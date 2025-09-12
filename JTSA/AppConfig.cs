@@ -10,8 +10,6 @@ namespace JTSA
 {
     public static class AppConfig
     {
-        public static string ClientID { get; private set; } = "";
-        public static string AccessToken { get; private set; } = "";
         public static string UserName { get; private set; } = "";
 
         public static void LoadConfig()
@@ -29,9 +27,6 @@ namespace JTSA
                 .AddIniFile("appsettings.ini", optional: true, reloadOnChange: true)
                 .Build();
 
-
-            ClientID = config["Auth:ClientID"] ?? "";
-            AccessToken = config["Auth:AccessToken"] ?? "";
             UserName = config["Auth:UserName"] ?? "";
         }
     }

@@ -50,7 +50,6 @@ namespace JTSA
         /// </summary>
         public MainWindow()
         {
-
             AppConfig.LoadConfig();
 
             InitializeComponent();
@@ -70,7 +69,7 @@ namespace JTSA
             AllSidePanelClose();
 
             // イベント登録
-            this.Loaded += MainWindow_Loaded;
+            this.Loaded += MainWindow_LoadedAsync;
         }
 
 
@@ -79,13 +78,14 @@ namespace JTSA
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
         {
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
 
+
             // ユーザー名存在チェック
-            if (!string.IsNullOrEmpty(AppConfig.UserName))
+            if (!String.IsNullOrEmpty(AppConfig.UserName))
             {
                 UserName_TextBlock.Text = AppConfig.UserName;
             }
@@ -95,74 +95,127 @@ namespace JTSA
                 return;
             }
 
-            var streamerInfo = await Utility.GetBroadcasterIdAsync(AppConfig.UserName);
-            if (streamerInfo == null) return;
-
-            if (!string.IsNullOrEmpty(streamerInfo.BroadcastId))
+            // クライアントID存在チェック
+            if (string.IsNullOrEmpty(TwitchHelper.ClientID))
             {
-                Utility.broadcasterId = streamerInfo.BroadcastId;
-                BroadcastID_TextBlock.Text = "OK!";
-
-                StatusTextBlock.Text = $"broadcaster_id取得成功: {Utility.broadcasterId}";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-            }
-            else
-            {
-                BroadcastID_TextBlock.Text = "NG";
-                StatusTextBlock.Text = "broadcaster_idの取得に失敗しました敗しました。";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.Red;
+                return;
             }
 
             // アクセストークン存在チェック
-            if (!string.IsNullOrEmpty(AppConfig.AccessToken))
+            if (!string.IsNullOrEmpty(TwitchHelper.AccessToken))
             {
                 AccessToken_TextBlock.Text = "OK!";
             }
             else
             {
                 AccessToken_TextBlock.Text = "NG";
+                return;
             }
 
-            // クライアントID存在チェック
-            if (!string.IsNullOrEmpty(AppConfig.ClientID))
+            await StreamerDataSet();
+            
+            LoadScreen.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="userName"></param>
+        private async Task StreamerDataSet()
+        {
+            var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync();
+
+            if (streamerInfo != null && !String.IsNullOrEmpty(streamerInfo.BroadcastId))
             {
-                ClientID_TextBlock.Text = "OK!";
+                TwitchHelper.BroadcasterId = streamerInfo.BroadcastId;
+
+                StatusTextBlock.Text = $"broadcaster_id取得成功: {TwitchHelper.BroadcasterId}";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
             }
             else
             {
-                ClientID_TextBlock.Text = "NG";
+                StatusTextBlock.Text = "broadcaster_idの取得に失敗しました敗しました。";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.Red;
+                return;
+            }
+
+            if (!String.IsNullOrEmpty(TwitchHelper.AccessToken))
+            {
+                // タイトル取得処理
+                GetTwitchTitle();
+                await WaitForTargetStringAsync(CurrentTitleTextBlock.Text);
+                TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
+
+                // カテゴリID処理
+                var CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
+
+                // カテゴリ名取得処理
+                var category = await TwitchHelper.GetGamesByGameId(CategoryId);
+                editTitleTextForm = new EditTitleTextForm()
+                {
+                    Content = TitleEditTextBox.Text,
+                    CategoryId = category.Id,
+                    CategoryName = category.Name,
+                    BoxArtUrl = category.BoxArtUrl
+                };
+
+                ReloadCategory();
+
+                SetEditTitleTextForm();
             }
 
             // リスト読み込み処理
             ReloadTitleText();
             ReloadTitleTag();
             ReloadFriendTag();
-            ReloadCategory();
             ReloadSaveTitleText();
+        }
 
-            // タイトル取得処理
-            GetTwitchTitle();
-            await WaitForTargetStringAsync(CurrentTitleTextBlock.Text);
-            TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
-            // カテゴリID処理
-            String CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast(Utility.broadcasterId) ?? "不明";
+        #region =============== Tiwthc：OAuth認証 ===============
 
-            // カテゴリ名取得処理
-            var category = await TwitchHelper.GetGamesByGameId(CategoryId);
+        /// <summary>
+        /// OAuth認証ボタンクリック時
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void OAuthButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Loading画面表示
+            LoadScreen.Visibility = Visibility.Visible;
 
-            editTitleTextForm = new EditTitleTextForm()
+
+            var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
+
+            // 認証URLとユーザーコードをユーザーに表示
+            LoadPanelSubTextBox.Text = deviceCodeResponse.user_code;
+            LoadSubPanel.Visibility = Visibility.Visible;
+
+            // 認証ページを自動で開く（オプション）
+            Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={AppConfig.UserName}") { UseShellExecute = true });
+
+            // ポーリングでトークン取得
+            var token = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
+            if (!string.IsNullOrEmpty(token))
             {
-                Content = TitleEditTextBox.Text,
-                CategoryId = category.Id,
-                CategoryName = category.Name,
-                BoxArtUrl = category.BoxArtUrl
-            };
+                TwitchHelper.AccessToken = token;
+                StatusTextBlock.Text = "アクセストークンを取得しました。";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+                AccessToken_TextBlock.Text = "OK!";
+            }
+            else
+            {
+                StatusTextBlock.Text = "アクセストークンの取得に失敗しました。";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                AccessToken_TextBlock.Text = "NG";
+            }
 
-            SetEditTitleTextForm();
+            await StreamerDataSet();
 
             LoadScreen.Visibility = Visibility.Collapsed;
         }
+
+        #endregion
 
 
         #region =============== リストデータ更新処理 ===============
@@ -445,7 +498,7 @@ namespace JTSA
         private async void AddFriendAsync(String userId)
         {
             // 配信者情報取得
-            var streamerInfo = await Utility.GetBroadcasterIdAsync(userId);
+            var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(userId);
 
             // データチェック
             if (streamerInfo == null) return;
@@ -477,87 +530,6 @@ namespace JTSA
         #endregion
 
 
-        #region =============== Tiwthc：OAuth認証 ===============
-
-        /// <summary>
-        /// OAuth認証ボタンクリック時
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void OAuthButton_Click(object sender, RoutedEventArgs e)
-        {
-            //var clientId = ClientIdTextBox.Text;
-
-            // ローカルサーバを起動
-            var listener = new HttpListener();
-            listener.Prefixes.Add(Utility.RedirectUri);
-            listener.Start();
-
-            // 認証URL生成
-            var oauthUrl = $"https://id.twitch.tv/oauth2/authorize" +
-                           $"?client_id={AppConfig.ClientID}" +
-                           $"&redirect_uri={Utility.RedirectUri}" +
-                           $"&response_type=token" +
-                           $"&scope=channel:manage:broadcast";
-
-            // ブラウザで認証ページを開く
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = oauthUrl,
-                UseShellExecute = true
-            });
-
-            StatusTextBlock.Text = "認証後、アクセストークンを自動取得します...";
-            StatusTextBlock.Foreground = System.Windows.Media.Brushes.Orange;
-
-            // リダイレクトを待つ
-            var context = await listener.GetContextAsync();
-
-            // フラグメント（#access_token=...）はサーバには送られないため、JSでパースしてクエリに変換する
-            string responseString = @"
-                <html>
-                <body>
-                <script>
-                  if(window.location.hash){
-                    var params = new URLSearchParams(window.location.hash.substring(1));
-                    var token = params.get('access_token');
-                    if(token){
-                      window.location = '/?access_token=' + token;
-                    }
-                  }
-                </script>
-                認証完了。ウィンドウを閉じてください。
-                </body>
-                </html>";
-            var buffer = Encoding.UTF8.GetBytes(responseString);
-            context.Response.ContentLength64 = buffer.Length;
-            context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-            context.Response.OutputStream.Close();
-
-            // 2回目のリクエストでトークンを取得
-            var context2 = await listener.GetContextAsync();
-            var accessToken = context2.Request.QueryString["access_token"];
-            listener.Stop();
-
-            if (!string.IsNullOrEmpty(accessToken))
-            {
-                //AccessTokenTextBox.Text = accessToken;
-                StatusTextBlock.Text = "アクセストークンを自動取得しました。";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
-            }
-            else
-            {
-                StatusTextBlock.Text = "アクセストークンの取得に失敗しました。";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.Red;
-            }
-
-            context2.Response.ContentLength64 = 0;
-            context2.Response.OutputStream.Close();
-        }
-
-        #endregion
-
-
         #region =============== TwitchAPI通信 ===============
 
         /// <summary>
@@ -570,11 +542,11 @@ namespace JTSA
         {
             using var client = new HttpClient();
 
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppConfig.AccessToken);
-            client.DefaultRequestHeaders.Add("Client-Id", AppConfig.ClientID);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
 
             // TwitchAPIから配信タイトルを取得
-            var response = await client.GetAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={Utility.broadcasterId}");
+            var response = await client.GetAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}");
 
             // レスポンスの処理
             if (response.IsSuccessStatusCode)
@@ -624,8 +596,8 @@ namespace JTSA
             var categoryName = SelectCategpryNameTextBlock.Text;
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AppConfig.AccessToken);
-            client.DefaultRequestHeaders.Add("Client-Id", AppConfig.ClientID);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
 
             var content = new StringContent(
                 JsonSerializer.Serialize(new { title = title }),
@@ -633,7 +605,7 @@ namespace JTSA
 
             // TwitchAPIで配信タイトルを更新
             var response = await client.PatchAsync(
-                $"https://api.twitch.tv/helix/channels?broadcaster_id={Utility.broadcasterId}",
+                $"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}",
                 content);
 
             // レスポンスの処理
@@ -655,7 +627,7 @@ namespace JTSA
 
 
             String gameId = SelectCategpryIdTextBlock.Text.Trim();
-            bool result = await TwitchHelper.SetCategoryAsync(Utility.broadcasterId, AppConfig.AccessToken, AppConfig.ClientID, gameId.ToString());
+            bool result = await TwitchHelper.SetCategoryAsync(TwitchHelper.BroadcasterId, TwitchHelper.AccessToken, gameId.ToString());
             if (result)
             {
                 StatusTextBlock.Text = "カテゴリを設定しました。";
@@ -709,7 +681,7 @@ namespace JTSA
         private async void GetTitleButton_Click(object sender, RoutedEventArgs e)
         {
             // カテゴリID処理
-            String gameId = await TwitchHelper.GetTwitchCategoryByBroadcast(Utility.broadcasterId) ?? "不明";
+            String gameId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
 
             // カテゴリ名取得処理
             var category = await TwitchHelper.GetGamesByGameId(gameId);
