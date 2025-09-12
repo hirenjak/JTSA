@@ -50,8 +50,6 @@ namespace JTSA
         /// </summary>
         public MainWindow()
         {
-            // Loading画面表示（※MainWindow_Loaded終わりまで表示）
-            LoadScreen.Visibility = Visibility.Visible;
 
             AppConfig.LoadConfig();
 
@@ -83,6 +81,9 @@ namespace JTSA
         /// <param name="e"></param>
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Loading画面表示（※MainWindow_Loaded終わりまで表示）
+            LoadScreen.Visibility = Visibility.Visible;
+
             // ユーザー名存在チェック
             if (!string.IsNullOrEmpty(AppConfig.UserName))
             {

@@ -3,16 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:JTSA"
         Title="Twitch配信概要設定" Height="700" Width="970" Background="#FF404040" Foreground="White" >
 
-    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" MinWidth="300">
         <Grid Margin="0, 0, 0, 0" VerticalAlignment="Stretch">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="560"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- メインUI（今までのDockPanelやStackPanelなど） -->
-            <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560">
+            <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560" Width="Auto">
                 <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <TextBlock x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Right"/>
                     <Grid Margin="0, 0, 8, 0" Width="Auto">
@@ -117,7 +117,7 @@
                                             <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="Black" FontSize="10" VerticalAlignment="Center"></TextBlock>
                                             <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
                                                 <Label Margin="0" VerticalAlignment="Bottom" Foreground="Black" FontSize="10">最終使用日：</Label>
-                                                <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="Black"></TextBlock>
+                                                <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="Black" TextWrapping="Wrap"></TextBlock>
                                             </StackPanel>
                                             <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTextLogDeleteButton_Click"/>
                                         </Grid>
@@ -145,7 +145,7 @@
 
             <!-- サイドパネル（タイトルテキストタグ） -->
             <DockPanel Grid.Column="2" Margin="8,8,8,8" Height="Auto" Width="Auto" Name="TitleTagSidePanel">
-                <Grid Width="300">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -217,7 +217,7 @@
 
             <!-- サイドパネル（フレンド） -->
             <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="FriendSidePanel" Visibility="Collapsed">
-                <Grid Width="300">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -293,7 +293,7 @@
 
             <!-- サイドパネル（カテゴリ） -->
             <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="CategorySidePanel" Visibility="Collapsed">
-                <Grid Width="300">
+                <Grid MinWidth="300">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
@@ -363,7 +363,7 @@
 
             <!-- サイドパネル（保存タイトル） -->
             <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="SaveTitleSidePanel" Visibility="Collapsed">
-                <Grid Width="300">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -421,7 +421,7 @@
 
             <!-- サイドパネル（カテゴリ検索） -->
             <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="CategorySearchSidePanel" Visibility="Collapsed">
-                <Grid Width="300">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
