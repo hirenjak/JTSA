@@ -71,7 +71,7 @@
                                     <ColumnDefinition Width="1*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="SelectCategpryIdTextBlock" Grid.Column="0" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 8, 0"  Background="LightGray" Height="20"></TextBlock>
-                                <TextBlock x:Name="SelectCategpryNameTextBlock" Grid.Column="1" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 8, 0"  Background="LightGray" Height="20"></TextBlock>
+                                <TextBlock x:Name="SelectCategpryNameTextBlock" Grid.Column="1" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 8, 0"  Background="LightGray" Height="20" MouseLeftButtonDown="SelectCategpryNameTextBlock_MouseLeftButtonDown"></TextBlock>
                                 <Button x:Name="AddCategoryButton" Grid.Column="2" Content="リストに登録" Width="72" Height="28" Margin="0, 0, 0, 0" Click="AddCategoryButton_Click"/>
                             </Grid>
                         </StackPanel>

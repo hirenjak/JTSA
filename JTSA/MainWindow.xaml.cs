@@ -693,31 +693,11 @@ namespace JTSA
         /// <param name="e"></param>
         private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // TextBlockのテキストをクリップボードにコピー（リトライ付き）
-            bool copied = false;
-            for (int i = 0; i < 3 && !copied; i++)
-            {
-                try
-                {
-                    Clipboard.SetDataObject(CurrentTitleTextBlock.Text);
-                    copied = true;
-                }
-                catch (System.Runtime.InteropServices.COMException)
-                {
-                    Thread.Sleep(100); // 少し待ってリトライ
-                }
-            }
-
-            if (copied)
-            {
-                StatusTextBlock.Text = "タイトルをクリップボードにコピーしました。";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-            }
-            else
-            {
-                StatusTextBlock.Text = "クリップボードへのコピーに失敗しました。";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.Red;
-            }
+            DisplayLog(
+                Utility.CopyClipBoad(CurrentTitleTextBlock.Text),
+                "タイトルをクリップボードにコピーしました。",
+                "クリップボードへのコピーに失敗しました。"
+            );
         }
 
 
@@ -779,6 +759,20 @@ namespace JTSA
             String boxArtUrl = editTitleTextForm.BoxArtUrl;
 
             AddCategory(categoryId, categoryName, boxArtUrl);
+        }
+
+        /// <summary>
+        /// カテゴリIDテキストクリック時
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            DisplayLog(
+                Utility.CopyClipBoad(SelectCategpryNameTextBlock.Text),
+                "カテゴリをクリップボードにコピーしました。",
+                "クリップボードへのコピーに失敗しました。"
+            );
         }
 
         #endregion
@@ -1290,5 +1284,6 @@ namespace JTSA
             if (editTitleTextForm == null) return;
             editTitleTextForm.Content = TitleEditTextBox.Text;
         }
+
     }
 }
