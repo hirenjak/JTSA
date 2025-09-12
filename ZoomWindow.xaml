@@ -1,0 +1,9 @@
+<Window x:Class="JTSA.ZoomWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ZOOM" Height="300" Width="400" WindowStartupLocation="CenterOwner">
+    <Grid>
+        <!-- ‚±‚±‚ÉZOOM‰æ–Ê‚ÌUI‚ðì¬ -->
+        <TextBlock Text="ZOOM‰æ–Ê" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+    </Grid>
+</Window>

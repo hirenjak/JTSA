@@ -1,0 +1,469 @@
+﻿<Window x:Class="JTSA.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:JTSA"
+        Title="Twitch配信概要設定" Height="700" Width="970" Background="#FF404040" Foreground="White" >
+
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid Margin="0, 0, 0, 0" VerticalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- メインUI（今までのDockPanelやStackPanelなど） -->
+            <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560">
+                <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <TextBlock x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Right"/>
+                    <Grid Margin="0, 0, 8, 0" Width="Auto">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0, 0, 0, 0" >
+                            <DockPanel Margin="0, 0, 0, 0" >
+                                <Label Foreground="White" Content="UserName"/>
+                                <Button DockPanel.Dock="Right" x:Name="OAuthButton" FontSize="10" Content="OAuth認証" Width="56" Height="18" Margin="0, 0, 0, 0" VerticalAlignment="Center" Click="OAuthButton_Click"/>
+                            </DockPanel>
+                            <TextBox x:Name="UserName_TextBlock" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 0, 0" Background="White" Height="18" ></TextBox>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="0, 0, 0, 0" >
+                            <Label Foreground="White" Content="BroadcastID"/>
+                            <TextBlock x:Name="BroadcastID_TextBlock" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 0, 0" Background="DarkGray" Height="18" ></TextBlock>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="0, 0, 0, 0" >
+                            <Label Foreground="White" Content="ClientID"/>
+                            <TextBlock x:Name="ClientID_TextBlock" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 0, 0" Background="DarkGray" Height="18" ></TextBlock>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Margin="0, 0, 0, 0" >
+                            <Label Foreground="White" Content="AccessToken"/>
+                            <TextBlock x:Name="AccessToken_TextBlock" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 0, 0" Background="DarkGray" Height="18" ></TextBlock>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Vertical" Margin="0, 0, 0, 0" Width="Auto">
+                        <StackPanel Margin="0, 0, 0, 0" >
+                            <Label Foreground="White" Content="現在タイトルの表示 ※文面をクリックでクリップボードにコピー"/>
+                            <Grid  Margin="8, 0, 0, 0" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="4*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+                            
+                                <TextBlock Grid.Column="0" x:Name="CurrentTitleTextBlock" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Background="DarkGray" Height="Auto" MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown"></TextBlock>
+                            
+                                <StackPanel Grid.Column="1" >
+                                    <Button Content="取得" Width="72" Height="28" Margin="0, 0, 0, 0" Click="GetTitleButton_Click"/>
+                                    <Button Content="X告知" Width="72" Height="28" Margin="0, 8, 0, 0" Click="TweetButton_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Margin="0, 8, 0, 0" >
+                            <Label Foreground="White" Content="選択カテゴリ"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="3*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="SelectCategpryIdTextBlock" Grid.Column="0" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 8, 0"  Background="LightGray" Height="20"></TextBlock>
+                                <TextBlock x:Name="SelectCategpryNameTextBlock" Grid.Column="1" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 8, 0"  Background="LightGray" Height="20"></TextBlock>
+                                <Button x:Name="AddCategoryButton" Grid.Column="2" Content="リストに登録" Width="72" Height="28" Margin="0, 0, 0, 0" Click="AddCategoryButton_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
+                    <Grid  Margin="8, 0, 0, 0" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="4*"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="TitleEditTextBox" Grid.Column="0" Height="64" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Top" Text="" Margin="0, 0, 0, 0" TextWrapping="Wrap" TextChanged="TitleEditTextBox_TextChanged"/>
+                    
+                        <StackPanel Grid.Column="2" >
+                            <Button x:Name="SaveTitleButton" Content="保存" Width="72" Height="28" Margin="0, 0, 0, 0" Click="SaveTitleButton_Click"/>
+                            <Button x:Name="SetTitleButton" Content="送信" Width="72" Height="28" Margin="0, 8, 0, 0" Click="SetTitleButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            
+                <Grid Margin="8,8,8,8" Height="Auto" >
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="24"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                
+                    <Label Grid.Row="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <StackPanel Margin="8, 0, 8, 0">
+                                        <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="Black" FontSize="16" TextWrapping="Wrap"></TextBlock>
+
+                                        <Grid Margin="0" Height="Auto">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="Black" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                            <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
+                                                <Label Margin="0" VerticalAlignment="Bottom" Foreground="Black" FontSize="10">最終使用日：</Label>
+                                                <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="Black"></TextBlock>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTextLogDeleteButton_Click"/>
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <Border Width="Auto" Height="2" Background="White"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </DockPanel>
+        
+            <!-- サイドパネル開閉ボタン（右上などに配置） -->
+            <StackPanel Grid.Column="1" Width="Auto" Margin="8, 0, 8, 0">
+                <Button Content="Close" Width="64" Height="28" Name="ToggleCloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleCloseButton_Click"/>
+                <Button Content="TitleTag" Width="64" Height="28" Name="ToggleTagPanelButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleTitleTagPanelButton_Click"/>
+                <Button Content="Friend" Width="64" Height="28" Name="ToggleFriendButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleFriendButton_Click"/>
+                <Button Content="Category" Width="64" Height="28" Name="ToggleCategoryButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleCategoryButton_Click"/>
+                <Button Content="Save Title" Width="64" Height="28" Name="ToggleFavoriteTitleButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleFavoriteTitleButton_Click"/>
+                <Button Width="64" Height="28" Name="ToggleReserveTitleButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleReserveTitleButton_Click">
+                    <TextBlock FontSize="9" TextWrapping="Wrap" TextAlignment="Center">Category Search</TextBlock>
+                </Button>
+            </StackPanel>
+
+            <!-- サイドパネル（タイトルテキストタグ） -->
+            <DockPanel Grid.Column="2" Margin="8,8,8,8" Height="Auto" Width="Auto" Name="TitleTagSidePanel">
+                <Grid Width="300">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <Label Content="※追加したいタイトルタグを入れて追加ボタンを押す" Foreground="White"/>
+                        <Grid Grid.Row="0" Grid.Column="0" Margin="0, 0, 0, 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="4*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox Name="TitleTextTagAddTextBox" Grid.Column="0"></TextBox>
+                            <Button Grid.Column="1" Margin="8, 0, 0, 0" Click="TitleTagAddButton_Click">追加</Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0, 8, 0, 0">
+                        <Label Content="検索欄" Foreground="White"/>
+                        <TextBox Name="TotleTextTagSearchTextBox" TextChanged="TitleTagSearchTextBox_TextChanged" ></TextBox>
+                    </StackPanel>
+
+                    <Grid Height="Auto" Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                    
+                        <Label Grid.Row="0" Content="※クリックするとタイトル編集のカーソルを入れてる部分に挿入" Foreground="White"/>
+                        <ListBox ItemsSource="{Binding TitleTagFormList}" Grid.Row="1" Background="#FF404040"
+                                x:Name="TitleTagListBox"
+                                Height="Auto" Width="Auto"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                SelectionChanged="TitleTagListBox_SelectionChanged" PreviewMouseDown="TitleTagListBox_PreviewMouseDown">
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <StackPanel Margin="8, 0, 8, 0">
+                                            <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap">
+                                            </TextBlock>
+                                            <Grid Margin="0" Height="Auto">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Text="{Binding Id}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0" >
+                                                    <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                                    <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                                </StackPanel>
+                                                <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTagDeleteButton_Click" />
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <Border Width="Auto" Height="2" Background="White"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </DockPanel>
+
+            <!-- サイドパネル（フレンド） -->
+            <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="FriendSidePanel" Visibility="Collapsed">
+                <Grid Width="300">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel>
+                        <Label Content="※追加したいユーザーIDを入れて追加ボタンを押す" Foreground="White"/>
+                        <Grid Grid.Row="0" Grid.Column="1" Margin="0, 0, 0, 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="4*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox Name="FriendAddTextBox" Grid.Column="0"></TextBox>
+                            <Button Name="FriendAddButton" Grid.Column="1" Margin="8, 0, 0, 0" Click="FriendAddButton_Click" >追加</Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0, 8, 0, 0">
+                        <Label Content="検索欄" Foreground="White"/>
+                        <TextBox Name="FriendSerchTextBox" ToolTip="検索欄" TextChanged="FriendSerchTextBox_TextChanged"></TextBox>
+                    </StackPanel>
+
+                    <Grid Height="Auto" Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Row="0" Content="※クリックするとタイトル編集のカーソルを入れてる部分に挿入" Foreground="White"/>
+
+                        <ListBox ItemsSource="{Binding FriendFormList}" Grid.Row="2" Background="#FF404040" x:Name="FriendListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="FriendListBox_SelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <StackPanel Margin="8, 0, 8, 0">
+                                            <TextBlock Text="{Binding DisplayName}" Grid.Column="0"
+                                               Width="Auto" 
+                                               Foreground="White" FontSize="16" TextWrapping="Wrap">
+                                            </TextBlock>
+
+                                            <Grid Margin="0" Height="Auto">
+
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Text="{Binding UserId}" Width="Auto" Grid.Column="1" Grid.Row="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                <StackPanel Orientation="Horizontal" Grid.Column="0"  Grid.Row="1" Margin="8, 0, 0, 0" >
+                                                    <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                                    <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding BroadcastId}" Width="Auto" Grid.Column="0"  Grid.Row="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                <Button Grid.Column="2" Grid.Row="1"  Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="FriendDeleteButton_Click"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <Border Width="Auto" Height="2" Background="White"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </DockPanel>
+
+            <!-- サイドパネル（カテゴリ） -->
+            <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="CategorySidePanel" Visibility="Collapsed">
+                <Grid Width="300">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
+                        <Label Content="検索欄" Foreground="White"/>
+                        <TextBox Name="CategorySerchTextBox" ToolTip="検索欄" TextChanged="CategoryTextBox_TextChanged"></TextBox>
+                    </StackPanel>
+                
+                    <Grid Height="Auto" Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Row="0" Content="※クリックすると選択カテゴリを変更" Foreground="White"/>
+
+                        <ListBox ItemsSource="{Binding CategoryFormList}" Grid.Row="2" Background="#FF404040"
+                            x:Name="CategoryListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            SelectionChanged="CategoryListBox_SelectionChanged">
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <StackPanel Margin="8, 0, 8, 0">
+                                            <Grid Margin="0" Height="Auto">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Image Source="{Binding BoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding DisplayName}" Grid.Column="1" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                                            </Grid>
+
+                                            <Grid Margin="0" Height="Auto">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Text="{Binding UserId}" Width="Auto" Grid.Column="1" Grid.Row="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                <StackPanel Orientation="Horizontal" Grid.Column="0"  Grid.Row="1" Margin="8, 0, 0, 0" >
+                                                    <Label  Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                                    <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding BroadcastId}" Width="Auto" Grid.Column="0"  Grid.Row="0"  Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                <Button Grid.Column="2" Grid.Row="1"  Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="CategoryDeleteButton_Click"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <Border Width="Auto" Height="2" Background="White"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </DockPanel>
+
+            <!-- サイドパネル（保存タイトル） -->
+            <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="SaveTitleSidePanel" Visibility="Collapsed">
+                <Grid Width="300">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0, 0, 0, 0">
+                        <Label Content="検索欄" Foreground="White"/>
+                        <TextBox Name="SaveTitleSerchTextBox" ToolTip="検索欄" TextChanged="SaveTitleTextBox_TextChanged"></TextBox>
+                    </StackPanel>
+
+                    <Grid Height="Auto" Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Row="0" Content="※クリックするとタイトル編集と選択カテゴリを変更" Foreground="White"/>
+
+                        <ListBox ItemsSource="{Binding SaveTitleTextFormList}" Grid.Row="1" Background="#FF404040"
+                            x:Name="SaveTitleListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            SelectionChanged="SaveTitleListBox_SelectionChanged">
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+
+                                        <StackPanel Margin="8, 0, 8, 0">
+                                            <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+
+                                            <Grid Margin="0" Height="Auto">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
+                                                    <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                                    <TextBlock Text="{Binding LastUsedDate}" Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                                </StackPanel>
+                                                <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="SaveTitleDeleteButton_Click"/>
+                                            </Grid>
+                                        </StackPanel>
+                                
+                                        <Border Width="Auto" Height="2" Background="White"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </DockPanel>
+
+            <!-- サイドパネル（カテゴリ検索） -->
+            <DockPanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" Name="CategorySearchSidePanel" Visibility="Collapsed">
+                <Grid Width="300">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0, 0, 0, 0">
+                        <Label Content="検索欄" Foreground="White"/>
+                        <TextBox Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTitleSerchTextBox_TextChanged"/>
+                    </StackPanel>
+
+                    <Grid Height="Auto" Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Row="0" Content="※クリックすると選択カテゴリを変更" Foreground="White"/>
+                        <ListBox ItemsSource="{Binding SearchCategoryFormList}" Grid.Row="1" Grid.Column="3" Background="#FF404040"
+                                x:Name="CategorySearchListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                SelectionChanged="CategorySearchListBox_SelectionChanged">
+
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="8, 0, 8, 0">
+                                            <Image Source="{Binding BoxArtUrl}" Width="36" Height="48" Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+
+                                        <Border Width="Auto" Height="2" Background="White"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+            </DockPanel>
+        </Grid>
+
+        <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto">
+            <TextBlock Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="56">Loading Now...</TextBlock>
+        </Grid>
+    </Grid>
+</Window>
