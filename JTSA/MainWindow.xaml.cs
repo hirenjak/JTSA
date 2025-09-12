@@ -50,6 +50,9 @@ namespace JTSA
         /// </summary>
         public MainWindow()
         {
+            // Loading画面表示（※MainWindow_Loaded終わりまで表示）
+            LoadScreen.Visibility = Visibility.Visible;
+
             AppConfig.LoadConfig();
 
             InitializeComponent();

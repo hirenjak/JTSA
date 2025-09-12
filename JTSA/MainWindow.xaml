@@ -462,7 +462,7 @@
             </DockPanel>
         </Grid>
 
-        <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto">
+        <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Visibility="Collapsed">
             <TextBlock Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="56">Loading Now...</TextBlock>
         </Grid>
     </Grid>
