@@ -4,7 +4,8 @@
         Title="Twitch配信概要設定" Height="700" Width="970" Background="#FF404040" Foreground="White" >
 
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <Grid Margin="0, 0, 0, 0" VerticalAlignment="Stretch">
+        <TextBlock VerticalAlignment="Top" Height="20" x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Left"/>
+        <Grid VerticalAlignment="Stretch" Margin="0, 20, 0, 0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -14,7 +15,6 @@
             <!-- メインUI（今までのDockPanelやStackPanelなど） -->
             <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560">
                 <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <TextBlock x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Right"/>
                     <Grid Margin="0, 0, 8, 0" Width="Auto">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1*"/>
@@ -132,7 +132,7 @@
             </DockPanel>
         
             <!-- サイドパネル開閉ボタン（右上などに配置） -->
-            <StackPanel Grid.Column="1" Width="Auto" Margin="8, 0, 8, 0">
+            <StackPanel Grid.Column="1" Width="Auto" Margin="8, 20, 8, 0">
                 <Button Content="Close" Width="64" Height="28" Name="ToggleCloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleCloseButton_Click"/>
                 <Button Content="TitleTag" Width="64" Height="28" Name="ToggleTagPanelButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleTitleTagPanelButton_Click"/>
                 <Button Content="Friend" Width="64" Height="28" Name="ToggleFriendButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleFriendButton_Click"/>
@@ -144,7 +144,7 @@
             </StackPanel>
 
             <!-- サイドパネル（タイトルテキストタグ） -->
-            <DockPanel Grid.Column="2" Margin="8,8,8,8" Height="Auto" Width="Auto" Name="TitleTagSidePanel">
+            <DockPanel Grid.Column="2" Margin="8,20,8,8" Height="Auto" Width="Auto" Name="TitleTagSidePanel">
                 <Grid Width="300">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -462,7 +462,7 @@
             </DockPanel>
         </Grid>
 
-        <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto">
+        <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 18, 0, 0" Visibility="Collapsed">
             <TextBlock Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="56">Loading Now...</TextBlock>
         </Grid>
     </Grid>
