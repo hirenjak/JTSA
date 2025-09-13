@@ -19,6 +19,7 @@ namespace JTSA
 
     static class Utility
     {
+        public static String UserName { get; set; } = "";
         public static String RedirectUri = "http://localhost:8080/";
 
 

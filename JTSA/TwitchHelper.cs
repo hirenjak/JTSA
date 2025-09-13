@@ -10,31 +10,10 @@ using System.Text.Json;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace JTSA
 {
-    public class SearchCategories
-    {
-        public required String Id { get; set; }
-        public required String Name { get; set; }
-        public required String BoxArtUrl { get; set; }
-    }
-
-    public class ModifyChannelInformation
-    {
-        public required String game_id { get; set; }
-        public required String broadcaster_language { get; set; }
-        public required String title { get; set; }
-        public required int delay { get; set; }
-    }
-
-    public class Games
-    {
-        public required String Id { get; set; }
-        public required String Name { get; set; }
-        public required String BoxArtUrl { get; set; }
-        public required String IGDBId { get; set; }
-    }
 
     static class TwitchHelper
     {
@@ -44,15 +23,31 @@ namespace JTSA
         public static String AccessToken = "";
         public static String BroadcasterId = "";
 
-        public static DeviceCodeResponse deviceCodeResponse = new()
+
+        public class SearchCategories
         {
-            device_code = "",
-            user_code = "",
-            verification_uri = "https://www.twitch.tv/activate",
-            expires_in = 0,
-            interval = 0,
-            verification_uri_complete = "https://www.twitch.tv/activate?user_code="+AppConfig.UserName
-        };
+            public required String Id { get; set; }
+            public required String Name { get; set; }
+            public required String BoxArtUrl { get; set; }
+        }
+
+
+        public class ModifyChannelInformation
+        {
+            public required String game_id { get; set; }
+            public required String broadcaster_language { get; set; }
+            public required String title { get; set; }
+            public required int delay { get; set; }
+        }
+
+
+        public class Games
+        {
+            public required String Id { get; set; }
+            public required String Name { get; set; }
+            public required String BoxArtUrl { get; set; }
+            public required String IGDBId { get; set; }
+        }
 
 
         public class DeviceCodeResponse
@@ -64,9 +59,21 @@ namespace JTSA
             public int interval { get; set; }
             public string verification_uri_complete { get; set; }
         }
-        
 
-        public static async Task<DeviceCodeResponse> RequestDeviceCodeAsync()
+
+        public class AccessTokenResponse
+        {
+            public int expiresIn { get; set; }
+            public int interval { get; set; }
+            public string refreshToken { get; set; }
+            public string accessToken { get; set; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<DeviceCodeResponse?> RequestDeviceCodeAsync()
         {
             using var client = new HttpClient();
             var content = new FormUrlEncodedContent(new[]
@@ -76,6 +83,7 @@ namespace JTSA
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
+
             return JsonSerializer.Deserialize<DeviceCodeResponse>(json);
         }
 
@@ -89,9 +97,18 @@ namespace JTSA
         /// <returns></returns>
         public static async Task<UserInformation?> GetBroadcasterIdAsync()
         {
-            return await GetBroadcasterIdAsync(AppConfig.UserName);
+            return await GetBroadcasterIdAsync(Utility.UserName);
         }
-        public static async Task<string> PollDeviceTokenAsync(string deviceCode, int interval, int expiresIn)
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="deviceCode"></param>
+        /// <param name="interval"></param>
+        /// <param name="expiresIn"></param>
+        /// <returns></returns>
+        public static async Task<AccessTokenResponse> PollDeviceTokenAsync(string deviceCode, int interval, int expiresIn)
         {
             using var client = new HttpClient();
             var start = DateTime.UtcNow;
@@ -101,32 +118,41 @@ namespace JTSA
 
                 var content = new FormUrlEncodedContent(new[]
                 {
-            new KeyValuePair<string, string>("client_id", ClientID),
-            new KeyValuePair<string, string>("device_code", deviceCode),
-            new KeyValuePair<string, string>("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
-        });
+                    new KeyValuePair<string, string>("client_id", ClientID),
+                    new KeyValuePair<string, string>("device_code", deviceCode),
+                    new KeyValuePair<string, string>("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+                });
                 var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
                 var json = await response.Content.ReadAsStringAsync();
 
                 using var doc = JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("access_token", out var tokenElem))
                 {
-                    return tokenElem.GetString();
+                    AccessTokenResponse elem = new()
+                    {
+                        accessToken = tokenElem.GetString() ?? "",
+                        refreshToken = doc.RootElement.GetProperty("refresh_token").GetString() ?? "",
+                        expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
+                    };
+
+                    return elem;
                 }
                 else if (doc.RootElement.TryGetProperty("error", out var errorElem))
                 {
                     var error = errorElem.GetString();
                     if (error == "authorization_pending" || error == "slow_down")
                     {
-                        continue; // 認証待ち or ポーリング間隔を守る
+                        // 認証待ち or ポーリング間隔を守る
+                        continue; 
                     }
                     else
                     {
-                        break; // その他のエラー
+                        // その他のエラー
+                        break; 
                     }
                 }
             }
-            return null;
+            return new();
         }
 
 

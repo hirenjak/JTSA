@@ -50,8 +50,6 @@ namespace JTSA
         /// </summary>
         public MainWindow()
         {
-            AppConfig.LoadConfig();
-
             InitializeComponent();
 
             categorySearchDebounceTimer = new System.Windows.Threading.DispatcherTimer();
@@ -83,23 +81,23 @@ namespace JTSA
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
 
-
-            // ユーザー名存在チェック
-            if (!String.IsNullOrEmpty(AppConfig.UserName))
-            {
-                UserName_TextBlock.Text = AppConfig.UserName;
-            }
-            else
-            {
-                UserName_TextBlock.Text = "NG";
-                return;
-            }
-
             // クライアントID存在チェック
-            if (string.IsNullOrEmpty(TwitchHelper.ClientID))
-            {
-                return;
-            }
+            if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
+
+            M_Setting tempSettingObj;
+
+            // ユーザー名取得確認
+            tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName);
+            if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value)) return;
+
+            Utility.UserName = tempSettingObj.Value;
+
+            // リフレッシュトークンからアクセストークンを再取得
+            var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
+            if (settingUserName == null || String.IsNullOrEmpty(settingUserName.Value)) return;
+
+
+            UserName_TextBox.Text = Utility.UserName;
 
             // アクセストークン存在チェック
             if (!string.IsNullOrEmpty(TwitchHelper.AccessToken))
@@ -112,10 +110,14 @@ namespace JTSA
                 return;
             }
 
+
+
+
             await StreamerDataSet();
             
             LoadScreen.Visibility = Visibility.Collapsed;
         }
+
 
         /// <summary>
         /// 
@@ -184,21 +186,26 @@ namespace JTSA
             // Loading画面表示
             LoadScreen.Visibility = Visibility.Visible;
 
+            Utility.UserName = UserName_TextBox.Text.Trim();
 
-            var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
+            var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync() ?? new();
 
             // 認証URLとユーザーコードをユーザーに表示
             LoadPanelSubTextBox.Text = deviceCodeResponse.user_code;
+
             LoadSubPanel.Visibility = Visibility.Visible;
 
             // 認証ページを自動で開く（オプション）
-            Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={AppConfig.UserName}") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={Utility.UserName}") { UseShellExecute = true });
 
             // ポーリングでトークン取得
-            var token = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
-            if (!string.IsNullOrEmpty(token))
+            var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
+            
+            
+            if (!string.IsNullOrEmpty(accessTokenResponse.accessToken))
             {
-                TwitchHelper.AccessToken = token;
+                TwitchHelper.AccessToken = accessTokenResponse.accessToken;
+
                 StatusTextBlock.Text = "アクセストークンを取得しました。";
                 StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
                 AccessToken_TextBlock.Text = "OK!";
@@ -209,6 +216,25 @@ namespace JTSA
                 StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
                 AccessToken_TextBlock.Text = "NG";
             }
+
+            // --- 設定情報保存処理 ---
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.UserName,
+                Value = Utility.UserName,
+            });
+
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.RefreshToken,
+                Value = accessTokenResponse.refreshToken,
+            });
+
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.ExpiresIn,
+                Value = accessTokenResponse.expiresIn.ToString(),
+            });
 
             await StreamerDataSet();
 
@@ -443,7 +469,7 @@ namespace JTSA
 
             // 挿入処理
             DisplayLog(
-                M_TitleTag.Insert(db, isnertData),
+                M_TitleTag.Insert(isnertData),
                 "データを追加しました。",
                 "既にデータが存在します。"
             );
@@ -1241,7 +1267,7 @@ namespace JTSA
         {
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
-            var text = editTitleTextForm.Content + "%0D%0A" + "配信カテゴリ：" + editTitleTextForm.CategoryName + "%0D%0A" + "配信URL：" + $"https://www.twitch.tv/" + AppConfig.UserName;
+            var text = editTitleTextForm.Content + "%0D%0A" + "配信カテゴリ：" + editTitleTextForm.CategoryName + "%0D%0A" + "配信URL：" + $"https://www.twitch.tv/" + Utility.UserName;
 
             // ブラウザで認証ページを開く
             Process.Start(new ProcessStartInfo

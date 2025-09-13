@@ -60,6 +60,7 @@ public class M_TitleTag
     public static void Delete(int id)
     {
         using var db = new AppDbContext();
+
         var entity = db.M_TitleTagList.FirstOrDefault(x => x.Id == id);
 
         if (entity != null)
@@ -76,8 +77,10 @@ public class M_TitleTag
     /// <param name="db"></param>
     /// <param name="insertData"></param>
     /// <returns></returns>
-    public static bool Insert(AppDbContext db, M_TitleTag insertData)
+    public static bool Insert(M_TitleTag insertData)
     {
+        using var db = new AppDbContext();
+
         db.M_TitleTagList.Add(insertData);
         int result = db.SaveChanges();
 
