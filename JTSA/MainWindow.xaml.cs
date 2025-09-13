@@ -32,13 +32,6 @@ namespace JTSA
         public ObservableCollection<TitleTextForm> SaveTitleTextFormList { get; } = new();
 
 
-        /// <summary> メインウィンドウの基本幅 </summary>
-        private const int MainWindowBaseWidth = 654;
-
-        /// <summary> サイドパネルの幅 </summary>
-        private const int SidePanelWidth = 320;
-
-
         private EditTitleTextForm editTitleTextForm;
 
         private System.Windows.Threading.DispatcherTimer categorySearchDebounceTimer;
@@ -63,8 +56,8 @@ namespace JTSA
                 db.Database.EnsureCreated();
             }
 
-            this.Width = MainWindowBaseWidth;
             AllSidePanelClose();
+            TitleTagSidePanel.Visibility = Visibility.Visible;
 
             // イベント登録
             this.Loaded += MainWindow_LoadedAsync;
@@ -903,7 +896,6 @@ namespace JTSA
         /// <param name="e"></param>
         private void ToggleCloseButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Width = MainWindowBaseWidth;
             AllSidePanelClose();
         }
 
@@ -917,7 +909,6 @@ namespace JTSA
         {
             AllSidePanelClose();
             TitleTagSidePanel.Visibility = Visibility.Visible;
-            this.Width = MainWindowBaseWidth + SidePanelWidth;
         }
 
 
@@ -930,7 +921,6 @@ namespace JTSA
         {
             AllSidePanelClose();
             FriendSidePanel.Visibility = Visibility.Visible;
-            this.Width = MainWindowBaseWidth + SidePanelWidth;
         }
 
 
@@ -943,7 +933,6 @@ namespace JTSA
         {
             AllSidePanelClose();
             CategorySidePanel.Visibility = Visibility.Visible;
-            this.Width = MainWindowBaseWidth + SidePanelWidth;
         }
 
 
@@ -956,7 +945,6 @@ namespace JTSA
         {
             AllSidePanelClose();
             SaveTitleSidePanel.Visibility = Visibility.Visible;
-            this.Width = MainWindowBaseWidth + SidePanelWidth;
         }
 
 
@@ -969,7 +957,6 @@ namespace JTSA
         {
             AllSidePanelClose();
             CategorySearchSidePanel.Visibility = Visibility.Visible;
-            this.Width = MainWindowBaseWidth + SidePanelWidth;
         }
 
 
