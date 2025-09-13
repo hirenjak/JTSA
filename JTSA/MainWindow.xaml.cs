@@ -80,6 +80,7 @@ namespace JTSA
         {
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
+            LoadSubPanel.Visibility = Visibility.Collapsed;
 
             // クライアントID存在チェック
             if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
@@ -88,30 +89,54 @@ namespace JTSA
 
             // ユーザー名取得確認
             tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName);
-            if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value)) return;
+            if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
+            {
+                StatusTextBlock.Text = "ユーザー名が設定されていません";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
+            }
+            else
+            {
+                StatusTextBlock.Text = "ユーザー名を取得";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+            }
 
             Utility.UserName = tempSettingObj.Value;
+            UserName_TextBox.Text = Utility.UserName;
 
             // リフレッシュトークンからアクセストークンを再取得
             var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
             if (settingUserName == null || String.IsNullOrEmpty(settingUserName.Value)) return;
 
+            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value) ?? new();
 
-            UserName_TextBox.Text = Utility.UserName;
-
-            // アクセストークン存在チェック
-            if (!string.IsNullOrEmpty(TwitchHelper.AccessToken))
+            if (string.IsNullOrEmpty(accessTokenResponse.accessToken))
             {
-                AccessToken_TextBlock.Text = "OK!";
+                StatusTextBlock.Text = "アクセストークンの取得に失敗";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
             }
             else
             {
-                AccessToken_TextBlock.Text = "NG";
-                return;
+                StatusTextBlock.Text = "アクセストークンを取得";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
             }
 
+            TwitchHelper.AccessToken = accessTokenResponse.accessToken;
 
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.RefreshToken,
+                Value = accessTokenResponse.refreshToken,
+            });
 
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.ExpiresIn,
+                Value = accessTokenResponse.expiresIn.ToString(),
+            });
 
             await StreamerDataSet();
             
@@ -136,8 +161,8 @@ namespace JTSA
             }
             else
             {
-                StatusTextBlock.Text = "broadcaster_idの取得に失敗しました敗しました。";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.Red;
+                StatusTextBlock.Text = "broadcaster_idの取得に失敗しました。";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
                 return;
             }
 
@@ -206,13 +231,13 @@ namespace JTSA
             {
                 TwitchHelper.AccessToken = accessTokenResponse.accessToken;
 
-                StatusTextBlock.Text = "アクセストークンを取得しました。";
+                StatusTextBlock.Text = "アクセストークンを取得";
                 StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
                 AccessToken_TextBlock.Text = "OK!";
             }
             else
             {
-                StatusTextBlock.Text = "アクセストークンの取得に失敗しました。";
+                StatusTextBlock.Text = "アクセストークンの取得に失敗";
                 StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
                 AccessToken_TextBlock.Text = "NG";
             }
@@ -270,6 +295,9 @@ namespace JTSA
                     LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
+
+            StatusTextBlock.Text = "タイトルログリストを読込";
+            StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
 
 
@@ -295,6 +323,9 @@ namespace JTSA
                     LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
+
+            StatusTextBlock.Text = "タイトルタグリストを読込";
+            StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
 
 
@@ -321,6 +352,9 @@ namespace JTSA
                     LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
+
+            StatusTextBlock.Text = "フレンドリストを読込";
+            StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
 
 
@@ -347,6 +381,9 @@ namespace JTSA
                     LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
+
+            StatusTextBlock.Text = "カテゴリリストを読込";
+            StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
 
 
@@ -373,6 +410,9 @@ namespace JTSA
                     LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
+
+            StatusTextBlock.Text = "保存タイトルを読込";
+            StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
 
 
@@ -398,6 +438,9 @@ namespace JTSA
                     LastUsedDate = ""
                 });
             }
+
+            StatusTextBlock.Text = "検索カテゴリリストを読込";
+            StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
         
         #endregion
@@ -432,8 +475,7 @@ namespace JTSA
             };
 
             // 挿入処理
-            DisplayLog(
-               M_TitleText.Insert(isnertData),
+            DisplayLog(M_TitleText.Insert(isnertData),
                 "データを追加しました。",
                 "既にデータが存在します。"
             );
@@ -468,8 +510,7 @@ namespace JTSA
             };
 
             // 挿入処理
-            DisplayLog(
-                M_TitleTag.Insert(isnertData),
+            DisplayLog(M_TitleTag.Insert(isnertData),
                 "データを追加しました。",
                 "既にデータが存在します。"
             );
@@ -506,8 +547,7 @@ namespace JTSA
             };
 
             // 挿入処理
-            DisplayLog(
-                M_Category.Insert(db, isnertData),
+            DisplayLog(M_Category.Insert(db, isnertData),
                 "データを追加しました。",
                 "既にデータが存在します。"
             );

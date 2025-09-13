@@ -156,6 +156,35 @@ namespace JTSA
         }
 
 
+        public static async Task<AccessTokenResponse?> RefreshAccessTokenAsync(string refreshToken)
+        {
+            using var client = new HttpClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("client_id", ClientID),
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("refresh_token", refreshToken)
+            });
+
+            var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("access_token", out var tokenElem))
+            {
+                return new AccessTokenResponse
+                {
+                    accessToken = tokenElem.GetString() ?? "",
+                    refreshToken = doc.RootElement.GetProperty("refresh_token").GetString() ?? "",
+                    expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
+                };
+            }
+            return null;
+        }
+
+
         /// <summary>
         /// 配信者情報取得処理
         /// </summary>
