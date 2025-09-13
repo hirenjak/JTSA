@@ -73,7 +73,7 @@
                                                     <ColumnDefinition Width="1*"/>
                                                 </Grid.ColumnDefinitions>
                             
-                                                <TextBlock Grid.Column="0" x:Name="CurrentTitleTextBlock" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Background="DarkGray" Height="Auto" MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown"></TextBlock>
+                                                <TextBlock Grid.Column="0" x:Name="CurrentTitleTextBlock" TextWrapping="Wrap" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Background="DarkGray" Height="Auto" MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown"></TextBlock>
                             
                                                 <StackPanel Grid.Column="1" >
                                                     <Button Content="取得" Width="72" Height="28" Margin="0, 0, 0, 0" Click="GetTitleButton_Click"/>
@@ -186,7 +186,7 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Row="1" Grid.Column="0" Margin="0, 8, 0, 0">
-                                        <Label Content="検索欄" Foreground="White"/>
+                                        <Label Content="検索欄（※未実装）" Foreground="White"/>
                                         <TextBox Name="TotleTextTagSearchTextBox" TextChanged="TitleTagSearchTextBox_TextChanged" ></TextBox>
                                     </StackPanel>
 
@@ -258,7 +258,7 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Row="1" Grid.Column="2" Margin="0, 8, 0, 0">
-                                        <Label Content="検索欄" Foreground="White"/>
+                                        <Label Content="検索欄（※未実装）" Foreground="White"/>
                                         <TextBox Name="FriendSerchTextBox" ToolTip="検索欄" TextChanged="FriendSerchTextBox_TextChanged"></TextBox>
                                     </StackPanel>
 
@@ -322,7 +322,7 @@
 
                                     <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
                                         <Label Content="検索欄" Foreground="White"/>
-                                        <TextBox Name="CategorySerchTextBox" ToolTip="検索欄" TextChanged="CategoryTextBox_TextChanged"></TextBox>
+                                        <TextBox Name="CategorySerchTextBox" ToolTip="検索欄（※未実装）" TextChanged="CategoryTextBox_TextChanged"></TextBox>
                                     </StackPanel>
                 
                                     <Grid Height="Auto" Grid.Row="2">
@@ -390,7 +390,7 @@
                                     </Grid.RowDefinitions>
 
                                     <StackPanel Grid.Row="0" Grid.Column="2" Margin="0, 8, 0, 0">
-                                        <Label Content="検索欄" Foreground="White"/>
+                                        <Label Content="検索欄（※未実装）" Foreground="White"/>
                                         <TextBox Name="SaveTitleSerchTextBox" ToolTip="検索欄" TextChanged="SaveTitleTextBox_TextChanged"></TextBox>
                                     </StackPanel>
 
@@ -448,7 +448,7 @@
                                     </Grid.RowDefinitions>
 
                                     <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-                                        <Label Content="検索欄" Foreground="White"/>
+                                        <Label Content="検索欄（※未実装）" Foreground="White"/>
                                         <TextBox Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTitleSerchTextBox_TextChanged"/>
                                     </StackPanel>
 
