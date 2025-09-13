@@ -38,11 +38,10 @@
                 <Label Grid.Column="0" Grid.Row="1" Foreground="White" VerticalAlignment="Center" Content="AccessToken"/>
                 <TextBox Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox" Width="Auto" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="0, 0, 0, 0" Background="White" Height="18" ></TextBox>
                 <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" Width="Auto" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="0, 0, 0, 0" Background="DarkGray" Height="18" ></TextBlock>
-
             </Grid>
         </Grid>
         
-        <TabControl Grid.Row="1" Width="Auto"  Background="#FF404040" >
+        <TabControl Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" >
             <TabItem Header="配信概要設定">
                 <Grid >
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
