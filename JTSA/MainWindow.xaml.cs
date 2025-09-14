@@ -735,9 +735,9 @@ namespace JTSA
             editTitleTextForm.Content = TitleEditTextBox.Text;
         }
 
-        private void TokenCodeCopyButton_Click(object sender, RoutedEventArgs e)
-        {
-            Utility.CopyClipBoad(LoadPanelSubTextBox.Text);
-        }
+		private void TokenCodeCopyButton_Click(object sender, RoutedEventArgs e)
+		{
+			Utility.CopyClipBoad(LoadPanelSubTextBox.Text);
+		}
     }
 }

@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
     <BaseOutputPath>bin\</BaseOutputPath>
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -23,6 +24,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="9.0.9" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
   <ItemGroup>
