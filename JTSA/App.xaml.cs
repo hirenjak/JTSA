@@ -7,6 +7,15 @@ namespace JTSA
 {
     public partial class App : Application
     {
+        [STAThread]
+        public static void Main(string[] args)
+        {
+            VelopackApp.Build().Run();   // ← ここが一番最初
+            var app = new App();
+            app.InitializeComponent();    // StartupUri があればここで反映
+            app.Run();
+        }
+
         protected override async void OnStartup(StartupEventArgs e)
         {
             await UpdateCheck();

@@ -8,12 +8,21 @@
     <UseWPF>true</UseWPF>
     <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
     <BaseOutputPath>bin\</BaseOutputPath>
-    <StartupObject></StartupObject>
+	<GenerateApplicationDefinition>false</GenerateApplicationDefinition>
+	<StartupObject>JTSA.App</StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>none</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+	  <ApplicationDefinition Remove="App.xaml" />
+	  <Page Include="App.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		  <SubType>Designer</SubType>
+	  </Page>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Costura.Fody" Version="6.0.0">
