@@ -12,9 +12,6 @@ namespace JTSA.Panels
     {
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
-        /// <summary>  </summary>
-        public ObservableCollection<FriendTagForm> FriendFormList { get; } = new();
-
         public FriendSidePanel()
         {
             InitializeComponent();
@@ -122,7 +119,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            FriendFormList.Clear();
+            mainWindow.FriendFormList.Clear();
 
             // データの取得
             var records = M_Friend.SelectAllOrderbyLastUser(db);
@@ -130,7 +127,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                FriendFormList.Add(new()
+                mainWindow.FriendFormList.Add(new()
                 {
                     BroadcastId = item.BroadcastId,
                     UserId = item.UserId,

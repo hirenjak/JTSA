@@ -11,9 +11,6 @@ namespace JTSA.Panels
 
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
-        /// <summary>  </summary>
-        public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
-
         /// <summary>
         /// リストボックスアイテム選択時
         /// </summary>
@@ -100,7 +97,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            TitleTagFormList.Clear();
+            mainWindow.TitleTagFormList.Clear();
 
             // データの取得
             var records = M_TitleTag.SelectAllOrderbyLastUser(db);
@@ -108,7 +105,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                TitleTagFormList.Add(new()
+                mainWindow.TitleTagFormList.Add(new()
                 {
                     Id = item.Id,
                     DisplayName = item.DisplayName,

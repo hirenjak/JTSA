@@ -22,7 +22,7 @@
 
                 <Label Grid.Row="0" Content="※クリックするとタイトル編集と選択カテゴリを変更" Foreground="White"/>
 
-                <ListBox ItemsSource="{Binding SaveTitleTextFormList}" Grid.Row="1" Background="#FF404040"
+                <ListBox ItemsSource="{Binding Panels.SaveTitleTextFormList}" Grid.Row="1" Background="#FF404040"
                 x:Name="SaveTitleListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectionChanged="SaveTitleListBox_SelectionChanged">

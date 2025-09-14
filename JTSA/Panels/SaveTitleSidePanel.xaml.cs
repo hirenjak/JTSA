@@ -9,9 +9,6 @@ namespace JTSA.Panels
     {
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
-        /// <summary>  </summary>
-        public ObservableCollection<TitleTextForm> SaveTitleTextFormList { get; } = new();
-
         public SaveTitleSidePanel()
         {
             InitializeComponent();
@@ -77,7 +74,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            SaveTitleTextFormList.Clear();
+            mainWindow.SaveTitleTextFormList.Clear();
 
             // データの取得
             var records = M_TitleText.SelectSaveDataOrderbyLastUser();
@@ -85,7 +82,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                SaveTitleTextFormList.Add(new()
+                mainWindow.SaveTitleTextFormList.Add(new()
                 {
                     CategoryId = item.CategoryId,
                     Id = item.Id,

@@ -63,7 +63,6 @@
                             <!-- メインUI（今までのDockPanelやStackPanelなど） -->
                             <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560" Width="Auto">
                                 <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    
 
                                     <StackPanel Orientation="Vertical" Margin="0, 0, 0, 0" Width="Auto">
                                         <StackPanel Margin="0, 0, 0, 0" >

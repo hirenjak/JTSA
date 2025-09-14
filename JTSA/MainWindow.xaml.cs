@@ -16,6 +16,21 @@ namespace JTSA
         /// <summary>  </summary>
         public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
+        /// <summary>  </summary>
+        public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
+
+        /// <summary>  </summary>
+        public ObservableCollection<CategoryForm> SearchCategoryFormList { get; } = new();
+
+        /// <summary>  </summary>
+        public ObservableCollection<FriendTagForm> FriendFormList { get; } = new();
+
+        /// <summary>  </summary>
+        public ObservableCollection<TitleTextForm> SaveTitleTextFormList { get; } = new();
+
+        /// <summary>  </summary>
+        public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
+
         public EditTitleTextForm editTitleTextForm;
 
         /// <summary>
@@ -135,10 +150,17 @@ namespace JTSA
                 return;
             }
 
-            if (!String.IsNullOrEmpty(TwitchHelper.AccessToken))
+            bool isExistAccessToken =!String.IsNullOrEmpty(TwitchHelper.AccessToken);
+
+            if (isExistAccessToken)
             {
+                StatusTextBlock.Text = "アクセストークンを取得";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+                AccessToken_TextBlock.Text = "OK!";
+
                 // タイトル取得処理
-                await TwitchHelper.GetTwitchTitle();
+                CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? "";
+
                 await WaitForTargetStringAsync(CurrentTitleTextBlock.Text);
                 TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
@@ -158,6 +180,12 @@ namespace JTSA
                 CategorySidePanel.ReloadCategory();
 
                 SetEditTitleTextForm();
+            }
+            else
+            {
+                StatusTextBlock.Text = "アクセストークンの取得に失敗";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                AccessToken_TextBlock.Text = "NG";
             }
 
             // リスト読み込み処理
@@ -435,16 +463,15 @@ namespace JTSA
             var title = await TwitchHelper.GetTwitchTitle();
             if (string.IsNullOrEmpty(title))
             {
-
+                StatusTextBlock.Text = "配信概要に失敗しました。：";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+            }
+            else
+            {
                 CurrentTitleTextBlock.Text = title;
 
                 StatusTextBlock.Text = "配信概要を取得しました。";
                 StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-            }
-            else
-            {
-                StatusTextBlock.Text = "配信概要に失敗しました。：";
-                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
             }
         }
 

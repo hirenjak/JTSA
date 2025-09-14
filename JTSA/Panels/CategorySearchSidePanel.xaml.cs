@@ -8,10 +8,6 @@ namespace JTSA.Panels
     {
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
-        /// <summary>  </summary>
-        public ObservableCollection<CategoryForm> SearchCategoryFormList { get; } = new();
-
-
         private System.Windows.Threading.DispatcherTimer categorySearchDebounceTimer;
         private string lastCategorySearchText = "";
 
@@ -74,7 +70,7 @@ namespace JTSA.Panels
         private async void ReloadSearchCategory(String searchText)
         {
             // 初期化処理
-            SearchCategoryFormList.Clear();
+            mainWindow.SearchCategoryFormList.Clear();
 
             // データの取得
             var results = await TwitchHelper.SearchCategoriesByGameNameAsync(searchText);
@@ -82,7 +78,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in results)
             {
-                SearchCategoryFormList.Add(new()
+                mainWindow.SearchCategoryFormList.Add(new()
                 {
                     CategoryId = item.Id,
                     DisplayName = item.Name,

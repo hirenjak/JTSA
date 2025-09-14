@@ -9,9 +9,6 @@ namespace JTSA.Panels
     {
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
-        /// <summary>  </summary>
-        public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
-
         public CategorySidePanel()
         {
             InitializeComponent();
@@ -70,7 +67,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            CategoryFormList.Clear();
+            mainWindow.CategoryFormList.Clear();
 
             // データの取得
             var records = M_Category.SelectAllOrderbyLastUser(db);
@@ -78,7 +75,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                CategoryFormList.Add(new()
+                mainWindow.CategoryFormList.Add(new()
                 {
                     CategoryId = item.CategoryId,
                     DisplayName = item.DisplayName,
