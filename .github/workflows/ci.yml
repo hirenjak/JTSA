@@ -1,0 +1,39 @@
+name: Build & Release (Velopack)
+
+on:
+  push:
+    tags:
+      - 'v*'   # 例: v1.0.0 を push したら動く
+
+permissions:
+  contents: write  # Releases へアップするのに必要
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish app
+        run: dotnet publish JTSA/JTSA.csproj -c Release -r win-x64 -o publish --self-contained true
+
+      - name: Install vpk
+        run: dotnet tool install -g vpk
+
+      - name: Pack with Velopack
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v','V')  # v1.0.0 → 1.0.0
+          vpk pack --packId JTSA --packVersion $ver --packDir publish --mainExe JTSA.exe --outputDir Releases
+
+      - name: Upload to GitHub Releases
+        run: >
+          vpk upload github
+          --repoUrl https://github.com/${{ github.repository }}
+          --publish
+          --releaseName "JTSA ${{ github.ref_name }}"
+          --tag ${{ github.ref_name }}
+          --token ${{ secrets.GITHUB_TOKEN }}
