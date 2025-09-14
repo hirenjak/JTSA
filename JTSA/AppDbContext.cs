@@ -4,8 +4,7 @@ namespace JTSA.Models
 {
     public class AppDbContext : DbContext
     {
-        String oldDBName = "app.db";
-        String newDBName = "JTSAv03.db";
+        String DBName = "JTSA.db";
 
         public DbSet<M_TitleText> M_TitleTextList { get; set; }
         public DbSet<M_Category> M_CategoryList { get; set; }
@@ -14,6 +13,6 @@ namespace JTSA.Models
         public DbSet<M_TitleTag> M_TitleTagList { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
-            => options.UseSqlite($"Data Source={newDBName}");
+            => options.UseSqlite($"Data Source={DBName}");
     }
 }
