@@ -360,5 +360,36 @@ namespace JTSA
             }
             return list;
         }
+
+
+        /// <summary>
+        /// タイトルの取得
+        /// API：https://api.twitch.tv/helix/channels?broadcaster_id=
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public static async Task<string?> GetTwitchTitle()
+        {
+            using var client = new HttpClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
+
+            // TwitchAPIから配信タイトルを取得
+            var response = await client.GetAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}");
+
+            // レスポンスの処理
+            if (response.IsSuccessStatusCode)
+            { // 200 OK
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var title = doc.RootElement.GetProperty("data")[0].GetProperty("title").GetString();
+
+                return title;
+            }
+
+            return null;
+        }
     }
 }
