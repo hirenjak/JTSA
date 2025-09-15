@@ -8,7 +8,7 @@ using System.Windows.Controls;
 namespace JTSA.Panels
 {
     /// <summary>
-    /// AppArrangePanel.xaml の相互作用ロジック
+    /// 配信時アプリ配置パネル
     /// </summary>
     public partial class AppArrangePanel : UserControl
     {

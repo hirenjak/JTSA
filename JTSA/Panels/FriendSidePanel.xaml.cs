@@ -6,14 +6,24 @@ using System.Windows.Controls;
 namespace JTSA.Panels
 {
     /// <summary>
-    /// FriendSidePanel.xaml の相互作用ロジック
+    /// 登録フレンド管理パネル
     /// </summary>
     public partial class FriendSidePanel : UserControl
     {
+        /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
+        /// <summary>  </summary>
+        public ObservableCollection<FriendTagForm> FriendFormList { get; } = new();
+
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         public FriendSidePanel()
         {
+            DataContext = this;
+
             InitializeComponent();
         }
 
@@ -119,7 +129,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            mainWindow.FriendFormList.Clear();
+            FriendFormList.Clear();
 
             // データの取得
             var records = M_Friend.SelectAllOrderbyLastUser(db);
@@ -127,7 +137,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                mainWindow.FriendFormList.Add(new()
+                FriendFormList.Add(new()
                 {
                     BroadcastId = item.BroadcastId,
                     UserId = item.UserId,

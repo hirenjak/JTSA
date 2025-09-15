@@ -17,22 +17,8 @@ namespace JTSA
 		/// <summary>  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
-		/// <summary>  </summary>
-		public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
-
-		/// <summary>  </summary>
-		public ObservableCollection<CategoryForm> SearchCategoryFormList { get; } = new();
-
-		/// <summary>  </summary>
-		public ObservableCollection<FriendTagForm> FriendFormList { get; } = new();
-
-		/// <summary>  </summary>
-		public ObservableCollection<TitleTextForm> SaveTitleTextFormList { get; } = new();
-
-		/// <summary>  </summary>
-		public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
-
 		public EditTitleTextForm editTitleTextForm;
+
 
 		/// <summary>
 		/// コンストラクタ

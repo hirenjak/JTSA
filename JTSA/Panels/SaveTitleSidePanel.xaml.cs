@@ -5,12 +5,25 @@ using System.Windows.Controls;
 
 namespace JTSA.Panels
 {
+    /// <summary>
+    /// 保存タイトルテキスト管理パネル
+    /// </summary>
     public partial class SaveTitleSidePanel : UserControl
     {
+        /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
+        /// <summary>  </summary>
+        public ObservableCollection<TitleTextForm> SaveTitleTextFormList { get; } = new();
+
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         public SaveTitleSidePanel()
         {
+            DataContext = this;
+            
             InitializeComponent();
         }
 

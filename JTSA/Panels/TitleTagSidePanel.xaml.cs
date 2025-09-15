@@ -5,11 +5,28 @@ using System.Windows.Controls;
 
 namespace JTSA.Panels
 {
+    /// <summary>
+    /// タイトルテキストタグ管理パネル
+    /// </summary>
     public partial class TitleTagSidePanel : UserControl
     {
-        public TitleTagSidePanel() => InitializeComponent();
-
+        /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+
+        /// <summary>  </summary>
+        public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
+
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public TitleTagSidePanel()
+        {
+            DataContext = this;
+
+            InitializeComponent();
+        }
+
 
         /// <summary>
         /// リストボックスアイテム選択時

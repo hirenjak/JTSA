@@ -5,12 +5,25 @@ using System.Windows.Controls;
 
 namespace JTSA.Panels
 {
+    /// <summary>
+    /// 登録カテゴリ管理パネル
+    /// </summary>
     public partial class CategorySidePanel : UserControl
     {
+        /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
+        /// <summary>  </summary>
+        public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
+
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         public CategorySidePanel()
         {
+            DataContext = this;
+
             InitializeComponent();
         }
 
@@ -67,7 +80,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            mainWindow.CategoryFormList.Clear();
+            CategoryFormList.Clear();
 
             // データの取得
             var records = M_Category.SelectAllOrderbyLastUser(db);
@@ -75,7 +88,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                mainWindow.CategoryFormList.Add(new()
+                CategoryFormList.Add(new()
                 {
                     CategoryId = item.CategoryId,
                     DisplayName = item.DisplayName,
