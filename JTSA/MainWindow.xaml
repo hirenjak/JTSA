@@ -25,12 +25,13 @@
                 <TextBlock Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Height="Auto" Width="Auto" x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Left"/>
             </StackPanel>
 
-            <Grid Grid.Row="1" Margin="8, -2, 0, 0" Width="Auto">
+            <Grid Grid.Row="1" Margin="8, -2, 9, 0" Width="Auto">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -44,6 +45,7 @@
                 <Button Grid.Column="2" Grid.Row="0" Content="アプリ起動" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="StreamAppAllStart"/>
                 <Button Grid.Column="2" Grid.Row="1" Content="アプリ停止" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="StreamAppAllStop"/>
                 <Button Grid.Column="3" Grid.Row="0" Content="画面配置" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="StreamAppAllMove"/>
+                <Button Grid.Column="4" Grid.Row="0" Content="DBフォルダ" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" HorizontalAlignment="Right" Click="DBFolderOpen"/>
             </Grid>
         </Grid>
         

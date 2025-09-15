@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.IO;
 
 namespace JTSA
 {
@@ -784,6 +785,25 @@ namespace JTSA
         private void StreamAppAllMove(object sender, RoutedEventArgs e)
         {
 			AppArrangePanel.RegistAppAllMove();
+        }
+
+        private void DBFolderOpen(object sender, RoutedEventArgs e)
+        {
+			OpenDbFolder();
+        }
+
+        // dbDirectoryをエクスプローラーで開くメソッド
+        private void OpenDbFolder()
+        {
+            string folder = AppDbContext.dbDirectory;
+            if (Directory.Exists(folder))
+            {
+                Process.Start("explorer.exe", folder);
+            }
+            else
+            {
+                MessageBox.Show("フォルダが存在しません: " + folder);
+            }
         }
     }
 }

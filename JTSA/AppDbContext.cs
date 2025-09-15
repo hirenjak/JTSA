@@ -5,7 +5,7 @@ namespace JTSA.Models
 {
     public class AppDbContext : DbContext
     {
-        String DBName = "JTSA.db";
+        public static String dbDirectory;
 
         public DbSet<M_TitleText> M_TitleTextList { get; set; }
         public DbSet<M_Category> M_CategoryList { get; set; }
@@ -16,8 +16,10 @@ namespace JTSA.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // 実行ファイルのディレクトリ + userdata/JTSA.db
-            var dbDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "userdata");
+            // AppData\Roaming\JTSA\userdata\JTSA.db
+            dbDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), // Roaming
+                "JTSA", "userdata");
             Directory.CreateDirectory(dbDirectory); // フォルダがなければ作成
             var dbPath = Path.Combine(dbDirectory, "JTSA.db");
 
