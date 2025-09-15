@@ -188,8 +188,9 @@
 
                     <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
+                            <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
                             <StackPanel Name="LoadSubPanel" Visibility="Visible">
+                                <TextBlock HorizontalAlignment="Center" Foreground="White" FontSize="20" Text="※アプリ左上のUserNameにあなたのTwitchユーザーIDを入れてから認証してください"/>
                                 <TextBlock HorizontalAlignment="Center" Foreground="White" FontSize="20" Text="以下の認証コードを画面に入力してください"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                     <TextBox x:Name="LoadPanelSubTextBox" Foreground="White" FontSize="20" Background="#FF4A4747" BorderBrush="White" TextAlignment="Center" IsReadOnly="True" Width="200" Height="Auto"></TextBox>
