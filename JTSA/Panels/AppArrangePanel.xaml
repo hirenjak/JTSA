@@ -30,6 +30,7 @@
                 <StackPanel HorizontalAlignment="Left">
                     <TextBlock Text="登録中アプリ一覧" Foreground="White" FontSize="14"></TextBlock>
                     <TextBlock Text="※クリックで停止アプリは起動、起動アプリは登録位置に移動" Foreground="White" FontSize="12"></TextBlock>
+                    <TextBlock Text="※管理者権限でないと動かないものもあるので注意" Foreground="White" FontSize="12"></TextBlock>
                 </StackPanel>
             </Grid>
 
