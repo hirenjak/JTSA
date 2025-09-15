@@ -57,7 +57,7 @@ namespace JTSA
             public required string verification_uri { get; set; }
             public int expires_in { get; set; }
             public int interval { get; set; }
-            public required string verification_uri_complete { get; set; }
+            public string verification_uri_complete { get; set; }
         }
 
 
@@ -84,15 +84,7 @@ namespace JTSA
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
 
-            return JsonSerializer.Deserialize<DeviceCodeResponse>(json) ?? new()
-            {
-                device_code = "",
-                user_code = "",
-                verification_uri = "",
-                expires_in = 0,
-                interval = 0,
-                verification_uri_complete = ""
-            };
+            return JsonSerializer.Deserialize<DeviceCodeResponse>(json);
         }
 
 
