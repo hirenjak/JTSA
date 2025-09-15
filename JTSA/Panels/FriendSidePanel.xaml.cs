@@ -115,7 +115,7 @@ namespace JTSA.Panels
             };
 
             // 挿入処理
-            M_Friend.Insert(db, isnertData);
+            M_Friend.Insert(isnertData);
 
             // 再読み込み処理
             ReloadFriend();
@@ -132,7 +132,7 @@ namespace JTSA.Panels
             FriendFormList.Clear();
 
             // データの取得
-            var records = M_Friend.SelectAllOrderbyLastUser(db);
+            var records = M_Friend.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)

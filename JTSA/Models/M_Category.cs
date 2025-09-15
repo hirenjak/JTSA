@@ -1,16 +1,14 @@
 using JTSA.Models;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 public class M_Category
 {
     [Key]
-    public required String CategoryId { get; set; }
+    public required string CategoryId { get; set; }
 
-    public required String DisplayName { get; set; }
+    public required string DisplayName { get; set; }
 
-    public required String BoxArtUrl { get; set; }
+    public required string BoxArtUrl { get; set; }
 
     public int CountSelected { get; set; }
 
@@ -30,8 +28,10 @@ public class M_Category
     /// </summary>
     /// <param name="db"></param>
     /// <returns></returns>
-    public static List<M_Category> SelectAllOrderbyLastUser(AppDbContext db)
+    public static List<M_Category> SelectAllOrderbyLastUser()
     {
+        using var db = new AppDbContext();
+
         List<M_Category> results = new();
 
         foreach (var record in db.M_CategoryList.OrderByDescending(x => x.LastUseDateTime))
@@ -55,13 +55,28 @@ public class M_Category
 
 
     /// <summary>
+    /// SELECT * FROM M_TitleText ORDER BY Id DESC
+    /// </summary>
+    /// <param name="db"></param>
+    /// <returns></returns>
+    public static M_Category SelectOneByCategoryId(string categoryId)
+    {
+        using var db = new AppDbContext();
+
+        return db.M_CategoryList.Single(x => x.CategoryId == categoryId);
+    }
+
+
+    /// <summary>
     /// Insert
     /// </summary>
     /// <param name="db"></param>
     /// <param name="insertData"></param>
     /// <returns>true：登録成功 false：既にデータがある</returns>
-    public static bool Insert(AppDbContext db, M_Category insertData)
+    public static bool Insert(M_Category insertData)
     {
+        using var db = new AppDbContext();
+
         db.M_CategoryList.Add(insertData);
 
         if(db.M_CategoryList.SingleOrDefault(x => x.CategoryId == insertData.CategoryId) == null)
@@ -76,10 +91,47 @@ public class M_Category
 
 
     /// <summary>
+    /// Update
+    /// </summary>
+    /// <param name="db"></param>
+    /// <param name="insertData"></param>
+    /// <returns></returns>
+    public static bool Update(M_Category updateData)
+    {
+        using var db = new AppDbContext();
+
+        var targetRecord = SelectOneByCategoryId(updateData.CategoryId);
+
+        updateData.CreatedDateTime = targetRecord.CreatedDateTime;
+
+        db.M_CategoryList.Update(updateData);
+        int result = db.SaveChanges();
+
+        return result > 0 ? true : false;
+    }
+
+
+    /// <summary>
+    /// Update：最終使用
+    /// </summary>
+    /// <param name="categoryId"></param>
+    /// <returns></returns>
+    public static bool UpdateLastUse(string categoryId)
+    {
+        var targetRecord = SelectOneByCategoryId(categoryId);
+
+        targetRecord.CountSelected += 1;
+        targetRecord.LastUseDateTime = DateTime.Now;
+
+        return Update(targetRecord);
+    }
+
+
+    /// <summary>
     /// Delete
     /// </summary>
     /// <param name="id"></param>
-    public static void Delete(String categoryId)
+    public static void Delete(string categoryId)
     {
         using var db = new AppDbContext();
         var entity = db.M_CategoryList.FirstOrDefault(x => x.CategoryId == categoryId);

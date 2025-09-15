@@ -117,7 +117,7 @@ namespace JTSA.Panels
             TitleTagFormList.Clear();
 
             // データの取得
-            var records = M_TitleTag.SelectAllOrderbyLastUser(db);
+            var records = M_TitleTag.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)

@@ -1,9 +1,6 @@
-using JTSA;
 using JTSA.Models;
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
 
 public class M_TitleText
 {
@@ -11,11 +8,11 @@ public class M_TitleText
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
-    public required String Content { get; set; }
+    public required string Content { get; set; }
 
-    public required String CategoryId { get; set; }
+    public required string CategoryId { get; set; }
 
-    public required String CategoryName { get; set; }
+    public required string CategoryName { get; set; }
 
     public int CountSelected { get; set; }
 
@@ -151,8 +148,9 @@ public class M_TitleText
         return result > 0 ? true : false;
     }
 
+
     /// <summary>
-    /// Insert
+    /// Update
     /// </summary>
     /// <param name="db"></param>
     /// <param name="insertData"></param>
@@ -161,10 +159,29 @@ public class M_TitleText
     {
         using var db = new AppDbContext();
 
+        var targetRecord = SelectOneById(updateData.Id);
+        updateData.CreatedDateTime = targetRecord.CreatedDateTime;
+
         db.M_TitleTextList.Update(updateData);
         int result = db.SaveChanges();
 
         return result > 0 ? true : false;
+    }
+
+
+    /// <summary>
+    /// Update：最終使用
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static bool UpdateLastUse(int id)
+    {
+        var targetRecord = SelectOneById(id);
+
+        targetRecord.CountSelected += 1;
+        targetRecord.LastUseDateTime = DateTime.Now;
+
+        return Update(targetRecord);
     }
 
 

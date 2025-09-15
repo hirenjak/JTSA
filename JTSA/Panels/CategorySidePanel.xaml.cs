@@ -83,7 +83,7 @@ namespace JTSA.Panels
             CategoryFormList.Clear();
 
             // データの取得
-            var records = M_Category.SelectAllOrderbyLastUser(db);
+            var records = M_Category.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)
@@ -129,7 +129,7 @@ namespace JTSA.Panels
             };
 
             // 挿入処理
-            mainWindow.DisplayLog(M_Category.Insert(db, isnertData),
+            mainWindow.DisplayLog(M_Category.Insert(isnertData),
                 "データを追加しました。",
                 "既にデータが存在します。"
             );

@@ -1,9 +1,5 @@
-using JTSA;
 using JTSA.Models;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
 
 public class M_StreamWindow
 {
@@ -90,6 +86,7 @@ public class M_StreamWindow
         return result > 0 ? true : false;
     }
 
+
     /// <summary>
     /// Insert
     /// </summary>
@@ -99,6 +96,10 @@ public class M_StreamWindow
     public static bool Update(M_StreamWindow updateData)
     {
         using var db = new AppDbContext();
+
+        var targetRecord = SelectOneById(updateData.ProcessName);
+
+        updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
         db.M_StreamWindowList.Update(updateData);
         int result = db.SaveChanges();

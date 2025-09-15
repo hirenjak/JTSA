@@ -1,13 +1,10 @@
 using JTSA.Models;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.IO.Packaging;
 
 public class M_Friend
 {
     [Key]
-    public required String BroadcastId { get; set; }
+    public required string BroadcastId { get; set; }
 
     public required string UserId { get; set; }
 
@@ -60,8 +57,10 @@ public class M_Friend
     /// </summary>
     /// <param name="db"></param>
     /// <returns></returns>
-    public static List<M_Friend> SelectAllOrderbyLastUser(AppDbContext db)
+    public static List<M_Friend> SelectAllOrderbyLastUser()
     {
+        using var db = new AppDbContext();
+
         List<M_Friend> results = new();
 
         foreach (var record in db.M_FriendList.OrderByDescending(x => x.LastUseDateTime))
@@ -83,14 +82,30 @@ public class M_Friend
         return results;
     }
 
+
+    /// <summary>
+    /// SELECT * FROM M_TitleText ORDER BY Id DESC
+    /// </summary>
+    /// <param name="db"></param>
+    /// <returns></returns>
+    public static M_Friend SelectOneByBroadcasterId(string broadcasterId)
+    {
+        using var db = new AppDbContext();
+
+        return db.M_FriendList.Single(x => x.BroadcastId == broadcasterId);
+    }
+
+
     /// <summary>
     /// Insert
     /// </summary>
     /// <param name="db"></param>
     /// <param name="insertData"></param>
     /// <returns></returns>
-    public static bool Insert(AppDbContext db, M_Friend insertData)
+    public static bool Insert(M_Friend insertData)
     {
+        using var db = new AppDbContext();
+
         if (!db.M_FriendList.Any(x => x.BroadcastId == insertData.BroadcastId))
         {
             db.M_FriendList.Add(insertData);
@@ -103,10 +118,46 @@ public class M_Friend
 
 
     /// <summary>
+    /// Update
+    /// </summary>
+    /// <param name="db"></param>
+    /// <param name="insertData"></param>
+    /// <returns></returns>
+    public static bool Update(M_Friend updateData)
+    {
+        using var db = new AppDbContext();
+
+        var targetRecord = SelectOneByBroadcasterId(updateData.BroadcastId);
+        updateData.CreatedDateTime = targetRecord.CreatedDateTime;
+
+        db.M_FriendList.Update(updateData);
+        int result = db.SaveChanges();
+
+        return result > 0 ? true : false;
+    }
+
+
+    /// <summary>
+    /// Update：最終使用
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    public static bool UpdateLastUse(string broadcastId)
+    {
+        var targetRecord = SelectOneByBroadcasterId(broadcastId);
+
+        targetRecord.CountSelected += 1;
+        targetRecord.LastUseDateTime = DateTime.Now;
+
+        return Update(targetRecord);
+    }
+
+
+    /// <summary>
     /// Delete
     /// </summary>
     /// <param name="id"></param>
-    public static void Delete(String broadcastId)
+    public static void Delete(string broadcastId)
     {
         using var db = new AppDbContext();
         var entity = db.M_FriendList.FirstOrDefault(x => x.BroadcastId == broadcastId);
