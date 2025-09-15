@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 
 namespace JTSA.Models
 {
@@ -13,7 +14,14 @@ namespace JTSA.Models
         public DbSet<M_TitleTag> M_TitleTagList { get; set; }
         public DbSet<M_StreamWindow> M_StreamWindowList { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder options)
-            => options.UseSqlite($"Data Source={DBName}");
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            // 実行ファイルのディレクトリ + userdata/JTSA.db
+            var dbDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "userdata");
+            Directory.CreateDirectory(dbDirectory); // フォルダがなければ作成
+            var dbPath = Path.Combine(dbDirectory, "JTSA.db");
+
+            optionsBuilder.UseSqlite($"Data Source={dbPath}");
+        }
     }
 }
