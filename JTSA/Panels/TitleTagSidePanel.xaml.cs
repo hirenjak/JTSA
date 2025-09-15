@@ -114,7 +114,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            mainWindow.TitleTagFormList.Clear();
+            TitleTagFormList.Clear();
 
             // データの取得
             var records = M_TitleTag.SelectAllOrderbyLastUser(db);
@@ -122,7 +122,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                mainWindow.TitleTagFormList.Add(new()
+                TitleTagFormList.Add(new()
                 {
                     Id = item.Id,
                     DisplayName = item.DisplayName,

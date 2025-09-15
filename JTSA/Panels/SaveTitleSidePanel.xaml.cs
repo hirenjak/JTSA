@@ -87,7 +87,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            mainWindow.SaveTitleTextFormList.Clear();
+            SaveTitleTextFormList.Clear();
 
             // データの取得
             var records = M_TitleText.SelectSaveDataOrderbyLastUser();
@@ -95,7 +95,7 @@ namespace JTSA.Panels
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
-                mainWindow.SaveTitleTextFormList.Add(new()
+                SaveTitleTextFormList.Add(new()
                 {
                     CategoryId = item.CategoryId,
                     Id = item.Id,
