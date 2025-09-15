@@ -7,7 +7,9 @@ public class M_StreamWindow
     public required string ProcessName { get; set; }
     
     public required string WindowTitle { get; set; }
-    
+
+    public required string AppExePath { get; set; }
+
     public int X { get; set; }
     
     public int Y { get; set; }
@@ -42,6 +44,7 @@ public class M_StreamWindow
             {
                 ProcessName = record.ProcessName,
                 WindowTitle = record.WindowTitle,
+                AppExePath = record.AppExePath,
                 X = record.X,
                 Y = record.Y,
                 Width = record.Width,

@@ -14,21 +14,35 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Background="#FF404040" >
-            <Button Name="RunAppButton" Content="アプリ読込" Click="RunAppButton_Click" ></Button>
-            <Button Name="RegisterAppAllSetButton" Content="全配置" Click="RegisterAppAllSetButton_Click"></Button>
-            <Button Name="RegisterAppButton" Content="アプリ選択（未実装）" Click="RegisterAppButton_Click" ></Button>
+            <Button Name="RunAppButton" Content="アプリ読込" Margin="4" Height="40" Click="RunAppButton_Click" ></Button>
+            <Button Name="RegisterAppAllSetButton" Content="アプリ一括配置" Margin="4" Height="40" Click="RegisterAppAllSetButton_Click"></Button>
+            <Button Name="RegisterAllAppStartButton" Content="アプリ一括起動" Margin="4" Height="40" Click="RegisterAllAppStartButton_Click" ></Button>
+            <Button Name="RegisterAllAppStopButton" Content="アプリ一括停止" Margin="4" Height="40" Click="RegisterAllAppStopButton_Click" ></Button>
+            <Button Name="RegisterAppButton" Content="アプリ選択（未実装）" Margin="4" Height="40" Click="RegisterAppButton_Click" ></Button>
         </StackPanel>
 
         <ListBox ItemsSource="{Binding RegistAppList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                 x:Name="RegistAppListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                SelectionChanged="RegistAppListBox_SelectionChanged">
+                SelectionChanged="RegistAppListBox_SelectionChanged" PreviewMouseDown="RegistAppListBox_PreviewMouseDown">
 
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel>
                         <StackPanel Margin="8, 0, 8, 0">
-                            <TextBlock Text="{Binding ProcessName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                            <Grid >
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="【 " Foreground="White" FontSize="16" ></TextBlock>
+                                    <TextBlock Text="{Binding Status}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" ></TextBlock>
+                                    <TextBlock Text=" 】 " Foreground="White" FontSize="16" ></TextBlock>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ProcessName}" Grid.Column="1" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                            </Grid>
                             <TextBlock Text="{Binding WindowTitle}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
 
                             <Grid Margin="0" Height="Auto">
@@ -72,8 +86,18 @@
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
-                                <Button x:Name="RegistAppResetButton" Grid.Column="1" Content="再設定" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" Click="RegistAppResetButton_Click"/>
-                                <Button x:Name="RegistAppDeleteButton" Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" Click="RegistAppDeleteButton_Click"/>
+                            </Grid>
+                            <Grid Margin="0" Height="Auto">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="RegistAppStopButton" Grid.Column="0" Content="停止" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Left"  Click="RegistAppStopButton_Click"/>
+                                <Button x:Name="RegistAppExePathResetButton" Grid.Column="1" Content="Path設定" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="RegistAppExePathResetButton_Click"/>
+                                <Button x:Name="RegistAppResetButton" Grid.Column="2" Content="再設定" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="RegistAppResetButton_Click"/>
+                                <Button x:Name="RegistAppDeleteButton" Grid.Column="3" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="RegistAppDeleteButton_Click"/>
                             </Grid>
                         </StackPanel>
 
@@ -86,7 +110,7 @@
 
         <ListBox ItemsSource="{Binding RunAppList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="2" Background="#FF404040" 
                 x:Name="RunAppListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="RunAppListBox_SelectionChanged">
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="RunAppListBox_SelectionChanged" PreviewMouseDown="RunAppListBox_PreviewMouseDown">
 
             <ListBox.ItemTemplate>
                 <DataTemplate>

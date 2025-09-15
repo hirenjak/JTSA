@@ -1,9 +1,12 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace JTSA.Panels
 {
@@ -26,6 +29,8 @@ namespace JTSA.Panels
         private bool isWaitingForAppClick = false;
         private System.Windows.Threading.DispatcherTimer mouseHookTimer;
 
+        // タイマー用フィールドを追加
+        private DispatcherTimer statusUpdateTimer;
 
         /// <summary>
         /// コンストラクタ
@@ -37,6 +42,12 @@ namespace JTSA.Panels
             DataContext = this;
 
             ReloadRegistAppList();
+
+            // タイマー初期化（例：5秒ごとに更新）
+            statusUpdateTimer = new DispatcherTimer();
+            statusUpdateTimer.Interval = TimeSpan.FromSeconds(1);
+            statusUpdateTimer.Tick += StatusUpdateTimer_Tick;
+            statusUpdateTimer.Start();
         }
 
 
@@ -107,11 +118,74 @@ namespace JTSA.Panels
                 {
                     ProcessName = record.ProcessName,
                     WindowTitle = record.WindowTitle,
+                    AppExePath = record.AppExePath,
                     X = record.X,
                     Y = record.Y,
                     Width = record.Width,
                     Height = record.Height
                 });
+            }
+
+            UpdateRegistAppStatus();
+        }
+
+
+        /// <summary>
+        /// タイマーTickイベントで状態更新
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void StatusUpdateTimer_Tick(object? sender, EventArgs e)
+        {
+            UpdateRegistAppStatus();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void UpdateRegistAppStatus()
+        {
+            foreach (var app in RegistAppList)
+            {
+                var procs = Process.GetProcessesByName(app.ProcessName);
+                if (procs.Length == 0)
+                {
+                    app.Status = "停止";
+                    app.OldStatus = "停止";
+                }
+                else
+                {
+                    // ウィンドウハンドルが有効かどうかで判定
+                    var proc = procs.FirstOrDefault(p => p.MainWindowTitle == app.WindowTitle);
+                    if (proc == null)
+                    {
+                        if (app.OldStatus == "起動中")
+                        {
+                            app.Status = "停止途中";
+                        }
+                        else
+                        {
+                            app.Status = "起動途中";
+                        }
+                    }
+                    else if (proc.MainWindowHandle != IntPtr.Zero)
+                    {
+                        app.Status = "起動中";
+                        app.OldStatus = "起動中";
+                    }
+                    else
+                    {
+                        if (app.OldStatus == "起動中")
+                        {
+                            app.Status = "停止途中";
+                        }
+                        else
+                        {
+                            app.Status = "起動途中";
+                        }
+                    }
+                }
             }
         }
 
@@ -233,10 +307,51 @@ namespace JTSA.Panels
         {
             if (RegistAppListBox.SelectedItem is AppInfoForm app)
             {
-                if (!Win32Helper.SetAppWindowRect(app))
+                // 停止状態なら起動
+                if (app.Status == "停止" && !string.IsNullOrEmpty(app.AppExePath))
                 {
-                    mainWindow.StatusTextBlock.Text = "移動失敗：対象が起動中か、権限/タイトル一致をご確認ください。";
+                    mainWindow.DisplayLog(RegistListRunStart(app.AppExePath),
+                        $"アプリを起動しました：{app.ProcessName}",
+                        $"起動失敗"
+                    );
                 }
+                else
+                {
+                    // ウィンドウ移動処理
+                    mainWindow.DisplayLog(Win32Helper.SetAppWindowRect(app),
+                        $"アプリを移動しました：{app.ProcessName}",
+                        $"移動失敗：対象が起動中か、権限/タイトル一致をご確認ください。"
+                    );
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="exePath"></param>
+        private bool RegistListRunStart(string exePath)
+        {
+            try
+            {
+                string obsExe = exePath; // 実環境のパスに
+                var psi = new ProcessStartInfo
+                {
+                    FileName = obsExe,
+                    WorkingDirectory = Path.GetDirectoryName(obsExe), // ★これが重要
+                    UseShellExecute = false,                          // true でもよいが下記注意
+                                                                        // 例: 引数を付けたい場合
+                    Arguments = "--multi --startvirtualcam"           // 任意
+                };
+
+                Process.Start(psi);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
             }
         }
 
@@ -298,11 +413,15 @@ namespace JTSA.Panels
             {
                 var rect = GetAppWindowRect(run.ProcessName);
 
+                var proc = Process.GetProcessesByName(run.ProcessName).FirstOrDefault();
+                string exePath = proc.MainModule.FileName;
+
                 M_StreamWindow.Insert(
                     new M_StreamWindow
                     {
                         ProcessName = run.ProcessName,
                         WindowTitle = run.WindowTitle,
+                        AppExePath = exePath,
                         X = (int)rect?.X,
                         Y = (int)rect?.Y,
                         Width = (int)rect?.Width,
@@ -313,7 +432,32 @@ namespace JTSA.Panels
                 );
             }
 
+            // 選択状態を解除
+            RunAppListBox.SelectedIndex = -1;
+
             ReloadRegistAppList();
+        }
+
+
+        /// <summary>
+        /// リストボックスアイテムクリック時
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void RunAppListBox_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // クリックされたアイテムを取得
+            var listBox = sender as ListBox;
+            if (listBox == null) return;
+
+            var item = ItemsControl.ContainerFromElement(listBox, e.OriginalSource as DependencyObject) as ListBoxItem;
+            if (item == null) return;
+
+            // すでに選択されている場合は一度選択解除
+            if (item != null && item.IsSelected)
+            {
+                listBox.SelectedIndex = -1;
+            }
         }
 
 
@@ -334,6 +478,7 @@ namespace JTSA.Panels
                     {
                         ProcessName = item.ProcessName,
                         WindowTitle = item.WindowTitle,
+                        AppExePath = item.AppExePath,
                         X = (int)rect?.X,
                         Y = (int)rect?.Y,
                         Width = (int)rect?.Width,
@@ -346,7 +491,32 @@ namespace JTSA.Panels
                 }
             }
 
+            // 選択状態を解除
+            RunAppListBox.SelectedIndex = -1;
+
             ReloadRegistAppList();
+        }
+
+
+        /// <summary>
+        /// リストボックスアイテムクリック時
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void RegistAppListBox_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // クリックされたアイテムを取得
+            var listBox = sender as ListBox;
+            if (listBox == null) return;
+
+            var item = ItemsControl.ContainerFromElement(listBox, e.OriginalSource as DependencyObject) as ListBoxItem;
+            if (item == null) return;
+
+            // すでに選択されている場合は一度選択解除
+            if (item != null && item.IsSelected)
+            {
+                listBox.SelectedIndex = -1;
+            }
         }
 
 
@@ -364,6 +534,139 @@ namespace JTSA.Panels
                     mainWindow.StatusTextBlock.Text = "移動失敗：対象が起動中か、権限/タイトル一致をご確認ください。";
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void RegistAppStopButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.DataContext is AppInfoForm item)
+            {
+                RegistAppStop(item);
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="target"></param>
+        private void RegistAppStop(AppInfoForm target)
+        {
+            // 起動中のみ停止可能
+            if (target.Status == "起動中")
+            {
+                try
+                {
+                    // プロセス名とウィンドウタイトルで該当プロセスを特定
+                    var procs = Process.GetProcessesByName(target.ProcessName);
+                    foreach (var proc in procs)
+                    {
+                        if (proc.MainWindowTitle == target.WindowTitle)
+                        {
+                            proc.Kill();
+                            mainWindow.StatusTextBlock.Text = $"アプリを停止しました: {target.ProcessName}";
+                            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+                            return;
+                        }
+                    }
+                    mainWindow.StatusTextBlock.Text = "該当プロセスが見つかりませんでした。";
+                    mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                }
+                catch (Exception ex)
+                {
+                    mainWindow.StatusTextBlock.Text = $"停止失敗: {ex.Message}";
+                    mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                }
+            }
+            else
+            {
+                mainWindow.StatusTextBlock.Text = "アプリが起動中でないため停止できません。";
+                mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+            }
+        }
+
+
+        private void RegistAppExePathResetButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.DataContext is AppInfoForm item)
+            {
+                var dialog = new OpenFileDialog();
+                dialog.Filter = "実行ファイル (*.exe)|*.exe";
+                dialog.Title = "アプリの実行ファイルを選択してください";
+
+                // 既に設定済みなら初期表示をその場所に
+                if (!string.IsNullOrEmpty(item.AppExePath))
+                {
+                    try
+                    {
+                        dialog.InitialDirectory = System.IO.Path.GetDirectoryName(item.AppExePath);
+                        dialog.FileName = System.IO.Path.GetFileName(item.AppExePath);
+                    }
+                    catch { /* パスが不正な場合は無視 */ }
+                }
+
+                if (dialog.ShowDialog() == true)
+                {
+                    item.AppExePath = dialog.FileName;
+                    mainWindow.StatusTextBlock.Text = $"起動ファイルを設定しました: {item.AppExePath}";
+                    // 必要ならDBにも保存
+                    M_StreamWindow.Update(new M_StreamWindow
+                    {
+                        ProcessName = item.ProcessName,
+                        WindowTitle = item.WindowTitle,
+                        AppExePath = item.AppExePath,
+                        X = item.X ?? 0,
+                        Y = item.Y ?? 0,
+                        Width = item.Width ?? 0,
+                        Height = item.Height ?? 0,
+                        UpdateDateTime = DateTime.Now
+                    });
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void RegisterAllAppStartButton_Click(object sender, RoutedEventArgs e)
+        {
+            mainWindow.StatusTextBlock.Text = "アプリ起動中...";
+            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+
+            foreach (var item in RegistAppList)
+            {
+                RegistListRunStart(item.AppExePath);
+            }
+
+            mainWindow.StatusTextBlock.Text = "アプリ起動完了";
+            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void RegisterAllAppStopButton_Click(object sender, RoutedEventArgs e)
+        {
+            mainWindow.StatusTextBlock.Text = "アプリ停止中...";
+            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+
+            foreach (var item in RegistAppList)
+            {
+                RegistAppStop(item);
+            }
+
+            mainWindow.StatusTextBlock.Text = "アプリ停止完了";
+            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
     }
 }

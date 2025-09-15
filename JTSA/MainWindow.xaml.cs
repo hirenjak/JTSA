@@ -24,8 +24,13 @@ namespace JTSA
 		/// コンストラクタ
 		/// </summary>
 		public MainWindow()
-		{
-			InitializeComponent();
+        {
+            using (var db = new AppDbContext())
+            {
+                db.Database.Migrate();
+            }
+
+            InitializeComponent();
 
 			DataContext = this;
 
@@ -48,10 +53,6 @@ namespace JTSA
 			LoadScreen.Visibility = Visibility.Visible;
 			LoadSubPanel.Visibility = Visibility.Collapsed;
 
-            using (var db = new AppDbContext())
-            {
-                db.Database.Migrate();
-            }
 
             // クライアントID存在チェック
             if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
