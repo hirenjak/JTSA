@@ -20,10 +20,10 @@ namespace JTSA
 		public EditTitleTextForm editTitleTextForm;
 
 
-		/// <summary>
-		/// コンストラクタ
-		/// </summary>
-		public MainWindow()
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public MainWindow()
         {
             using (var db = new AppDbContext())
             {
@@ -717,15 +717,60 @@ namespace JTSA
 			});
 		}
 
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private void TitleEditTextBox_TextChanged(object sender, TextChangedEventArgs e)
 		{
 			if (editTitleTextForm == null) return;
 			editTitleTextForm.Content = TitleEditTextBox.Text;
 		}
 
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private void TokenCodeCopyButton_Click(object sender, RoutedEventArgs e)
 		{
 			Utility.CopyClipBoad(LoadPanelSubTextBox.Text);
 		}
-	}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+        private void StreamAppAllStart(object sender, RoutedEventArgs e)
+        {
+            AppArrangePanel.RegistAllAppStart();
+        }
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+        private void StreamAppAllStop(object sender, RoutedEventArgs e)
+        {
+            AppArrangePanel.RegistAllAppStop();
+        }
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
+        private void StreamAppAllMove(object sender, RoutedEventArgs e)
+        {
+			AppArrangePanel.RegistAppAllMove();
+        }
+    }
 }

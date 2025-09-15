@@ -527,14 +527,21 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void RegisterAppAllSetButton_Click(object sender, RoutedEventArgs e)
         {
+            RegistAppAllMove();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void RegistAppAllMove()
+        {
             foreach (var item in RegistAppList)
             {
-                if (!Win32Helper.SetAppWindowRect(item))
-                {
-                    mainWindow.StatusTextBlock.Text = "移動失敗：対象が起動中か、権限/タイトル一致をご確認ください。";
-                }
+                Win32Helper.SetAppWindowRect(item);
             }
         }
+
 
         /// <summary>
         /// 
@@ -590,6 +597,11 @@ namespace JTSA.Panels
         }
 
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void RegistAppExePathResetButton_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.DataContext is AppInfoForm item)
@@ -653,6 +665,18 @@ namespace JTSA.Panels
         /// <summary>
         /// 
         /// </summary>
+        public void RegistAllAppStart()
+        {
+            foreach (var item in RegistAppList)
+            {
+                RegistListRunStart(item.AppExePath);
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void RegisterAllAppStopButton_Click(object sender, RoutedEventArgs e)
@@ -660,13 +684,22 @@ namespace JTSA.Panels
             mainWindow.StatusTextBlock.Text = "アプリ停止中...";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
 
+            RegistAllAppStop();
+
+            mainWindow.StatusTextBlock.Text = "アプリ停止完了";
+            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void RegistAllAppStop()
+        {
             foreach (var item in RegistAppList)
             {
                 RegistAppStop(item);
             }
-
-            mainWindow.StatusTextBlock.Text = "アプリ停止完了";
-            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
     }
 }
