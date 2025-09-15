@@ -1,0 +1,4 @@
+﻿# .vpkignore
+JTSA.db
+userdata/
+logs/
