@@ -13,7 +13,6 @@ namespace JTSA.Panels
 
         public CategorySearchSidePanel()
         {
-
             categorySearchDebounceTimer = new System.Windows.Threading.DispatcherTimer();
             categorySearchDebounceTimer.Interval = TimeSpan.FromSeconds(1);
             categorySearchDebounceTimer.Tick += CategorySearchDebounceTimer_Tick;

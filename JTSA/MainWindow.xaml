@@ -199,10 +199,7 @@
             </TabItem>
             <TabItem Header="新機能ページ">
                 <!-- 新しい機能のUIをここに記述 -->
-                <StackPanel>
-                    <TextBlock Text="ここに新機能のUIを追加" Foreground="White"/>
-                    <!-- 追加のコントロール -->
-                </StackPanel>
+                <panels:AppArrangePanel x:Name="AppArrangePanel"/>
             </TabItem>
         </TabControl>
     </Grid>
