@@ -28,18 +28,6 @@ public class M_StreamWindow
 
     public DateTime UpdateDateTime { get; set; }
 
-    //public int Id { get; set; }
-
-    //public required string Content { get; set; }
-
-    //public required string CategoryId { get; set; }
-
-    //public required string CategoryName { get; set; }
-
-    //public int CountSelected { get; set; }
-
-    //public int SortNumber { get; set; }
-
 
     /// <summary>
     /// SELECT * FROM M_TitleText ORDER BY Id DESC
