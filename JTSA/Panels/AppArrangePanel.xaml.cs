@@ -26,8 +26,8 @@ namespace JTSA.Panels
         public ObservableCollection<AppInfoForm> RunAppList { get; set; } = new();
 
 
-        private bool isWaitingForAppClick = false;
-        private System.Windows.Threading.DispatcherTimer mouseHookTimer;
+        /// <summary> マウスでの選択用 </summary>
+        //private DispatcherTimer mouseHookTimer;
 
         // タイマー用フィールドを追加
         private DispatcherTimer statusUpdateTimer;
@@ -58,10 +58,10 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="processName"></param>
         /// <returns></returns>
-        public (int X, int Y, int Width, int Height)? GetAppWindowRect(string processName)
+        public (int X, int Y, int Width, int Height) GetAppWindowRect(string processName)
         {
             var proc = Process.GetProcessesByName(processName).FirstOrDefault();
-            if (proc == null || proc.MainWindowHandle == IntPtr.Zero) return null;
+            if (proc == null || proc.MainWindowHandle == IntPtr.Zero) return new (0, 0, 0, 0);
 
             if (Win32Helper.GetWindowRect(proc.MainWindowHandle, out RECT rect))
             {
@@ -69,7 +69,8 @@ namespace JTSA.Panels
                 int height = rect.Bottom - rect.Top;
                 return (rect.Left, rect.Top, width, height);
             }
-            return null;
+
+            return new(0, 0, 0, 0);
         }
 
 
@@ -204,8 +205,7 @@ namespace JTSA.Panels
             const int VK_LBUTTON = 0x01;
             if ((Win32Helper.GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) return;
 
-            mouseHookTimer.Stop();
-            isWaitingForAppClick = false;
+            //mouseHookTimer.Stop();
 
             if (!Win32Helper.GetCursorPos(out System.Drawing.Point cursorPos)) return;
 
@@ -349,7 +349,7 @@ namespace JTSA.Panels
 
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }
@@ -414,7 +414,10 @@ namespace JTSA.Panels
                 var rect = GetAppWindowRect(run.ProcessName);
 
                 var proc = Process.GetProcessesByName(run.ProcessName).FirstOrDefault();
+
+#pragma warning disable CS8602 // null 参照の可能性があるものの逆参照です。
                 string exePath = proc.MainModule.FileName;
+#pragma warning restore CS8602 // null 参照の可能性があるものの逆参照です。
 
                 M_StreamWindow.Insert(
                     new M_StreamWindow
@@ -422,10 +425,10 @@ namespace JTSA.Panels
                         ProcessName = run.ProcessName,
                         WindowTitle = run.WindowTitle,
                         AppExePath = exePath,
-                        X = (int)rect?.X,
-                        Y = (int)rect?.Y,
-                        Width = (int)rect?.Width,
-                        Height = (int)rect?.Height,
+                        X = (int)rect.X,
+                        Y = (int)rect.Y,
+                        Width = (int)rect.Width,
+                        Height = (int)rect.Height,
                         CreatedDateTime = DateTime.Now,
                         UpdateDateTime = DateTime.Now
                     }
@@ -472,23 +475,21 @@ namespace JTSA.Panels
             if ((sender as Button)?.DataContext is AppInfoForm item)
             {
                 var rect = GetAppWindowRect(item.ProcessName);
-                if (rect.HasValue)
-                {
-                    var target = new M_StreamWindow()
-                    {
-                        ProcessName = item.ProcessName,
-                        WindowTitle = item.WindowTitle,
-                        AppExePath = item.AppExePath,
-                        X = (int)rect?.X,
-                        Y = (int)rect?.Y,
-                        Width = (int)rect?.Width,
-                        Height = (int)rect?.Height,
-                        CreatedDateTime = DateTime.Now,
-                        UpdateDateTime = DateTime.Now
-                    };
 
-                    M_StreamWindow.Update(target);
-                }
+                var target = new M_StreamWindow()
+                {
+                    ProcessName = item.ProcessName,
+                    WindowTitle = item.WindowTitle,
+                    AppExePath = item.AppExePath,
+                    X = (int)rect.X,
+                    Y = (int)rect.Y,
+                    Width = (int)rect.Width,
+                    Height = (int)rect.Height,
+                    CreatedDateTime = DateTime.Now,
+                    UpdateDateTime = DateTime.Now
+                };
+
+                M_StreamWindow.Update(target);
             }
 
             // 選択状態を解除

@@ -24,10 +24,10 @@ namespace JTSA
     // アプリ情報用クラス
     public class AppInfoForm : INotifyPropertyChanged
     {
-        private string _processName;
+        private string? _processName;
         public string ProcessName
         {
-            get => _processName;
+            get => _processName ?? "";
             set
             {
                 if (_processName != value)
@@ -38,10 +38,10 @@ namespace JTSA
             }
         }
 
-        private string _windowTitle;
+        private string? _windowTitle;
         public string WindowTitle
         {
-            get => _windowTitle;
+            get => _windowTitle ?? "";
             set
             {
                 if (_windowTitle != value)
@@ -108,10 +108,10 @@ namespace JTSA
             }
         }
 
-        private string _status;
+        private string? _status;
         public string Status
         {
-            get => _status;
+            get => _status ?? "";
             set
             {
                 if (_status != value)
@@ -122,10 +122,10 @@ namespace JTSA
             }
         }
 
-        private string _oldstatus;
+        private string? _oldstatus;
         public string OldStatus
         {
-            get => _oldstatus;
+            get => _oldstatus ?? "";
             set
             {
                 if (_oldstatus != value)
@@ -136,10 +136,10 @@ namespace JTSA
             }
         }
 
-        private string _appExePath;
+        private string? _appExePath;
         public string AppExePath
         {
-            get => _appExePath;
+            get => _appExePath ?? "";
             set
             {
                 if (_appExePath != value)
@@ -151,7 +151,7 @@ namespace JTSA
         }
         
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

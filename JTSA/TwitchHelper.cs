@@ -17,47 +17,47 @@ namespace JTSA
 
     static class TwitchHelper
     {
-        public static String ClientID { get; } = "tbpy1q9lh9pkyrqhde6o4f4dkq9rj0";
+        public static string ClientID { get; } = "tbpy1q9lh9pkyrqhde6o4f4dkq9rj0";
 
-        public static String RedirectUri = @"http://localhost:8080/";
-        public static String AccessToken = "";
-        public static String BroadcasterId = "";
+        public static string RedirectUri = @"http://localhost:8080/";
+        public static string AccessToken = "";
+        public static string BroadcasterId = "";
 
 
         public class SearchCategories
         {
-            public required String Id { get; set; }
-            public required String Name { get; set; }
-            public required String BoxArtUrl { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public required string BoxArtUrl { get; set; }
         }
 
 
         public class ModifyChannelInformation
         {
-            public required String game_id { get; set; }
-            public required String broadcaster_language { get; set; }
-            public required String title { get; set; }
+            public required string game_id { get; set; }
+            public required string broadcaster_language { get; set; }
+            public required string title { get; set; }
             public required int delay { get; set; }
         }
 
 
         public class Games
         {
-            public required String Id { get; set; }
-            public required String Name { get; set; }
-            public required String BoxArtUrl { get; set; }
-            public required String IGDBId { get; set; }
+            public required string Id { get; set; }
+            public required string Name { get; set; }
+            public required string BoxArtUrl { get; set; }
+            public required string IGDBId { get; set; }
         }
 
 
         public class DeviceCodeResponse
         {
-            public string device_code { get; set; }
-            public string user_code { get; set; }
-            public string verification_uri { get; set; }
+            public required string device_code { get; set; }
+            public required string user_code { get; set; }
+            public required string verification_uri { get; set; }
             public int expires_in { get; set; }
             public int interval { get; set; }
-            public string verification_uri_complete { get; set; }
+            public required string verification_uri_complete { get; set; }
         }
 
 
@@ -65,15 +65,15 @@ namespace JTSA
         {
             public int expiresIn { get; set; }
             public int interval { get; set; }
-            public string refreshToken { get; set; }
-            public string accessToken { get; set; }
+            public required string refreshToken { get; set; }
+            public required string accessToken { get; set; }
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
-        public static async Task<DeviceCodeResponse?> RequestDeviceCodeAsync()
+        public static async Task<DeviceCodeResponse> RequestDeviceCodeAsync()
         {
             using var client = new HttpClient();
             var content = new FormUrlEncodedContent(new[]
@@ -84,7 +84,15 @@ namespace JTSA
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
 
-            return JsonSerializer.Deserialize<DeviceCodeResponse>(json);
+            return JsonSerializer.Deserialize<DeviceCodeResponse>(json) ?? new()
+            {
+                device_code = "",
+                user_code = "",
+                verification_uri = "",
+                expires_in = 0,
+                interval = 0,
+                verification_uri_complete = ""
+            };
         }
 
 
@@ -152,11 +160,20 @@ namespace JTSA
                     }
                 }
             }
-            return new();
+            return new() {
+                accessToken = "",
+                refreshToken = "",
+                expiresIn = 0
+            };
         }
 
 
-        public static async Task<AccessTokenResponse?> RefreshAccessTokenAsync(string refreshToken)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="refreshToken"></param>
+        /// <returns></returns>
+        public static async Task<AccessTokenResponse> RefreshAccessTokenAsync(string refreshToken)
         {
             using var client = new HttpClient();
             var content = new FormUrlEncodedContent(new[]
@@ -167,7 +184,12 @@ namespace JTSA
             });
 
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
-            if (!response.IsSuccessStatusCode) return null;
+            if (!response.IsSuccessStatusCode) return new()
+            {
+                accessToken = "",
+                refreshToken = "",
+                expiresIn = 0
+            };
 
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
@@ -181,7 +203,12 @@ namespace JTSA
                     expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
                 };
             }
-            return null;
+            return new()
+            {
+                accessToken = "",
+                refreshToken = "",
+                expiresIn = 0
+            };
         }
 
 
@@ -282,12 +309,24 @@ namespace JTSA
             client.DefaultRequestHeaders.Add("Client-Id", ClientID);
 
             var response = await client.GetAsync($"https://api.twitch.tv/helix/games?id={gameId}");
-            if (!response.IsSuccessStatusCode) return null;
+            if (!response.IsSuccessStatusCode) return new()
+            {
+                Id = "",
+                Name = "",
+                BoxArtUrl = "",
+                IGDBId = ""
+            };
 
             var json = await response.Content.ReadAsStringAsync();
             using var doc2 = JsonDocument.Parse(json);
             var data2 = doc2.RootElement.GetProperty("data");
-            if (data2.GetArrayLength() == 0) return null;
+            if (data2.GetArrayLength() == 0) return new()
+            {
+                Id = "",
+                Name = "",
+                BoxArtUrl = "",
+                IGDBId = ""
+            };
 
             var result = new Games
             {

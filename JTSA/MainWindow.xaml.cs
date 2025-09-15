@@ -37,8 +37,16 @@ namespace JTSA
 			AllSidePanelClose();
 			TitleTagSidePanel.Visibility = Visibility.Visible;
 
-			// イベント登録
-			this.Loaded += MainWindow_LoadedAsync;
+            editTitleTextForm = new()
+			{
+				Content = "",
+				CategoryId = "",
+				CategoryName = "",
+				BoxArtUrl = ""
+            };	
+
+            // イベント登録
+            this.Loaded += MainWindow_LoadedAsync;
 		}
 
 
@@ -60,7 +68,12 @@ namespace JTSA
 			M_Setting tempSettingObj;
 
 			// ユーザー名取得確認
-			tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName);
+			tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? new()
+			{
+				Name = 9999,
+				Value = ""
+            };
+
 			if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
 			{
 				StatusTextBlock.Text = "ユーザー名が設定されていません";
@@ -81,7 +94,7 @@ namespace JTSA
 			var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
 			if (settingUserName == null || String.IsNullOrEmpty(settingUserName.Value)) return;
 
-			var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value) ?? new();
+			var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
 
 			if (string.IsNullOrEmpty(accessTokenResponse.accessToken))
 			{
@@ -199,7 +212,7 @@ namespace JTSA
 
 			Utility.UserName = UserName_TextBox.Text.Trim();
 
-			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync() ?? new();
+			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
 
 			// 認証URLとユーザーコードをユーザーに表示
 			LoadPanelSubTextBox.Text = deviceCodeResponse.user_code;
