@@ -1,7 +1,10 @@
 ﻿<UserControl x:Class="JTSA.Panels.AppArrangePanel"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-             Background="#FF404040" Height="700" Width="970">
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            mc:Ignorable="d"
+            Background="#FF404040" Width="970">
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -12,11 +15,11 @@
 
         <StackPanel Grid.Column="0" Background="#FF404040" >
             <Button Name="RunAppButton" Content="アプリ読込" Click="RunAppButton_Click" ></Button>
-            <Button Name="RegisterAppButton" Content="アプリ選択" Click="RegisterAppButton_Click" ></Button>
-            <Button Content="全配置"></Button>
+            <Button Name="RegisterAppAllSetButton" Content="全配置" Click="RegisterAppAllSetButton_Click"></Button>
+            <Button Name="RegisterAppButton" Content="アプリ選択（未実装）" Click="RegisterAppButton_Click" ></Button>
         </StackPanel>
 
-        <ListBox ItemsSource="{Binding RegistAppList}" Grid.Column="1" Background="#FF404040" 
+        <ListBox ItemsSource="{Binding RegistAppList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                 x:Name="RegistAppListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                 SelectionChanged="RegistAppListBox_SelectionChanged">
@@ -25,19 +28,52 @@
                 <DataTemplate>
                     <StackPanel>
                         <StackPanel Margin="8, 0, 8, 0">
-                            <TextBlock Text="{Binding WindowTitle}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                            <TextBlock Text="{Binding ProcessName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                            <TextBlock Text="{Binding WindowTitle}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
 
                             <Grid Margin="0" Height="Auto">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="{Binding ProcessName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
-                                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
+                                <StackPanel Grid.Column="0" Margin="8, 0, 0, 0">
+
+                                    <Grid Height="Auto">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="X：" Width="Auto" Foreground="White" FontSize="12"></TextBlock>
+                                            <TextBlock Text="{Binding X}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Y：" Width="Auto" Foreground="White" FontSize="12"></TextBlock>
+                                            <TextBlock Text="{Binding Y}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Height="Auto">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="Width：" Width="Auto" Foreground="White" FontSize="12"></TextBlock>
+                                            <TextBlock Text="{Binding Width}" Width="Auto" Foreground="White" FontSize="12"></TextBlock>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="Height：" Width="Auto" Foreground="White" FontSize="12"></TextBlock>
+                                            <TextBlock Text="{Binding Height}" Width="Auto" Foreground="White" FontSize="12"></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
-                                <Button x:Name="RegistAppDeleteButton" Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="RegistAppDeleteButton_Click"/>
+                                <Button x:Name="RegistAppResetButton" Grid.Column="1" Content="再設定" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" Click="RegistAppResetButton_Click"/>
+                                <Button x:Name="RegistAppDeleteButton" Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" Click="RegistAppDeleteButton_Click"/>
                             </Grid>
                         </StackPanel>
 
@@ -48,7 +84,7 @@
         </ListBox>
 
 
-        <ListBox ItemsSource="{Binding RunAppList}" Grid.Column="2" Background="#FF404040" 
+        <ListBox ItemsSource="{Binding RunAppList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="2" Background="#FF404040" 
                 x:Name="RunAppListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="RunAppListBox_SelectionChanged">
 
@@ -56,7 +92,7 @@
                 <DataTemplate>
                     <StackPanel>
                         <StackPanel Margin="8, 0, 8, 0">
-                            <TextBlock Text="{Binding WindowTitle}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                            <TextBlock Text="{Binding ProcessName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
 
                             <Grid Margin="0" Height="Auto">
                                 <Grid.ColumnDefinitions>
@@ -65,10 +101,9 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="{Binding ProcessName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
-                                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
+                                <TextBlock Text="{Binding WindowTitle}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
                                 </StackPanel>
-                                <Button x:Name="RunAppDeleteButton" Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="RunAppDeleteButton_Click"/>
                             </Grid>
                         </StackPanel>
 

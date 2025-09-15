@@ -3,6 +3,7 @@ using System;
 using JTSA.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250915121935_20250915211800")]
+    partial class _20250915211800
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -108,44 +111,6 @@ namespace JTSA.Migrations
                     b.HasKey("Name");
 
                     b.ToTable("M_SettingList");
-                });
-
-            modelBuilder.Entity("M_StreamWindow", b =>
-                {
-                    b.Property<string>("ProcessName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Height")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUseDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdateDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Width")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("WindowTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("X")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Y")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ProcessName");
-
-                    b.ToTable("M_StreamWindowList");
                 });
 
             modelBuilder.Entity("M_TitleTag", b =>

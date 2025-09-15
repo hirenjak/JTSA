@@ -11,6 +11,7 @@ namespace JTSA.Models
         public DbSet<M_Friend> M_FriendList { get; set; }
         public DbSet<M_Setting> M_SettingList { get; set; }
         public DbSet<M_TitleTag> M_TitleTagList { get; set; }
+        public DbSet<M_StreamWindow> M_StreamWindowList { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Data Source={DBName}");
