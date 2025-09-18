@@ -58,8 +58,6 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        
-
                         <Grid Grid.Row="1" VerticalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="560"/>
@@ -79,9 +77,9 @@
                                                     <ColumnDefinition Width="4*"/>
                                                     <ColumnDefinition Width="1*"/>
                                                 </Grid.ColumnDefinitions>
-                            
+
                                                 <TextBlock Grid.Column="0" x:Name="CurrentTitleTextBlock" TextWrapping="Wrap" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Background="DarkGray" Height="Auto" MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown"></TextBlock>
-                            
+
                                                 <StackPanel Grid.Column="1" >
                                                     <Button Content="取得" Width="72" Height="28" Margin="0, 0, 0, 0" Click="GetTitleButton_Click"/>
                                                     <Button Content="X告知" Width="72" Height="28" Margin="0, 8, 0, 0" Click="TweetButton_Click"/>
@@ -112,20 +110,20 @@
                                         </Grid.ColumnDefinitions>
 
                                         <TextBox x:Name="TitleEditTextBox" Grid.Column="0" Height="64" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Top" Text="" Margin="0, 0, 0, 0" TextWrapping="Wrap" TextChanged="TitleEditTextBox_TextChanged"/>
-                    
+
                                         <StackPanel Grid.Column="2" >
                                             <Button x:Name="SaveTitleButton" Content="保存" Width="72" Height="28" Margin="0, 0, 0, 0" Click="SaveTitleButton_Click"/>
                                             <Button x:Name="SetTitleButton" Content="送信" Width="72" Height="28" Margin="0, 8, 0, 0" Click="SetTitleButton_Click"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
-            
+
                                 <Grid Margin="8" Height="Auto" >
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="24"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
-                
+
                                     <Label Grid.Row="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
                                     <ListBox Grid.Row="1" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
                                         <ListBox.ItemTemplate>
@@ -157,7 +155,7 @@
                                     </ListBox>
                                 </Grid>
                             </DockPanel>
-        
+
                             <!-- サイドパネル開閉ボタン（右上などに配置） -->
                             <StackPanel Grid.Column="1" Width="Auto" Margin="8, 20, 8, 0">
                                 <Button Content="Close" Width="64" Height="28" Name="ToggleCloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleCloseButton_Click" Visibility="Collapsed"/>
@@ -185,7 +183,6 @@
                             <!-- サイドパネル（カテゴリ検索） -->
                             <panels:CategorySearchSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="CategorySearchSidePanel" Visibility="Collapsed"/>
                         </Grid>
-
                     </Grid>
 
                     <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
@@ -205,9 +202,55 @@
                     </Grid>
                 </Grid>
             </TabItem>
-            
+
             <TabItem Header="アプリ配置管理">
                 <panels:AppArrangePanel x:Name="AppArrangePanel"/>
+            </TabItem>
+
+            <TabItem Header="スケジュール管理">
+                <StackPanel>
+                    <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・配信用のスケジュールの登録</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・配信用のスケジュールの確認</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・スケジュールの開始終了日時、タイトルログ</TextBlock>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="レイド管理">
+                <StackPanel>
+                    <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・フォロー一覧のうちの配信ユーザー表示</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・配信ユーザーの配信タイトル、時間、カテゴリを表示</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・レイドコマンドの送信</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・直近のレイドを表示</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・直近レイドの配信タイトル、時間、カテゴリを表示</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・シャウトアウトコマンドの送信</TextBlock>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="配信詳細設定">
+                <StackPanel>
+                    <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・配信概要設定</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・チャネポONOFFプリセット</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・コンテンツラベルの制御</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・チャネポの集計</TextBlock>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="OBS連携">
+                <StackPanel>
+                    <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・OBSの簡単な制御（配信開始停止、シーン切替、ソースONOFF）</TextBlock>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="配信補助">
+                <StackPanel>
+                    <TextBlock Foreground="White" FontSize="20" >要望募集中</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・参加型管理</TextBlock>
+                    <TextBlock Foreground="White" FontSize="20" >・チャット通知や時報、タイマー</TextBlock>
+                </StackPanel>
             </TabItem>
         </TabControl>
     </Grid>
