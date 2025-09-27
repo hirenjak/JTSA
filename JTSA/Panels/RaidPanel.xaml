@@ -1,0 +1,252 @@
+﻿<UserControl x:Class="JTSA.Panels.RaidPanel"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            mc:Ignorable="d"
+            Background="#FF404040">
+
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="8, 0, 8, 0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <StackPanel HorizontalAlignment="Left">
+                    <TextBlock Text="レイド先ユーザー（配信中のフォローユーザー）" Foreground="White" FontSize="14"></TextBlock>
+                </StackPanel>
+            </Grid>
+
+            <ListBox Grid.Row="1" ItemsSource="{Binding RaidUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
+                    x:Name="RaidUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    SelectionChanged="RaidUserListBox_SelectionChanged" PreviewMouseDown="RaidUserListBox_PreviewMouseDown">
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <StackPanel Margin="8, 0, 8, 0">
+                                <Grid >
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding UserName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" ></TextBlock>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid >
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <TextBlock Text="配信時間:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        <TextBlock Text="{Binding StreamTime}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <TextBlock Text="カテゴリ:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        <TextBlock Text="{Binding Category}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Margin="0" Height="Auto">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                </Grid>
+
+                                <Grid Margin="0" Height="Auto">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="StreamShowButton" Grid.Column="2" Content="配信視聴" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="StreamShowButton_Click"/>
+                                    <Button x:Name="RaidButton" Grid.Column="3" Content="レイド開始" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="RaidButton_Click"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Width="Auto" Height="2" Background="White"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <Grid Grid.Column="1" Margin="8, 0, 8, 0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="1*"/>
+                <RowDefinition Height="1*"/>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="配信内容集計" Foreground="White" FontSize="14"></TextBlock>
+            <StackPanel Grid.Row="1" Margin="0, 8, 0, 0">
+                <TextBlock Text="・ビッツユーザー" Foreground="White" FontSize="14"></TextBlock>
+                <ListBox Grid.Row="1" ItemsSource="{Binding BitsUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
+                        x:Name="BitsUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectionChanged="RaidUserListBox_SelectionChanged" PreviewMouseDown="RaidUserListBox_PreviewMouseDown">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <StackPanel Margin="8, 0, 8, 0">
+                                    <Grid >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding UserName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" ></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="ビッツ金額:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="{Binding BitsAmount}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+
+                                <Border Width="Auto" Height="2" Background="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Margin="0, 8, 0, 0">
+                <TextBlock Text="・サブスク更新ユーザー" Foreground="White" FontSize="14"></TextBlock>
+                <ListBox Grid.Row="1" ItemsSource="{Binding SubscribeUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
+                     x:Name="SubscribeUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     SelectionChanged="SubscribeUserListBox_SelectionChanged" PreviewMouseDown="SubscribeUserListBox_PreviewMouseDown">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <StackPanel Margin="8, 0, 8, 0">
+                                    <Grid >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding UserName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" ></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="ビッツ金額:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="{Binding SubscribeAmount}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+
+                                <Border Width="Auto" Height="2" Background="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </StackPanel>
+
+            <StackPanel Grid.Row="3" Margin="0, 8, 0, 0">
+                <TextBlock Text="・レイドユーザー" Foreground="White" FontSize="14"></TextBlock>
+                <ListBox Grid.Row="1" ItemsSource="{Binding RaidedUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
+                    x:Name="RaidedUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    SelectionChanged="RaidUserListBox_SelectionChanged" PreviewMouseDown="RaidUserListBox_PreviewMouseDown">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <StackPanel Margin="8, 0, 8, 0">
+                                    <Grid >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding UserName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" ></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*"/>
+                                            <ColumnDefinition Width="1*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="配信時間:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="{Binding StreamTime}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="カテゴリ:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="{Binding Category}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0" Height="Auto">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                    </Grid>
+
+                                    <Grid Margin="0" Height="Auto">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button x:Name="StreamShowButton" Grid.Column="2" Content="配信視聴" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="StreamShowButton_Click"/>
+                                        <Button x:Name="RaidButton" Grid.Column="3" Content="/Shouout" Width="64" Height="20" Margin="8, 0, 0, 4" VerticalAlignment="Bottom" HorizontalAlignment="Right" Click="RaidButton_Click"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <Border Width="Auto" Height="2" Background="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

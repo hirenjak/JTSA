@@ -217,15 +217,7 @@
             </TabItem>
 
             <TabItem Header="レイド管理">
-                <StackPanel>
-                    <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・フォロー一覧のうちの配信ユーザー表示</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・配信ユーザーの配信タイトル、時間、カテゴリを表示</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・レイドコマンドの送信</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・直近のレイドを表示</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・直近レイドの配信タイトル、時間、カテゴリを表示</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・シャウトアウトコマンドの送信</TextBlock>
-                </StackPanel>
+                <panels:RaidPanel x:Name="RaidPanel"/>
             </TabItem>
 
             <TabItem Header="配信詳細設定">

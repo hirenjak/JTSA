@@ -78,6 +78,7 @@ namespace JTSA
 			if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
 			{
 				StatusTextBlock.Text = "ユーザー名が設定されていません";
+
 				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
 				LoadSubPanel.Visibility = Visibility.Visible;
 				return;
