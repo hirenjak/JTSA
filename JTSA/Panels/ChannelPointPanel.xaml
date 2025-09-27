@@ -1,0 +1,18 @@
+﻿<UserControl x:Class="JTSA.Panels.ChannelPointPanel"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+            mc:Ignorable="d"
+            Background="#FF404040">
+
+    <Grid>
+        <StackPanel>
+            <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
+            <TextBlock Foreground="White" FontSize="20" >・配信概要設定</TextBlock>
+            <TextBlock Foreground="White" FontSize="20" >・チャネポONOFFプリセット</TextBlock>
+            <TextBlock Foreground="White" FontSize="20" >・コンテンツラベルの制御</TextBlock>
+            <TextBlock Foreground="White" FontSize="20" >・チャネポの集計</TextBlock>
+        </StackPanel>
+    </Grid>
+</UserControl>

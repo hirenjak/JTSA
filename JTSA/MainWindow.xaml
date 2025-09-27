@@ -238,14 +238,8 @@
                 </StackPanel>
             </TabItem>
 
-            <TabItem Header="配信詳細設定">
-                <StackPanel>
-                    <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・配信概要設定</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・チャネポONOFFプリセット</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・コンテンツラベルの制御</TextBlock>
-                    <TextBlock Foreground="White" FontSize="20" >・チャネポの集計</TextBlock>
-                </StackPanel>
+            <TabItem Header="チャネポ">
+                <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
             </TabItem>
 
             <TabItem Header="OBS連携">
