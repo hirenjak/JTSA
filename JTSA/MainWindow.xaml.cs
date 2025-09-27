@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -617,26 +618,6 @@ namespace JTSA
 		#endregion
 
 
-		#region =============== プライベート関数 ===============
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <returns></returns>
-		private async Task WaitForTargetStringAsync(String target)
-		{
-			// 最大3秒待つ（100msごとにチェック）
-			for (int i = 0; i < 30; i++)
-			{
-				if (!string.IsNullOrEmpty(target)) return;
-
-				await Task.Delay(100);
-			}
-		}
-
-		#endregion
-
-
 		#region =============== サイドパネル切替ボタン ===============
 
 		/// <summary>
@@ -757,12 +738,15 @@ namespace JTSA
 
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
-			var text = stremTitleText + "%0D%0A" + "配信カテゴリ：" + categoryNameText + "%0D%0A" + $"https://www.twitch.tv/" + Utility.UserName;
+			var text = stremTitleText + "\\r\\n" + "配信カテゴリ：" + categoryNameText + "\\r\\n" + $"https://www.twitch.tv/" + Utility.UserName;
 
-			// ブラウザで認証ページを開く
-			Process.Start(new ProcessStartInfo
+            // URIエンコード
+            var encodedText = WebUtility.UrlEncode(text);
+
+            // ブラウザで認証ページを開く
+            Process.Start(new ProcessStartInfo
 			{
-				FileName = oauthUrl + text,
+				FileName = oauthUrl + encodedText,
 				UseShellExecute = true
 			});
 		}
