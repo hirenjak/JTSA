@@ -255,6 +255,12 @@
                     <TextBlock Foreground="White" FontSize="20" >・チャット通知や時報、タイマー</TextBlock>
                 </StackPanel>
             </TabItem>
+
+            <TabItem Header="AppLog">
+                <StackPanel>
+                    <panels:AppLogPanel x:Name="AppLogPanel"/>
+                </StackPanel>
+            </TabItem>
         </TabControl>
     </Grid>
 </Window>

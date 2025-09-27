@@ -1,0 +1,34 @@
+﻿<UserControl x:Class="JTSA.Panels.AppLogPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="#FF404040"
+             VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+
+    <DockPanel>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Button Grid.Row="0" Content="ログクリア" HorizontalAlignment="Right" Margin="0,8,8,0" Click="ClearLogButton_Click" />
+
+            <ListBox ItemsSource="{Binding AppLogFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="1" Background="#FF404040" 
+                            x:Name="AppLogListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding LogDateTime}" Width="Auto" Foreground="{Binding Color}" FontSize="10" TextWrapping="Wrap" Margin="4, 0, 4, 0"/>
+                            <TextBlock Text="{Binding Content}" Width="Auto" Foreground="{Binding Color}" FontSize="10" TextWrapping="Wrap" Margin="4, 0, 4, 0"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</UserControl>
