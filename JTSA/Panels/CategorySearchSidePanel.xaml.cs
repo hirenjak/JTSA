@@ -70,11 +70,12 @@ namespace JTSA.Panels
             {
                 mainWindow.editTitleTextForm.CategoryId = selectedItem.CategoryId;
                 mainWindow.editTitleTextForm.CategoryName = selectedItem.DisplayName;
-                mainWindow.editTitleTextForm.BoxArtUrl = selectedItem.BoxArtUrl;
+                mainWindow.editTitleTextForm.CategoryBoxArtUrl = selectedItem.BoxArtUrl;
 
                 mainWindow.SetEditTitleTextForm();
             }
         }
+
 
         /// <summary>
         /// 読込処理：検索カテゴリ

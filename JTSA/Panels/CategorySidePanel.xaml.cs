@@ -27,6 +27,7 @@ namespace JTSA.Panels
             InitializeComponent();
         }
 
+
         /// <summary>
         /// 検索テキスト文字入力時
         /// </summary>
@@ -47,8 +48,11 @@ namespace JTSA.Panels
         {
             if (CategoryListBox.SelectedItem is CategoryForm selectedItem)
             {
-                mainWindow.SelectCategpryIdTextBlock.Text = selectedItem.CategoryId;
-                mainWindow.SelectCategpryNameTextBlock.Text = selectedItem.DisplayName;
+                mainWindow.editTitleTextForm.CategoryId = selectedItem.CategoryId;
+                mainWindow.editTitleTextForm.CategoryName = selectedItem.DisplayName;
+                mainWindow.editTitleTextForm.CategoryBoxArtUrl = selectedItem.BoxArtUrl;
+
+                mainWindow.SetEditTitleTextForm();
             }
 
             // 選択状態を解除

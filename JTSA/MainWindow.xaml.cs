@@ -43,7 +43,7 @@ namespace JTSA
 				Content = "",
 				CategoryId = "",
 				CategoryName = "",
-				BoxArtUrl = ""
+				CategoryBoxArtUrl = ""
             };	
 
             // イベント登録
@@ -92,42 +92,53 @@ namespace JTSA
 			UserName_TextBox.Text = Utility.UserName;
 
 			// リフレッシュトークンからアクセストークンを再取得
-			var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
-			if (settingUserName == null || String.IsNullOrEmpty(settingUserName.Value)) return;
+			await ResetAccessTokenAsync();
 
-			var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
-
-			if (string.IsNullOrEmpty(accessTokenResponse.accessToken))
-			{
-				StatusTextBlock.Text = "アクセストークンの取得に失敗";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-				LoadSubPanel.Visibility = Visibility.Visible;
-				return;
-			}
-			else
-			{
-				StatusTextBlock.Text = "アクセストークンを取得";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
-
-			TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-
-			M_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)M_Setting.SettingName.RefreshToken,
-				Value = accessTokenResponse.refreshToken,
-			});
-
-			M_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)M_Setting.SettingName.ExpiresIn,
-				Value = accessTokenResponse.expiresIn.ToString(),
-			});
-
-			await StreamerDataSet();
+            await StreamerDataSet();
 			
 			LoadScreen.Visibility = Visibility.Collapsed;
 		}
+
+
+        /// <summary>
+        /// アクセストークンの再取得
+        /// </summary>
+        /// <returns></returns>
+        private async Task ResetAccessTokenAsync()
+		{
+
+            var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
+            if (settingUserName == null || String.IsNullOrEmpty(settingUserName.Value)) return;
+
+            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
+
+            if (string.IsNullOrEmpty(accessTokenResponse.accessToken))
+            {
+                StatusTextBlock.Text = "アクセストークンの取得に失敗";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
+            }
+            else
+            {
+                StatusTextBlock.Text = "アクセストークンを取得";
+                StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+            }
+
+            TwitchHelper.AccessToken = accessTokenResponse.accessToken;
+
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.RefreshToken,
+                Value = accessTokenResponse.refreshToken,
+            });
+
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.ExpiresIn,
+                Value = accessTokenResponse.expiresIn.ToString(),
+            });
+        }
 
 
 		/// <summary>
@@ -176,7 +187,7 @@ namespace JTSA
 					Content = TitleEditTextBox.Text,
 					CategoryId = category.Id,
 					CategoryName = category.Name,
-					BoxArtUrl = category.BoxArtUrl
+					CategoryBoxArtUrl = category.BoxArtUrl
 				};
 
 				CategorySidePanel.ReloadCategory();
@@ -343,6 +354,7 @@ namespace JTSA
 
 		#endregion
 
+
 		#region =============== メインパネル：編集部分 ===============
 
 		/// <summary>
@@ -354,6 +366,7 @@ namespace JTSA
 			SelectCategpryIdTextBlock.Text = editTitleTextForm.CategoryId;
 			SelectCategpryNameTextBlock.Text = editTitleTextForm.CategoryName;
 		}
+
 
 		/// <summary>
 		/// 送信ボタンクリック時
@@ -459,7 +472,7 @@ namespace JTSA
 
 			editTitleTextForm.CategoryId = category.Id;
 			editTitleTextForm.CategoryName = category.Name;
-			editTitleTextForm.BoxArtUrl = category.BoxArtUrl;
+			editTitleTextForm.CategoryBoxArtUrl = category.BoxArtUrl;
 			SetEditTitleTextForm();
 
 			var title = await TwitchHelper.GetTwitchTitle();
@@ -511,7 +524,7 @@ namespace JTSA
 		{
 			String categoryId = editTitleTextForm.CategoryId;
 			String categoryName = editTitleTextForm.CategoryName;
-			String boxArtUrl = editTitleTextForm.BoxArtUrl;
+			String boxArtUrl = editTitleTextForm.CategoryBoxArtUrl;
 
 			CategorySidePanel.AddCategory(categoryId, categoryName, boxArtUrl);
 		}
@@ -717,11 +730,21 @@ namespace JTSA
 
 		#endregion
 
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private void TweetButton_Click(object sender, RoutedEventArgs e)
 		{
-			// 認証URL生成
-			var oauthUrl = $"https://x.com/intent/post?text=";
-			var text = editTitleTextForm.Content + "%0D%0A" + "配信カテゴリ：" + editTitleTextForm.CategoryName + "%0D%0A" + "配信URL：" + $"https://www.twitch.tv/" + Utility.UserName;
+			// 必要データの取得
+			var stremTitleText = editTitleTextForm.Content;
+			var categoryNameText = editTitleTextForm.CategoryName;
+
+            // 認証URL生成
+            var oauthUrl = $"https://x.com/intent/post?text=";
+			var text = stremTitleText + "%0D%0A" + "配信カテゴリ：" + categoryNameText + "%0D%0A" + $"https://www.twitch.tv/" + Utility.UserName;
 
 			// ブラウザで認証ページを開く
 			Process.Start(new ProcessStartInfo

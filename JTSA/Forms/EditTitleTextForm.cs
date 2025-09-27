@@ -15,6 +15,6 @@ namespace JTSA
         public required String Content { get; set; }
         public required String CategoryId { get; set; }
         public required String CategoryName { get; set; }
-        public required String BoxArtUrl { get; set; }
+        public required String CategoryBoxArtUrl { get; set; }
     }
 }
