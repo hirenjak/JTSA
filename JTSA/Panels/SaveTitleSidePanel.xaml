@@ -30,26 +30,33 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <Image Source="{Binding CategoryBoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
+                                    <StackPanel Margin="8, 0, 8, 0" Grid.Column="1">
+                                        <TextBlock Text="{Binding Content}" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
 
-                                <StackPanel Margin="8, 0, 8, 0">
-                                    <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                                        <Grid Margin="0" Height="Auto">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
 
-                                    <Grid Margin="0" Height="Auto">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                            <StackPanel Orientation="Horizontal" Margin="8, 0, 0, 0">
+                                                <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                                <TextBlock Text="{Binding LastUsedDate}" Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="SaveTitleDeleteButton_Click"/>
+                                        </Grid>
+                                    </StackPanel>
 
-                                        <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
-                                        <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
-                                            <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
-                                            <TextBlock Text="{Binding LastUsedDate}" Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
-                                        </StackPanel>
-                                        <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="SaveTitleDeleteButton_Click"/>
-                                    </Grid>
-                                </StackPanel>
-
+                                </Grid>
                                 <Border Width="Auto" Height="2" Background="White"/>
                             </StackPanel>
                         </DataTemplate>

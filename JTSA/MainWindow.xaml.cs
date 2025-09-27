@@ -450,7 +450,7 @@ namespace JTSA
 			var title = TitleEditTextBox.Text;
 			var categoryId = SelectCategoryIdTextBlock.Text;
 			var categoryName = SelectCategoryNameTextBlock.Text;
-            var categoryBoxArtUrl = SelectCategoryNameTextBlock.Text;
+            var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
 
             AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
 
@@ -579,7 +579,18 @@ namespace JTSA
 
 				SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
 				SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
-			}
+                if (!string.IsNullOrEmpty(selectedItem.CategoryBoxArtUrl))
+                {
+					try
+                    {
+                        SelectCategoryBoxArt.Source = new BitmapImage(new Uri(selectedItem.CategoryBoxArtUrl));
+                    }
+					catch
+					{
+						SelectCategoryBoxArt.Source = null;
+					}
+                }
+            }
 		}
 
 
