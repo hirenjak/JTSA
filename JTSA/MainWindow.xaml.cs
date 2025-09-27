@@ -185,13 +185,12 @@ namespace JTSA
 				AccessToken_TextBlock.Text = "OK!";
 
 				// タイトル取得処理
-				CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? "";
+				CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
 
-				await WaitForTargetStringAsync(CurrentTitleTextBlock.Text);
 				TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
 				// カテゴリID処理
-				var CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
+				var CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? string.Empty;
 
 				// カテゴリ名取得処理
 				var category = await TwitchHelper.GetGamesByGameId(CategoryId);
@@ -435,6 +434,10 @@ namespace JTSA
                 "送信成功 「 カテゴリ 」",
 				"送信失敗 「 カテゴリ 」"
             );
+
+            // タイトル取得処理
+            CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
+
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
         }
