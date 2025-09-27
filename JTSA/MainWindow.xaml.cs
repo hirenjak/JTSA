@@ -596,6 +596,7 @@ namespace JTSA
 			}
 
 			ReloadTitleText();
+			SaveTitleSidePanel.ReloadSaveTitleText();
 		}
 
 		#endregion
