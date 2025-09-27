@@ -47,7 +47,8 @@ namespace JTSA.Panels
             mainWindow.StatusTextBlock.Text = log;
             mainWindow.StatusTextBlock.Foreground = color;
 
-            AppLogFormList.Add(new AppLogForm() { 
+            AppLogFormList.Insert(0,
+                new AppLogForm() { 
                 LogDateTime = DateTime.Now,
                 Content = log,  
                 Color = color
