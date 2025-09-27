@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JTSA.Panels;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -327,6 +328,8 @@ namespace JTSA
                 BoxArtUrl = data2[0].GetProperty("box_art_url").GetString() ?? "",
                 IGDBId = data2[0].GetProperty("igdb_id").GetString() ?? ""
             };
+            
+            result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "52").Replace("{height}", "72");
 
             return result;
         }

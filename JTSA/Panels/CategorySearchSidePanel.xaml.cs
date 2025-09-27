@@ -68,13 +68,11 @@ namespace JTSA.Panels
         {
             if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
             {
-                mainWindow.editTitleTextForm.CategoryId = selectedItem.CategoryId;
-                mainWindow.editTitleTextForm.CategoryName = selectedItem.DisplayName;
-                mainWindow.editTitleTextForm.BoxArtUrl = selectedItem.BoxArtUrl;
-
-                mainWindow.SetEditTitleTextForm();
+                mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
+                mainWindow.SetDisplayFromEditFrom();
             }
         }
+
 
         /// <summary>
         /// 読込処理：検索カテゴリ

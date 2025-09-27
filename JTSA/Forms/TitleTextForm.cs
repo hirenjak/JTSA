@@ -13,9 +13,10 @@ namespace JTSA
     public class TitleTextForm
     {
         public int Id { get; set; }
-        public required String Content { get; set; }
-        public required String CategoryId { get; set; }
-        public required String CategoryName { get; set; }
-        public required String LastUsedDate { get; set; }
+        public required string Content { get; set; }
+        public required string CategoryId { get; set; }
+        public required string CategoryName { get; set; }
+        public required string CategoryBoxArtUrl { get; set; }
+        public required string LastUsedDate { get; set; }
     }
 }

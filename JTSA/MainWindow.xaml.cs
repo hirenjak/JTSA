@@ -3,13 +3,16 @@ using JTSA.Panels;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.IO;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace JTSA
 {
@@ -18,7 +21,9 @@ namespace JTSA
 		/// <summary>  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
-		public EditTitleTextForm editTitleTextForm;
+		public EditTitleTextForm editTitleTextForm = new();
+
+	    private DispatcherTimer accessTokenRefreshTimer;
 
 
         /// <summary>
@@ -38,17 +43,20 @@ namespace JTSA
 			AllSidePanelClose();
 			TitleTagSidePanel.Visibility = Visibility.Visible;
 
-            editTitleTextForm = new()
-			{
-				Content = "",
-				CategoryId = "",
-				CategoryName = "",
-				BoxArtUrl = ""
-            };	
-
             // イベント登録
             this.Loaded += MainWindow_LoadedAsync;
-		}
+
+            // アクセストークンの自動リフレッシュタイマー設定
+            accessTokenRefreshTimer = new DispatcherTimer();
+            accessTokenRefreshTimer.Interval = TimeSpan.FromHours(3);
+            accessTokenRefreshTimer.Tick += async (s, e) =>
+            {
+                await ResetAccessTokenAsync();
+                AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン自動リフレッシュ", "実行");
+            };
+
+            accessTokenRefreshTimer.Start();
+        }
 
 
 		/// <summary>
@@ -57,19 +65,19 @@ namespace JTSA
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
 		private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
-		{
-			// Loading画面表示（※MainWindow_Loaded終わりまで表示）
-			LoadScreen.Visibility = Visibility.Visible;
+        {
+            AppLogPanel.AddProcessLog(GetType().Name, "アプリ起動", "処理開始");
+
+            // Loading画面表示（※MainWindow_Loaded終わりまで表示）
+            LoadScreen.Visibility = Visibility.Visible;
 			LoadSubPanel.Visibility = Visibility.Collapsed;
 
 
             // クライアントID存在チェック
             if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
 
-			M_Setting tempSettingObj;
-
-			// ユーザー名取得確認
-			tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? new()
+            // ユーザー名取得確認
+            M_Setting tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? new()
 			{
 				Name = 9999,
 				Value = ""
@@ -78,57 +86,77 @@ namespace JTSA
 			if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
 			{
 				StatusTextBlock.Text = "ユーザー名が設定されていません";
-
 				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
 				LoadSubPanel.Visibility = Visibility.Visible;
 				return;
 			}
-			else
-			{
-				StatusTextBlock.Text = "ユーザー名を取得";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
+            
+			AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 ユーザー名 」");
+
 
 			Utility.UserName = tempSettingObj.Value;
 			UserName_TextBox.Text = Utility.UserName;
 
 			// リフレッシュトークンからアクセストークンを再取得
-			var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
-			if (settingUserName == null || String.IsNullOrEmpty(settingUserName.Value)) return;
+			var isProcessSuccess = await ResetAccessTokenAsync();
 
-			var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
+            if (!isProcessSuccess)
+            {
+                AppLogPanel.AddCriticalErrorLog(GetType().Name, "※※※ 再認証してください ※※※");
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
+            }
 
-			if (string.IsNullOrEmpty(accessTokenResponse.accessToken))
-			{
-				StatusTextBlock.Text = "アクセストークンの取得に失敗";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-				LoadSubPanel.Visibility = Visibility.Visible;
-				return;
-			}
-			else
-			{
-				StatusTextBlock.Text = "アクセストークンを取得";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
+            await StreamerDataSet();
 
-			TwitchHelper.AccessToken = accessTokenResponse.accessToken;
+            LoadScreen.Visibility = Visibility.Collapsed;
+            AppLogPanel.AddProcessLog(GetType().Name, "アプリ起動", "処理終了");
+        }
 
-			M_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)M_Setting.SettingName.RefreshToken,
-				Value = accessTokenResponse.refreshToken,
-			});
 
-			M_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)M_Setting.SettingName.ExpiresIn,
-				Value = accessTokenResponse.expiresIn.ToString(),
-			});
+        /// <summary>
+        /// アクセストークンの再取得
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> ResetAccessTokenAsync()
+        {
+            AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理開始");
 
-			await StreamerDataSet();
-			
-			LoadScreen.Visibility = Visibility.Collapsed;
-		}
+            var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
+            var isProcessSuccess = !(settingUserName == null || String.IsNullOrEmpty(settingUserName.Value));
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "DB取得成功 「 ユーザー名 」",
+                "DB取得失敗 「 ユーザー名 」"
+            );
+
+            if (!isProcessSuccess) return false;
+
+            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
+            isProcessSuccess = !string.IsNullOrEmpty(accessTokenResponse.accessToken);
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "取得成功 「 アクセストークン 」",
+                "取得失敗 「 アクセストークン 」"
+            );
+
+            if (!isProcessSuccess) return false;
+
+            TwitchHelper.AccessToken = accessTokenResponse.accessToken;
+
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.RefreshToken,
+                Value = accessTokenResponse.refreshToken,
+            });
+
+            M_Setting.InsertUpdate(new M_Setting
+            {
+                Name = (int)M_Setting.SettingName.ExpiresIn,
+                Value = accessTokenResponse.expiresIn.ToString(),
+            });
+
+            AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理終了");
+			return true;
+        }
 
 
 		/// <summary>
@@ -136,58 +164,48 @@ namespace JTSA
 		/// </summary>
 		/// <param name="userName"></param>
 		private async Task StreamerDataSet()
-		{
-			var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync();
+        {
+            AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理開始");
 
-			if (streamerInfo != null && !String.IsNullOrEmpty(streamerInfo.BroadcastId))
-			{
-				TwitchHelper.BroadcasterId = streamerInfo.BroadcastId;
+            var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync();
+            var isProcessSuccess = streamerInfo != null && !string.IsNullOrEmpty(streamerInfo.BroadcastId);
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "取得成功 「 配信者ID 」",
+                "取得失敗 「 配信者ID 」"
+            );
 
-				StatusTextBlock.Text = $"broadcaster_id取得成功: {TwitchHelper.BroadcasterId}";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
-			else
-			{
-				StatusTextBlock.Text = "broadcaster_idの取得に失敗しました。";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-				return;
-			}
+            if (!isProcessSuccess) return;
 
-			bool isExistAccessToken =!String.IsNullOrEmpty(TwitchHelper.AccessToken);
+			TwitchHelper.BroadcasterId = streamerInfo.BroadcastId;
+
+
+            bool isExistAccessToken =!string.IsNullOrEmpty(TwitchHelper.AccessToken);
 
 			if (isExistAccessToken)
-			{
-				StatusTextBlock.Text = "アクセストークンを取得";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+            {
+                AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 アクセストークン 」");
 				AccessToken_TextBlock.Text = "OK!";
 
 				// タイトル取得処理
-				CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? "";
+				CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
 
-				await WaitForTargetStringAsync(CurrentTitleTextBlock.Text);
 				TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
 				// カテゴリID処理
-				var CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
+				var CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? string.Empty;
 
 				// カテゴリ名取得処理
 				var category = await TwitchHelper.GetGamesByGameId(CategoryId);
-				editTitleTextForm = new EditTitleTextForm()
-				{
-					Content = TitleEditTextBox.Text,
-					CategoryId = category.Id,
-					CategoryName = category.Name,
-					BoxArtUrl = category.BoxArtUrl
-				};
 
-				CategorySidePanel.ReloadCategory();
+				editTitleTextForm.Content = TitleEditTextBox.Text;
+				editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
+                SetDisplayFromEditFrom();
 
-				SetEditTitleTextForm();
+                CategorySidePanel.ReloadCategory();
 			}
 			else
-			{
-				StatusTextBlock.Text = "アクセストークンの取得に失敗";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+            {
+                AppLogPanel.AddErrorLog(GetType().Name, "取得失敗 「 アクセストークン 」");
 				AccessToken_TextBlock.Text = "NG";
 			}
 
@@ -197,7 +215,9 @@ namespace JTSA
 			FriendSidePanel.ReloadFriend();
 			CategorySidePanel.ReloadCategory();
 			SaveTitleSidePanel.ReloadSaveTitleText();
-		}
+
+            AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理終了");
+        }
 
 
 		#region =============== Tiwthc：OAuth認証 ===============
@@ -226,20 +246,20 @@ namespace JTSA
 
 			// ポーリングでトークン取得
 			var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
-			
-			
-			if (!string.IsNullOrEmpty(accessTokenResponse.accessToken))
+
+            var isProcessSuccess = !string.IsNullOrEmpty(accessTokenResponse.accessToken);
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "取得成功 「 アクセストークン 」",
+                "取得失敗 「 アクセストークン 」"
+            );
+
+            if (isProcessSuccess)
 			{
 				TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-
-				StatusTextBlock.Text = "アクセストークンを取得";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
 				AccessToken_TextBlock.Text = "OK!";
 			}
 			else
 			{
-				StatusTextBlock.Text = "アクセストークンの取得に失敗";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
 				AccessToken_TextBlock.Text = "NG";
 			}
 
@@ -293,12 +313,12 @@ namespace JTSA
 					Content = item.Content,
 					CategoryId = item.CategoryId,
 					CategoryName = item.CategoryName,
-					LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
+					CategoryBoxArtUrl = item.CategoryBoxArtUrl,
+                    LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
 				});
 			}
 
-			StatusTextBlock.Text = "タイトルログリストを読込";
-			StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+            AppLogPanel.AddSuccessLog(GetType().Name, "タイトルログリストを読込");
 		}
 
 		#endregion
@@ -310,13 +330,15 @@ namespace JTSA
 		/// タイトルテキスト：追加処理
 		/// </summary>
 		/// <param name="title"></param>
-		private void AddTitleText(String content, String categoryId, String categoryName)
-		{
-			// DB接続処理
-			using var db = new AppDbContext();
+		private void AddTitleText(string content, string categoryId, string categoryName, string categoryBoxArtUrl)
+        {
+            AppLogPanel.AddProcessLog(GetType().Name, "タイトルログリスト", "追加処理開始");
+
+            // DB接続処理
+            using var db = new AppDbContext();
 
 			// データチェック
-			if (String.IsNullOrWhiteSpace(content)) return;
+			if (string.IsNullOrWhiteSpace(content)) return;
 
 			// データ作成
 			var isnertData = new M_TitleText
@@ -324,7 +346,8 @@ namespace JTSA
 				Content = content,
 				CategoryId = categoryId,
 				CategoryName = categoryName,
-				CountSelected = 0,
+				CategoryBoxArtUrl = categoryBoxArtUrl,
+                CountSelected = 0,
 				SortNumber = 9999,
 				IsDeleted = false,
 				LastUseDateTime = DateTime.Now,
@@ -332,29 +355,39 @@ namespace JTSA
 				UpdateDateTime = DateTime.Now
 			};
 
-			// 挿入処理
-			DisplayLog(M_TitleText.Insert(isnertData),
-				"データを追加しました。",
-				"既にデータが存在します。"
+            // 挿入処理
+            var isProcessSuccess = M_TitleText.Insert(isnertData);
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "データ追加成功 「 タイトルログ 」",
+				"データ追加失敗 「 タイトルログ 」"
 			);
 
 			// 再読み込み処理
 			ReloadTitleText();
-		}
+
+            AppLogPanel.AddProcessLog(GetType().Name, "タイトルログリスト", "追加処理終了");
+        }
 
 		#endregion
 
+
 		#region =============== メインパネル：編集部分 ===============
+
 
 		/// <summary>
 		/// 読み込み処理：編集部分
 		/// </summary>
-		public void SetEditTitleTextForm()
+		public void SetDisplayFromEditFrom()
 		{
 			TitleEditTextBox.Text = editTitleTextForm.Content;
-			SelectCategpryIdTextBlock.Text = editTitleTextForm.CategoryId;
-			SelectCategpryNameTextBlock.Text = editTitleTextForm.CategoryName;
-		}
+			SelectCategoryIdTextBlock.Text = editTitleTextForm.CategoryId;
+			SelectCategoryNameTextBlock.Text = editTitleTextForm.CategoryName;
+			if (!string.IsNullOrEmpty(editTitleTextForm.CategoryBoxArtUrl))
+            {
+                SelectCategoryBoxArt.Source = new BitmapImage(new Uri(editTitleTextForm.CategoryBoxArtUrl));
+            }
+        }
+
 
 		/// <summary>
 		/// 送信ボタンクリック時
@@ -362,12 +395,16 @@ namespace JTSA
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
 		private async void SetTitleButton_Click(object sender, RoutedEventArgs e)
-		{
-			var title = TitleEditTextBox.Text;
-			var categoryId = SelectCategpryIdTextBlock.Text;
-			var categoryName = SelectCategpryNameTextBlock.Text;
+        {
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理開始");
 
-			using var client = new HttpClient();
+            var title = TitleEditTextBox.Text;
+			var categoryId = SelectCategoryIdTextBlock.Text;
+			var categoryName = SelectCategoryNameTextBlock.Text;
+			var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
+
+
+            using var client = new HttpClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
 			client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
 
@@ -380,37 +417,32 @@ namespace JTSA
 				$"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}",
 				content);
 
-			// レスポンスの処理
-			if (response.IsSuccessStatusCode)
-			{// 200 OK
+			var isProcessSuccess = response.IsSuccessStatusCode;
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "送信成功 「 配信概要 」",
+                "送信失敗 「 配信概要 」：" + (int)response.StatusCode + "：" + response.StatusCode
+            );
 
-				StatusTextBlock.Text = "配信概要を更新しました。";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-
+            // レスポンスの処理
+            if (isProcessSuccess)
+			{
 				// --- 履歴追加処理 ---
-				AddTitleText(title, categoryId, categoryName);
-			}
-			else
-			{// エラー
-
-				StatusTextBlock.Text = "更新に失敗しました。：" + (int)response.StatusCode + "：" + response.StatusCode;
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+				AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
 			}
 
+			String gameId = SelectCategoryIdTextBlock.Text.Trim();
+            isProcessSuccess = await TwitchHelper.SetCategoryAsync(TwitchHelper.BroadcasterId, TwitchHelper.AccessToken, gameId.ToString());
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "送信成功 「 カテゴリ 」",
+				"送信失敗 「 カテゴリ 」"
+            );
 
-			String gameId = SelectCategpryIdTextBlock.Text.Trim();
-			bool result = await TwitchHelper.SetCategoryAsync(TwitchHelper.BroadcasterId, TwitchHelper.AccessToken, gameId.ToString());
-			if (result)
-			{
-				StatusTextBlock.Text = "カテゴリを設定しました。";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
-			else
-			{
-				StatusTextBlock.Text = "カテゴリの設定に失敗しました。";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-			}
-		}
+            // タイトル取得処理
+            CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
+
+
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
+        }
 
 
 		/// <summary>
@@ -421,10 +453,11 @@ namespace JTSA
 		private void SaveTitleButton_Click(object sender, RoutedEventArgs e)
 		{
 			var title = TitleEditTextBox.Text;
-			var categoryId = SelectCategpryIdTextBlock.Text;
-			var categoryName = SelectCategpryNameTextBlock.Text;
+			var categoryId = SelectCategoryIdTextBlock.Text;
+			var categoryName = SelectCategoryNameTextBlock.Text;
+            var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
 
-			AddTitleText(title, categoryId, categoryName);
+            AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
 
 			SaveTitleSidePanel.ReloadSaveTitleText();
 		}
@@ -437,12 +470,12 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-			DisplayLog(
-				Utility.CopyClipBoad(CurrentTitleTextBlock.Text),
-				"タイトルをクリップボードにコピーしました。",
-				"クリップボードへのコピーに失敗しました。"
-			);
-		}
+            var isProcessSuccess = Utility.CopyClipBoad(CurrentTitleTextBlock.Text);
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "クリップボードコピー成功 「 タイトル 」",
+                "クリップボードコピー失敗 「 タイトル 」"
+            );
+        }
 
 
 		/// <summary>
@@ -451,32 +484,34 @@ namespace JTSA
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
 		private async void GetTitleButton_Click(object sender, RoutedEventArgs e)
-		{
-			// カテゴリID処理
-			String gameId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
+        {
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル取得", "処理開始");
+
+            // カテゴリID処理
+            String gameId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
 
 			// カテゴリ名取得処理
 			var category = await TwitchHelper.GetGamesByGameId(gameId);
 
-			editTitleTextForm.CategoryId = category.Id;
-			editTitleTextForm.CategoryName = category.Name;
-			editTitleTextForm.BoxArtUrl = category.BoxArtUrl;
-			SetEditTitleTextForm();
-
 			var title = await TwitchHelper.GetTwitchTitle();
-			if (string.IsNullOrEmpty(title))
-			{
-				StatusTextBlock.Text = "配信概要に失敗しました。：";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-			}
-			else
+
+			var isProcessSuccess = !string.IsNullOrEmpty(title);
+
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "取得成功 「 配信概要 」",
+                "取得失敗 「 配信概要 」"
+            );
+
+			if (isProcessSuccess)
 			{
 				CurrentTitleTextBlock.Text = title;
+            }
 
-				StatusTextBlock.Text = "配信概要を取得しました。";
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
-		}
+            editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
+            SetDisplayFromEditFrom();
+
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル取得", "処理終了");
+        }
 
 
 		/// <summary>
@@ -512,10 +547,11 @@ namespace JTSA
 		{
 			String categoryId = editTitleTextForm.CategoryId;
 			String categoryName = editTitleTextForm.CategoryName;
-			String boxArtUrl = editTitleTextForm.BoxArtUrl;
+			String boxArtUrl = editTitleTextForm.CategoryBoxArtUrl;
 
 			CategorySidePanel.AddCategory(categoryId, categoryName, boxArtUrl);
 		}
+
 
 		/// <summary>
 		/// カテゴリIDテキストクリック時
@@ -524,11 +560,10 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-			DisplayLog(
-				Utility.CopyClipBoad(SelectCategpryNameTextBlock.Text),
-				"カテゴリをクリップボードにコピーしました。",
-				"クリップボードへのコピーに失敗しました。"
-			);
+            AppLogPanel.AddSwitchLog(Utility.CopyClipBoad(SelectCategoryNameTextBlock.Text), GetType().Name,
+                "クリップボードコピー成功 「 カテゴリ 」",
+                "クリップボードコピー失敗 「 カテゴリ 」"
+            );
 		}
 
 		#endregion
@@ -547,14 +582,25 @@ namespace JTSA
 			{
 				TitleEditTextBox.Text = selectedItem.Content;
 
-				SelectCategpryIdTextBlock.Text = selectedItem.CategoryId;
-				SelectCategpryNameTextBlock.Text = selectedItem.CategoryName;
-			}
+				SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
+				SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
+                if (!string.IsNullOrEmpty(selectedItem.CategoryBoxArtUrl))
+                {
+					try
+                    {
+                        SelectCategoryBoxArt.Source = new BitmapImage(new Uri(selectedItem.CategoryBoxArtUrl));
+                    }
+					catch
+					{
+						SelectCategoryBoxArt.Source = null;
+					}
+                }
+            }
 		}
 
 
 		/// <summary>
-		/// 
+		/// 削除ボタンクリック時
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
@@ -567,46 +613,7 @@ namespace JTSA
 			}
 
 			ReloadTitleText();
-		}
-
-		#endregion
-
-
-		#region =============== プライベート関数 ===============
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="isError"></param>
-		/// <param name="successStr"></param>
-		/// <param name="errorStr"></param>
-		public void DisplayLog(bool isError, String successStr, String errorStr)
-		{
-			if (isError)
-			{
-				StatusTextBlock.Text = successStr;
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
-			else
-			{
-				StatusTextBlock.Text = errorStr;
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-			}
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <returns></returns>
-		private async Task WaitForTargetStringAsync(String target)
-		{
-			// 最大3秒待つ（100msごとにチェック）
-			for (int i = 0; i < 30; i++)
-			{
-				if (!string.IsNullOrEmpty(target)) return;
-
-				await Task.Delay(100);
-			}
+			SaveTitleSidePanel.ReloadSaveTitleText();
 		}
 
 		#endregion
@@ -718,16 +725,29 @@ namespace JTSA
 
 		#endregion
 
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
 		private void TweetButton_Click(object sender, RoutedEventArgs e)
 		{
-			// 認証URL生成
-			var oauthUrl = $"https://x.com/intent/post?text=";
-			var text = editTitleTextForm.Content + "%0D%0A" + "配信カテゴリ：" + editTitleTextForm.CategoryName + "%0D%0A" + "配信URL：" + $"https://www.twitch.tv/" + Utility.UserName;
+			// 必要データの取得
+			var stremTitleText = editTitleTextForm.Content;
+			var categoryNameText = editTitleTextForm.CategoryName;
 
-			// ブラウザで認証ページを開く
-			Process.Start(new ProcessStartInfo
+            // 認証URL生成
+            var oauthUrl = $"https://x.com/intent/post?text=";
+			var text = stremTitleText + "\\r\\n" + "配信カテゴリ：" + categoryNameText + "\\r\\n" + $"https://www.twitch.tv/" + Utility.UserName;
+
+            // URIエンコード
+            var encodedText = WebUtility.UrlEncode(text);
+
+            // ブラウザで認証ページを開く
+            Process.Start(new ProcessStartInfo
 			{
-				FileName = oauthUrl + text,
+				FileName = oauthUrl + encodedText,
 				UseShellExecute = true
 			});
 		}
@@ -788,12 +808,21 @@ namespace JTSA
 			AppArrangePanel.RegistAppAllMove();
         }
 
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="sender"></param>
+		/// <param name="e"></param>
         private void DBFolderOpen(object sender, RoutedEventArgs e)
         {
 			OpenDbFolder();
         }
 
-        // dbDirectoryをエクスプローラーで開くメソッド
+
+        /// <summary>
+        /// dbDirectoryをエクスプローラーで開くメソッド
+        /// </summary>
         private void OpenDbFolder()
         {
             string folder = AppDbContext.dbDirectory;

@@ -112,6 +112,8 @@ namespace JTSA.Panels
         /// </summary>
         public void ReloadTitleTag()
         {
+            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグリスト再読み込み", "処理開始");
+
             // DB接続と初期化処理
             using var db = new AppDbContext();
             TitleTagFormList.Clear();
@@ -130,8 +132,7 @@ namespace JTSA.Panels
                 });
             }
 
-            mainWindow.StatusTextBlock.Text = "タイトルタグリストを読込";
-            mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグリスト再読み込み", "処理終了");
         }
 
 
@@ -141,6 +142,8 @@ namespace JTSA.Panels
         /// <param name="title"></param>
         private void AddTitleTag(string displayName)
         {
+            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグDB追加", "処理開始");
+
             // DB接続処理
             using var db = new AppDbContext();
 
@@ -160,13 +163,15 @@ namespace JTSA.Panels
             };
 
             // 挿入処理
-            mainWindow.DisplayLog(M_TitleTag.Insert(isnertData),
-                "データを追加しました。",
-                "既にデータが存在します。"
+            mainWindow.AppLogPanel.AddSwitchLog(M_TitleTag.Insert(isnertData), GetType().Name,
+                $"【 DB追加 】 成功：{isnertData.DisplayName}",
+                "【 DB追加 】 既存データと競合"
             );
 
             // 再読み込み処理
             ReloadTitleTag();
+
+            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグDB追加", "処理終了");
         }
     }    
 }

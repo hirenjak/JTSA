@@ -14,6 +14,8 @@ public class M_TitleText
 
     public required string CategoryName { get; set; }
 
+    public required string CategoryBoxArtUrl { get; set; }
+
     public int CountSelected { get; set; }
 
     public int SortNumber { get; set; }
@@ -44,6 +46,7 @@ public class M_TitleText
                 Content = record.Content,
                 CategoryId = record.CategoryId,
                 CategoryName = record.CategoryName,
+                CategoryBoxArtUrl = record.CategoryBoxArtUrl,
                 CountSelected = record.CountSelected,
                 SortNumber = record.SortNumber,
                 IsDeleted = record.IsDeleted,
@@ -74,6 +77,7 @@ public class M_TitleText
                 Content = record.Content,
                 CategoryId = record.CategoryId,
                 CategoryName = record.CategoryName,
+                CategoryBoxArtUrl = record.CategoryBoxArtUrl,
                 CountSelected = record.CountSelected,
                 SortNumber = record.SortNumber,
                 IsDeleted = record.IsDeleted,
@@ -119,6 +123,7 @@ public class M_TitleText
                 Content = record.Content,
                 CategoryId = record.CategoryId,
                 CategoryName = record.CategoryName,
+                CategoryBoxArtUrl = record.CategoryBoxArtUrl,
                 CountSelected = record.CountSelected,
                 SortNumber = record.SortNumber,
                 IsDeleted = record.IsDeleted,

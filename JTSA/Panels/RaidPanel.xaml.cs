@@ -76,5 +76,15 @@ namespace JTSA.Panels
         {
 
         }
+
+        private void SubscribeUserListBox_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+
+        }
+
+        private void SubscribeUserListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
     }
 }
