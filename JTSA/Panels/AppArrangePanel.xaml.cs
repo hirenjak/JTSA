@@ -310,7 +310,7 @@ namespace JTSA.Panels
                 // 停止状態なら起動
                 if (app.Status == "停止" && !string.IsNullOrEmpty(app.AppExePath))
                 {
-                    mainWindow.DisplayLog(RegistListRunStart(app.AppExePath),
+                    mainWindow.AppLogPanel.AddSwitchLog(RegistListRunStart(app.AppExePath), GetType().Name,
                         $"アプリを起動しました：{app.ProcessName}",
                         $"起動失敗"
                     );
@@ -318,7 +318,7 @@ namespace JTSA.Panels
                 else
                 {
                     // ウィンドウ移動処理
-                    mainWindow.DisplayLog(Win32Helper.SetAppWindowRect(app),
+                    mainWindow.AppLogPanel.AddSwitchLog(Win32Helper.SetAppWindowRect(app), GetType().Name,
                         $"アプリを移動しました：{app.ProcessName}",
                         $"移動失敗：対象が起動中か、権限/タイトル一致をご確認ください。"
                     );

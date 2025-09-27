@@ -51,7 +51,7 @@ namespace JTSA
             accessTokenRefreshTimer.Tick += async (s, e) =>
             {
                 await ResetAccessTokenAsync();
-                AppLogPanel.AddProcessLog("アクセストークン自動リフレッシュ実行");
+                AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン自動リフレッシュ", "実行");
             };
 
             accessTokenRefreshTimer.Start();
@@ -65,7 +65,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
         {
-            AppLogPanel.AddProcessLog("処理開始 【 アプリ起動 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "アプリ起動", "処理開始");
 
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
@@ -84,12 +84,12 @@ namespace JTSA
 
 			if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
 			{
-                AppLogPanel.AddCriticalErrorLog("※※※ ユーザー名が設定されていません ※※※");
+                AppLogPanel.AddCriticalErrorLog(GetType().Name, "※※※ ユーザー名が設定されていません ※※※");
                 LoadSubPanel.Visibility = Visibility.Visible;
 				return;
 			}
             
-			AppLogPanel.AddSuccessLog("取得成功 「 ユーザー名 」");
+			AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 ユーザー名 」");
 
 
 			Utility.UserName = tempSettingObj.Value;
@@ -100,7 +100,7 @@ namespace JTSA
 
             if (!isProcessSuccess)
             {
-                AppLogPanel.AddCriticalErrorLog("※※※ 再認証してください ※※※");
+                AppLogPanel.AddCriticalErrorLog(GetType().Name, "※※※ 再認証してください ※※※");
                 LoadSubPanel.Visibility = Visibility.Visible;
                 return;
             }
@@ -108,7 +108,7 @@ namespace JTSA
             await StreamerDataSet();
 
             LoadScreen.Visibility = Visibility.Collapsed;
-            AppLogPanel.AddProcessLog("処理終了 【 アプリ起動 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "アプリ起動", "処理終了");
         }
 
 
@@ -118,11 +118,11 @@ namespace JTSA
         /// <returns></returns>
         private async Task<bool> ResetAccessTokenAsync()
         {
-            AppLogPanel.AddProcessLog("処理開始 【 アクセストークン再取得 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理開始");
 
             var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
             var isProcessSuccess = !(settingUserName == null || String.IsNullOrEmpty(settingUserName.Value));
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "DB取得成功 「 ユーザー名 」",
                 "DB取得失敗 「 ユーザー名 」"
             );
@@ -131,7 +131,7 @@ namespace JTSA
 
             var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
             isProcessSuccess = !string.IsNullOrEmpty(accessTokenResponse.accessToken);
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 アクセストークン 」",
                 "取得失敗 「 アクセストークン 」"
             );
@@ -152,7 +152,7 @@ namespace JTSA
                 Value = accessTokenResponse.expiresIn.ToString(),
             });
 
-            AppLogPanel.AddProcessLog("処理終了 【 アクセストークン再取得 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理終了");
 			return true;
         }
 
@@ -163,11 +163,11 @@ namespace JTSA
 		/// <param name="userName"></param>
 		private async Task StreamerDataSet()
         {
-            AppLogPanel.AddProcessLog("処理開始 【 配信者情報設定 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理開始");
 
             var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync();
             var isProcessSuccess = streamerInfo != null && !string.IsNullOrEmpty(streamerInfo.BroadcastId);
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 配信者ID 」",
                 "取得失敗 「 配信者ID 」"
             );
@@ -181,7 +181,7 @@ namespace JTSA
 
 			if (isExistAccessToken)
             {
-                AppLogPanel.AddSuccessLog("取得成功 「 アクセストークン 」");
+                AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 アクセストークン 」");
 				AccessToken_TextBlock.Text = "OK!";
 
 				// タイトル取得処理
@@ -204,7 +204,7 @@ namespace JTSA
 			}
 			else
             {
-                AppLogPanel.AddErrorLog("取得失敗 「 アクセストークン 」");
+                AppLogPanel.AddErrorLog(GetType().Name, "取得失敗 「 アクセストークン 」");
 				AccessToken_TextBlock.Text = "NG";
 			}
 
@@ -215,7 +215,7 @@ namespace JTSA
 			CategorySidePanel.ReloadCategory();
 			SaveTitleSidePanel.ReloadSaveTitleText();
 
-            AppLogPanel.AddProcessLog("処理終了 【 配信者情報設定 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理終了");
         }
 
 
@@ -247,7 +247,7 @@ namespace JTSA
 			var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
 
             var isProcessSuccess = !string.IsNullOrEmpty(accessTokenResponse.accessToken);
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 アクセストークン 」",
                 "取得失敗 「 アクセストークン 」"
             );
@@ -317,7 +317,7 @@ namespace JTSA
 				});
 			}
 
-            AppLogPanel.AddSuccessLog("タイトルログリストを読込");
+            AppLogPanel.AddSuccessLog(GetType().Name, "タイトルログリストを読込");
 		}
 
 		#endregion
@@ -331,7 +331,7 @@ namespace JTSA
 		/// <param name="title"></param>
 		private void AddTitleText(string content, string categoryId, string categoryName, string categoryBoxArtUrl)
         {
-            AppLogPanel.AddSuccessLog("タイトルログリストを追加");
+            AppLogPanel.AddProcessLog(GetType().Name, "タイトルログリスト", "追加処理開始");
 
             // DB接続処理
             using var db = new AppDbContext();
@@ -356,14 +356,16 @@ namespace JTSA
 
             // 挿入処理
             var isProcessSuccess = M_TitleText.Insert(isnertData);
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
-				"データ追加成功 「 タイトルログ 」",
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "データ追加成功 「 タイトルログ 」",
 				"データ追加失敗 「 タイトルログ 」"
 			);
 
 			// 再読み込み処理
 			ReloadTitleText();
-		}
+
+            AppLogPanel.AddProcessLog(GetType().Name, "タイトルログリスト", "追加処理終了");
+        }
 
 		#endregion
 
@@ -393,7 +395,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private async void SetTitleButton_Click(object sender, RoutedEventArgs e)
         {
-            AppLogPanel.AddSuccessLog("処理開始 【配信タイトル送信】");
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理開始");
 
             var title = TitleEditTextBox.Text;
 			var categoryId = SelectCategoryIdTextBlock.Text;
@@ -415,7 +417,7 @@ namespace JTSA
 				content);
 
 			var isProcessSuccess = response.IsSuccessStatusCode;
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "送信成功 「 配信概要 」",
                 "送信失敗 「 配信概要 」：" + (int)response.StatusCode + "：" + response.StatusCode
             );
@@ -429,12 +431,12 @@ namespace JTSA
 
 			String gameId = SelectCategoryIdTextBlock.Text.Trim();
             isProcessSuccess = await TwitchHelper.SetCategoryAsync(TwitchHelper.BroadcasterId, TwitchHelper.AccessToken, gameId.ToString());
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "送信成功 「 カテゴリ 」",
 				"送信失敗 「 カテゴリ 」"
             );
 
-            AppLogPanel.AddSuccessLog("処理終了 【配信タイトル送信】");
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
         }
 
 
@@ -464,7 +466,7 @@ namespace JTSA
 		private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
             var isProcessSuccess = Utility.CopyClipBoad(CurrentTitleTextBlock.Text);
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "クリップボードコピー成功 「 タイトル 」",
                 "クリップボードコピー失敗 「 タイトル 」"
             );
@@ -478,7 +480,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private async void GetTitleButton_Click(object sender, RoutedEventArgs e)
         {
-            AppLogPanel.AddProcessLog("処理開始 【 配信タイトル取得 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル取得", "処理開始");
 
             // カテゴリID処理
             String gameId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
@@ -490,7 +492,7 @@ namespace JTSA
 
 			var isProcessSuccess = !string.IsNullOrEmpty(title);
 
-            AppLogPanel.AddSwitchLog(isProcessSuccess,
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 配信概要 」",
                 "取得失敗 「 配信概要 」"
             );
@@ -503,7 +505,7 @@ namespace JTSA
             editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
             SetDisplayFromEditFrom();
 
-            AppLogPanel.AddProcessLog("処理終了 【 配信タイトル取得 】");
+            AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル取得", "処理終了");
         }
 
 
@@ -553,8 +555,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-            AppLogPanel.AddSwitchLog(
-				Utility.CopyClipBoad(SelectCategoryNameTextBlock.Text),
+            AppLogPanel.AddSwitchLog(Utility.CopyClipBoad(SelectCategoryNameTextBlock.Text), GetType().Name,
                 "クリップボードコピー成功 「 カテゴリ 」",
                 "クリップボードコピー失敗 「 カテゴリ 」"
             );
@@ -583,7 +584,7 @@ namespace JTSA
 
 
 		/// <summary>
-		/// 
+		/// 削除ボタンクリック時
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
@@ -603,26 +604,6 @@ namespace JTSA
 
 
 		#region =============== プライベート関数 ===============
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="isError"></param>
-		/// <param name="successStr"></param>
-		/// <param name="errorStr"></param>
-		public void DisplayLog(bool isError, String successStr, String errorStr)
-		{
-			if (isError)
-			{
-				StatusTextBlock.Text = successStr;
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
-			}
-			else
-			{
-				StatusTextBlock.Text = errorStr;
-				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
-			}
-		}
 
 		/// <summary>
 		/// 

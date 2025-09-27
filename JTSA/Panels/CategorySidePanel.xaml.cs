@@ -130,7 +130,7 @@ namespace JTSA.Panels
             };
 
             // 挿入処理
-            mainWindow.DisplayLog(M_Category.Insert(isnertData),
+            mainWindow.AppLogPanel.AddSwitchLog(M_Category.Insert(isnertData), GetType().Name,
                 "データを追加しました。",
                 "既にデータが存在します。"
             );

@@ -42,7 +42,7 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        private void AddLog(string log, SolidColorBrush color)
+        private void AddLog(string traceClassName, string log, SolidColorBrush color)
         {
             mainWindow.StatusTextBlock.Text = log;
             mainWindow.StatusTextBlock.Foreground = color;
@@ -50,7 +50,7 @@ namespace JTSA.Panels
             AppLogFormList.Insert(0,
                 new AppLogForm() { 
                 LogDateTime = DateTime.Now,
-                Content = log,  
+                Content = "【 " + traceClassName + "】 " + log,  
                 Color = color
             });
         }
@@ -60,9 +60,9 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddProcessLog(string log)
+        public void AddProcessLog(string traceClassName, string processTitle ,string log)
         {
-            AddLog(log, NORMAL_COLOR);
+            AddLog($"{traceClassName} ： {processTitle} ", log, NORMAL_COLOR);
         }
 
 
@@ -70,9 +70,9 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddSuccessLog(string log)
+        public void AddSuccessLog(string traceClassName, string log)
         {
-            AddLog(log, SUCCSESS_COLOR);
+            AddLog(traceClassName, log, SUCCSESS_COLOR);
         }
 
 
@@ -80,9 +80,9 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddErrorLog(string log)
+        public void AddErrorLog(string traceClassName, string log)
         {
-            AddLog(log, ERROR_COLOR);
+            AddLog(traceClassName, log, ERROR_COLOR);
         }
 
 
@@ -90,9 +90,9 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddCriticalErrorLog(string log)
+        public void AddCriticalErrorLog(string traceClassName, string log)
         {
-            AddLog(log, CRITICAL_ERROR_COLOR);
+            AddLog(traceClassName, log, CRITICAL_ERROR_COLOR);
         }
 
 
@@ -102,15 +102,15 @@ namespace JTSA.Panels
         /// <param name="isSuccess"></param>
         /// <param name="successLog"></param>
         /// <param name="errorLog"></param>
-        public void AddSwitchLog(bool isSuccess, string successLog, string errorLog)
+        public void AddSwitchLog(bool isSuccess, string traceClassName, string successLog, string errorLog)
         {
             if (isSuccess)
             {
-                AddLog(successLog, SUCCSESS_COLOR);
+                AddLog(traceClassName, successLog, SUCCSESS_COLOR);
             } 
             else
             {
-                AddLog(errorLog, ERROR_COLOR);
+                AddLog(traceClassName, errorLog, ERROR_COLOR);
             }
         }
 
