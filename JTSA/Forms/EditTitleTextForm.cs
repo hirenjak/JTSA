@@ -12,9 +12,35 @@ namespace JTSA
 {
     public class EditTitleTextForm
     {
-        public required String Content { get; set; }
-        public required String CategoryId { get; set; }
-        public required String CategoryName { get; set; }
-        public required String CategoryBoxArtUrl { get; set; }
+        public string Content { get; set; }
+        public string CategoryId { get; private set; }
+        public string CategoryName { get; private set; }
+        public string CategoryBoxArtUrl { get; private set; }
+
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        public EditTitleTextForm()
+        {
+            Content = string.Empty;
+            CategoryId = string.Empty;
+            CategoryName = string.Empty;
+            CategoryBoxArtUrl = string.Empty;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="name"></param>
+        /// <param name="boxArtUlr"></param>
+        public void SetCategory(string id, string name, string boxArtUlr)
+        {
+            this.CategoryId = id;
+            this.CategoryName = name;
+            this.CategoryBoxArtUrl = boxArtUlr;
+        }
     }
 }

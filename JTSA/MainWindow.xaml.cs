@@ -3,13 +3,14 @@ using JTSA.Panels;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace JTSA
 {
@@ -18,7 +19,7 @@ namespace JTSA
 		/// <summary>  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
-		public EditTitleTextForm editTitleTextForm;
+		public EditTitleTextForm editTitleTextForm = new();
 
 
         /// <summary>
@@ -37,14 +38,6 @@ namespace JTSA
 
 			AllSidePanelClose();
 			TitleTagSidePanel.Visibility = Visibility.Visible;
-
-            editTitleTextForm = new()
-			{
-				Content = "",
-				CategoryId = "",
-				CategoryName = "",
-				CategoryBoxArtUrl = ""
-            };	
 
             // イベント登録
             this.Loaded += MainWindow_LoadedAsync;
@@ -182,17 +175,13 @@ namespace JTSA
 
 				// カテゴリ名取得処理
 				var category = await TwitchHelper.GetGamesByGameId(CategoryId);
-				editTitleTextForm = new EditTitleTextForm()
-				{
-					Content = TitleEditTextBox.Text,
-					CategoryId = category.Id,
-					CategoryName = category.Name,
-					CategoryBoxArtUrl = category.BoxArtUrl
-				};
 
-				CategorySidePanel.ReloadCategory();
+				editTitleTextForm.Content = TitleEditTextBox.Text;
+				editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
+                SetDisplayFromEditFrom();
 
-				SetEditTitleTextForm();
+                CategorySidePanel.ReloadCategory();
+
 			}
 			else
 			{
@@ -303,7 +292,8 @@ namespace JTSA
 					Content = item.Content,
 					CategoryId = item.CategoryId,
 					CategoryName = item.CategoryName,
-					LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
+					CategoryBoxArtUrl = item.CategoryBoxArtUrl,
+                    LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
 				});
 			}
 
@@ -320,13 +310,13 @@ namespace JTSA
 		/// タイトルテキスト：追加処理
 		/// </summary>
 		/// <param name="title"></param>
-		private void AddTitleText(String content, String categoryId, String categoryName)
+		private void AddTitleText(string content, string categoryId, string categoryName, string categoryBoxArtUrl)
 		{
 			// DB接続処理
 			using var db = new AppDbContext();
 
 			// データチェック
-			if (String.IsNullOrWhiteSpace(content)) return;
+			if (string.IsNullOrWhiteSpace(content)) return;
 
 			// データ作成
 			var isnertData = new M_TitleText
@@ -334,7 +324,8 @@ namespace JTSA
 				Content = content,
 				CategoryId = categoryId,
 				CategoryName = categoryName,
-				CountSelected = 0,
+				CategoryBoxArtUrl = categoryBoxArtUrl,
+                CountSelected = 0,
 				SortNumber = 9999,
 				IsDeleted = false,
 				LastUseDateTime = DateTime.Now,
@@ -357,15 +348,17 @@ namespace JTSA
 
 		#region =============== メインパネル：編集部分 ===============
 
+
 		/// <summary>
 		/// 読み込み処理：編集部分
 		/// </summary>
-		public void SetEditTitleTextForm()
+		public void SetDisplayFromEditFrom()
 		{
 			TitleEditTextBox.Text = editTitleTextForm.Content;
-			SelectCategpryIdTextBlock.Text = editTitleTextForm.CategoryId;
-			SelectCategpryNameTextBlock.Text = editTitleTextForm.CategoryName;
-		}
+			SelectCategoryIdTextBlock.Text = editTitleTextForm.CategoryId;
+			SelectCategoryNameTextBlock.Text = editTitleTextForm.CategoryName;
+			SelectCategoryBoxArt.Source = new BitmapImage(new Uri(editTitleTextForm.CategoryBoxArtUrl));
+        }
 
 
 		/// <summary>
@@ -376,10 +369,12 @@ namespace JTSA
 		private async void SetTitleButton_Click(object sender, RoutedEventArgs e)
 		{
 			var title = TitleEditTextBox.Text;
-			var categoryId = SelectCategpryIdTextBlock.Text;
-			var categoryName = SelectCategpryNameTextBlock.Text;
+			var categoryId = SelectCategoryIdTextBlock.Text;
+			var categoryName = SelectCategoryNameTextBlock.Text;
+			var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
 
-			using var client = new HttpClient();
+
+            using var client = new HttpClient();
 			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
 			client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
 
@@ -400,7 +395,7 @@ namespace JTSA
 				StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
 
 				// --- 履歴追加処理 ---
-				AddTitleText(title, categoryId, categoryName);
+				AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
 			}
 			else
 			{// エラー
@@ -410,8 +405,9 @@ namespace JTSA
 			}
 
 
-			String gameId = SelectCategpryIdTextBlock.Text.Trim();
+			String gameId = SelectCategoryIdTextBlock.Text.Trim();
 			bool result = await TwitchHelper.SetCategoryAsync(TwitchHelper.BroadcasterId, TwitchHelper.AccessToken, gameId.ToString());
+
 			if (result)
 			{
 				StatusTextBlock.Text = "カテゴリを設定しました。";
@@ -433,10 +429,11 @@ namespace JTSA
 		private void SaveTitleButton_Click(object sender, RoutedEventArgs e)
 		{
 			var title = TitleEditTextBox.Text;
-			var categoryId = SelectCategpryIdTextBlock.Text;
-			var categoryName = SelectCategpryNameTextBlock.Text;
+			var categoryId = SelectCategoryIdTextBlock.Text;
+			var categoryName = SelectCategoryNameTextBlock.Text;
+            var categoryBoxArtUrl = SelectCategoryNameTextBlock.Text;
 
-			AddTitleText(title, categoryId, categoryName);
+            AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
 
 			SaveTitleSidePanel.ReloadSaveTitleText();
 		}
@@ -470,10 +467,8 @@ namespace JTSA
 			// カテゴリ名取得処理
 			var category = await TwitchHelper.GetGamesByGameId(gameId);
 
-			editTitleTextForm.CategoryId = category.Id;
-			editTitleTextForm.CategoryName = category.Name;
-			editTitleTextForm.CategoryBoxArtUrl = category.BoxArtUrl;
-			SetEditTitleTextForm();
+			editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
+            SetDisplayFromEditFrom();
 
 			var title = await TwitchHelper.GetTwitchTitle();
 			if (string.IsNullOrEmpty(title))
@@ -537,7 +532,7 @@ namespace JTSA
 		private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
 			DisplayLog(
-				Utility.CopyClipBoad(SelectCategpryNameTextBlock.Text),
+				Utility.CopyClipBoad(SelectCategoryNameTextBlock.Text),
 				"カテゴリをクリップボードにコピーしました。",
 				"クリップボードへのコピーに失敗しました。"
 			);
@@ -559,8 +554,8 @@ namespace JTSA
 			{
 				TitleEditTextBox.Text = selectedItem.Content;
 
-				SelectCategpryIdTextBlock.Text = selectedItem.CategoryId;
-				SelectCategpryNameTextBlock.Text = selectedItem.CategoryName;
+				SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
+				SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
 			}
 		}
 

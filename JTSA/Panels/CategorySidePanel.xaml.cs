@@ -48,11 +48,8 @@ namespace JTSA.Panels
         {
             if (CategoryListBox.SelectedItem is CategoryForm selectedItem)
             {
-                mainWindow.editTitleTextForm.CategoryId = selectedItem.CategoryId;
-                mainWindow.editTitleTextForm.CategoryName = selectedItem.DisplayName;
-                mainWindow.editTitleTextForm.CategoryBoxArtUrl = selectedItem.BoxArtUrl;
-
-                mainWindow.SetEditTitleTextForm();
+                mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
+                mainWindow.SetDisplayFromEditFrom();
             }
 
             // 選択状態を解除

@@ -49,10 +49,14 @@ namespace JTSA.Panels
             if (SaveTitleListBox.SelectedItem is TitleTextForm selectedItem)
             {
                 mainWindow.editTitleTextForm.Content = selectedItem.Content;
-                mainWindow.editTitleTextForm.CategoryId = selectedItem.CategoryId;
-                mainWindow.editTitleTextForm.CategoryName = selectedItem.CategoryName;
 
-                mainWindow.SetEditTitleTextForm();
+                mainWindow.editTitleTextForm.SetCategory(
+                    selectedItem.CategoryId,
+                    selectedItem.CategoryName,
+                    selectedItem.CategoryBoxArtUrl
+                );
+
+                mainWindow.SetDisplayFromEditFrom();
             }
 
             // 選択状態を解除
@@ -101,6 +105,7 @@ namespace JTSA.Panels
                     Id = item.Id,
                     Content = item.Content,
                     CategoryName = item.CategoryName,
+                    CategoryBoxArtUrl = item.CategoryBoxArtUrl,
                     LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }

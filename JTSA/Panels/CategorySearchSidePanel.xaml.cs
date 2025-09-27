@@ -68,11 +68,8 @@ namespace JTSA.Panels
         {
             if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
             {
-                mainWindow.editTitleTextForm.CategoryId = selectedItem.CategoryId;
-                mainWindow.editTitleTextForm.CategoryName = selectedItem.DisplayName;
-                mainWindow.editTitleTextForm.CategoryBoxArtUrl = selectedItem.BoxArtUrl;
-
-                mainWindow.SetEditTitleTextForm();
+                mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
+                mainWindow.SetDisplayFromEditFrom();
             }
         }
 
