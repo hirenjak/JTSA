@@ -37,6 +37,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="TwitchLib.Api" Version="3.10.1-preview.199.347b75c" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
