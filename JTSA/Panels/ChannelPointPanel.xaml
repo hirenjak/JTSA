@@ -9,10 +9,9 @@
     <Grid>
         <StackPanel>
             <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・配信概要設定</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・チャネポONOFFプリセット</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・コンテンツラベルの制御</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・チャネポの集計</TextBlock>
+            <TextBlock x:Name="ChannelPointGetStatus" VerticalAlignment="Center" Foreground="White" FontSize="20"/>
+            <ListView x:Name="ChannelPointListView" Grid.Column="0" Margin="5">
+            </ListView>
         </StackPanel>
     </Grid>
 </UserControl>
