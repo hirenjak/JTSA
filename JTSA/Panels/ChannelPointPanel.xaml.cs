@@ -26,18 +26,29 @@ namespace JTSA.Panels
         {
             InitializeComponent();
         }
-        public void ReloadChannnelPoint()
+        public async void ReloadChannnelPoint()
         {
             mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "チャンネルポイントリスト再読み込み", "処理開始");
+            ChannelPointGetStatus.Text = "チャンネルポイント取得中..."; // 処理中のメッセージ
+            ChannelPointListView.ItemsSource = null; // 事前にリストをクリア
 
-            // DB接続と初期化処理
-            using var db = new AppDbContext();
-            ChannelPointGetStatus.Text = "hi!!!";
+            // データの取得し、結果をrewards変数に格納
+            var rewards = await TwitchHelper.GetCustomRewardsAsync();
 
-            // データの取得
-            var records = M_TitleTag.SelectAllOrderbyLastUser();
-
-            // 画面データ入れ換え処理
+            // 取得結果のチェック
+            if (rewards != null)
+            {
+                // 取得成功時、ListViewのItemsSourceにデータリストを設定
+                ChannelPointListView.ItemsSource = rewards;
+                ChannelPointGetStatus.Text = $"取得成功！ ({rewards.Count}件)";
+                mainWindow.AppLogPanel.AddSuccessLog(GetType().Name, "チャンネルポイントリスト取得成功");
+            }
+            else
+            {
+                // 取得失敗時
+                ChannelPointGetStatus.Text = "チャンネルポイントの取得に失敗しました。";
+                mainWindow.AppLogPanel.AddErrorLog(GetType().Name, "チャンネルポイントリスト取得失敗");
+            }
 
             mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "チャンネルポイントリスト再読み込み", "処理終了");
         }
