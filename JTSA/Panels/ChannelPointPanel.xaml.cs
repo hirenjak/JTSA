@@ -1,6 +1,7 @@
 ﻿using JTSA.Models;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,6 +26,57 @@ namespace JTSA.Panels
         public ChannelPointPanel()
         {
             InitializeComponent();
+        }
+
+        // ★追加：最後にソートした列と方向を記憶するための変数
+        private GridViewColumnHeader _lastHeaderClicked = null;
+        private ListSortDirection _lastDirection = ListSortDirection.Ascending;
+
+        // ★追加：ヘッダークリック時のイベントハンドラ
+        private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e)
+        {
+            if (e.OriginalSource is GridViewColumnHeader headerClicked)
+            {
+                // ヘッダーに対応するプロパティ名を取得
+                string sortBy = "";
+                if (headerClicked.Column.DisplayMemberBinding is Binding binding)
+                {
+                    sortBy = binding.Path.Path;
+                }
+                // 画像など、DisplayMemberBinding以外を使っている列の場合の対応
+                else if (headerClicked.Column.Header.ToString() == "有効")
+                {
+                    sortBy = "IsEnabled";
+                }
+                else if (headerClicked.Column.Header.ToString() == "一時停止")
+                {
+                    sortBy = "IsPaused";
+                }
+
+                if (string.IsNullOrEmpty(sortBy)) return;
+
+                // ソート方向を決定
+                ListSortDirection direction;
+                if (headerClicked != _lastHeaderClicked)
+                {
+                    direction = ListSortDirection.Ascending;
+                }
+                else
+                {
+                    direction = _lastDirection == ListSortDirection.Ascending ?
+                                ListSortDirection.Descending : ListSortDirection.Ascending;
+                }
+
+                // ListViewのItemsSourceからCollectionViewを取得してソートを適用
+                var dataView = CollectionViewSource.GetDefaultView(ChannelPointListView.ItemsSource);
+                dataView.SortDescriptions.Clear();
+                dataView.SortDescriptions.Add(new SortDescription(sortBy, direction));
+                dataView.Refresh();
+
+                // 今回のソート情報を記憶
+                _lastHeaderClicked = headerClicked;
+                _lastDirection = direction;
+            }
         }
         public async void ReloadChannnelPoint()
         {
