@@ -91,6 +91,7 @@ namespace JTSA.Panels
             if (rewards != null)
             {
                 // 取得成功時、ListViewのItemsSourceにデータリストを設定
+                rewards.Sort((a, b) => a.Cost.CompareTo(b.Cost)); // コストで昇順ソート
                 ChannelPointListView.ItemsSource = rewards;
                 ChannelPointGetStatus.Text = $"取得成功！ ({rewards.Count}件)";
                 mainWindow.AppLogPanel.AddSuccessLog(GetType().Name, "チャンネルポイントリスト取得成功");

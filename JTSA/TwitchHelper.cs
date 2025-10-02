@@ -484,6 +484,7 @@ namespace JTSA
             return null;
         }
 
+
         /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬リストを取得する
         /// API: https://api.twitch.tv/helix/channel_points/custom_rewards
@@ -525,7 +526,12 @@ namespace JTSA
                             Url1x = r.Image.Url1x,
                             Url2x = r.Image.Url2x,
                             Url4x = r.Image.Url4x
-                        } : null
+                        } : new RewardImage
+                        {
+                            Url1x = r.DefaultImage.Url1x,
+                            Url2x = r.DefaultImage.Url2x,
+                            Url4x = r.DefaultImage.Url4x
+                        }
                     }).ToList();
 
                     return rewards;
