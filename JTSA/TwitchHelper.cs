@@ -13,6 +13,8 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using TwitchLib.Api;
+using TwitchLib.Api.Core;
 
 namespace JTSA
 {
@@ -24,6 +26,22 @@ namespace JTSA
         public static string RedirectUri = @"http://localhost:8080/";
         public static string AccessToken = "";
         public static string BroadcasterId = "";
+
+        private static readonly TwitchAPI api;
+
+        static TwitchHelper()
+        {
+            api = new TwitchAPI();
+            api.Settings.ClientId = ClientID;
+            // AccessTokenは都度セットする（認証後に値が変わるため）
+        }
+
+        // 例：アクセストークンをセットするメソッド
+        public static void SetAccessToken(string token)
+        {
+            AccessToken = token;
+            api.Settings.AccessToken = token;
+        }
 
 
         public class SearchCategories
@@ -77,10 +95,10 @@ namespace JTSA
         public class CustomReward
         {
             [System.Text.Json.Serialization.JsonPropertyName("id")]
-            public string Id { get; set; }
+            public required string Id { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("title")]
-            public string Title { get; set; }
+            public required string Title { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("cost")]
             public int Cost { get; set; }
@@ -89,7 +107,7 @@ namespace JTSA
             public bool IsEnabled { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("prompt")]
-            public string Prompt { get; set; }
+            public required string Prompt { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("is_paused")]
             public bool IsPaused { get; set; }
@@ -101,13 +119,13 @@ namespace JTSA
         public class RewardImage
         {
             [System.Text.Json.Serialization.JsonPropertyName("url_1x")]
-            public string Url1x { get; set; }
+            public required string Url1x { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("url_2x")]
-            public string Url2x { get; set; }
+            public required string Url2x { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("url_4x")]
-            public string Url4x { get; set; }
+            public required string Url4x { get; set; }
         }
 
         /// <summary>
@@ -472,44 +490,99 @@ namespace JTSA
         /// Scope: channel:read:redemptions
         /// </summary>
         /// <returns>カスタム報酬のリスト。失敗した場合はnull。</returns>
+        //public static async Task<List<CustomReward>?> GetCustomRewardsAsync()
+        //{
+        //    MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+        //    mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "チャンネルポイントリスト読み込み", "処理開始");
+        //    // broadcaster_id が設定されていない場合は処理を中断
+        //    if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
+        //    {
+        //        mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "チャンネルポイントリスト読み込み中断", "broadcaster_id 不詳");
+        //        return null;
+        //    }
+
+        //    using var client = new HttpClient();
+        //    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
+        //    client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
+
+        //    // APIエンドポイントに必須パラメータ broadcaster_id を追加
+        //    var requestUrl = $"https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={TwitchHelper.BroadcasterId}";
+
+        //    var response = await client.GetAsync(requestUrl);
+
+        //    if (response.IsSuccessStatusCode)
+        //    {
+        //        var jsonString = await response.Content.ReadAsStringAsync();
+
+        //        // JSONのルートから "data" プロパティを取得
+        //        using var jsonDoc = JsonDocument.Parse(jsonString);
+        //        if (jsonDoc.RootElement.TryGetProperty("data", out var dataElement))
+        //        {
+        //            // "data" の中身 (報酬の配列) を List<CustomReward> に変換
+        //            var rewards = JsonSerializer.Deserialize<List<CustomReward>>(dataElement.GetRawText());
+        //            return rewards;
+        //        }
+        //    }
+
+        //    // レスポンスが成功でなかった場合や、パースに失敗した場合はnullを返す
+        //    // 実際にはここでエラー内容をログに出力するとデバッグがしやすくなります
+        //    // var errorContent = await response.Content.ReadAsStringAsync();
+        //    // Console.WriteLine($"API Error: {response.StatusCode} - {errorContent}");
+        //    return null;
+        //}
+
+        /// <summary>
+        /// TwitchLibを使用してチャンネルポイントのカスタム報酬リストを取得する
+        /// API: https://api.twitch.tv/helix/channel_points/custom_rewards
+        /// Scope: channel:read:redemptions
+        /// </summary>
+        /// <returns>カスタム報酬のリスト。失敗した場合はnull。</returns>
         public static async Task<List<CustomReward>?> GetCustomRewardsAsync()
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "チャンネルポイントリスト読み込み", "処理開始");
-            // broadcaster_id が設定されていない場合は処理を中断
+            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト読み込み", "処理開始");
+
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "チャンネルポイントリスト読み込み中断", "broadcaster_id 不詳");
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト読み込み中断", "broadcaster_id 不詳");
                 return null;
             }
-
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
-            client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
-
-            // APIエンドポイントに必須パラメータ broadcaster_id を追加
-            var requestUrl = $"https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={TwitchHelper.BroadcasterId}";
-
-            var response = await client.GetAsync(requestUrl);
-
-            if (response.IsSuccessStatusCode)
+            api.Settings.AccessToken = TwitchHelper.AccessToken;
+            try
             {
-                var jsonString = await response.Content.ReadAsStringAsync();
+                // TwitchLib.Api.Helix.ChannelPoints.GetCustomRewardAsync を利用
+                var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+                    broadcasterId: TwitchHelper.BroadcasterId,
+                    onlyManageableRewards: false
+                );
 
-                // JSONのルートから "data" プロパティを取得
-                using var jsonDoc = JsonDocument.Parse(jsonString);
-                if (jsonDoc.RootElement.TryGetProperty("data", out var dataElement))
+                if (response?.Data != null)
                 {
-                    // "data" の中身 (報酬の配列) を List<CustomReward> に変換
-                    var rewards = JsonSerializer.Deserialize<List<CustomReward>>(dataElement.GetRawText());
+                    // TwitchLibのCustomReward型からJTSAのCustomReward型へ変換
+                    var rewards = response.Data.Select(r => new CustomReward
+                    {
+                        Id = r.Id,
+                        Title = r.Title,
+                        Cost = r.Cost,
+                        IsEnabled = r.IsEnabled,
+                        Prompt = r.Prompt,
+                        IsPaused = r.IsPaused,
+                        Image = r.Image != null ? new RewardImage
+                        {
+                            Url1x = r.Image.Url1x,
+                            Url2x = r.Image.Url2x,
+                            Url4x = r.Image.Url4x
+                        } : null
+                    }).ToList();
+
                     return rewards;
                 }
             }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得失敗", ex.Message);
+            }
 
-            // レスポンスが成功でなかった場合や、パースに失敗した場合はnullを返す
-            // 実際にはここでエラー内容をログに出力するとデバッグがしやすくなります
-            // var errorContent = await response.Content.ReadAsStringAsync();
-            // Console.WriteLine($"API Error: {response.StatusCode} - {errorContent}");
             return null;
         }
 

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace JTSA.Panels
@@ -122,6 +123,24 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void ClearLogButton_Click(object sender, RoutedEventArgs e)
         {
+        }
+
+        private void AppLogListBox_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            var item = (sender as ListBox)?.SelectedItem;
+            if (item != null)
+            {
+                // AppLogForm型でContentプロパティがある前提
+                var contentProp = item.GetType().GetProperty("Content");
+                if (contentProp != null)
+                {
+                    var content = contentProp.GetValue(item)?.ToString();
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        Clipboard.SetText(content);
+                    }
+                }
+            }
         }
     }
 }
