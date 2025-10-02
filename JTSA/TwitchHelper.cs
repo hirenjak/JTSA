@@ -485,53 +485,6 @@ namespace JTSA
         }
 
         /// <summary>
-        /// チャンネルポイントのカスタム報酬リストを取得する
-        /// API: https://api.twitch.tv/helix/channel_points/custom_rewards
-        /// Scope: channel:read:redemptions
-        /// </summary>
-        /// <returns>カスタム報酬のリスト。失敗した場合はnull。</returns>
-        //public static async Task<List<CustomReward>?> GetCustomRewardsAsync()
-        //{
-        //    MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-        //    mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "チャンネルポイントリスト読み込み", "処理開始");
-        //    // broadcaster_id が設定されていない場合は処理を中断
-        //    if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
-        //    {
-        //        mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "チャンネルポイントリスト読み込み中断", "broadcaster_id 不詳");
-        //        return null;
-        //    }
-
-        //    using var client = new HttpClient();
-        //    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
-        //    client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
-
-        //    // APIエンドポイントに必須パラメータ broadcaster_id を追加
-        //    var requestUrl = $"https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={TwitchHelper.BroadcasterId}";
-
-        //    var response = await client.GetAsync(requestUrl);
-
-        //    if (response.IsSuccessStatusCode)
-        //    {
-        //        var jsonString = await response.Content.ReadAsStringAsync();
-
-        //        // JSONのルートから "data" プロパティを取得
-        //        using var jsonDoc = JsonDocument.Parse(jsonString);
-        //        if (jsonDoc.RootElement.TryGetProperty("data", out var dataElement))
-        //        {
-        //            // "data" の中身 (報酬の配列) を List<CustomReward> に変換
-        //            var rewards = JsonSerializer.Deserialize<List<CustomReward>>(dataElement.GetRawText());
-        //            return rewards;
-        //        }
-        //    }
-
-        //    // レスポンスが成功でなかった場合や、パースに失敗した場合はnullを返す
-        //    // 実際にはここでエラー内容をログに出力するとデバッグがしやすくなります
-        //    // var errorContent = await response.Content.ReadAsStringAsync();
-        //    // Console.WriteLine($"API Error: {response.StatusCode} - {errorContent}");
-        //    return null;
-        //}
-
-        /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬リストを取得する
         /// API: https://api.twitch.tv/helix/channel_points/custom_rewards
         /// Scope: channel:read:redemptions
