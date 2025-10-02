@@ -214,6 +214,7 @@ namespace JTSA
 			FriendSidePanel.ReloadFriend();
 			CategorySidePanel.ReloadCategory();
 			SaveTitleSidePanel.ReloadSaveTitleText();
+			ChannelPointPanel.ReloadChannnelPoint();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理終了");
         }

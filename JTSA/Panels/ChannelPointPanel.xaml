@@ -7,12 +7,51 @@
             Background="#FF404040">
 
     <Grid>
-        <StackPanel>
-            <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・配信概要設定</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・チャネポONOFFプリセット</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・コンテンツラベルの制御</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・チャネポの集計</TextBlock>
-        </StackPanel>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="ChannelPointGetStatus" Grid.Row="0" Margin="5" Foreground="White"/>
+
+        <ListView x:Name="ChannelPointListView" Grid.Row="1" Margin="5">
+            <ListView.Resources>
+                <Style TargetType="{x:Type GridViewColumnHeader}">
+                    <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
+                </Style>
+            </ListView.Resources>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="画像" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Image Source="{Binding Image.Url1x}" Height="28" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="有効" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsEnabled}" IsEnabled="False" HorizontalAlignment="Center" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="一時停止" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsPaused}" IsEnabled="False" HorizontalAlignment="Center" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="タイトル" Width="200" DisplayMemberBinding="{Binding Title}" />
+
+                    <GridViewColumn Header="コスト" Width="80" DisplayMemberBinding="{Binding Cost}" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+
     </Grid>
 </UserControl>
