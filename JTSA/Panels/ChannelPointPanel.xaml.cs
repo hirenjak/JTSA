@@ -59,7 +59,11 @@ namespace JTSA.Panels
                 ListSortDirection direction;
                 if (headerClicked != _lastHeaderClicked)
                 {
-                    direction = ListSortDirection.Ascending;
+                    // IsEnabled, IsPaused の場合は初回降順、それ以外は昇順
+                    if (sortBy == "IsEnabled" || sortBy == "IsPaused")
+                        direction = ListSortDirection.Descending;
+                    else
+                        direction = ListSortDirection.Ascending;
                 }
                 else
                 {
