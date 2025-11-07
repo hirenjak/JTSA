@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -15,6 +16,9 @@ using System.Windows;
 using System.Windows.Controls;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
+using TwitchLib.Api.Helix.Models.ChannelPoints;
+using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 
 namespace JTSA
 {
@@ -89,49 +93,6 @@ namespace JTSA
             public required string accessToken { get; set; }
         }
 
-        /// <summary>
-        /// カスタムリワード（チャンネルポイント報酬）の情報
-        /// </summary>
-        public class CustomReward
-        {
-            [System.Text.Json.Serialization.JsonPropertyName("id")]
-            public required string Id { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("title")]
-            public required string Title { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("cost")]
-            public int Cost { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("is_enabled")]
-            public bool IsEnabled { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("prompt")]
-            public required string Prompt { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("is_paused")]
-            public bool IsPaused { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("image")]
-            public RewardImage? Image { get; set; }
-        }
-
-        public class RewardImage
-        {
-            [System.Text.Json.Serialization.JsonPropertyName("url_1x")]
-            public required string Url1x { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("url_2x")]
-            public required string Url2x { get; set; }
-
-            [System.Text.Json.Serialization.JsonPropertyName("url_4x")]
-            public required string Url4x { get; set; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
         public static async Task<DeviceCodeResponse> RequestDeviceCodeAsync()
         {
             using var client = new HttpClient();
@@ -145,7 +106,6 @@ namespace JTSA
 
             return JsonSerializer.Deserialize<DeviceCodeResponse>(json);
         }
-
 
         /// <summary>
         /// 配信者情報取得処理
@@ -484,27 +444,25 @@ namespace JTSA
             return null;
         }
 
-
         /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬リストを取得する
-        /// API: https://api.twitch.tv/helix/channel_points/custom_rewards
+        /// API: GET https://api.twitch.tv/helix/channel_points/custom_rewards
         /// Scope: channel:read:redemptions
         /// </summary>
-        /// <returns>カスタム報酬のリスト。失敗した場合はnull。</returns>
+        /// <returns>TwitchLibのCustomReward型のリスト。失敗した場合はnull。</returns>
         public static async Task<List<CustomReward>?> GetCustomRewardsAsync()
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト読み込み", "処理開始");
+            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得", "処理開始");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト読み込み中断", "broadcaster_id 不詳");
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得中断", "broadcaster_id 不詳");
                 return null;
             }
             api.Settings.AccessToken = TwitchHelper.AccessToken;
             try
             {
-                // TwitchLib.Api.Helix.ChannelPoints.GetCustomRewardAsync を利用
                 var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
                     broadcasterId: TwitchHelper.BroadcasterId,
                     onlyManageableRewards: false
@@ -512,29 +470,7 @@ namespace JTSA
 
                 if (response?.Data != null)
                 {
-                    // TwitchLibのCustomReward型からJTSAのCustomReward型へ変換
-                    var rewards = response.Data.Select(r => new CustomReward
-                    {
-                        Id = r.Id,
-                        Title = r.Title,
-                        Cost = r.Cost,
-                        IsEnabled = r.IsEnabled,
-                        Prompt = r.Prompt,
-                        IsPaused = r.IsPaused,
-                        Image = r.Image != null ? new RewardImage
-                        {
-                            Url1x = r.Image.Url1x,
-                            Url2x = r.Image.Url2x,
-                            Url4x = r.Image.Url4x
-                        } : new RewardImage
-                        {
-                            Url1x = r.DefaultImage.Url1x,
-                            Url2x = r.DefaultImage.Url2x,
-                            Url4x = r.DefaultImage.Url4x
-                        }
-                    }).ToList();
-
-                    return rewards;
+                    return response.Data.ToList();
                 }
             }
             catch (Exception ex)
@@ -545,5 +481,90 @@ namespace JTSA
             return null;
         }
 
+        /// <summary>
+        /// TwitchLibを使用してチャンネルポイントのカスタム報酬を修正する
+        /// API: PATCH https://api.twitch.tv/helix/channel_points/custom_rewards
+        /// Scope: channel:manage:redemptions
+        /// </summary>
+        /// <param name="CustomRewardId">修正対象のカスタムリワードID</param>
+        /// <param name="updateCustomRewardRequest">修正内容</param>
+        /// <returns>修正後のカスタム報酬リスト(修正したものだけ)。失敗した場合はnull。</returns>
+        public static async Task<List<CustomReward>?> UpdateCustomRewardAsync(
+            string CustomRewardId, 
+            UpdateCustomRewardRequest updateCustomRewardRequest)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新", "処理開始");
+
+            if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
+            {
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新中断", "broadcaster_id 不詳");
+                return null;
+            }
+            api.Settings.AccessToken = TwitchHelper.AccessToken;
+            api.Settings.ClientId = TwitchHelper.ClientID; // ClientIdを明示的に再セット
+
+            try
+            {
+                var response = await api.Helix.ChannelPoints.UpdateCustomRewardAsync(
+                    broadcasterId: TwitchHelper.BroadcasterId,
+                    rewardId: CustomRewardId,
+                    request: updateCustomRewardRequest
+                );
+
+                if (response?.Data != null)
+                {
+                    mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新", "成功");
+                    return response.Data.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新失敗", ex.Message);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// TwitchLibを使用してチャンネルポイントのカスタム報酬を新規作成する
+        /// API: POST https://api.twitch.tv/helix/channel_points/custom_rewards
+        /// Scope: channel:manage:redemptions
+        /// </summary>
+        /// <param name="createCustomRewardRequest">作成内容</param>
+        /// <returns>作成後のカスタム報酬リスト（作成したものだけ）。失敗した場合はnull。</returns>
+        public static async Task<List<CustomReward>?> CreateCustomRewardAsync(CreateCustomRewardsRequest createCustomRewardRequest)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成", "処理開始");
+
+            if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
+            {
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成中断", "broadcaster_id 不詳");
+                return null;
+            }
+            api.Settings.AccessToken = TwitchHelper.AccessToken;
+            api.Settings.ClientId = TwitchHelper.ClientID; // ClientIdを明示的に再セット
+
+            try
+            {
+                var response = await api.Helix.ChannelPoints.CreateCustomRewardsAsync(
+                    broadcasterId: TwitchHelper.BroadcasterId,
+                    request: createCustomRewardRequest
+                );
+
+                if (response?.Data != null)
+                {
+                    mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成", "成功");
+                    return response.Data.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成失敗", ex.Message);
+            }
+
+            return null;
+        }
     }
 }
