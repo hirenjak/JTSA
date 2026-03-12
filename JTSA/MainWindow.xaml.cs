@@ -85,8 +85,9 @@ namespace JTSA
 
 			if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
 			{
-                AppLogPanel.AddCriticalErrorLog(GetType().Name, "※※※ ユーザー名が設定されていません ※※※");
-                LoadSubPanel.Visibility = Visibility.Visible;
+				StatusTextBlock.Text = "ユーザー名が設定されていません";
+				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
+				LoadSubPanel.Visibility = Visibility.Visible;
 				return;
 			}
             

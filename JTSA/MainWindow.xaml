@@ -224,6 +224,10 @@
             <TabItem Header="ユーザー管理">
                 <panels:UserPanel x:Name="UserPanel"/>
             </TabItem>
+            
+            <TabItem Header="レイド管理">
+                <panels:RaidPanel x:Name="RaidPanel"/>
+            </TabItem>
 
             <TabItem Header="チャネポ">
                 <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
