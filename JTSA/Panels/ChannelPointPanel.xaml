@@ -7,12 +7,90 @@
             Background="#FF404040">
 
     <Grid>
-        <StackPanel>
-            <TextBlock Foreground="White" FontSize="20" >近日実装予定</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・配信概要設定</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・チャネポONOFFプリセット</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・コンテンツラベルの制御</TextBlock>
-            <TextBlock Foreground="White" FontSize="20" >・チャネポの集計</TextBlock>
-        </StackPanel>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- 入力フォーム用 -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1行目: ステータス＋新規作成ボタン -->
+        <DockPanel Grid.Row="0" Margin="5">
+            <TextBlock x:Name="ChannelPointGetStatus" Foreground="White" VerticalAlignment="Center" />
+            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90" Margin="8,0,0,0"
+                    HorizontalAlignment="Right" Click="CreateRewardButton_Click" />
+        </DockPanel>
+
+        <!-- 2行目: 入力フォーム（初期は非表示） -->
+        <Border Grid.Row="1" Margin="5" Background="#222" CornerRadius="4" Padding="8"
+                x:Name="RewardFormPanel" Visibility="Collapsed">
+            <StackPanel Tag="False">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="名前:" Width="60" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBox x:Name="RewardNameTextBox" Width="200"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="コスト:" Width="60" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBox x:Name="RewardCostTextBox" Width="100"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="画像:" Width="60" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBox x:Name="RewardImageUrlTextBox" IsEnabled="False" Width="300"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="作成" Width="80" Margin="0,0,8,0" Click="CreateRewardSubmitButton_Click"/>
+                    <Button Content="キャンセル" Width="80" Click="CreateRewardCancelButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- 3行目: リスト -->
+        <ListView x:Name="ChannelPointListView" Grid.Row="2" Margin="5">
+            <ListView.Resources>
+                <Style TargetType="{x:Type GridViewColumnHeader}">
+                    <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
+                </Style>
+            </ListView.Resources>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="操作可能">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="画像" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Image Source="{Binding Image.Url1x}" Height="28" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="有効">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox
+                                    IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                    Click="ToggleIsEnabled_Click"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="一時停止">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox
+                                    IsChecked="{Binding IsPaused, Mode=OneWay}"
+                                    Click="ToggleIsPaused_Click"/>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="タイトル" Width="200" DisplayMemberBinding="{Binding Title}" />
+
+                    <GridViewColumn Header="コスト" Width="80" DisplayMemberBinding="{Binding Cost}" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+
     </Grid>
 </UserControl>

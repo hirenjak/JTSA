@@ -18,7 +18,8 @@
 
             <ListBox ItemsSource="{Binding AppLogFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="1" Background="#FF404040" 
                             x:Name="AppLogListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                            MouseLeftButtonUp="AppLogListBox_MouseLeftButtonUp">
 
                 <ListBox.ItemTemplate>
                     <DataTemplate>
