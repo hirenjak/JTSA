@@ -201,7 +201,6 @@ namespace JTSA
 				editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
                 SetDisplayFromEditFrom();
 
-                CategorySidePanel.ReloadCategory();
 			}
 			else
             {
@@ -213,9 +212,7 @@ namespace JTSA
 			ReloadTitleText();
 			TitleTagSidePanel.ReloadTitleTag();
 			FriendSidePanel.ReloadFriend();
-			CategorySidePanel.ReloadCategory();
 			SaveTitleSidePanel.ReloadSaveTitleText();
-			ChannelPointPanel.ReloadChannnelPoint();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理終了");
         }
@@ -549,8 +546,6 @@ namespace JTSA
 			String categoryId = editTitleTextForm.CategoryId;
 			String categoryName = editTitleTextForm.CategoryName;
 			String boxArtUrl = editTitleTextForm.CategoryBoxArtUrl;
-
-			CategorySidePanel.AddCategory(categoryId, categoryName, boxArtUrl);
 		}
 
 
@@ -658,18 +653,6 @@ namespace JTSA
 
 
 		/// <summary>
-		/// サイドパネル：カテゴリボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void ToggleCategoryButton_Click(object sender, RoutedEventArgs e)
-		{
-			AllSidePanelClose();
-			CategorySidePanel.Visibility = Visibility.Visible;
-		}
-
-
-		/// <summary>
 		/// サイドパネル：お気に入りタイトルボタンクリック時
 		/// </summary>
 		/// <param name="sender"></param>
@@ -678,18 +661,6 @@ namespace JTSA
 		{
 			AllSidePanelClose();
 			SaveTitleSidePanel.Visibility = Visibility.Visible;
-		}
-
-
-		/// <summary>
-		/// サイドパネル：予約タイトルボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void ToggleReserveTitleButton_Click(object sender, RoutedEventArgs e)
-		{
-			AllSidePanelClose();
-			CategorySearchSidePanel.Visibility = Visibility.Visible;
 		}
 
 
@@ -708,19 +679,9 @@ namespace JTSA
 				FriendSidePanel.Visibility = Visibility.Collapsed;
 			}
 
-			if (CategorySidePanel.Visibility == Visibility.Visible)
-			{
-				CategorySidePanel.Visibility = Visibility.Collapsed;
-			}
-
 			if (SaveTitleSidePanel.Visibility == Visibility.Visible)
 			{
 				SaveTitleSidePanel.Visibility = Visibility.Collapsed;
-			}
-
-			if (CategorySearchSidePanel.Visibility == Visibility.Visible)
-			{
-				CategorySearchSidePanel.Visibility = Visibility.Collapsed;
 			}
 		}
 
@@ -740,10 +701,11 @@ namespace JTSA
 
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
-			var text = stremTitleText + "\\r\\n" + "配信カテゴリ：" + categoryNameText + "\\r\\n" + $"https://www.twitch.tv/" + Utility.UserName;
+			var categoryText = "配信カテゴリ：" + categoryNameText;
+			var streamUrlText = $"https://www.twitch.tv/" + Utility.UserName;
 
-            // URIエンコード
-            var encodedText = WebUtility.UrlEncode(text);
+			// URIエンコード
+			var encodedText = WebUtility.UrlEncode(stremTitleText) + "%0A" + WebUtility.UrlEncode(categoryText) + "%0A" + WebUtility.UrlEncode(streamUrlText);
 
             // ブラウザで認証ページを開く
             Process.Start(new ProcessStartInfo

@@ -3,6 +3,7 @@ using System;
 using JTSA.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,80 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260709031932_M_Category_SteamURL_Add")]
+    partial class M_Category_SteamURL_Add
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
-
-            modelBuilder.Entity("JTSA.Models.M_GamePlayList", b =>
-                {
-                    b.Property<int>("GamePlayListId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("CountSelected")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GamePlayListName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUseDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ThumbnailCategoryUrl")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("GamePlayListId");
-
-                    b.ToTable("M_GamePlayList");
-                });
-
-            modelBuilder.Entity("JTSA.Models.T_GamePlayListLink", b =>
-                {
-                    b.Property<int>("GamePlayListId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("CategoryId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CountSelected")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUseDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("GamePlayListId", "CategoryId");
-
-                    b.ToTable("T_GamePlayListLink");
-                });
 
             modelBuilder.Entity("M_Category", b =>
                 {

@@ -10,6 +10,10 @@ public class M_Category
 
     public required string BoxArtUrl { get; set; }
 
+    public required string SteamUrl { get; set; }
+
+    public required string SteamHeaderUrl { get; set; }
+
     public int CountSelected { get; set; }
 
     public int SortNumber { get; set; }
@@ -41,6 +45,8 @@ public class M_Category
                 CategoryId = record.CategoryId,
                 DisplayName = record.DisplayName,
                 BoxArtUrl = record.BoxArtUrl,
+                SteamUrl = record.SteamUrl,
+                SteamHeaderUrl = record.SteamHeaderUrl,
                 CountSelected = record.CountSelected,
                 SortNumber = record.SortNumber,
                 IsDeleted = record.IsDeleted,
@@ -77,10 +83,10 @@ public class M_Category
     {
         using var db = new AppDbContext();
 
-        db.M_CategoryList.Add(insertData);
-
         if(db.M_CategoryList.SingleOrDefault(x => x.CategoryId == insertData.CategoryId) == null)
         {
+            db.M_CategoryList.Add(insertData);
+
             db.SaveChanges();
 
             return true;

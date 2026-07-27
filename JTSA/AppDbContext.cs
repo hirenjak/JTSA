@@ -13,7 +13,23 @@ namespace JTSA.Models
         public DbSet<M_Setting> M_SettingList { get; set; }
         public DbSet<M_TitleTag> M_TitleTagList { get; set; }
         public DbSet<M_StreamWindow> M_StreamWindowList { get; set; }
+        public DbSet<M_GamePlayList> M_GamePlayList { get; set; }
+        public DbSet<T_GamePlayListLink> T_GamePlayListLink { get; set; }
 
+        /// <summary>
+        /// 複合キーの設定
+        /// </summary>
+        /// <param name="modelBuilder"></param>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<T_GamePlayListLink>()
+                .HasKey(c => new { c.GamePlayListId, c.CategoryId });
+        }
+
+        /// <summary>
+        /// DBの物理ファイル位置などの設定
+        /// </summary>
+        /// <param name="optionsBuilder"></param>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // AppData\Roaming\JTSA\userdata\JTSA.db
