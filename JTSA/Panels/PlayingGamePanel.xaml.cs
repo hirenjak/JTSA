@@ -41,7 +41,7 @@ namespace JTSA.Panels
             var testList1 = M_GamePlayList.SelectAllOrderbyLastUpdate();
             var testList2 = T_GamePlayListLink.SelectOneByCategoryId(testList1[0].GamePlayListId);
 
-            foreach(var testItem in testList2)
+            foreach (var testItem in testList2)
             {
                 var CategoryData = M_Category.SelectOneByCategoryId(testItem.CategoryId);
 
@@ -52,8 +52,6 @@ namespace JTSA.Panels
                     Status = GameStatus.None
                 });
             }
-
-            var test = 0;
         }
 
         public static string? GetSteamAppId(string url)

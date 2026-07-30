@@ -8,7 +8,7 @@ namespace JTSA.Panels
     /// <summary>
     /// 登録フレンド管理パネル
     /// </summary>
-    public partial class FriendSidePanel : UserControl
+    public partial class FriendPanel : UserControl
     {
         /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
@@ -20,7 +20,7 @@ namespace JTSA.Panels
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        public FriendSidePanel()
+        public FriendPanel()
         {
             DataContext = this;
 

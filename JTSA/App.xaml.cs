@@ -10,9 +10,12 @@ namespace JTSA
         [STAThread]
         public static void Main(string[] args)
         {
-            VelopackApp.Build().Run();   // ← ここが一番最初
+            // アプリケーションの最初の処理
+            VelopackApp.Build().Run();   
             var app = new App();
-            app.InitializeComponent();    // StartupUri があればここで反映
+
+            // StartupUri があればここで反映
+            app.InitializeComponent();
             app.Run();
         }
 
@@ -22,6 +25,10 @@ namespace JTSA
             base.OnStartup(e);
         }
 
+        /// <summary>
+        /// アップデートの確認を行う
+        /// </summary>
+        /// <returns></returns>
         private static async Task UpdateCheck()
         {
             try
@@ -33,7 +40,8 @@ namespace JTSA
                         AllowVersionDowngrade = false
                     });
 
-                if (!mgr.IsInstalled) return; // 開発実行などインストール外ならスキップ
+                // 開発実行などインストール外ならスキップ
+                if (!mgr.IsInstalled) return; 
 
                 var info = await mgr.CheckForUpdatesAsync();
                 if (info == null || info.TargetFullRelease == null) return; // 更新なし

@@ -6,8 +6,6 @@
             mc:Ignorable="d"
             Background="#FF404040">
 
-
-
     <DockPanel>
         <Grid>
             <Grid.ColumnDefinitions>

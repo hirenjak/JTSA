@@ -211,7 +211,7 @@ namespace JTSA
 			// リスト読み込み処理
 			ReloadTitleText();
 			TitleTagSidePanel.ReloadTitleTag();
-			FriendSidePanel.ReloadFriend();
+			FriendPanel.ReloadFriend();
 			SaveTitleSidePanel.ReloadSaveTitleText();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理終了");
@@ -641,18 +641,6 @@ namespace JTSA
 
 
 		/// <summary>
-		/// サイドパネル：フレンドボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void ToggleFriendButton_Click(object sender, RoutedEventArgs e)
-		{
-			AllSidePanelClose();
-			FriendSidePanel.Visibility = Visibility.Visible;
-		}
-
-
-		/// <summary>
 		/// サイドパネル：お気に入りタイトルボタンクリック時
 		/// </summary>
 		/// <param name="sender"></param>
@@ -672,11 +660,6 @@ namespace JTSA
 			if (TitleTagSidePanel.Visibility == Visibility.Visible)
 			{
 				TitleTagSidePanel.Visibility = Visibility.Collapsed;
-			}
-
-			if (FriendSidePanel.Visibility == Visibility.Visible)
-			{
-				FriendSidePanel.Visibility = Visibility.Collapsed;
 			}
 
 			if (SaveTitleSidePanel.Visibility == Visibility.Visible)
@@ -703,6 +686,8 @@ namespace JTSA
             var oauthUrl = $"https://x.com/intent/post?text=";
 			var categoryText = "配信カテゴリ：" + categoryNameText;
 			var streamUrlText = $"https://www.twitch.tv/" + Utility.UserName;
+
+            stremTitleText = stremTitleText.Replace("#", "＃");
 
 			// URIエンコード
 			var encodedText = WebUtility.UrlEncode(stremTitleText) + "%0A" + WebUtility.UrlEncode(categoryText) + "%0A" + WebUtility.UrlEncode(streamUrlText);

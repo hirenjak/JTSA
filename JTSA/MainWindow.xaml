@@ -25,27 +25,110 @@
                 <TextBlock Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Height="Auto" Width="Auto" x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Left"/>
             </StackPanel>
 
-            <Grid Grid.Row="1" Margin="8, -2, 9, 0" Width="Auto">
+            <Grid Grid.Row="1" Margin="8, -2, 8, 0" Width="Auto" Height="72">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="88"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="480"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
 
-                <Label Grid.Column="0" Grid.Row="0" Foreground="White" VerticalAlignment="Center" Content="UserName"/>
-                <Label Grid.Column="0" Grid.Row="1" Foreground="White" VerticalAlignment="Center" Content="AccessToken"/>
-                <TextBox Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox" Width="Auto" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="0, 0, 0, 0" Background="White" Height="18" ></TextBox>
-                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" Width="Auto" VerticalAlignment="Center" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="0, 0, 0, 0" Background="DarkGray" Height="18" ></TextBlock>
-                <Button Grid.Column="2" Grid.Row="0" Content="アプリ起動" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="StreamAppAllStart"/>
-                <Button Grid.Column="2" Grid.Row="1" Content="アプリ停止" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="StreamAppAllStop"/>
-                <Button Grid.Column="3" Grid.Row="0" Content="画面配置" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="StreamAppAllMove"/>
-                <Button Grid.Column="4" Grid.Row="0" Content="DBフォルダ" Width="72" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" HorizontalAlignment="Right" Click="DBFolderOpen"/>
+                <Grid Grid.Column="0" Margin="0, 4, 0, 0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Button Grid.Row="0" Content="取得" 
+                            Margin="2, 4, 2, 4"
+                            Click="GetTitleButton_Click"/>
+                    <Button Grid.Row="1" Content="X告知" 
+                            Margin="2, 4, 2, 4"
+                            Click="TweetButton_Click"/>
+                </Grid>
+
+                <Grid Grid.Column="1" Margin="0, 4, 0, 0">
+                    <Image Grid.Column="0" Grid.Row="0" x:Name="SelectCategoryBoxArt"
+                           Margin="0, 4, 0, 4"
+                           HorizontalAlignment="Center"/>
+                </Grid>
+
+                <Grid Grid.Column="2" Margin="-8, 12, 0, 4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="1*"/>
+                        <RowDefinition Height="2*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" x:Name="SelectCategoryIdTextBlock" 
+                               Padding="2, 2, 2, 2" Margin="8, 0, 8, 0"
+                               Foreground="Black" FontSize="12" Background="DarkGray">
+                    </TextBlock>
+                    <TextBlock Grid.Row="1" x:Name="SelectCategoryNameTextBlock" 
+                               TextWrapping="Wrap" Padding="2, 2, 2, 2" Margin="8, 8, 8, 0" 
+                               Foreground="Black" FontSize="9" Background="DarkGray" 
+                               MouseLeftButtonDown="SelectCategpryNameTextBlock_MouseLeftButtonDown">
+                    </TextBlock>
+                </Grid>
+
+                <Grid Grid.Column="3" Margin="0, 0, 0, 4"
+                            VerticalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Label Grid.Row="0" Content="現在タイトルの表示 ※文面をクリックでクリップボードにコピー"
+                           Padding="0, 0, 0, 0"
+                           Foreground="White" />
+
+                    <TextBlock Grid.Row="1" x:Name="CurrentTitleTextBlock" 
+                               Padding="2, 2, 2, 2"
+                               TextWrapping="Wrap" Foreground="Black" FontSize="12" Background="DarkGray" 
+                               MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown">
+                    </TextBlock>
+                </Grid>
+
+                <!-- ヘッダー：設定周り -->
+                <Grid Grid.Column="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Button Grid.Row="0" Content="DBフォルダ" 
+                                Width="72" Height="20" Margin="8, 0, 0, 0" 
+                                VerticalAlignment="Center" HorizontalAlignment="Right" 
+                                Click="DBFolderOpen"/>
+                        <Grid Grid.Row="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Label Grid.Column="0" Grid.Row="0" Content="UserName"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
+                                     Width="Auto"
+                                     VerticalAlignment="Center" HorizontalAlignment="Stretch" 
+                                     Foreground="Black" FontSize="12" 
+                                     Background="White">
+                            </TextBox>
+                            <Label Grid.Column="0" Grid.Row="1" Content="AccessToken"
+                                   Foreground="White" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
+                                       Width="Auto" 
+                                       VerticalAlignment="Center" 
+                                       Foreground="Black" FontSize="12" 
+                                       Background="DarkGray" Height="18" >
+                            </TextBlock>
+                            
+                        </Grid>
+                    </Grid>
+                </Grid>
             </Grid>
         </Grid>
         
@@ -54,11 +137,9 @@
                 <Grid >
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="1" VerticalAlignment="Stretch">
+                        <Grid Grid.Row="0" VerticalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="560"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -68,42 +149,6 @@
                             <!-- メインUI（今までのDockPanelやStackPanelなど） -->
                             <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560" Width="Auto">
                                 <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-
-                                    <StackPanel Orientation="Vertical" Margin="0, 0, 0, 0" Width="Auto">
-                                        <StackPanel Margin="0, 0, 0, 0" >
-                                            <Label Foreground="White" Content="現在タイトルの表示 ※文面をクリックでクリップボードにコピー"/>
-                                            <Grid  Margin="8, 0, 0, 0" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="4*"/>
-                                                    <ColumnDefinition Width="1*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Grid.Column="0" x:Name="CurrentTitleTextBlock" TextWrapping="Wrap" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Background="DarkGray" Height="Auto" MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown"></TextBlock>
-
-                                                <StackPanel Grid.Column="1" >
-                                                    <Button Content="取得" Width="72" Height="28" Margin="0, 0, 0, 0" Click="GetTitleButton_Click"/>
-                                                    <Button Content="X告知" Width="72" Height="28" Margin="0, 8, 0, 0" Click="TweetButton_Click"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </StackPanel>
-
-                                        <StackPanel Margin="0, 8, 0, 0" >
-                                            <Label Foreground="White" Content="選択カテゴリ"/>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="0.5*"/>
-                                                    <ColumnDefinition Width="4*"/>
-                                                    <ColumnDefinition Width="1*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Image x:Name="SelectCategoryBoxArt" Grid.Column="0" Width="36" Height="48"/>
-                                                <StackPanel Grid.Column="1" >
-                                                    <TextBlock x:Name="SelectCategoryIdTextBlock" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 0, 8, 0"  Background="LightGray" Height="20"></TextBlock>
-                                                    <TextBlock x:Name="SelectCategoryNameTextBlock" Foreground="Black" FontSize="12" Padding="4, 0, 4, 0" Margin="8, 8, 8, 0"  Background="LightGray" Height="20" MouseLeftButtonDown="SelectCategpryNameTextBlock_MouseLeftButtonDown"></TextBlock>
-                                                </StackPanel>
-                                                <Button x:Name="AddCategoryButton" Grid.Column="2" Content="リストに登録" Width="72" Height="28" Margin="0, 0, 0, 0" Click="AddCategoryButton_Click"/>
-                                            </Grid>
-                                        </StackPanel>
-                                    </StackPanel>
 
                                     <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
                                     <Grid  Margin="8, 8, 0, 0" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
@@ -133,7 +178,8 @@
 
                                         <StackPanel Grid.Row="1" 
                                                     Margin="8, 0, 0, 0">
-                                            <TextBox x:Name="FriendEditTextBox" Height="18" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Top" Text="" Margin="0, 0, 0, 0" TextWrapping="Wrap" TextChanged="TitleEditTextBox_TextChanged"/>
+                                            <TextBox x:Name="FriendEditTextBox" Height="18" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Top" Text="" Margin="0, 0, 0, 0" TextWrapping="Wrap" 
+                                                     TextChanged="TitleEditTextBox_TextChanged"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
@@ -187,15 +233,11 @@
                             <StackPanel Grid.Column="1" Width="Auto" Margin="8, 20, 8, 0">
                                 <Button Content="Close" Width="64" Height="28" Name="ToggleCloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleCloseButton_Click" Visibility="Collapsed"/>
                                 <Button Content="TitleTag" Width="64" Height="28" Name="ToggleTagPanelButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleTitleTagPanelButton_Click"/>
-                                <Button Content="Friend" Width="64" Height="28" Name="ToggleFriendButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleFriendButton_Click"/>
                                 <Button Content="Save Title" Width="64" Height="28" Name="ToggleFavoriteTitleButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleFavoriteTitleButton_Click"/>
                             </StackPanel>
 
                             <!-- サイドパネル（タイトルテキストタグ） -->
                             <panels:TitleTagSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="TitleTagSidePanel" Visibility="Visible"/>
-
-                            <!-- サイドパネル（フレンド） -->
-                            <panels:FriendSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="FriendSidePanel" Visibility="Collapsed"/>
 
                             <!-- サイドパネル（保存タイトル） -->
                             <panels:SaveTitleSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="SaveTitleSidePanel" Visibility="Collapsed"/>
@@ -221,19 +263,23 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="カテゴリ管理">
+            <TabItem Header="【カテゴリ】">
                 <panels:CategoryPanel x:Name="CategoryPanel"/>
             </TabItem>
+            
+            <TabItem Header="【フレンド】">
+                <panels:FriendPanel x:Name="FriendPanel"/>
+            </TabItem>
 
-            <TabItem Header="プレイ中ゲーム管理">
+            <TabItem Header="【プレイ中ゲーム】">
                 <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
             </TabItem>
 
-            <TabItem Header="アプリ配置管理">
+            <TabItem Header="【アプリ配置】">
                 <panels:AppArrangePanel x:Name="AppArrangePanel"/>
             </TabItem>
 
-            <TabItem Header="レイド管理">
+            <TabItem Header="【レイド】">
                 <panels:RaidPanel x:Name="RaidPanel"/>
             </TabItem>
 
