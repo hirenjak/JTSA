@@ -30,12 +30,12 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Label Grid.Row="0" Content="※クリックすると選択カテゴリを変更" Foreground="White"/>
+                    <Label Grid.Row="0" Content="※ダブルクリックすると選択カテゴリを変更" Foreground="White"/>
 
                     <ListBox ItemsSource="{Binding CategoryFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="2" Background="#FF404040"
                 x:Name="CategoryListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                SelectionChanged="CategoryListBox_SelectionChanged">
+                MouseDoubleClick="CategoryListBox_SelectionChanged">
 
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -104,14 +104,16 @@
                     </ListBox>
                 </Grid>
             </Grid>
-            <Grid Grid.Column="1" Width="300">
+            <Grid Grid.Column="1" 
+                  Width="300"
+                  Margin="8, 0, 0, 0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-                    <Label Content="検索欄（※未実装）" Foreground="White"/>
+                    <Label Content="Twitchカテゴリの検索" Foreground="White"/>
                     <TextBox x:Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTitleSerchTextBox_TextChanged"/>
                 </StackPanel>
 

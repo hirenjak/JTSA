@@ -444,6 +444,10 @@ namespace JTSA
 
             SetDisplayFromEditFrom();
 
+
+            M_Category.UpdateLastUse(getCategory.Id);
+            CategoryPanel.ReloadCategory();
+
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
         }
 
@@ -677,9 +681,9 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void TitleEditTextBox_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			if (editTitleTextForm == null) return;
 			editTitleTextForm.Content = TitleEditTextBox.Text;
-		}
+			CurrentTitleTextBlock.Text = editTitleTextForm.Content;
+        }
 
 
 		/// <summary>

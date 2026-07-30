@@ -54,13 +54,13 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CategoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void CategoryListBox_SelectionChanged(object sender, EventArgs e)
         {
-            if (CategoryListBox.SelectedItem is CategoryForm selectedItem)
-            {
-                 mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
-                mainWindow.SetDisplayFromEditFrom();
-            }
+            if (CategoryListBox.SelectedItem is not CategoryForm selectedItem)
+                return;
+
+            mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
+            mainWindow.SetDisplayFromEditFrom();
 
             // 選択状態を解除
             CategoryListBox.SelectedIndex = -1;
