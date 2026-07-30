@@ -27,30 +27,37 @@
 
             <Grid Grid.Row="1" Margin="8, -2, 8, 0" Width="Auto" Height="72">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="88"/>
+                    <ColumnDefinition Width="58"/>
                     <ColumnDefinition Width="60"/>
                     <ColumnDefinition Width="160"/>
                     <ColumnDefinition Width="480"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
+                
                 <Grid Grid.Column="0" Margin="0, 4, 0, 0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Button Grid.Row="0" Content="取得" 
-                            Margin="2, 4, 2, 4"
-                            Click="GetTitleButton_Click"/>
+                    
+                    <Button Grid.Column ="0" x:Name="SetTitleButton" Content="送信" 
+                            HorizontalAlignment="Stretch"
+                            Margin="2, 2, 2, 4"
+                            Click="SetTitleButton_Click"/>
+                    
                     <Button Grid.Row="1" Content="X告知" 
-                            Margin="2, 4, 2, 4"
+                            Margin="2, 2, 2, 4"
                             Click="TweetButton_Click"/>
                 </Grid>
 
-                <Grid Grid.Column="1" Margin="0, 4, 0, 0">
-                    <Image Grid.Column="0" Grid.Row="0" x:Name="SelectCategoryBoxArt"
-                           Margin="0, 4, 0, 4"
-                           HorizontalAlignment="Center"/>
+                <Grid Grid.Column="1" >
+                    <StackPanel Grid.Column="0" Grid.Row="0"
+                                Margin="8, 8, 8, 4"
+                                Background="Black">
+                        <Image x:Name="SelectCategoryBoxArt"
+                               HorizontalAlignment="Center"/>
+                    </StackPanel>
                 </Grid>
 
                 <Grid Grid.Column="2" Margin="-8, 12, 0, 4">
@@ -58,10 +65,23 @@
                         <RowDefinition Height="1*"/>
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" x:Name="SelectCategoryIdTextBlock" 
-                               Padding="2, 2, 2, 2" Margin="8, 0, 8, 0"
+                    
+                    <Grid Grid.Row="0"
+                          Margin="8, 0, 8, 0" >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="52"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" x:Name="SelectCategoryIdTextBlock" 
+                               Padding="2, 2, 2, 2" 
                                Foreground="Black" FontSize="12" Background="DarkGray">
-                    </TextBlock>
+                        </TextBlock>
+                        <Button Grid.Column="1" Content="更新" 
+                                Height="24" Margin="8, 0, 0, 0" 
+                                VerticalAlignment="Center"
+                                Click="GetTitleButton_Click"/>
+                    </Grid>
                     <TextBlock Grid.Row="1" x:Name="SelectCategoryNameTextBlock" 
                                TextWrapping="Wrap" Padding="2, 2, 2, 2" Margin="8, 8, 8, 0" 
                                Foreground="Black" FontSize="9" Background="DarkGray" 
@@ -88,7 +108,7 @@
                 </Grid>
 
                 <!-- ヘッダー：設定周り -->
-                <Grid Grid.Column="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Grid Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="24"/>
@@ -105,11 +125,11 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="60"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Label Grid.Column="0" Grid.Row="0" Content="UserName"
+                            <Label Grid.Column="0" Grid.Row="0" Content="TwiName"
                                    Foreground="White" VerticalAlignment="Center"/>
                             <TextBox Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
                                      Width="Auto"
@@ -117,7 +137,7 @@
                                      Foreground="Black" FontSize="12" 
                                      Background="White">
                             </TextBox>
-                            <Label Grid.Column="0" Grid.Row="1" Content="AccessToken"
+                            <Label Grid.Column="0" Grid.Row="1" Content="AccToken"
                                    Foreground="White" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
                                        Width="Auto" 
@@ -147,41 +167,20 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- メインUI（今までのDockPanelやStackPanelなど） -->
-                            <DockPanel Grid.Column="0" Name="MainDockPanel" MinWidth="560" Width="Auto">
-                                <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <DockPanel Grid.Column="0" Name="MainDockPanel" 
+                                       MinWidth="560" Width="Auto">
+                                
+                                <StackPanel DockPanel.Dock="Top" 
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
                                     <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
-                                    <Grid  Margin="8, 8, 0, 0" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="2*"/>
-                                            <RowDefinition Height="1*"/>
-                                        </Grid.RowDefinitions>
 
-                                        <Grid  Margin="8, 0, 0, 8" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="4*"/>
-                                                <ColumnDefinition Width="1*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
-                                                     Height="64" Width="Auto" 
-                                                     HorizontalAlignment="Stretch" 
-                                                     VerticalAlignment="Top" Text="" 
-                                                     Margin="0, 0, 0, 0" TextWrapping="Wrap" 
-                                                     TextChanged="TitleEditTextBox_TextChanged"/>
-
-                                            <StackPanel Grid.Row="0" Grid.Column="2" >
-                                                <Button x:Name="SaveTitleButton" Content="保存" Width="72" Height="28" Margin="0, 0, 0, 0" Click="SaveTitleButton_Click"/>
-                                                <Button x:Name="SetTitleButton" Content="送信" Width="72" Height="28" Margin="0, 8, 0, 0" Click="SetTitleButton_Click"/>
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <StackPanel Grid.Row="1" 
-                                                    Margin="8, 0, 0, 0">
-                                            <TextBox x:Name="FriendEditTextBox" Height="18" Width="Auto" HorizontalAlignment="Stretch" VerticalAlignment="Top" Text="" Margin="0, 0, 0, 0" TextWrapping="Wrap" 
-                                                     TextChanged="TitleEditTextBox_TextChanged"/>
-                                        </StackPanel>
-                                    </Grid>
+                                    <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
+                                             Height="48" Width="Auto" 
+                                             HorizontalAlignment="Stretch" 
+                                             VerticalAlignment="Top" Text="" 
+                                             Margin="8, 0, 0, 0" TextWrapping="Wrap" 
+                                             TextChanged="TitleEditTextBox_TextChanged"/>
                                 </StackPanel>
 
                                 <Grid Margin="8" Height="Auto" >
@@ -229,22 +228,13 @@
                                 </Grid>
                             </DockPanel>
 
-                            <!-- サイドパネル開閉ボタン（右上などに配置） -->
-                            <StackPanel Grid.Column="1" Width="Auto" Margin="8, 20, 8, 0">
-                                <Button Content="Close" Width="64" Height="28" Name="ToggleCloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleCloseButton_Click" Visibility="Collapsed"/>
-                                <Button Content="TitleTag" Width="64" Height="28" Name="ToggleTagPanelButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 0, 0, 0" Click="ToggleTitleTagPanelButton_Click"/>
-                                <Button Content="Save Title" Width="64" Height="28" Name="ToggleFavoriteTitleButton" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 8, 0, 0" Click="ToggleFavoriteTitleButton_Click"/>
-                            </StackPanel>
-
                             <!-- サイドパネル（タイトルテキストタグ） -->
                             <panels:TitleTagSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="TitleTagSidePanel" Visibility="Visible"/>
-
-                            <!-- サイドパネル（保存タイトル） -->
-                            <panels:SaveTitleSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="SaveTitleSidePanel" Visibility="Collapsed"/>
 
                         </Grid>
                     </Grid>
 
+                    <!-- 読込画面 -->
                     <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
@@ -263,12 +253,12 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="【カテゴリ】">
-                <panels:CategoryPanel x:Name="CategoryPanel"/>
-            </TabItem>
-            
             <TabItem Header="【フレンド】">
                 <panels:FriendPanel x:Name="FriendPanel"/>
+            </TabItem>
+
+            <TabItem Header="【カテゴリ】">
+                <panels:CategoryPanel x:Name="CategoryPanel"/>
             </TabItem>
 
             <TabItem Header="【プレイ中ゲーム】">

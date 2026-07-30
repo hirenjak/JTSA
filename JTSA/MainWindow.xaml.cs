@@ -13,6 +13,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using TwitchLib.Api.Helix.Models.Schedule;
 
 namespace JTSA
 {
@@ -212,7 +213,6 @@ namespace JTSA
 			ReloadTitleText();
 			TitleTagSidePanel.ReloadTitleTag();
 			FriendPanel.ReloadFriend();
-			SaveTitleSidePanel.ReloadSaveTitleText();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理終了");
         }
@@ -436,29 +436,16 @@ namespace JTSA
             );
 
             // タイトル取得処理
-            CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
+			var getTitleText = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
+            var getCategory = await TwitchHelper.GetGamesByGameId(gameId);
 
+            CurrentTitleTextBlock.Text = getTitleText;
+            editTitleTextForm.SetCategory(getCategory.Id, getCategory.Name, getCategory.BoxArtUrl);
+
+            SetDisplayFromEditFrom();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
         }
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void SaveTitleButton_Click(object sender, RoutedEventArgs e)
-		{
-			var title = TitleEditTextBox.Text;
-			var categoryId = SelectCategoryIdTextBlock.Text;
-			var categoryName = SelectCategoryNameTextBlock.Text;
-            var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
-
-            AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
-
-			SaveTitleSidePanel.ReloadSaveTitleText();
-		}
 
 
 		/// <summary>
@@ -609,7 +596,6 @@ namespace JTSA
 			}
 
 			ReloadTitleText();
-			SaveTitleSidePanel.ReloadSaveTitleText();
 		}
 
 		#endregion
@@ -641,18 +627,6 @@ namespace JTSA
 
 
 		/// <summary>
-		/// サイドパネル：お気に入りタイトルボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void ToggleFavoriteTitleButton_Click(object sender, RoutedEventArgs e)
-		{
-			AllSidePanelClose();
-			SaveTitleSidePanel.Visibility = Visibility.Visible;
-		}
-
-
-		/// <summary>
 		/// 全てのサイドパネルを閉じる
 		/// </summary>
 		private void AllSidePanelClose()
@@ -660,11 +634,6 @@ namespace JTSA
 			if (TitleTagSidePanel.Visibility == Visibility.Visible)
 			{
 				TitleTagSidePanel.Visibility = Visibility.Collapsed;
-			}
-
-			if (SaveTitleSidePanel.Visibility == Visibility.Visible)
-			{
-				SaveTitleSidePanel.Visibility = Visibility.Collapsed;
 			}
 		}
 
