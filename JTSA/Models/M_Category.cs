@@ -65,11 +65,11 @@ public class M_Category
     /// </summary>
     /// <param name="db"></param>
     /// <returns></returns>
-    public static M_Category SelectOneByCategoryId(string categoryId)
+    public static M_Category? SelectOneByCategoryId(string categoryId)
     {
         using var db = new AppDbContext();
 
-        return db.M_CategoryList.Single(x => x.CategoryId == categoryId);
+        return db.M_CategoryList.SingleOrDefault(x => x.CategoryId == categoryId);
     }
 
 
@@ -108,6 +108,8 @@ public class M_Category
 
         var targetRecord = SelectOneByCategoryId(updateData.CategoryId);
 
+        if(targetRecord == null) {return false;}
+
         updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
         db.M_CategoryList.Update(updateData);
@@ -125,6 +127,8 @@ public class M_Category
     public static bool UpdateLastUse(string categoryId)
     {
         var targetRecord = SelectOneByCategoryId(categoryId);
+
+        if (targetRecord == null) { return false; }
 
         targetRecord.CountSelected += 1;
         targetRecord.LastUseDateTime = DateTime.Now;

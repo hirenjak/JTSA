@@ -6,6 +6,10 @@
             mc:Ignorable="d"
             Background="#FF404040">
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+    
     <Grid Margin="8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*"/>
@@ -24,7 +28,7 @@
                     <TextBlock Grid.Column="0" Text="プレイリスト名"
                                Foreground="White">
                     </TextBlock>
-                    <TextBox Grid.Column="1" x:Name="TitleEditTextBox"
+                    <TextBox Grid.Column="1" x:Name="GamePlayListTitleEdit"
                                  Width="Auto">
                     </TextBox>
                 </Grid>
@@ -70,10 +74,8 @@
 
                                         <TextBlock Text="完了"
                                            Foreground="#00FF80"
-                                           FontSize="30"
-                                           FontWeight="Bold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
+                                           FontSize="30" FontWeight="Bold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
 
                                     <Border 
@@ -108,8 +110,7 @@
         </DockPanel>
 
         <ListBox Grid.Row="1" Grid.Column="1" 
-                 x:Name="RaidUserListBox" 
-                 ItemsSource="{Binding RaidUserList}" 
+                 x:Name="GamePlayListBox" 
                  d:ItemsSource="{d:SampleData ItemCount = 3}" 
 
                  Height="Auto" Width="Auto"
@@ -125,13 +126,21 @@
                 <DataTemplate>
                     <StackPanel>
                         <StackPanel Margin="8, 0, 8, 0">
+                            <TextBlock Text="{Binding GamePlayListName}"
+                                   d:Text="aaaa"
+                                   Width="Auto" 
+                                   Foreground="White" 
+                                   FontSize="16"
+                                   Visibility="{Binding IsLoaded, 
+                                       Converter={StaticResource BooleanToVisibilityConverter}}">
+                            </TextBlock>
                             <Grid >
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Image Grid.Column="0" Source="{Binding ImageUrl}"
+                                <Image Grid.Column="0"  Source="{Binding ImageUrl}"
                                        Stretch="UniformToFill"/>
 
                                 <StackPanel Grid.Column="1" 
@@ -140,10 +149,17 @@
                                                d:Text="GamePlayListName"
                                                Width="Auto" 
                                                Foreground="White" 
-                                               FontSize="16" ></TextBlock>
+                                               FontSize="16" >
+                                    </TextBlock>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
+                        <TextBlock Text="{Binding GamePlayListName}"
+                                   d:Text="9999/99/99"
+                                   Width="Auto" 
+                                   Foreground="White" 
+                                   FontSize="16" >
+                        </TextBlock>
 
                         <Border Width="Auto" Height="2" Background="White"/>
                     </StackPanel>

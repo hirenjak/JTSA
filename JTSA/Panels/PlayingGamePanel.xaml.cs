@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics.Eventing.Reader;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -13,6 +14,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using TwitchLib.Api.Helix.Models.Schedule;
 
@@ -24,6 +26,9 @@ namespace JTSA.Panels
     public partial class PlayingGamePanel : UserControl
     {
         private ObservableCollection<SteamImageItem> Items { get; } = new();
+
+        /// <summary>  </summary>
+        public ObservableCollection<GamePlaylistForm> GamePlaylistFormList { get; } = new();
 
         private static readonly HttpClient httpClient = new();
 
@@ -37,18 +42,30 @@ namespace JTSA.Panels
         {
             InitializeComponent();
             ImageItemsControl.ItemsSource = Items;
+            GamePlayListBox.ItemsSource = GamePlaylistFormList;
 
-            var testList1 = M_GamePlayList.SelectAllOrderbyLastUpdate();
-            var testList2 = T_GamePlayListLink.SelectOneByCategoryId(testList1[0].GamePlayListId);
+            var gamePlayListHeaders = M_GamePlayList.SelectAllOrderbyLastUpdate();
 
-            foreach (var testItem in testList2)
+            foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
-                var CategoryData = M_Category.SelectOneByCategoryId(testItem.CategoryId);
+                GamePlaylistFormList.Add(new GamePlaylistForm()
+                {
+                    GamePlayListName = gamePlayListHeader.GamePlayListName,
+                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
+                    LastUsedDate = gamePlayListHeader.LastUseDateTime.ToString("yyyy/MM/dd hh:mm"),
+                    IsLoaded = false
+                });
+            }
 
+            var gamePlayList = T_GamePlayListLink.SelectOneByCategoryId(gamePlayListHeaders[0].GamePlayListId);
+
+            foreach (var game in gamePlayList)
+            {
+                var categoryData = M_Category.SelectOneByCategoryId(game.CategoryId);
                 Items.Add(new SteamImageItem()
                 {
-                    CategoryId = testItem.CategoryId,
-                    ImageUrl = CategoryData.SteamHeaderUrl,
+                    CategoryId = game.CategoryId,
+                    ImageUrl = categoryData.SteamHeaderUrl != "" ? categoryData.SteamHeaderUrl : categoryData.BoxArtUrl,
                     Status = GameStatus.None
                 });
             }
@@ -139,7 +156,7 @@ namespace JTSA.Panels
             // データ作成
             var isnertData = new M_GamePlayList
             {
-                GamePlayListName = TitleEditTextBox.Text,
+                GamePlayListName = GamePlayListTitleEdit.Text,
                 ThumbnailCategoryUrl = Items[0].CategoryId,
                 CountSelected = 0,
                 SortNumber = 9999,
@@ -150,7 +167,7 @@ namespace JTSA.Panels
             };
 
             // 挿入処理
-            var isProcessSuccess = M_GamePlayList.Insert(isnertData);
+            var insertPlayListData = M_GamePlayList.Insert(isnertData);
 
             List<T_GamePlayListLink> insertList = new List<T_GamePlayListLink>();
 
@@ -159,7 +176,7 @@ namespace JTSA.Panels
                 insertList.Add(
                     new T_GamePlayListLink
                     {
-                        GamePlayListId = isProcessSuccess.GamePlayListId,
+                        GamePlayListId = insertPlayListData.GamePlayListId,
                         CategoryId = item.CategoryId,
                         LastUseDateTime = DateTime.Now,
                         CreatedDateTime = DateTime.Now,
@@ -169,7 +186,7 @@ namespace JTSA.Panels
 
             var isProcessSuccessList = T_GamePlayListLink.Insert(insertList);
 
-            mainWindow.AppLogPanel.AddSwitchLog(isProcessSuccess != null, GetType().Name,
+            mainWindow.AppLogPanel.AddSwitchLog(insertPlayListData != null, GetType().Name,
                 "データ追加成功 「 ゲームプレイリスト 」",
                 "データ追加失敗 「 ゲームプレイリスト 」"
             );
