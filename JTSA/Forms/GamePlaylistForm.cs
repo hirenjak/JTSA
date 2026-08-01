@@ -12,6 +12,7 @@ namespace JTSA
 {
     public class GamePlaylistForm
     {
+        public required int GamePlayListId { get; set; }
         public required string GamePlayListName { get; set; }
         public required string LastUsedDate { get; set; }
         public required string ImageUrl { get; set; }

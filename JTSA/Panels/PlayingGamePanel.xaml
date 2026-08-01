@@ -126,7 +126,7 @@
                 <DataTemplate>
                     <StackPanel>
                         <StackPanel Margin="8, 0, 8, 0">
-                            <TextBlock Text="{Binding GamePlayListName}"
+                            <TextBlock Text="読込中"
                                    d:Text="aaaa"
                                    Width="Auto" 
                                    Foreground="White" 
@@ -141,7 +141,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Image Grid.Column="0"  Source="{Binding ImageUrl}"
-                                       Stretch="UniformToFill"/>
+                                       Stretch="UniformToFill"
+                                       Height="48"/>
 
                                 <StackPanel Grid.Column="1" 
                                             Orientation="Horizontal">
@@ -154,12 +155,18 @@
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
-                        <TextBlock Text="{Binding GamePlayListName}"
+                        <TextBlock Text="{Binding LastUsedDate}"
                                    d:Text="9999/99/99"
                                    Width="Auto" 
                                    Foreground="White" 
                                    FontSize="16" >
                         </TextBlock>
+                        <Button Grid.Column="2" Grid.Row="1"  Content="削除" 
+                                Width="64" Height="20" 
+                                Margin="8, 0, 0, 0" 
+                                VerticalAlignment="Center" 
+                                Click="GamePlaylistDeleteButton_Click"/>
+
 
                         <Border Width="Auto" Height="2" Background="White"/>
                     </StackPanel>

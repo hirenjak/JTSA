@@ -66,5 +66,44 @@ namespace JTSA.Models
 
             return true;
         }
+
+
+        /// <summary>
+        /// Delete
+        /// </summary>
+        /// <param name="id"></param>
+        public static void Delete(int gamePlaylistId, string CategoryId)
+        {
+            using var db = new AppDbContext();
+            var entity = db.T_GamePlayListLink.FirstOrDefault(x =>
+                        x.GamePlayListId == gamePlaylistId
+                        && x.CategoryId == CategoryId);
+
+            if (entity != null)
+            {
+                db.T_GamePlayListLink.Remove(entity);
+                db.SaveChanges();
+            }
+        }
+
+        /// <summary>
+        /// Delete
+        /// </summary>
+        /// <param name="id"></param>
+        public static void DeletePlaylist(int gamePlaylistId)
+        {
+            using var db = new AppDbContext();
+            var entity = db.T_GamePlayListLink.Where(x =>
+                        x.GamePlayListId == gamePlaylistId).ToList();
+            
+            if (entity != null)
+            {
+                foreach (var item in entity)
+                {
+                    db.T_GamePlayListLink.Remove(item);
+                }
+                db.SaveChanges();
+            }
+        }
     }
 }

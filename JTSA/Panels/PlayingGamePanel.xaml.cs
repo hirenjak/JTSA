@@ -25,7 +25,7 @@ namespace JTSA.Panels
     /// </summary>
     public partial class PlayingGamePanel : UserControl
     {
-        private ObservableCollection<SteamImageItem> Items { get; } = new();
+        private ObservableCollection<SteamImageItem> SteamImageItemForm { get; } = new();
 
         /// <summary>  </summary>
         public ObservableCollection<GamePlaylistForm> GamePlaylistFormList { get; } = new();
@@ -41,34 +41,57 @@ namespace JTSA.Panels
         public PlayingGamePanel()
         {
             InitializeComponent();
-            ImageItemsControl.ItemsSource = Items;
+            ImageItemsControl.ItemsSource = SteamImageItemForm;
             GamePlayListBox.ItemsSource = GamePlaylistFormList;
 
+            ReloadGamePlaylist();
+        }
+
+        private void ReloadGamePlaylist()
+        {
+            SteamImageItemForm.Clear();
+            GamePlaylistFormList.Clear();
+
             var gamePlayListHeaders = M_GamePlayList.SelectAllOrderbyLastUpdate();
+            if (gamePlayListHeaders.Count == 0) return;
+
+            var gamePlayList = T_GamePlayListLink.SelectOneByCategoryId(gamePlayListHeaders[0].GamePlayListId);
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
+                var categoryData = M_Category.SelectOneByCategoryId(gamePlayListHeader.ThumbnailCategoryUrl);
                 GamePlaylistFormList.Add(new GamePlaylistForm()
                 {
+                    GamePlayListId = gamePlayListHeader.GamePlayListId,
                     GamePlayListName = gamePlayListHeader.GamePlayListName,
-                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
+                    ImageUrl = categoryData.BoxArtUrl,
                     LastUsedDate = gamePlayListHeader.LastUseDateTime.ToString("yyyy/MM/dd hh:mm"),
                     IsLoaded = false
                 });
             }
 
-            var gamePlayList = T_GamePlayListLink.SelectOneByCategoryId(gamePlayListHeaders[0].GamePlayListId);
-
             foreach (var game in gamePlayList)
             {
                 var categoryData = M_Category.SelectOneByCategoryId(game.CategoryId);
-                Items.Add(new SteamImageItem()
+                SteamImageItemForm.Add(new SteamImageItem()
                 {
                     CategoryId = game.CategoryId,
                     ImageUrl = categoryData.SteamHeaderUrl != "" ? categoryData.SteamHeaderUrl : categoryData.BoxArtUrl,
                     Status = GameStatus.None
                 });
             }
+        }
+
+        private void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            // ボタンのDataContextから削除対象を取得
+            if ((sender as Button)?.DataContext is GamePlaylistForm item)
+            {
+                M_GamePlayList.Delete(item.GamePlayListId);
+                T_GamePlayListLink.DeletePlaylist(item.GamePlayListId);
+            }
+
+            ReloadGamePlaylist();
         }
 
         public static string? GetSteamAppId(string url)
@@ -98,7 +121,7 @@ namespace JTSA.Panels
 
             if (((FrameworkElement)sender).DataContext is SteamImageItem item)
             {
-                Items.Remove(item);
+                SteamImageItemForm.Remove(item);
 
                 SaveObsHtml();
             }
@@ -151,13 +174,13 @@ namespace JTSA.Panels
             using var db = new AppDbContext();
 
             // データチェック
-            if (Items.Count == 0) return;
+            if (SteamImageItemForm.Count == 0) return;
 
             // データ作成
             var isnertData = new M_GamePlayList
             {
                 GamePlayListName = GamePlayListTitleEdit.Text,
-                ThumbnailCategoryUrl = Items[0].CategoryId,
+                ThumbnailCategoryUrl = SteamImageItemForm[0].CategoryId,
                 CountSelected = 0,
                 SortNumber = 9999,
                 IsDeleted = false,
@@ -171,7 +194,7 @@ namespace JTSA.Panels
 
             List<T_GamePlayListLink> insertList = new List<T_GamePlayListLink>();
 
-            foreach(var item in Items)
+            foreach(var item in SteamImageItemForm)
             {
                 insertList.Add(
                     new T_GamePlayListLink
@@ -192,6 +215,8 @@ namespace JTSA.Panels
             );
 
             mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "ゲームプレイリスト", "追加処理終了");
+
+            ReloadGamePlaylist();
         }
 
         private void SaveObsHtml()
@@ -217,7 +242,7 @@ namespace JTSA.Panels
 
         private string CreateObsHtml()
         {
-            var itemsHtml = string.Join(Environment.NewLine, Items.Select(item =>
+            var itemsHtml = string.Join(Environment.NewLine, SteamImageItemForm.Select(item =>
                 $"""
                 <div class="imageItem{item.StatusClass}">
                     <img src="{item.ImageUrl}">
@@ -313,7 +338,7 @@ namespace JTSA.Panels
                 return;
             }
 
-            Items.Add(new SteamImageItem
+            SteamImageItemForm.Add(new SteamImageItem
             {
                 CategoryId = categoryId,
                 ImageUrl = urlText
