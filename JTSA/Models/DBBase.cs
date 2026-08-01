@@ -2,8 +2,6 @@
 {
     public abstract class DBBase
     {
-        public required bool IsDeleted { get; set; }
-
         public required DateTime LastUsedDateTime { get; set; }
 
         public required DateTime CreatedDateTime { get; set; }

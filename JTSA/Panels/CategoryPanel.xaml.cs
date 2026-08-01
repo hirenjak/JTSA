@@ -105,7 +105,7 @@ namespace JTSA.Panels
                     CategoryId = item.CategoryId,
                     DisplayName = item.DisplayName,
                     BoxArtUrl = item.BoxArtUrl,
-                    SteamUrl = item.SteamUrl,
+                    SteamUrl = item.SteamUrl ?? "",
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
@@ -135,7 +135,6 @@ namespace JTSA.Panels
                 BoxArtUrl = boxArtUrl,
                 SteamHeaderArtUrl = "",
                 SteamUrl = "",
-                IsDeleted = false,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now
@@ -206,7 +205,7 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
-                M_Category category = DAO_Category.SelectOneByCategoryId(item.CategoryId);
+                M_Category category = DAO_Category.SelectOneById(item.CategoryId);
                 mainWindow.PlayingGamePanel.AddSteamImageAsync(item.CategoryId, category.SteamHeaderArtUrl);
             }
 

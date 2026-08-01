@@ -131,12 +131,12 @@
 
                             <Label Grid.Column="0" Grid.Row="0" Content="TwiName"
                                    Foreground="White" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
+                            <TextBlock Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
                                      Width="Auto"
-                                     VerticalAlignment="Center" HorizontalAlignment="Stretch" 
-                                     Foreground="Black" FontSize="12" 
-                                     Background="White">
-                            </TextBox>
+                                     VerticalAlignment="Center"
+                                     Foreground="Black" FontSize="12"
+                                     Background="DarkGray" Height="18">
+                            </TextBlock>
                             <Label Grid.Column="0" Grid.Row="1" Content="AccToken"
                                    Foreground="White" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
@@ -235,18 +235,44 @@
                     </Grid>
 
                     <!-- 読込画面 -->
-                    <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
+                    <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Visible">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
                             <StackPanel Name="LoadSubPanel" Visibility="Visible">
-                                <TextBlock HorizontalAlignment="Center" Foreground="White" FontSize="20" Text="※アプリ左上のUserNameにあなたのTwitchユーザーIDを入れてから認証してください"/>
-                                <TextBlock HorizontalAlignment="Center" Foreground="White" FontSize="20" Text="以下の認証コードを画面に入力してください"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="Twithcユーザー名："
+                                        HorizontalAlignment="Center" 
+                                        Foreground="White" FontSize="20" />
+                                    <TextBox x:Name="LoadPanelUserNameTextBox" 
+                                         Width="200" Height="Auto"
+                                         Foreground="White" FontSize="20" TextAlignment="Center" 
+                                         Background="#FF4A4747" 
+                                         BorderBrush="White">
+                                    </TextBox>
+                                </StackPanel>
+                                <TextBlock Text="Twitchユーザー名を入力してOAuth認証ボタンをクリック" 
+                                           HorizontalAlignment="Center" 
+                                           Foreground="White" FontSize="20"/>
+                                <TextBlock Text="その後下のテキストボックスに表示される認証コードを認証画面に入力" 
+                                           HorizontalAlignment="Center" 
+                                           Foreground="White" FontSize="20"/>
+                                <Button DockPanel.Dock="Right" x:Name="OAuthButton" Content="OAuth認証"
+                                        Width="112" Height="36" 
+                                        FontSize="20"
+                                        Margin="0, 24, 0, 0" 
+                                        VerticalAlignment="Center" 
+                                        Click="OAuthButton_Click"/>
+
+                                <TextBlock Text="以下の認証コードをブラウザの認証画面に入力してください" 
+                                           HorizontalAlignment="Center" 
+                                           Foreground="White" FontSize="20" 
+                                           Margin="0, 8, 0, 0"/>
+                                <StackPanel Orientation="Horizontal" 
+                                            HorizontalAlignment="Center">
                                     <TextBox x:Name="LoadPanelSubTextBox" Foreground="White" FontSize="20" Background="#FF4A4747" BorderBrush="White" TextAlignment="Center" IsReadOnly="True" Width="200" Height="Auto"></TextBox>
                                     <Button FontSize="18" Padding="4, 0, 4, 0"  Content="Copy" Click="TokenCodeCopyButton_Click" />
                                 </StackPanel>
                                 
-                                <Button DockPanel.Dock="Right" x:Name="OAuthButton" FontSize="20" Content="OAuth認証" Width="112" Height="36" Margin="0, 8, 0, 0" VerticalAlignment="Center" Click="OAuthButton_Click"/>
                             </StackPanel>
                         </StackPanel>
                     </Grid>

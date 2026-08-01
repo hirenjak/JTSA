@@ -74,34 +74,28 @@ namespace JTSA
             LoadScreen.Visibility = Visibility.Visible;
 			LoadSubPanel.Visibility = Visibility.Collapsed;
 
-
             // クライアントID存在チェック
             if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
 
-            // ユーザー名取得確認
-            M_Setting tempSettingObj = DAO_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? new()
-			{
-				Name = 9999,
-				Value = ""
-            };
-
-			if (tempSettingObj == null || String.IsNullOrEmpty(tempSettingObj.Value))
+			// ユーザー名取得確認
+			M_Setting? settingUserName = DAO_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? null;
+			if (settingUserName == null || string.IsNullOrEmpty(settingUserName.Value))
 			{
 				StatusTextBlock.Text = "ユーザー名が設定されていません";
 				StatusTextBlock.Foreground = System.Windows.Media.Brushes.OrangeRed;
 				LoadSubPanel.Visibility = Visibility.Visible;
+
 				return;
 			}
             
 			AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 ユーザー名 」");
 
-
-			Utility.UserName = tempSettingObj.Value;
+			// ユーザー名の取得に成功していれば画面とアプリメモリに値を登録
+			Utility.UserName = settingUserName.Value;
 			UserName_TextBox.Text = Utility.UserName;
 
 			// リフレッシュトークンからアクセストークンを再取得
-			var isProcessSuccess = await ResetAccessTokenAsync();
-
+			bool isProcessSuccess = await ResetAccessTokenAsync();
             if (!isProcessSuccess)
             {
                 AppLogPanel.AddCriticalErrorLog(GetType().Name, "※※※ 再認証してください ※※※");
@@ -109,9 +103,12 @@ namespace JTSA
                 return;
             }
 
+			// アクセストークンの確認を持って起動時設定を完了
             await StreamerDataSet();
 
+			// ロード画面を非表示
             LoadScreen.Visibility = Visibility.Collapsed;
+
             AppLogPanel.AddProcessLog(GetType().Name, "アプリ起動", "処理終了");
         }
 
@@ -124,16 +121,16 @@ namespace JTSA
         {
             AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理開始");
 
-            var settingUserName = DAO_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
-            var isProcessSuccess = !(settingUserName == null || String.IsNullOrEmpty(settingUserName.Value));
-            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
-                "DB取得成功 「 ユーザー名 」",
-                "DB取得失敗 「 ユーザー名 」"
-            );
+			// リフレッシュトークンの取得（設定に無ければ失敗として戻す）
+            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
+			if (settingRefreshToken == null) return false;
+
+            bool isProcessSuccess = !(string.IsNullOrEmpty(settingRefreshToken.Value));
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name, "DB取得成功 「 ユーザー名 」", "DB取得失敗 「 ユーザー名 」" );
 
             if (!isProcessSuccess) return false;
 
-            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingUserName.Value);
+            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingRefreshToken.Value);
             isProcessSuccess = !string.IsNullOrEmpty(accessTokenResponse.accessToken);
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 アクセストークン 」",
@@ -148,12 +145,18 @@ namespace JTSA
             {
                 Name = (int)M_Setting.SettingName.RefreshToken,
                 Value = accessTokenResponse.refreshToken,
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now
             });
 
             DAO_Setting.InsertUpdate(new M_Setting
             {
                 Name = (int)M_Setting.SettingName.ExpiresIn,
                 Value = accessTokenResponse.expiresIn.ToString(),
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now
             });
 
             AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理終了");
@@ -170,6 +173,8 @@ namespace JTSA
             AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理開始");
 
             var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync();
+            if (streamerInfo == null) return;
+
             var isProcessSuccess = streamerInfo != null && !string.IsNullOrEmpty(streamerInfo.BroadcastId);
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 配信者ID 」",
@@ -188,16 +193,14 @@ namespace JTSA
                 AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 アクセストークン 」");
 				AccessToken_TextBlock.Text = "OK!";
 
-				// タイトル取得処理
-				CurrentTitleTextBlock.Text = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
+                // タイトル取得処理
+                var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+                CurrentTitleTextBlock.Text = streamInfo.title;
 
-				TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
-
-				// カテゴリID処理
-				var CategoryId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? string.Empty;
+                TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
 				// カテゴリ名取得処理
-				var category = await TwitchHelper.GetGamesByGameId(CategoryId);
+				var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
 
 				editTitleTextForm.Content = TitleEditTextBox.Text;
 				editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
@@ -231,7 +234,8 @@ namespace JTSA
 			// Loading画面表示
 			LoadScreen.Visibility = Visibility.Visible;
 
-			Utility.UserName = UserName_TextBox.Text.Trim();
+			Utility.UserName = LoadPanelUserNameTextBox.Text.Trim();
+			UserName_TextBox.Text = Utility.UserName;
 
 			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
 
@@ -267,19 +271,28 @@ namespace JTSA
 			{
 				Name = (int)M_Setting.SettingName.UserName,
 				Value = Utility.UserName,
-			});
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now
+            });
 
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)M_Setting.SettingName.RefreshToken,
 				Value = accessTokenResponse.refreshToken,
-			});
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now
+            });
 
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)M_Setting.SettingName.ExpiresIn,
 				Value = accessTokenResponse.expiresIn.ToString(),
-			});
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now
+            });
 
 			await StreamerDataSet();
 
@@ -348,7 +361,6 @@ namespace JTSA
 				CategoryBoxArtUrl = categoryBoxArtUrl,
                 SelectedCount = 0,
 				SortNumber = 9999,
-				IsDeleted = false,
 				LastUsedDateTime = DateTime.Now,
 				CreatedDateTime = DateTime.Now,
 				UpdatedDateTime = DateTime.Now
@@ -430,15 +442,16 @@ namespace JTSA
 			}
 
 			String gameId = SelectCategoryIdTextBlock.Text.Trim();
-            isProcessSuccess = await TwitchHelper.SetCategoryAsync(TwitchHelper.BroadcasterId, TwitchHelper.AccessToken, gameId.ToString());
+            isProcessSuccess = await TwitchHelper.SetCategoryAsync(gameId.ToString());
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "送信成功 「 カテゴリ 」",
 				"送信失敗 「 カテゴリ 」"
             );
 
             // タイトル取得処理
-			var getTitleText = await TwitchHelper.GetTwitchTitle() ?? string.Empty;
-            var getCategory = await TwitchHelper.GetGamesByGameId(gameId);
+			var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            var getTitleText = streamInfo.title;
+            var getCategory = await TwitchHelper.GetCategoryByGameId(gameId);
 
             CurrentTitleTextBlock.Text = getTitleText;
             editTitleTextForm.SetCategory(getCategory.Id, getCategory.Name, getCategory.BoxArtUrl);
@@ -446,7 +459,7 @@ namespace JTSA
             SetDisplayFromEditFrom();
 
 
-            DAO_Category.UpdateLastUse(getCategory.Id);
+            DAO_Category.UpdateLastUsed(getCategory.Id);
             CategoryPanel.ReloadCategory();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
@@ -478,14 +491,12 @@ namespace JTSA
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル取得", "処理開始");
 
             // カテゴリID処理
-            String gameId = await TwitchHelper.GetTwitchCategoryByBroadcast() ?? "";
+            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
 
 			// カテゴリ名取得処理
-			var category = await TwitchHelper.GetGamesByGameId(gameId);
+			var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
 
-			var title = await TwitchHelper.GetTwitchTitle();
-
-			var isProcessSuccess = !string.IsNullOrEmpty(title);
+			var isProcessSuccess = !string.IsNullOrEmpty(streamInfo.title);
 
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 配信概要 」",
@@ -494,7 +505,7 @@ namespace JTSA
 
 			if (isProcessSuccess)
 			{
-				CurrentTitleTextBlock.Text = title;
+				CurrentTitleTextBlock.Text = streamInfo.title;
             }
 
             editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
@@ -597,7 +608,7 @@ namespace JTSA
 			// ボタンのDataContextから削除対象を取得
 			if ((sender as Button)?.DataContext is TitleTextForm item)
 			{
-				DAO_t.Delete(item.Id);
+				DAO_TitleText.Delete(item.Id);
 			}
 
 			ReloadTitleText();

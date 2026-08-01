@@ -25,7 +25,6 @@ namespace JTSA.Dao
                     BroadcastId = record.BroadcastId,
                     UserId = record.UserId,
                     DisplayName = record.DisplayName,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
@@ -54,7 +53,6 @@ namespace JTSA.Dao
                     BroadcastId = record.BroadcastId,
                     UserId = record.UserId,
                     DisplayName = record.DisplayName,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime

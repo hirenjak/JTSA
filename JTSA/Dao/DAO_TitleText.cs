@@ -29,7 +29,6 @@ namespace JTSA.Dao
                     CategoryBoxArtUrl = record.CategoryBoxArtUrl,
                     SelectedCount = record.SelectedCount,
                     SortNumber = record.SortNumber,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
@@ -60,7 +59,6 @@ namespace JTSA.Dao
                     CategoryBoxArtUrl = record.CategoryBoxArtUrl,
                     SelectedCount = record.SelectedCount,
                     SortNumber = record.SortNumber,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
@@ -106,7 +104,6 @@ namespace JTSA.Dao
                     CategoryBoxArtUrl = record.CategoryBoxArtUrl,
                     SelectedCount = record.SelectedCount,
                     SortNumber = record.SortNumber,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime

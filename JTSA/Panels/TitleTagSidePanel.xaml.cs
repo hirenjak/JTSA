@@ -157,7 +157,6 @@ namespace JTSA.Panels
                 DisplayName = displayName,
                 SelectedCount = 0,
                 SortNumber = 0,
-                IsDeleted = false,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now

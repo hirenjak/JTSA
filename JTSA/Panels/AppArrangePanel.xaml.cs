@@ -430,7 +430,8 @@ namespace JTSA.Panels
                         Width = (int)rect.Width,
                         Height = (int)rect.Height,
                         CreatedDateTime = DateTime.Now,
-                        UpdatedDateTime = DateTime.Now
+                        UpdatedDateTime = DateTime.Now,
+                        LastUsedDateTime = DateTime.Now
                     }
                 );
             }
@@ -486,7 +487,8 @@ namespace JTSA.Panels
                     Width = (int)rect.Width,
                     Height = (int)rect.Height,
                     CreatedDateTime = DateTime.Now,
-                    UpdatedDateTime = DateTime.Now
+                    UpdatedDateTime = DateTime.Now,
+                    LastUsedDateTime = DateTime.Now
                 };
 
                 T_StreamWindow.Update(target);
@@ -636,7 +638,9 @@ namespace JTSA.Panels
                         Y = item.Y ?? 0,
                         Width = item.Width ?? 0,
                         Height = item.Height ?? 0,
-                        UpdatedDateTime = DateTime.Now
+                        CreatedDateTime = DateTime.Now,
+                        UpdatedDateTime = DateTime.Now,
+                        LastUsedDateTime = DateTime.Now
                     });
                 }
             }

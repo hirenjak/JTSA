@@ -28,7 +28,6 @@ namespace JTSA.Dao
                     DisplayName = record.DisplayName,
                     SelectedCount = record.SelectedCount,
                     SortNumber = record.SortNumber,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime

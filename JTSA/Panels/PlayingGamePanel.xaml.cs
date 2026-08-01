@@ -63,7 +63,7 @@ namespace JTSA.Panels
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
-                var categoryData = DAO_Category.SelectOneByCategoryId(gamePlayListHeader.ThumbnailCategoryUrl);
+                var categoryData = DAO_Category.SelectOneById(gamePlayListHeader.ThumbnailCategoryUrl);
                 playlistHeaderFormList.Add(new PlaylistHeaderForm()
                 {
                     GamePlayListId = gamePlayListHeader.GamePlayListId,
@@ -76,7 +76,7 @@ namespace JTSA.Panels
 
             foreach (var game in gamePlayList)
             {
-                var categoryData = DAO_Category.SelectOneByCategoryId(game.CategoryId);
+                var categoryData = DAO_Category.SelectOneById(game.CategoryId);
                 playlistItemFormList.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
@@ -202,7 +202,6 @@ namespace JTSA.Panels
                 ThumbnailCategoryUrl = playlistItemFormList[0].CategoryId,
                 SelectedCount = 0,
                 SortNumber = 9999,
-                IsDeleted = false,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now
@@ -339,20 +338,16 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="urlText"></param>
         /// <returns></returns>
-        public void AddSteamImageAsync(string categoryId, string urlText)
+        public async Task AddSteamImageAsync(string categoryId, string urlText)
         {
-            var url = urlText.Trim();
+            string url = urlText.Trim();
 
-            if (string.IsNullOrEmpty(urlText))
-            {
-                MessageBox.Show("SteamストアURLを入力してください。");
-                return;
-            }
+            var categoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
 
             playlistItemFormList.Add(new PlaylistItemForm
             {
                 CategoryId = categoryId,
-                ImageUrl = urlText
+                ImageUrl = string.IsNullOrEmpty(url) ? url : categoryData.BoxArtUrl,
             });
 
             SaveObsHtml();

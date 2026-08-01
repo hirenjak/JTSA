@@ -107,7 +107,6 @@ namespace JTSA.Panels
                 BroadcastId = streamerInfo.BroadcastId,
                 UserId = streamerInfo.UserId,
                 DisplayName = streamerInfo.DisplayName,
-                IsDeleted = false,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now

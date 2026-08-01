@@ -41,7 +41,6 @@ public class T_StreamWindow :DBBaseTransaction
                 Y = record.Y,
                 Width = record.Width,
                 Height = record.Height,
-                IsDeleted = record.IsDeleted,
                 LastUsedDateTime = record.LastUsedDateTime,
                 CreatedDateTime = record.CreatedDateTime,
                 UpdatedDateTime = record.UpdatedDateTime

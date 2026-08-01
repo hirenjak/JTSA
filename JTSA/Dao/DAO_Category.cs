@@ -66,7 +66,6 @@ namespace JTSA.Dao
                     BoxArtUrl = record.BoxArtUrl,
                     SteamUrl = record.SteamUrl,
                     SteamHeaderArtUrl = record.SteamHeaderArtUrl,
-                    IsDeleted = record.IsDeleted,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
@@ -112,7 +111,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            var targetRecord = SelectOneByCategoryId(updateData.CategoryId);
+            var targetRecord = SelectOneById(updateData.CategoryId);
 
             if (targetRecord == null) { return false; }
 
