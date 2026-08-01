@@ -1,4 +1,5 @@
-﻿using JTSA.Models;
+﻿using JTSA.Dao;
+using JTSA.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -49,7 +50,7 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is FriendTagForm item)
             {
-                M_Friend.Delete(item.BroadcastId);
+                DAO_Friend.Delete(item.BroadcastId);
             }
 
             ReloadFriend();
@@ -106,16 +107,14 @@ namespace JTSA.Panels
                 BroadcastId = streamerInfo.BroadcastId,
                 UserId = streamerInfo.UserId,
                 DisplayName = streamerInfo.DisplayName,
-                CountSelected = 0,
-                SortNumber = 0,
                 IsDeleted = false,
-                LastUseDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
-                UpdateDateTime = DateTime.Now
+                UpdatedDateTime = DateTime.Now
             };
 
             // 挿入処理
-            M_Friend.Insert(isnertData);
+            DAO_Friend.Insert(isnertData);
 
             // 再読み込み処理
             ReloadFriend();
@@ -132,7 +131,7 @@ namespace JTSA.Panels
             FriendFormList.Clear();
 
             // データの取得
-            var records = M_Friend.SelectAllOrderbyLastUser();
+            var records = DAO_Friend.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)
@@ -142,7 +141,7 @@ namespace JTSA.Panels
                     BroadcastId = item.BroadcastId,
                     UserId = item.UserId,
                     DisplayName = item.DisplayName,
-                    LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
+                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
 

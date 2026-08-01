@@ -1,4 +1,6 @@
-﻿using JTSA.Models;
+﻿using JTSA.Dao;
+using JTSA.Forms;
+using JTSA.Models;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -25,10 +27,10 @@ namespace JTSA.Panels
     /// </summary>
     public partial class PlayingGamePanel : UserControl
     {
-        private ObservableCollection<SteamImageItem> SteamImageItemForm { get; } = new();
+        private ObservableCollection<PlaylistItemForm> playlistItemFormList { get; } = new();
 
         /// <summary>  </summary>
-        public ObservableCollection<GamePlaylistForm> GamePlaylistFormList { get; } = new();
+        public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
 
         private static readonly HttpClient httpClient = new();
 
@@ -41,43 +43,45 @@ namespace JTSA.Panels
         public PlayingGamePanel()
         {
             InitializeComponent();
-            ImageItemsControl.ItemsSource = SteamImageItemForm;
-            GamePlayListBox.ItemsSource = GamePlaylistFormList;
+            ImageItemsControl.ItemsSource = playlistItemFormList;
+            GamePlayListBox.ItemsSource = playlistHeaderFormList;
 
             ReloadGamePlaylist();
         }
 
         private void ReloadGamePlaylist()
         {
-            SteamImageItemForm.Clear();
-            GamePlaylistFormList.Clear();
+            playlistItemFormList.Clear();
+            playlistHeaderFormList.Clear();
 
-            var gamePlayListHeaders = M_GamePlayList.SelectAllOrderbyLastUpdate();
+            // プレイリストヘッダ一覧の読込
+            var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
             if (gamePlayListHeaders.Count == 0) return;
 
-            var gamePlayList = T_GamePlayListLink.SelectOneByCategoryId(gamePlayListHeaders[0].GamePlayListId);
+            // 一番目のプレイリストを読込
+            var gamePlayList = DAO_GamePlaylist.SelectGamePlaylistById(gamePlayListHeaders[0].GamePlayListId);
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
-                var categoryData = M_Category.SelectOneByCategoryId(gamePlayListHeader.ThumbnailCategoryUrl);
-                GamePlaylistFormList.Add(new GamePlaylistForm()
+                var categoryData = DAO_Category.SelectOneByCategoryId(gamePlayListHeader.ThumbnailCategoryUrl);
+                playlistHeaderFormList.Add(new PlaylistHeaderForm()
                 {
                     GamePlayListId = gamePlayListHeader.GamePlayListId,
                     GamePlayListName = gamePlayListHeader.GamePlayListName,
                     ImageUrl = categoryData.BoxArtUrl,
-                    LastUsedDate = gamePlayListHeader.LastUseDateTime.ToString("yyyy/MM/dd hh:mm"),
+                    LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
                     IsLoaded = false
                 });
             }
 
             foreach (var game in gamePlayList)
             {
-                var categoryData = M_Category.SelectOneByCategoryId(game.CategoryId);
-                SteamImageItemForm.Add(new SteamImageItem()
+                var categoryData = DAO_Category.SelectOneByCategoryId(game.CategoryId);
+                playlistItemFormList.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
-                    ImageUrl = categoryData.SteamHeaderUrl != "" ? categoryData.SteamHeaderUrl : categoryData.BoxArtUrl,
-                    Status = GameStatus.None
+                    ImageUrl = categoryData.SteamHeaderArtUrl != "" ? categoryData.SteamHeaderArtUrl : categoryData.BoxArtUrl,
+                    Status = PlaylistItemForm.GameStatus.None
                 });
             }
         }
@@ -85,10 +89,9 @@ namespace JTSA.Panels
         private void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
-            if ((sender as Button)?.DataContext is GamePlaylistForm item)
+            if ((sender as Button)?.DataContext is PlaylistHeaderForm item)
             {
-                M_GamePlayList.Delete(item.GamePlayListId);
-                T_GamePlayListLink.DeletePlaylist(item.GamePlayListId);
+                DAO_GamePlaylist.DeleteGamePlayList(item.GamePlayListId);
             }
 
             ReloadGamePlaylist();
@@ -104,12 +107,12 @@ namespace JTSA.Panels
         {
             e.Handled = true;
 
-            if (((FrameworkElement)sender).DataContext is SteamImageItem item)
+            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 item.Status =
-                    item.Status == GameStatus.Playing
-                        ? GameStatus.None
-                        : GameStatus.Playing;
+                    item.Status == PlaylistItemForm.GameStatus.Playing
+                        ? PlaylistItemForm.GameStatus.None
+                        : PlaylistItemForm.GameStatus.Playing;
 
                 SaveObsHtml();
             }
@@ -119,9 +122,9 @@ namespace JTSA.Panels
         {
             e.Handled = true;
 
-            if (((FrameworkElement)sender).DataContext is SteamImageItem item)
+            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
-                SteamImageItemForm.Remove(item);
+                playlistItemFormList.Remove(item);
 
                 SaveObsHtml();
             }
@@ -174,49 +177,57 @@ namespace JTSA.Panels
             using var db = new AppDbContext();
 
             // データチェック
-            if (SteamImageItemForm.Count == 0) return;
+            if (playlistItemFormList.Count == 0) return;
 
             // データ作成
-            var isnertData = new M_GamePlayList
+
+            // 挿入処理
+            var insertPlaylistHeader = FormConvertToPlaylistHeadder();
+            var insertPlaylistItemList = FormConvertToPlalistItemList();
+
+            DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader, insertPlaylistItemList);
+
+            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "ゲームプレイリスト", "追加処理終了");
+
+            ReloadGamePlaylist();
+        }
+
+        private T_GamePlayListHeader FormConvertToPlaylistHeadder()
+        {
+            T_GamePlayListHeader result = null;
+
+            result = new T_GamePlayListHeader
             {
                 GamePlayListName = GamePlayListTitleEdit.Text,
-                ThumbnailCategoryUrl = SteamImageItemForm[0].CategoryId,
-                CountSelected = 0,
+                ThumbnailCategoryUrl = playlistItemFormList[0].CategoryId,
+                SelectedCount = 0,
                 SortNumber = 9999,
                 IsDeleted = false,
-                LastUseDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now
             };
 
-            // 挿入処理
-            var insertPlayListData = M_GamePlayList.Insert(isnertData);
+            return result;
+        }
 
-            List<T_GamePlayListLink> insertList = new List<T_GamePlayListLink>();
-
-            foreach(var item in SteamImageItemForm)
+        private List<T_GamePlayListItem> FormConvertToPlalistItemList()
+        {
+            List<T_GamePlayListItem> resultList = [];
+            foreach (var item in playlistItemFormList)
             {
-                insertList.Add(
-                    new T_GamePlayListLink
+                resultList.Add(
+                    new T_GamePlayListItem
                     {
-                        GamePlayListId = insertPlayListData.GamePlayListId,
+                        GamePlayListId = item.PlaylistId,
                         CategoryId = item.CategoryId,
-                        LastUseDateTime = DateTime.Now,
+                        LastUsedDateTime = DateTime.Now,
                         CreatedDateTime = DateTime.Now,
                         UpdatedDateTime = DateTime.Now
                     });
             }
 
-            var isProcessSuccessList = T_GamePlayListLink.Insert(insertList);
-
-            mainWindow.AppLogPanel.AddSwitchLog(insertPlayListData != null, GetType().Name,
-                "データ追加成功 「 ゲームプレイリスト 」",
-                "データ追加失敗 「 ゲームプレイリスト 」"
-            );
-
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "ゲームプレイリスト", "追加処理終了");
-
-            ReloadGamePlaylist();
+            return resultList;
         }
 
         private void SaveObsHtml()
@@ -229,12 +240,12 @@ namespace JTSA.Panels
 
         private void ImageItem_Click(object sender, MouseButtonEventArgs e)
         {
-            if (((FrameworkElement)sender).DataContext is SteamImageItem item)
+            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 item.Status =
-                    item.Status == GameStatus.Completed
-                        ? GameStatus.None
-                        : GameStatus.Completed;
+                    item.Status == PlaylistItemForm.GameStatus.Completed
+                        ? PlaylistItemForm.GameStatus.None
+                        : PlaylistItemForm.GameStatus.Completed;
 
                 SaveObsHtml();
             }
@@ -242,7 +253,7 @@ namespace JTSA.Panels
 
         private string CreateObsHtml()
         {
-            var itemsHtml = string.Join(Environment.NewLine, SteamImageItemForm.Select(item =>
+            var itemsHtml = string.Join(Environment.NewLine, playlistItemFormList.Select(item =>
                 $"""
                 <div class="imageItem{item.StatusClass}">
                     <img src="{item.ImageUrl}">
@@ -338,7 +349,7 @@ namespace JTSA.Panels
                 return;
             }
 
-            SteamImageItemForm.Add(new SteamImageItem
+            playlistItemFormList.Add(new PlaylistItemForm
             {
                 CategoryId = categoryId,
                 ImageUrl = urlText
@@ -373,52 +384,6 @@ namespace JTSA.Panels
                 return headerImage.GetString();
 
             return null;
-        }
-    }
-
-    public enum GameStatus
-    {
-        None,
-        Playing,
-        Completed
-    }
-
-    public class SteamImageItem : INotifyPropertyChanged
-    {
-        public string CategoryId { get; set; } = "";
-        public string ImageUrl { get; set; } = "";
-
-        private GameStatus status = GameStatus.None;
-
-        public GameStatus Status
-        {
-            get => status;
-            set
-            {
-                status = value;
-                OnPropertyChanged(nameof(Status));
-                OnPropertyChanged(nameof(CompletedVisibility));
-                OnPropertyChanged(nameof(PlayingVisibility));
-                OnPropertyChanged(nameof(StatusClass));
-            }
-        }
-
-        public Visibility CompletedVisibility =>
-            Status == GameStatus.Completed ? Visibility.Visible : Visibility.Collapsed;
-
-        public Visibility PlayingVisibility =>
-            Status == GameStatus.Playing ? Visibility.Visible : Visibility.Collapsed;
-
-        public string StatusClass =>
-            Status == GameStatus.Completed ? " completed" :
-            Status == GameStatus.Playing ? " playing" :
-            "";
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void OnPropertyChanged(string name)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }

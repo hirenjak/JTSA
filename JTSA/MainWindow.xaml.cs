@@ -1,4 +1,5 @@
-﻿using JTSA.Models;
+﻿using JTSA.Dao;
+using JTSA.Models;
 using JTSA.Panels;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
@@ -78,7 +79,7 @@ namespace JTSA
             if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
 
             // ユーザー名取得確認
-            M_Setting tempSettingObj = M_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? new()
+            M_Setting tempSettingObj = DAO_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? new()
 			{
 				Name = 9999,
 				Value = ""
@@ -123,7 +124,7 @@ namespace JTSA
         {
             AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理開始");
 
-            var settingUserName = M_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
+            var settingUserName = DAO_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
             var isProcessSuccess = !(settingUserName == null || String.IsNullOrEmpty(settingUserName.Value));
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "DB取得成功 「 ユーザー名 」",
@@ -143,13 +144,13 @@ namespace JTSA
 
             TwitchHelper.AccessToken = accessTokenResponse.accessToken;
 
-            M_Setting.InsertUpdate(new M_Setting
+            DAO_Setting.InsertUpdate(new M_Setting
             {
                 Name = (int)M_Setting.SettingName.RefreshToken,
                 Value = accessTokenResponse.refreshToken,
             });
 
-            M_Setting.InsertUpdate(new M_Setting
+            DAO_Setting.InsertUpdate(new M_Setting
             {
                 Name = (int)M_Setting.SettingName.ExpiresIn,
                 Value = accessTokenResponse.expiresIn.ToString(),
@@ -262,19 +263,19 @@ namespace JTSA
 			}
 
 			// --- 設定情報保存処理 ---
-			M_Setting.InsertUpdate(new M_Setting
+			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)M_Setting.SettingName.UserName,
 				Value = Utility.UserName,
 			});
 
-			M_Setting.InsertUpdate(new M_Setting
+			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)M_Setting.SettingName.RefreshToken,
 				Value = accessTokenResponse.refreshToken,
 			});
 
-			M_Setting.InsertUpdate(new M_Setting
+			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)M_Setting.SettingName.ExpiresIn,
 				Value = accessTokenResponse.expiresIn.ToString(),
@@ -300,7 +301,7 @@ namespace JTSA
 			TitleTextFormList.Clear();
 
 			// データの取得
-			var records = M_TitleText.SelectAllOrderbyLastUser(db);
+			var records = DAO_TitleText.SelectAllOrderbyLastUser(db);
 
 			// 画面データ入れ換え処理
 			foreach (var item in records)
@@ -312,7 +313,7 @@ namespace JTSA
 					CategoryId = item.CategoryId,
 					CategoryName = item.CategoryName,
 					CategoryBoxArtUrl = item.CategoryBoxArtUrl,
-                    LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
+                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
 				});
 			}
 
@@ -339,22 +340,22 @@ namespace JTSA
 			if (string.IsNullOrWhiteSpace(content)) return;
 
 			// データ作成
-			var isnertData = new M_TitleText
+			var isnertData = new T_TitleText
 			{
 				Content = content,
 				CategoryId = categoryId,
 				CategoryName = categoryName,
 				CategoryBoxArtUrl = categoryBoxArtUrl,
-                CountSelected = 0,
+                SelectedCount = 0,
 				SortNumber = 9999,
 				IsDeleted = false,
-				LastUseDateTime = DateTime.Now,
+				LastUsedDateTime = DateTime.Now,
 				CreatedDateTime = DateTime.Now,
-				UpdateDateTime = DateTime.Now
+				UpdatedDateTime = DateTime.Now
 			};
 
             // 挿入処理
-            var isProcessSuccess = M_TitleText.Insert(isnertData);
+            var isProcessSuccess = DAO_TitleText.Insert(isnertData);
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "データ追加成功 「 タイトルログ 」",
 				"データ追加失敗 「 タイトルログ 」"
@@ -445,7 +446,7 @@ namespace JTSA
             SetDisplayFromEditFrom();
 
 
-            M_Category.UpdateLastUse(getCategory.Id);
+            DAO_Category.UpdateLastUse(getCategory.Id);
             CategoryPanel.ReloadCategory();
 
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理終了");
@@ -596,7 +597,7 @@ namespace JTSA
 			// ボタンのDataContextから削除対象を取得
 			if ((sender as Button)?.DataContext is TitleTextForm item)
 			{
-				M_TitleText.Delete(item.Id);
+				DAO_t.Delete(item.Id);
 			}
 
 			ReloadTitleText();

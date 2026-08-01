@@ -1,7 +1,7 @@
 using JTSA.Models;
 using System.ComponentModel.DataAnnotations;
 
-public class M_StreamWindow
+public class T_StreamWindow :DBBaseTransaction
 {
     [Key]
     public required string ProcessName { get; set; }
@@ -18,25 +18,17 @@ public class M_StreamWindow
 
     public int Height { get; set; }
 
-    public bool IsDeleted { get; set; }
-
-    public DateTime LastUseDateTime { get; set; }
-
-    public DateTime CreatedDateTime { get; set; }
-
-    public DateTime UpdateDateTime { get; set; }
-
 
     /// <summary>
     /// SELECT * FROM M_TitleText ORDER BY Id DESC
     /// </summary>
     /// <param name="db"></param>
     /// <returns></returns>
-    public static List<M_StreamWindow> SelectAllOrderbyProcessName()
+    public static List<T_StreamWindow> SelectAllOrderbyProcessName()
     {
         using var db = new AppDbContext();
 
-        List<M_StreamWindow> results = [];
+        List<T_StreamWindow> results = [];
 
         foreach (var record in db.M_StreamWindowList.OrderByDescending(x => x.ProcessName))
         {
@@ -50,9 +42,9 @@ public class M_StreamWindow
                 Width = record.Width,
                 Height = record.Height,
                 IsDeleted = record.IsDeleted,
-                LastUseDateTime = record.LastUseDateTime,
+                LastUsedDateTime = record.LastUsedDateTime,
                 CreatedDateTime = record.CreatedDateTime,
-                UpdateDateTime = record.UpdateDateTime
+                UpdatedDateTime = record.UpdatedDateTime
             });
         }
 
@@ -65,7 +57,7 @@ public class M_StreamWindow
     /// </summary>
     /// <param name="db"></param>
     /// <returns></returns>
-    public static M_StreamWindow SelectOneById(string processName)
+    public static T_StreamWindow SelectOneById(string processName)
     {
         using var db = new AppDbContext();
 
@@ -79,7 +71,7 @@ public class M_StreamWindow
     /// <param name="db"></param>
     /// <param name="insertData"></param>
     /// <returns></returns>
-    public static bool Insert(M_StreamWindow insertData)
+    public static bool Insert(T_StreamWindow insertData)
     {
         using var db = new AppDbContext();
 
@@ -96,7 +88,7 @@ public class M_StreamWindow
     /// <param name="db"></param>
     /// <param name="insertData"></param>
     /// <returns></returns>
-    public static bool Update(M_StreamWindow updateData)
+    public static bool Update(T_StreamWindow updateData)
     {
         using var db = new AppDbContext();
 

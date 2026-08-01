@@ -1,4 +1,5 @@
-﻿using JTSA.Models;
+﻿using JTSA.Dao;
+using JTSA.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -76,7 +77,7 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if (sender is Button { DataContext: TitleTagForm item })
             {
-                M_TitleTag.Delete(item.Id);
+                DAO_TitleTag.Delete(item.Id);
             }
 
             ReloadTitleTag();
@@ -119,7 +120,7 @@ namespace JTSA.Panels
             TitleTagFormList.Clear();
 
             // データの取得
-            var records = M_TitleTag.SelectAllOrderbyLastUser();
+            var records = DAO_TitleTag.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)
@@ -128,7 +129,7 @@ namespace JTSA.Panels
                 {
                     Id = item.Id,
                     DisplayName = item.DisplayName,
-                    LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
+                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
 
@@ -154,16 +155,16 @@ namespace JTSA.Panels
             var isnertData = new M_TitleTag
             {
                 DisplayName = displayName,
-                CountSelected = 0,
+                SelectedCount = 0,
                 SortNumber = 0,
                 IsDeleted = false,
-                LastUseDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
-                UpdateDateTime = DateTime.Now
+                UpdatedDateTime = DateTime.Now
             };
 
             // 挿入処理
-            mainWindow.AppLogPanel.AddSwitchLog(M_TitleTag.Insert(isnertData), GetType().Name,
+            mainWindow.AppLogPanel.AddSwitchLog(DAO_TitleTag.Insert(isnertData), GetType().Name,
                 $"【 DB追加 】 成功：{isnertData.DisplayName}",
                 "【 DB追加 】 既存データと競合"
             );

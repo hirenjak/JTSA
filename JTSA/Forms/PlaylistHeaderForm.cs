@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace JTSA
 {
-    public class GamePlaylistForm
+    public class PlaylistHeaderForm
     {
         public required int GamePlayListId { get; set; }
         public required string GamePlayListName { get; set; }

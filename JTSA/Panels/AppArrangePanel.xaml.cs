@@ -113,7 +113,7 @@ namespace JTSA.Panels
         {
             RegistAppList.Clear();
 
-            foreach (var record in M_StreamWindow.SelectAllOrderbyProcessName())
+            foreach (var record in T_StreamWindow.SelectAllOrderbyProcessName())
             {
                 RegistAppList.Add(new AppInfoForm
                 {
@@ -384,7 +384,7 @@ namespace JTSA.Panels
         {
             if ((sender as Button)?.DataContext is AppInfoForm item)
             {
-                M_StreamWindow.Delete(item.ProcessName);
+                T_StreamWindow.Delete(item.ProcessName);
             }
 
             ReloadRegistAppList();
@@ -419,8 +419,8 @@ namespace JTSA.Panels
                 string exePath = proc.MainModule.FileName;
 #pragma warning restore CS8602 // null 参照の可能性があるものの逆参照です。
 
-                M_StreamWindow.Insert(
-                    new M_StreamWindow
+                T_StreamWindow.Insert(
+                    new T_StreamWindow
                     {
                         ProcessName = run.ProcessName,
                         WindowTitle = run.WindowTitle,
@@ -430,7 +430,7 @@ namespace JTSA.Panels
                         Width = (int)rect.Width,
                         Height = (int)rect.Height,
                         CreatedDateTime = DateTime.Now,
-                        UpdateDateTime = DateTime.Now
+                        UpdatedDateTime = DateTime.Now
                     }
                 );
             }
@@ -476,7 +476,7 @@ namespace JTSA.Panels
             {
                 var rect = GetAppWindowRect(item.ProcessName);
 
-                var target = new M_StreamWindow()
+                var target = new T_StreamWindow()
                 {
                     ProcessName = item.ProcessName,
                     WindowTitle = item.WindowTitle,
@@ -486,10 +486,10 @@ namespace JTSA.Panels
                     Width = (int)rect.Width,
                     Height = (int)rect.Height,
                     CreatedDateTime = DateTime.Now,
-                    UpdateDateTime = DateTime.Now
+                    UpdatedDateTime = DateTime.Now
                 };
 
-                M_StreamWindow.Update(target);
+                T_StreamWindow.Update(target);
             }
 
             // 選択状態を解除
@@ -627,7 +627,7 @@ namespace JTSA.Panels
                     item.AppExePath = dialog.FileName;
                     mainWindow.StatusTextBlock.Text = $"起動ファイルを設定しました: {item.AppExePath}";
                     // 必要ならDBにも保存
-                    M_StreamWindow.Update(new M_StreamWindow
+                    T_StreamWindow.Update(new T_StreamWindow
                     {
                         ProcessName = item.ProcessName,
                         WindowTitle = item.WindowTitle,
@@ -636,7 +636,7 @@ namespace JTSA.Panels
                         Y = item.Y ?? 0,
                         Width = item.Width ?? 0,
                         Height = item.Height ?? 0,
-                        UpdateDateTime = DateTime.Now
+                        UpdatedDateTime = DateTime.Now
                     });
                 }
             }

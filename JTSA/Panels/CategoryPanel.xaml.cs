@@ -1,4 +1,5 @@
-﻿using JTSA.Models;
+﻿using JTSA.Dao;
+using JTSA.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -77,7 +78,7 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
-                M_Category.Delete(item.CategoryId);
+                DAO_Category.Delete(item.CategoryId);
             }
 
             ReloadCategory();
@@ -94,7 +95,7 @@ namespace JTSA.Panels
             CategoryFormList.Clear();
 
             // データの取得
-            var records = M_Category.SelectAllOrderbyLastUser();
+            var records = DAO_Category.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)
@@ -105,7 +106,7 @@ namespace JTSA.Panels
                     DisplayName = item.DisplayName,
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = item.SteamUrl,
-                    LastUsedDate = item.LastUseDateTime.ToString("yyyy/MM/dd hh:mm")
+                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
 
@@ -132,18 +133,16 @@ namespace JTSA.Panels
                 CategoryId = gameId,
                 DisplayName = displayName,
                 BoxArtUrl = boxArtUrl,
-                SteamHeaderUrl = "",
+                SteamHeaderArtUrl = "",
                 SteamUrl = "",
-                CountSelected = 0,
-                SortNumber = 0,
                 IsDeleted = false,
-                LastUseDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
-                UpdateDateTime = DateTime.Now
+                UpdatedDateTime = DateTime.Now
             };
 
             // 挿入処理
-            mainWindow.AppLogPanel.AddSwitchLog(M_Category.Insert(isnertData), GetType().Name,
+            mainWindow.AppLogPanel.AddSwitchLog(DAO_Category.Insert(isnertData), GetType().Name,
                 "データを追加しました。",
                 "既にデータが存在します。"
             );
@@ -163,12 +162,16 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
-                M_Category updateCategory = M_Category.SelectOneByCategoryId(item.CategoryId);
+                M_Category? updateCategory = DAO_Category.SelectOneById(item.CategoryId);
+                if (updateCategory == null) return;
+
                 updateCategory.SteamUrl = item.SteamUrl;
 
-                string appId = PlayingGamePanel.GetSteamAppId(item.SteamUrl);
-                updateCategory.SteamHeaderUrl = await PlayingGamePanel.GetSteamHeaderImageUrlAsync(appId);
-                M_Category.Update(updateCategory);
+                string? appId = PlayingGamePanel.GetSteamAppId(item.SteamUrl);
+                if (appId == null) return;
+
+                updateCategory.SteamHeaderArtUrl = await PlayingGamePanel.GetSteamHeaderImageUrlAsync(appId);
+                DAO_Category.Update(updateCategory);
             }
 
             ReloadCategory();
@@ -203,8 +206,8 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
-                M_Category category = M_Category.SelectOneByCategoryId(item.CategoryId);
-                mainWindow.PlayingGamePanel.AddSteamImageAsync(item.CategoryId, category.SteamHeaderUrl);
+                M_Category category = DAO_Category.SelectOneByCategoryId(item.CategoryId);
+                mainWindow.PlayingGamePanel.AddSteamImageAsync(item.CategoryId, category.SteamHeaderArtUrl);
             }
 
             ReloadCategory();
