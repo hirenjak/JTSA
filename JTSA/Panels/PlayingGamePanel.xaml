@@ -10,51 +10,63 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     </UserControl.Resources>
     
-    <Grid Margin="8">
+    <Grid Margin="0, 8, 0, 0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="300"/>
         </Grid.ColumnDefinitions>
 
         <DockPanel Grid.Column="0"
-            Margin="16">
+            Margin="8, 0, 0, 0">
 
-            <StackPanel DockPanel.Dock="Top">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Grid.Column="0" Text="ID："
-                               Foreground="White">
-                    </TextBlock>
-                    <TextBlock x:Name="CurrentGamePlaylistIdTextBlock" Grid.Column="0" Text=""
-                               Foreground="White">
-                    </TextBlock>
-                </StackPanel>
-                <Grid HorizontalAlignment="Stretch">
+            <StackPanel DockPanel.Dock="Top"
+                        Margin="0, 0, 0, 0">
+
+                <TextBlock Grid.Column="1" x:Name="CurrentGamePlaylistIdTextBlock"
+                           FontSize="12"
+                           Height="14"
+                           HorizontalAlignment="Right"
+                           Foreground="White">
+                </TextBlock>
+
+                <Grid HorizontalAlignment="Stretch"
+                      Margin="0, 2, 0, 0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="プレイリスト名"
+                    <TextBlock Grid.Column="2" Text="プレイリスト名："
                                Foreground="White">
                     </TextBlock>
-                    <TextBox Grid.Column="1" x:Name="GamePlayListTitleEdit"
-                                 Width="Auto">
+                    <TextBox Grid.Column="3" x:Name="GamePlayListTitleEdit"
+                             Width="Auto"
+                             Margin="4, 0, 0, 0">
                     </TextBox>
+                    <Button Grid.Column="4" Grid.Row="0" 
+                            FontSize="16"
+                            Width="40" Height="20" 
+                            Margin="4, 0, 0, 0" 
+                            Background="LightSeaGreen"
+                            Click="GamePlayListTitleEdit_Click">
+                        
+                        <TextBlock Text="更新"
+                                   FontSize="12"
+                                   Padding="0, 0, 0, 3"
+                                   TextAlignment="Center"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center">
+                        </TextBlock>
+                    </Button>
                 </Grid>
-
-                <StackPanel Orientation="Horizontal"
-                            Margin="0,0,0,16">
-
-                    <Button Content="OBS用HTMLを書き出し"
-                            Width="160"
-                            Click="ExportButton_Click"/>
-                    <Button Content="新規保存"
-                            Width="160"
-                            Click="GamePlayListSaveButton_Click"/>
-                </StackPanel>
             </StackPanel>
 
-            <ScrollViewer>
-                <ItemsControl x:Name="ImageItemsControl">
+            <ScrollViewer Margin="0, 4, 0, 0">
+                <ItemsControl x:Name="ImageItemsControl"
+                              d:ItemsSource="{d:SampleData ItemCount = 3}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel/>
@@ -63,8 +75,7 @@
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="230"
-                                    Height="107"
+                            <Border Width="230" Height="107"
                                     Margin="8"
                                     Cursor="Hand"
                                     MouseLeftButtonUp="ImageItem_Click"
@@ -114,66 +125,127 @@
 
         </DockPanel>
 
-        <ListBox Grid.Row="1" Grid.Column="1" 
-                 x:Name="GamePlaylistListBox" 
-                 d:ItemsSource="{d:SampleData ItemCount = 3}"
-                 Height="Auto" Width="Auto"
-                 Background="#FF404040" 
-                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 MouseDoubleClick="GamePlaylistListBox_DoubleClick">
+        <Grid Grid.Column="1" 
+              Margin="8, 0, 0, 0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel>
-                        <StackPanel Margin="8, 0, 8, 0">
-                            <TextBlock Text="読込中"
-                                   d:Text="aaaa"
-                                   Width="Auto" 
-                                   Foreground="White" 
-                                   FontSize="16"
-                                   Visibility="{Binding IsLoaded, 
-                                       Converter={StaticResource BooleanToVisibilityConverter}}">
-                            </TextBlock>
-                            <Grid >
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+            <Button Grid.Row="0" 
+                    FontSize="16"
+                    Height="20" 
+                    Margin="0, 0, 0, 0" 
+                    Background="LightSeaGreen"
+                    Click="GamePlayListSaveButton_Click">
+                <TextBlock Text="＋"
+                           Padding="0, 0, 0, 3"
+                           TextAlignment="Center"
+                           Foreground="White"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center">
+                </TextBlock>
+            </Button>
 
-                                <Image Grid.Column="0"  Source="{Binding ImageUrl}"
-                                       Stretch="UniformToFill"
-                                       Height="48"/>
+            <ListBox Grid.Row="1" x:Name="GamePlaylistListBox" 
+                     d:ItemsSource="{d:SampleData ItemCount = 3}"
+                     Height="Auto" Width="Auto"
+                     Margin="0, 4, 0, 0"
+                     Background="#FF404040" 
+                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     MouseDoubleClick="GamePlaylistListBox_DoubleClick">
 
-                                <StackPanel Grid.Column="1" 
-                                            Orientation="Horizontal">
-                                    <TextBlock Text="{Binding GamePlayListName}"
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <StackPanel Margin="8, 0, 8, 0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Image Grid.Column="0"  Source="{Binding ImageUrl}"
+                                           Height="48"
+                                       Stretch="UniformToFill"/>
+                                    
+                                    <!-- アイテム上部ステータス部分 -->
+                                    <Grid Grid.Column="1"
+                                          Margin="8, 0, 0, 0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- 読込状態表示 -->
+                                        <TextBlock Grid.Column="0" Grid.Row="0" Text="読込中"
+                                           d:Text="読込中"
+                                           Width="Auto" 
+                                           Foreground="White" 
+                                           FontSize="16"
+                                           Visibility="{Binding IsLoaded, 
+                                               Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        </TextBlock>
+                                    
+                                        <!-- 削除ボタン -->
+                                        <Button Grid.Column="1" Grid.Row="0" 
+                                                FontSize="16"
+                                                Width="20" Height="20" 
+                                                Margin="0, 0, 0, 0" 
+                                                Background="IndianRed"
+                                                Click="GamePlaylistDeleteButton_Click">
+                                            <TextBlock Text="×"
+                                                       Padding="0, 0, 0, 3"
+                                                       TextAlignment="Center"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center">
+                                            </TextBlock>
+                                        </Button>
+
+                                        <!-- プレイリストタイトル -->
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding GamePlayListName}"
                                                d:Text="GamePlayListName"
                                                Width="Auto" 
                                                Foreground="White" 
-                                               FontSize="16" >
-                                    </TextBlock>
-                                </StackPanel>
-                            </Grid>
+                                               FontSize="20" >
+                                        </TextBlock>
+                                        
+                                        <!-- 最終使用日時 -->
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding LastUsedDate}"
+                                                   d:Text="9999/99/99"
+                                                   Width="Auto" 
+                                                   Foreground="White" 
+                                                   HorizontalAlignment="Right"
+                                                   FontSize="12" >
+                                        </TextBlock>
+                                    </Grid>
+                                </Grid>
+
+                                <Grid >
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+
+                                    <StackPanel Grid.Column="1" 
+                                            Orientation="Vertical">
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <Border Width="Auto" Height="2" Background="White"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding LastUsedDate}"
-                                   d:Text="9999/99/99"
-                                   Width="Auto" 
-                                   Foreground="White" 
-                                   FontSize="16" >
-                        </TextBlock>
-                        <Button Grid.Column="2" Grid.Row="1"  Content="削除" 
-                                Width="64" Height="20" 
-                                Margin="8, 0, 0, 0" 
-                                VerticalAlignment="Center" 
-                                Click="GamePlaylistDeleteButton_Click"/>
-
-
-                        <Border Width="Auto" Height="2" Background="White"/>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
     </Grid>
 </UserControl>

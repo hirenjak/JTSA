@@ -108,7 +108,7 @@ namespace JTSA
 			// アクセストークンの確認を持って起動時設定を完了
             await StreamerDataSet();
 
-			await PlayingGamePanel.ReloadGamePlaylist();
+			await PlayingGamePanel.ReloadGameAllPlaylist();
 
             // ロード画面を非表示
             LoadScreen.Visibility = Visibility.Collapsed;

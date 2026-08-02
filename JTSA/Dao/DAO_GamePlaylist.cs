@@ -77,6 +77,32 @@ namespace JTSA.Dao
 
         #region ==================== INSERT/UPDATE ====================
 
+
+        /// <summary>
+        /// プレイリストの挿入更新処理
+        /// 引数で渡すデータは全てデータがある前提で行う
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="targetHeaderData"></param>
+        /// <returns>登録したT_GamePlayListHeader </returns>
+        public static bool UpdateLastUsed(long playlistId)
+        {
+            using (var db = new AppDbContext())
+            {
+                // ヘッダの既存データの読込処理
+                var selectHeaderExeResult = db.T_GamePlaylistHeader.SingleOrDefault(x => x.GamePlayListId == playlistId);
+                if (selectHeaderExeResult == null) return false;
+
+                selectHeaderExeResult.LastUsedDateTime = DateTime.Now;
+
+                // コミット処理
+                db.SaveChanges();
+            }
+
+            return true;
+        }
+
+
         /// <summary>
         /// プレイリストの挿入更新処理
         /// 引数で渡すデータは全てデータがある前提で行う

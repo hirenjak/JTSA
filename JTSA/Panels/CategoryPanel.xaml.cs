@@ -132,7 +132,7 @@ namespace JTSA.Panels
 
                 updateCategory.SteamUrl = item.SteamUrl;
 
-                string? appId = PlayingGamePanel.GetSteamAppId(item.SteamUrl);
+                string? appId = SteamHelper.GetSteamAppId(item.SteamUrl);
                 if (appId == null) return;
 
                 updateCategory.SteamHeaderArtUrl = await SteamHelper.GetSteamHeaderImageUrlAsync(appId);

@@ -27,11 +27,6 @@
                 </Grid>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0, 8, 0, 0">
-                <Label Content="検索欄（※未実装）" Foreground="White"/>
-                <TextBox Name="FriendSerchTextBox" ToolTip="検索欄" TextChanged="FriendSerchTextBox_TextChanged"></TextBox>
-            </StackPanel>
-
             <Grid Height="Auto" Grid.Row="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="24"/>
@@ -40,7 +35,15 @@
 
                 <Label Grid.Row="0" Content="※クリックするとタイトル編集のカーソルを入れてる部分に挿入" Foreground="White"/>
 
-                <ListBox ItemsSource="{Binding FriendFormList}" Grid.Row="2" Background="#FF404040" x:Name="FriendListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="FriendListBox_SelectionChanged">
+                <ListBox Grid.Row="2" x:Name="FriendListBox" 
+                         d:ItemsSource="{d:SampleData ItemCount = 3}"
+                         ItemsSource="{Binding FriendFormList}" 
+                         Background="#FF404040" 
+                         Height="Auto" Width="Auto" 
+                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" 
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" 
+                         SelectionChanged="FriendListBox_SelectionChanged">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>

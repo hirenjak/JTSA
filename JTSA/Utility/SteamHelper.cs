@@ -1,5 +1,6 @@
-﻿using System.Text.Json;
-using System.Net.Http;
+﻿using System.Net.Http;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace JTSA.Utility
 {
@@ -31,6 +32,18 @@ namespace JTSA.Utility
                 return headerImage.GetString();
 
             return null;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string? GetSteamAppId(string url)
+        {
+            var match = Regex.Match(url, @"store\.steampowered\.com/app/(\d+)");
+            return match.Success ? match.Groups[1].Value : null;
         }
     }
 }

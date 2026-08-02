@@ -7,6 +7,7 @@ using TwitchLib.Api;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
+using TwitchLib.Client;
 
 namespace JTSA.Utility
 {
@@ -445,5 +446,6 @@ namespace JTSA.Utility
 
             return null;
         }
+
     }
 }

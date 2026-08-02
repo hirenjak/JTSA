@@ -1,0 +1,53 @@
+﻿<UserControl x:Class="JTSA.Panels.UserControl1"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:JTSA.Panels"
+             mc:Ignorable="d" 
+             Background="#FF404040">
+    <Grid>
+        <StackPanel Grid.Row="1" Margin="0, 8, 0, 0">
+            <TextBlock Text="・ビッツユーザー" Foreground="White" FontSize="14"></TextBlock>
+            <ListBox Grid.Row="1" ItemsSource="{Binding ChatListForms}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
+            x:Name="ChatListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+            >
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <StackPanel Margin="8, 0, 8, 0">
+                                <Grid >
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding UserName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" ></TextBlock>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid >
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Comment}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Width="Auto" Height="2" Background="White"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+        </StackPanel>
+
+    </Grid>
+</UserControl>

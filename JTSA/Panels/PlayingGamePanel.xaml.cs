@@ -2,25 +2,11 @@
 using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
-using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics.Eventing.Reader;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Reflection.Metadata;
-using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
-using TwitchLib.Api.Helix.Models.Schedule;
 using static JTSA.Forms.PlaylistItemForm;
 
 namespace JTSA.Panels
@@ -30,6 +16,8 @@ namespace JTSA.Panels
     /// </summary>
     public partial class PlayingGamePanel : UserControl
     {
+        /// <summary> メインウィンドウ </summary>
+        MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
         private long CurrentGamePlaylistId { 
             get 
@@ -51,10 +39,12 @@ namespace JTSA.Panels
         /// <summary>  </summary>
         public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
 
-        private string? exportFilePath;
-
         private ObsHttpServer? server;
 
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         public PlayingGamePanel()
         {
             InitializeComponent();
@@ -68,141 +58,25 @@ namespace JTSA.Panels
             _ = server.StartAsync();
         }
 
-        public async Task ReloadGamePlaylist()
-        {
-            playlistItemFormList.Clear();
-            playlistHeaderFormList.Clear();
 
-            // プレイリストヘッダ一覧の読込
-            var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
-            if (gamePlayListHeaders.Count == 0) return;
+        #region ==================== イベントハンドラー ====================
 
-            foreach (var gamePlayListHeader in gamePlayListHeaders)
-            {
-                playlistHeaderFormList.Add(new PlaylistHeaderForm()
-                {
-                    GamePlayListId = gamePlayListHeader.GamePlayListId,
-                    GamePlayListName = gamePlayListHeader.GamePlayListName,
-                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
-                    LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
-                    IsLoaded = false
-                });
-            }
-
-
-            // 画面に何も設定されていないかの確認
-            if (CurrentGamePlaylistId == 0)
-            {
-                // 未設定なら一番目のプレイリストを読込
-                CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
-            }
-
-            var gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
-
-            // 画面に何も設定されていないかの確認
-            if (gamePlaylist == null)
-            {
-                // 未設定なら一番目のプレイリストを読込
-                CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
-                gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
-            }
-
-            CurrentGamePlaylistName = gamePlaylist.GamePlayListName;
-
-
-            // 画面に設定されている
-            var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
-
-            // 
-            foreach (var game in gamePlayListItems)
-            {
-                string imageUrl = "";
-                var categoryData = DAO_Category.SelectOneById(game.CategoryId);
-                if (categoryData == null)
-                {
-                    var twitchCategoryData = await TwitchHelper.GetCategoryByGameId(game.CategoryId);
-                    imageUrl = twitchCategoryData.BoxArtUrl;
-                }
-                else
-                {
-                    imageUrl = categoryData.SteamHeaderArtUrl != "" ? categoryData.SteamHeaderArtUrl : categoryData.BoxArtUrl;
-                }
-
-                playlistItemFormList.Add(new PlaylistItemForm()
-                {
-                    CategoryId = game.CategoryId,
-                    ImageUrl = imageUrl,
-                    Status = (GameStatus)game.Status
-                });
-            }
-        }
-
-        private async void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
-        {
-            // ボタンのDataContextから削除対象を取得
-            if ((sender as Button)?.DataContext is PlaylistHeaderForm item)
-            {
-                DAO_GamePlaylist.DeleteGamePlayList(item.GamePlayListId);
-            }
-
-            await ReloadGamePlaylist();
-        }
-
-        public static string? GetSteamAppId(string url)
-        {
-            var match = Regex.Match(url, @"store\.steampowered\.com/app/(\d+)");
-            return match.Success ? match.Groups[1].Value : null;
-        }
-
-        private async void ImageItem_RightClick(object sender, MouseButtonEventArgs e)
-        {
-            e.Handled = true;
-
-            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
-            {
-                item.Status =
-                    item.Status == PlaylistItemForm.GameStatus.Playing
-                        ? PlaylistItemForm.GameStatus.None
-                        : PlaylistItemForm.GameStatus.Playing;
-            }
-
-            UpdatePlaylistData();
-
-            await ReloadGamePlaylist();
-        }
-
-        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
-        {
-            e.Handled = true;
-
-            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
-            {
-                playlistItemFormList.Remove(item);
-            }
-
-            UpdatePlaylistData();
-
-            await ReloadGamePlaylist();
-        }
 
         /// <summary>
-        /// OBS書き出し用ボタン押下時
+        /// 
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void ExportButton_Click(object sender, RoutedEventArgs e)
+        private async void GamePlaylistListBox_DoubleClick(object sender, EventArgs e)
         {
-            var dialog = new SaveFileDialog
+            if (GamePlaylistListBox.SelectedItem is PlaylistHeaderForm selectedItem)
             {
-                FileName = "obs_steam_list.html",
-                Filter = "HTMLファイル (*.html)|*.html"
-            };
+                // データ登録
+                CurrentGamePlaylistId = selectedItem.GamePlayListId;
+            }
 
-            if (dialog.ShowDialog() != true) return;
-
-            exportFilePath = dialog.FileName;
-
-            MessageBox.Show("OBS用HTMLを書き出しました。\n以降は追加・削除・完了切替時に自動更新します。");
+            // 再読み込み処理
+            await ReloadGameAllPlaylist();
         }
 
 
@@ -220,17 +94,146 @@ namespace JTSA.Panels
             var insertPlaylistHeader = FormConvertToPlaylistHeadder();
             DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader);
 
-            await ReloadGamePlaylist();
+            await ReloadGameAllPlaylist();
         }
 
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void ImageItem_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
+            {
+                item.Status =
+                    item.Status == PlaylistItemForm.GameStatus.Completed
+                        ? PlaylistItemForm.GameStatus.None
+                        : PlaylistItemForm.GameStatus.Completed;
+            }
+
+            UpdatePlaylistData();
+
+            DAO_GamePlaylist.UpdateLastUsed(CurrentGamePlaylistId);
+
+            await ReloadGameAllPlaylist();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+
+            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
+            {
+                playlistItemFormList.Remove(item);
+            }
+
+            UpdatePlaylistData();
+
+            await ReloadGameAllPlaylist();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void ImageItem_RightClick(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+
+            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
+            {
+                item.Status =
+                    item.Status == PlaylistItemForm.GameStatus.Playing
+                        ? PlaylistItemForm.GameStatus.None
+                        : PlaylistItemForm.GameStatus.Playing;
+
+                if(item.Status == GameStatus.Playing)
+                {
+                    var categoryData = await TwitchHelper.GetCategoryByGameId(item.CategoryId);
+
+                    mainWindow.editTitleTextForm.SetCategory(categoryData.Id, categoryData.Name, categoryData.BoxArtUrl);
+                    mainWindow.SetDisplayFromEditFrom();
+                }
+            }
+
+            UpdatePlaylistData();
+
+            await ReloadGameAllPlaylist();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            // ボタンのDataContextから削除対象を取得
+            if ((sender as Button)?.DataContext is PlaylistHeaderForm item)
+            {
+                DAO_GamePlaylist.DeleteGamePlayList(item.GamePlayListId);
+            }
+
+            await ReloadGameAllPlaylist();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void GamePlayListTitleEdit_Click(object sender, EventArgs e)
+        {
+            var currentHeader = FormConvertToPlaylistHeadder();
+            DAO_GamePlaylist.InsertUpdate(currentHeader);
+
+            await ReloadGamePlaylistHeader();
+        }
+
+        #endregion
+
+
+        #region ==================== DB関連メソッド ====================
+
+
+        /// <summary>
+        /// 画面情報をDBに保存
+        /// </summary>
+        public void UpdatePlaylistData()
+        {
+            // データ作成
+            var insertPlaylistHeader = FormConvertToPlaylistHeadder();
+            var insertPlaylistItemList = FormConvertToPlalistItemList(insertPlaylistHeader.GamePlayListId);
+
+            // 挿入処理
+            DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader, insertPlaylistItemList);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         private T_GamePlaylistHeader FormConvertToPlaylistHeadder()
         {
             T_GamePlaylistHeader result = null;
 
             var playlistTitleText = CurrentGamePlaylistName;
 
-            if (string.IsNullOrEmpty(playlistTitleText)) {
+            if (string.IsNullOrEmpty(playlistTitleText))
+            {
                 playlistTitleText = "名称未設定";
             }
 
@@ -283,21 +286,138 @@ namespace JTSA.Panels
         }
 
 
-        private async void ImageItem_Click(object sender, MouseButtonEventArgs e)
+
+        #endregion
+
+
+        /// <summary>
+        /// プレイリスト一覧画面の再読み込み
+        /// </summary>
+        /// <returns></returns>
+        public async Task ReloadGameAllPlaylist()
         {
-            if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
+            //　リストの初期化
+            playlistItemFormList.Clear();
+            playlistHeaderFormList.Clear();
+
+            // プレイリストヘッダ一覧の読込
+            var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
+            if (gamePlayListHeaders.Count == 0) return;
+
+            foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
-                item.Status =
-                    item.Status == PlaylistItemForm.GameStatus.Completed
-                        ? PlaylistItemForm.GameStatus.None
-                        : PlaylistItemForm.GameStatus.Completed;
+                playlistHeaderFormList.Add(new PlaylistHeaderForm()
+                {
+                    GamePlayListId = gamePlayListHeader.GamePlayListId,
+                    GamePlayListName = gamePlayListHeader.GamePlayListName,
+                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
+                    LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
+                    IsLoaded = false
+                });
             }
+
+            // 画面に何も設定されていないかの確認
+            if (CurrentGamePlaylistId == 0)
+            {
+                // 未設定なら一番目のプレイリストを読込
+                CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
+            }
+
+            var gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
+
+            // 画面に何も設定されていないかの確認
+            if (gamePlaylist == null)
+            {
+                // 未設定なら一番目のプレイリストを読込
+                CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
+                gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
+            }
+
+            CurrentGamePlaylistName = gamePlaylist.GamePlayListName;
+
+
+            // 画面に設定されている
+            var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
+
+            // 
+            foreach (var game in gamePlayListItems)
+            {
+                string imageUrl = "";
+                var categoryData = DAO_Category.SelectOneById(game.CategoryId);
+                if (categoryData == null)
+                {
+                    var twitchCategoryData = await TwitchHelper.GetCategoryByGameId(game.CategoryId);
+                    imageUrl = twitchCategoryData.BoxArtUrl;
+                }
+                else
+                {
+                    imageUrl = categoryData.SteamHeaderArtUrl != "" ? categoryData.SteamHeaderArtUrl : categoryData.BoxArtUrl;
+                }
+
+                playlistItemFormList.Add(new PlaylistItemForm()
+                {
+                    CategoryId = game.CategoryId,
+                    ImageUrl = imageUrl,
+                    Status = (GameStatus)game.Status
+                });
+            }
+        }
+
+
+        /// <summary>
+        /// プレイリスト一覧画面の再読み込み
+        /// </summary>
+        /// <returns></returns>
+        public async Task ReloadGamePlaylistHeader()
+        {
+            //　リストの初期化
+            playlistHeaderFormList.Clear();
+
+            // プレイリストヘッダ一覧の読込
+            var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
+            if (gamePlayListHeaders.Count == 0) return;
+
+            foreach (var gamePlayListHeader in gamePlayListHeaders)
+            {
+                playlistHeaderFormList.Add(new PlaylistHeaderForm()
+                {
+                    GamePlayListId = gamePlayListHeader.GamePlayListId,
+                    GamePlayListName = gamePlayListHeader.GamePlayListName,
+                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
+                    LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
+                    IsLoaded = false
+                });
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="urlText"></param>
+        /// <returns></returns>
+        public async Task AddSteamImageAsync(string categoryId, string urlText)
+        {
+            string url = urlText.Trim();
+
+            var categoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
+
+            playlistItemFormList.Add(new PlaylistItemForm
+            {
+                CategoryId = categoryId,
+                ImageUrl = string.IsNullOrEmpty(url) ? url : categoryData.BoxArtUrl,
+            });
 
             UpdatePlaylistData();
 
-            await ReloadGamePlaylist();
+            await ReloadGameAllPlaylist();
         }
 
+
+        /// <summary>
+        /// OBS用JSON作成
+        /// </summary>
+        /// <returns></returns>
         private string CreateObsJson()
         {
             return JsonSerializer.Serialize(
@@ -308,6 +428,11 @@ namespace JTSA.Panels
                 }));
         }
 
+
+        /// <summary>
+        /// OBS用HTML作成
+        /// </summary>
+        /// <returns></returns>
         private string CreateObsHtml()
         {
             return """
@@ -334,19 +459,27 @@ body {
     padding: 0;
 }
 
-.imageItem {
-    position: relative;
-    width: 230px;
-    height: 107px;
-    overflow: hidden;
-    flex-shrink: 0;
+#imageList{
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    align-items:flex-start;
 }
 
-.imageItem img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
+.imageItem{
+    position:relative;
+    display:inline-block;
+    overflow:hidden;
+    flex-shrink:0;
+}
+
+.imageItem img{
+    display:block;
+    width:auto;
+    height:auto;
+
+    max-width:230px;
+    max-height:107px;
 }
 
 /* 完了：画像全体を暗くして中央表示 */
@@ -371,19 +504,21 @@ body {
 /* プレイ中：左下に表示 */
 .playingText {
     position: absolute;
-    left: 8px;
+    left: 4px;
     bottom: 8px;
 
     display: none;
 
-    padding: 4px 10px;
+    padding: 2px 10px;
     border-radius: 5px;
 
     color: white;
     background: #2196f3;
 
-    font-size: 14px;
+    font-size: 11px;
     font-weight: bold;
+
+    white-space: nowrap;
 }
 
 .imageItem.playing .playingText {
@@ -456,49 +591,5 @@ setInterval(load, 500);
 """;
         }
 
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="urlText"></param>
-        /// <returns></returns>
-        public async Task AddSteamImageAsync(string categoryId, string urlText)
-        {
-            string url = urlText.Trim();
-
-            var categoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
-
-            playlistItemFormList.Add(new PlaylistItemForm
-            {
-                CategoryId = categoryId,
-                ImageUrl = string.IsNullOrEmpty(url) ? url : categoryData.BoxArtUrl,
-            });
-
-            UpdatePlaylistData();
-
-            await ReloadGamePlaylist();
-        }
-
-        public void UpdatePlaylistData()
-        {
-            // データ作成
-            var insertPlaylistHeader = FormConvertToPlaylistHeadder();
-            var insertPlaylistItemList = FormConvertToPlalistItemList(insertPlaylistHeader.GamePlayListId);
-
-            // 挿入処理
-            DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader, insertPlaylistItemList);
-        }
-
-        private async void GamePlaylistListBox_DoubleClick(object sender, EventArgs e)
-        {
-            if (GamePlaylistListBox.SelectedItem is PlaylistHeaderForm selectedItem)
-            {
-                // データ登録
-                CurrentGamePlaylistId = selectedItem.GamePlayListId;
-            }
-
-            // 再読み込み処理
-            await ReloadGamePlaylist();
-        } 
     }
 }
