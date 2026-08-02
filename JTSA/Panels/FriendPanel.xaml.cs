@@ -17,9 +17,12 @@ namespace JTSA.Panels
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
         /// <summary>  </summary>
-        public ObservableCollection<FriendTagForm> FriendFormList { get; } = new();
+        public ObservableCollection<FriendForm> FriendFormList { get; } = new();
 
+        /// <summary>  </summary>
+        public ObservableCollection<FriendForm> SelectedFriendFormList { get; } = new();
 
+        
         /// <summary>
         /// コンストラクタ
         /// </summary>
@@ -28,6 +31,13 @@ namespace JTSA.Panels
             DataContext = this;
 
             InitializeComponent();
+
+            var settingPrefixWord = DAO_Setting.SelectOneById(DAO_Setting.SettingName.FriendPrefixWord);
+            if (settingPrefixWord != null)
+            {
+                FriendPrefixWordTextBox.Text = settingPrefixWord.Value;
+            }
+
         }
 
 
@@ -50,7 +60,7 @@ namespace JTSA.Panels
         private void FriendDeleteButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
-            if ((sender as Button)?.DataContext is FriendTagForm item)
+            if ((sender as Button)?.DataContext is FriendForm item)
             {
                 DAO_Friend.Delete(item.BroadcastId);
             }
@@ -66,7 +76,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void FriendAddButton_Click(object sender, RoutedEventArgs e)
         {
-            String userId = FriendAddTextBox.Text;
+            string userId = FriendAddTextBox.Text;
             AddFriendAsync(userId);
         }
 
@@ -78,10 +88,15 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void FriendListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (FriendListBox.SelectedItem is FriendTagForm selectedItem)
+            if (FriendListBox.SelectedItem is FriendForm selectedItem)
             {
-                mainWindow.InsertTextAtCaret(" @" + selectedItem.UserId + " ");
+                if (!SelectedFriendFormList.Any(x => x.BroadcastId == selectedItem.BroadcastId))
+                {
+                    SelectedFriendFormList.Add(selectedItem);
+                }
             }
+
+            UpdateTitlePreview();
 
             // 選択状態を解除
             FriendListBox.SelectedIndex = -1;
@@ -148,6 +163,42 @@ namespace JTSA.Panels
 
             mainWindow.StatusTextBlock.Text = "フレンドリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SelectedFriendButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.DataContext is FriendForm item)
+            {
+                SelectedFriendFormList.Remove(item);
+            }
+
+            UpdateTitlePreview();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void UpdateTitlePreview()
+        {
+            mainWindow.CurrentTitleTextUpdate();
+        }
+
+        private void FriendPrefixWordTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            DAO_Setting.InsertUpdate(new M_Setting()
+            {
+                Name = (int)DAO_Setting.SettingName.FriendPrefixWord,
+                Value = FriendPrefixWordTextBox.Text,
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now,
+                LastUsedDateTime = DateTime.Now
+            });
         }
     }
 }

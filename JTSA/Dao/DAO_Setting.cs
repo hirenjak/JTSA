@@ -10,7 +10,13 @@ namespace JTSA.Dao
 {
     class DAO_Setting
     {
-
+        public enum SettingName : int
+        {
+            UserName = 1,
+            RefreshToken = 2,
+            ExpiresIn = 3,
+            FriendPrefixWord = 4,
+        }
 
         /// <summary>
         /// SELECT * FROM M_TitleText ORDER BY Id DESC

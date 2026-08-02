@@ -7,7 +7,100 @@
             Background="#FF404040">
 
     <DockPanel>
-        <Grid>
+        <Grid DockPanel.Dock="Left" Height="Auto" Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="24"/>
+                <RowDefinition Height="18"/>
+                <RowDefinition Height="24"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+
+            <Label Grid.Row="0" Content="フレンドテキストの前に置かれる文字指定" 
+                   Foreground="White"/>
+            
+            <TextBox Grid.Row="1" Name="FriendPrefixWordTextBox" TextChanged="FriendPrefixWordTextBox_TextChanged"></TextBox>
+
+            <Label Grid.Row="2" Content="※ここに表示されてるユーザーがタイトルに挿入される" 
+                   Foreground="White"/>
+
+            <ListBox Grid.Row="3" x:Name="SelectedFriendListBox" 
+             d:ItemsSource="{d:SampleData ItemCount = 3}"
+             ItemsSource="{Binding SelectedFriendFormList}" 
+             Background="#FF404040" 
+             Height="Auto" Width="Auto" 
+             HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" 
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <StackPanel Margin="8, 0, 8, 0">
+                                <!-- アイテム上部ステータス部分 -->
+                                <Grid Grid.Column="0"
+                              Margin="8, 0, 0, 0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 表示名 -->
+                                    <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                   Width="Auto" 
+                                   Foreground="White" FontSize="16" TextWrapping="Wrap">
+                                    </TextBlock>
+
+                                    <!-- 削除ボタン -->
+                                    <Button Grid.Column="1" Grid.Row="0" 
+                                    FontSize="16"
+                                    Width="20" Height="20" 
+                                    Margin="0, 0, 0, 0" 
+                                    Background="IndianRed"
+                                    Click="SelectedFriendButton_Click">
+                                        <TextBlock Text="×"
+                                           Padding="0, 0, 0, 3"
+                                           TextAlignment="Center"
+                                           Foreground="White"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center">
+                                        </TextBlock>
+                                    </Button>
+                                </Grid>
+
+                                <Grid Margin="0" Height="Auto">
+
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="{Binding UserId}" Width="Auto" Grid.Column="1" Grid.Row="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0"  Grid.Row="1" Margin="8, 0, 0, 0" >
+                                        <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                        <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding BroadcastId}" Width="Auto" Grid.Column="0"  Grid.Row="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Width="Auto" Height="2" Background="White"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        
+        <Grid DockPanel.Dock="Right">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -48,10 +141,41 @@
                         <DataTemplate>
                             <StackPanel>
                                 <StackPanel Margin="8, 0, 8, 0">
-                                    <TextBlock Text="{Binding DisplayName}" Grid.Column="0"
-                                   Width="Auto" 
-                                   Foreground="White" FontSize="16" TextWrapping="Wrap">
-                                    </TextBlock>
+                                    <!-- アイテム上部ステータス部分 -->
+                                    <Grid Grid.Column="0"
+                                          Margin="8, 0, 0, 0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- 表示名 -->
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                               Width="Auto" 
+                                               Foreground="White" FontSize="16" TextWrapping="Wrap">
+                                        </TextBlock>
+
+                                        <!-- 削除ボタン -->
+                                        <Button Grid.Column="1" Grid.Row="0" 
+                                                FontSize="16"
+                                                Width="20" Height="20" 
+                                                Margin="0, 0, 0, 0" 
+                                                Background="IndianRed"
+                                                Click="FriendDeleteButton_Click">
+                                            <TextBlock Text="×"
+                                                       Padding="0, 0, 0, 3"
+                                                       TextAlignment="Center"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center">
+                                            </TextBlock>
+                                        </Button>
+                                    </Grid>
 
                                     <Grid Margin="0" Height="Auto">
 
@@ -71,7 +195,6 @@
                                             <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
                                         </StackPanel>
                                         <TextBlock Text="{Binding BroadcastId}" Width="Auto" Grid.Column="0"  Grid.Row="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
-                                        <Button Grid.Column="2" Grid.Row="1"  Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="FriendDeleteButton_Click"/>
                                     </Grid>
                                 </StackPanel>
 

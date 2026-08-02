@@ -4,6 +4,7 @@ using JTSA.Models;
 using JTSA.Panels;
 using JTSA.Utility;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +17,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using TwitchLib.Api.Helix.Models.Schedule;
 
 namespace JTSA
 {
@@ -27,7 +27,9 @@ namespace JTSA
 
 		public EditTitleTextForm editTitleTextForm = new();
 
-	    private DispatcherTimer accessTokenRefreshTimer;
+		private DispatcherTimer accessTokenRefreshTimer;
+
+		public string CurrentTitleText { get{ return CurrentTitleTextBlock.Text; } set{ CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(value); }}
 
 
         /// <summary>
@@ -44,7 +46,6 @@ namespace JTSA
 
 			DataContext = this;
 
-			AllSidePanelClose();
 			TitleTagSidePanel.Visibility = Visibility.Visible;
 
             // イベント登録
@@ -80,7 +81,7 @@ namespace JTSA
             if (string.IsNullOrEmpty(TwitchHelper.ClientID)) return;
 
 			// ユーザー名取得確認
-			M_Setting? settingUserName = DAO_Setting.SelectOneById(M_Setting.SettingName.UserName) ?? null;
+			M_Setting? settingUserName = DAO_Setting.SelectOneById(DAO_Setting.SettingName.UserName) ?? null;
 			if (settingUserName == null || string.IsNullOrEmpty(settingUserName.Value))
 			{
 				StatusTextBlock.Text = "ユーザー名が設定されていません";
@@ -126,7 +127,7 @@ namespace JTSA
             AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理開始");
 
 			// リフレッシュトークンの取得（設定に無ければ失敗として戻す）
-            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(M_Setting.SettingName.RefreshToken);
+            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken);
 			if (settingRefreshToken == null) return false;
 
             bool isProcessSuccess = !(string.IsNullOrEmpty(settingRefreshToken.Value));
@@ -147,7 +148,7 @@ namespace JTSA
 
             DAO_Setting.InsertUpdate(new M_Setting
             {
-                Name = (int)M_Setting.SettingName.RefreshToken,
+                Name = (int)DAO_Setting.SettingName.RefreshToken,
                 Value = accessTokenResponse.refreshToken,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
@@ -156,7 +157,7 @@ namespace JTSA
 
             DAO_Setting.InsertUpdate(new M_Setting
             {
-                Name = (int)M_Setting.SettingName.ExpiresIn,
+                Name = (int)DAO_Setting.SettingName.ExpiresIn,
                 Value = accessTokenResponse.expiresIn.ToString(),
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
@@ -199,7 +200,7 @@ namespace JTSA
 
                 // タイトル取得処理
                 var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
-                CurrentTitleTextBlock.Text = streamInfo.title;
+                CurrentTitleText = streamInfo.title;
 
                 TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
@@ -273,7 +274,7 @@ namespace JTSA
 			// --- 設定情報保存処理 ---
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
-				Name = (int)M_Setting.SettingName.UserName,
+				Name = (int)DAO_Setting.SettingName.UserName,
 				Value = JTSAHelper.UserName,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
@@ -282,7 +283,7 @@ namespace JTSA
 
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
-				Name = (int)M_Setting.SettingName.RefreshToken,
+				Name = (int)DAO_Setting.SettingName.RefreshToken,
 				Value = accessTokenResponse.refreshToken,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
@@ -291,7 +292,7 @@ namespace JTSA
 
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
-				Name = (int)M_Setting.SettingName.ExpiresIn,
+				Name = (int)DAO_Setting.SettingName.ExpiresIn,
 				Value = accessTokenResponse.expiresIn.ToString(),
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
@@ -413,7 +414,7 @@ namespace JTSA
         {
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理開始");
 
-            var title = TitleEditTextBox.Text;
+            var title = CurrentTitleText;
 			var categoryId = SelectCategoryIdTextBlock.Text;
 			var categoryName = SelectCategoryNameTextBlock.Text;
 			var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
@@ -442,7 +443,7 @@ namespace JTSA
             if (isProcessSuccess)
 			{
 				// --- 履歴追加処理 ---
-				AddTitleText(title, categoryId, categoryName, categoryBoxArtUrl);
+				AddTitleText(TitleEditTextBox.Text, categoryId, categoryName, categoryBoxArtUrl);
 			}
 
 			String gameId = SelectCategoryIdTextBlock.Text.Trim();
@@ -457,7 +458,7 @@ namespace JTSA
             var getTitleText = streamInfo.title;
             var getCategory = await TwitchHelper.GetCategoryByGameId(gameId);
 
-            CurrentTitleTextBlock.Text = getTitleText;
+            CurrentTitleText = getTitleText;
             editTitleTextForm.SetCategory(getCategory.Id, getCategory.Name, getCategory.BoxArtUrl);
 
             SetDisplayFromEditFrom();
@@ -477,7 +478,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-            var isProcessSuccess = JTSAHelper.CopyClipBoad(CurrentTitleTextBlock.Text);
+            var isProcessSuccess = JTSAHelper.CopyClipBoad(CurrentTitleText);
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "クリップボードコピー成功 「 タイトル 」",
                 "クリップボードコピー失敗 「 タイトル 」"
@@ -509,7 +510,7 @@ namespace JTSA
 
 			if (isProcessSuccess)
 			{
-				CurrentTitleTextBlock.Text = streamInfo.title;
+                CurrentTitleText = streamInfo.title;
             }
 
             editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
@@ -621,45 +622,6 @@ namespace JTSA
 		#endregion
 
 
-		#region =============== サイドパネル切替ボタン ===============
-
-		/// <summary>
-		/// サイドパネル：閉じるボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void ToggleCloseButton_Click(object sender, RoutedEventArgs e)
-		{
-			AllSidePanelClose();
-		}
-
-
-		/// <summary>
-		/// タイトルタグボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void ToggleTitleTagPanelButton_Click(object sender, RoutedEventArgs e)
-		{
-			AllSidePanelClose();
-			TitleTagSidePanel.Visibility = Visibility.Visible;
-		}
-
-
-		/// <summary>
-		/// 全てのサイドパネルを閉じる
-		/// </summary>
-		private void AllSidePanelClose()
-		{
-			if (TitleTagSidePanel.Visibility == Visibility.Visible)
-			{
-				TitleTagSidePanel.Visibility = Visibility.Collapsed;
-			}
-		}
-
-		#endregion
-
-
 		/// <summary>
 		/// 
 		/// </summary>
@@ -668,7 +630,7 @@ namespace JTSA
 		private void TweetButton_Click(object sender, RoutedEventArgs e)
 		{
 			// 必要データの取得
-			var stremTitleText = editTitleTextForm.Content;
+			var stremTitleText = TitleTextFriendTagToXReplace(editTitleTextForm.Content);
 			var categoryNameText = editTitleTextForm.CategoryName;
 
             // 認証URL生成
@@ -698,7 +660,7 @@ namespace JTSA
 		private void TitleEditTextBox_TextChanged(object sender, TextChangedEventArgs e)
 		{
 			editTitleTextForm.Content = TitleEditTextBox.Text;
-			CurrentTitleTextBlock.Text = editTitleTextForm.Content;
+            CurrentTitleText = editTitleTextForm.Content;
         }
 
 
@@ -738,6 +700,48 @@ namespace JTSA
             {
                 MessageBox.Show("フォルダが存在しません: " + folder);
             }
+        }
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		private string TitleTextFriendTagReplace(string titleText)
+		{
+			var friendText = FriendPanel.FriendPrefixWordTextBox.Text;
+			foreach(var friendItem in FriendPanel.SelectedFriendFormList)
+			{
+			 	friendText += " @" + friendItem.UserId;
+			}
+
+            titleText = titleText.Replace("${friend}", friendText + " ");
+			return titleText;
+		}
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private string TitleTextFriendTagToXReplace(string titleText)
+        {
+            var friendText = FriendPanel.FriendPrefixWordTextBox.Text;
+            foreach (var friendItem in FriendPanel.SelectedFriendFormList)
+            {
+                friendText += friendItem.DisplayName + "、";
+            }
+			friendText = friendText.Substring(0, friendText.Length - 1);
+
+            titleText = titleText.Replace("${friend}", friendText);
+            return titleText;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void CurrentTitleTextUpdate()
+		{
+            CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(TitleEditTextBox.Text);
         }
     }
 }
