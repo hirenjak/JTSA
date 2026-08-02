@@ -8,11 +8,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace JTSA
+namespace JTSA.Forms
 {
     public class TitleTagForm
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public required String DisplayName { get; set; }
         public required String LastUsedDate { get; set; }
     }

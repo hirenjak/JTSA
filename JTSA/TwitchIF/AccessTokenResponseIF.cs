@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JTSA.Forms.Twitch
+namespace JTSA.Forms.TwitchIF
 {
     public class AccessTokenResponseIF
     {

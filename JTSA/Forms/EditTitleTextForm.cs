@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace JTSA
+namespace JTSA.Forms
 {
     public class EditTitleTextForm
     {

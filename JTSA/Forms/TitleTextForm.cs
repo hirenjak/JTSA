@@ -8,11 +8,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace JTSA
+namespace JTSA.Forms
 {
     public class TitleTextForm
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public required string Content { get; set; }
         public required string CategoryId { get; set; }
         public required string CategoryName { get; set; }

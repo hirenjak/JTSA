@@ -5,16 +5,15 @@ namespace JTSA.Models
 {
     public class AppDbContext : DbContext
     {
-        public static String dbDirectory;
+        public static string dbDirectory;
 
-        public DbSet<T_TitleText> M_TitleTextList { get; set; }
+        public DbSet<T_TitleText> T_TitleTextList { get; set; }
         public DbSet<M_Category> M_CategoryList { get; set; }
         public DbSet<M_Friend> M_FriendList { get; set; }
         public DbSet<M_Setting> M_SettingList { get; set; }
         public DbSet<M_TitleTag> M_TitleTagList { get; set; }
-        public DbSet<T_StreamWindow> M_StreamWindowList { get; set; }
-        public DbSet<T_GamePlayListHeader> M_GamePlayList { get; set; }
-        public DbSet<T_GamePlayListItem> T_GamePlayListItem { get; set; }
+        public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
+        public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
 
         /// <summary>
         /// ï°çáÉLÅ[ÇÃê›íË
@@ -22,7 +21,7 @@ namespace JTSA.Models
         /// <param name="modelBuilder"></param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<T_GamePlayListItem>()
+            modelBuilder.Entity<T_GamePlaylistItem>()
                 .HasKey(c => new { c.GamePlayListId, c.CategoryId });
         }
 

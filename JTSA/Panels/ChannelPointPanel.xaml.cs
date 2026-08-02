@@ -17,6 +17,7 @@ using System.Windows.Shapes;
 using TwitchLib.Api.Helix.Models.ChannelPoints; // CustomReward用
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using JTSA.Utility;
 
 namespace JTSA.Panels
 {
@@ -210,7 +211,7 @@ namespace JTSA.Panels
                 IsEnabled = true
             };
 
-            var result = await JTSA.TwitchHelper.CreateCustomRewardAsync(req);
+            var result = await TwitchHelper.CreateCustomRewardAsync(req);
             if (result != null && result.Count > 0)
             {
                 MessageBox.Show("作成しました。");

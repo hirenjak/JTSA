@@ -5,8 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class T_TitleText : DBBaseTransaction
 {
     [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     public required string Content { get; set; }
 

@@ -1,6 +1,7 @@
 ﻿using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Models;
+using JTSA.Utility;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,13 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using TwitchLib.Api.Helix.Models.Schedule;
+using static JTSA.Forms.PlaylistItemForm;
 
 namespace JTSA.Panels
 {
@@ -27,29 +30,45 @@ namespace JTSA.Panels
     /// </summary>
     public partial class PlayingGamePanel : UserControl
     {
+
+        private long CurrentGamePlaylistId { 
+            get 
+            {
+                if (string.IsNullOrEmpty(CurrentGamePlaylistIdTextBlock.Text))
+                {
+                    return 0;
+                }
+                else
+                {
+                    return long.Parse(CurrentGamePlaylistIdTextBlock.Text);
+                }
+            } 
+            set { CurrentGamePlaylistIdTextBlock.Text = value.ToString(); }}
+        public string CurrentGamePlaylistName { get { return GamePlayListTitleEdit.Text; } set { GamePlayListTitleEdit.Text = value; } }
+
         private ObservableCollection<PlaylistItemForm> playlistItemFormList { get; } = new();
 
         /// <summary>  </summary>
         public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
 
-        private static readonly HttpClient httpClient = new();
-
         private string? exportFilePath;
 
-        /// <summary> メインウィンドウ </summary>
-        MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-
+        private ObsHttpServer? server;
 
         public PlayingGamePanel()
         {
             InitializeComponent();
             ImageItemsControl.ItemsSource = playlistItemFormList;
-            GamePlayListBox.ItemsSource = playlistHeaderFormList;
+            GamePlaylistListBox.ItemsSource = playlistHeaderFormList;
 
-            ReloadGamePlaylist();
+            server = new ObsHttpServer(
+                CreateObsHtml,
+                CreateObsJson);
+
+            _ = server.StartAsync();
         }
 
-        private void ReloadGamePlaylist()
+        public async Task ReloadGamePlaylist()
         {
             playlistItemFormList.Clear();
             playlistHeaderFormList.Clear();
@@ -58,35 +77,67 @@ namespace JTSA.Panels
             var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
             if (gamePlayListHeaders.Count == 0) return;
 
-            // 一番目のプレイリストを読込
-            var gamePlayList = DAO_GamePlaylist.SelectGamePlaylistById(gamePlayListHeaders[0].GamePlayListId);
-
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
-                var categoryData = DAO_Category.SelectOneById(gamePlayListHeader.ThumbnailCategoryUrl);
                 playlistHeaderFormList.Add(new PlaylistHeaderForm()
                 {
                     GamePlayListId = gamePlayListHeader.GamePlayListId,
                     GamePlayListName = gamePlayListHeader.GamePlayListName,
-                    ImageUrl = categoryData.BoxArtUrl,
+                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
                     LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
                     IsLoaded = false
                 });
             }
 
-            foreach (var game in gamePlayList)
+
+            // 画面に何も設定されていないかの確認
+            if (CurrentGamePlaylistId == 0)
             {
+                // 未設定なら一番目のプレイリストを読込
+                CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
+            }
+
+            var gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
+
+            // 画面に何も設定されていないかの確認
+            if (gamePlaylist == null)
+            {
+                // 未設定なら一番目のプレイリストを読込
+                CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
+                gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
+            }
+
+            CurrentGamePlaylistName = gamePlaylist.GamePlayListName;
+
+
+            // 画面に設定されている
+            var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
+
+            // 
+            foreach (var game in gamePlayListItems)
+            {
+                string imageUrl = "";
                 var categoryData = DAO_Category.SelectOneById(game.CategoryId);
+                if (categoryData == null)
+                {
+                    var twitchCategoryData = await TwitchHelper.GetCategoryByGameId(game.CategoryId);
+                    imageUrl = twitchCategoryData.BoxArtUrl;
+                }
+                else
+                {
+                    imageUrl = categoryData.SteamHeaderArtUrl != "" ? categoryData.SteamHeaderArtUrl : categoryData.BoxArtUrl;
+                }
+
                 playlistItemFormList.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
-                    ImageUrl = categoryData.SteamHeaderArtUrl != "" ? categoryData.SteamHeaderArtUrl : categoryData.BoxArtUrl,
-                    Status = PlaylistItemForm.GameStatus.None
+                    ImageUrl = imageUrl,
+                    Status = (GameStatus)game.Status
                 });
             }
         }
 
-        private void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
+        private async void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is PlaylistHeaderForm item)
@@ -94,7 +145,7 @@ namespace JTSA.Panels
                 DAO_GamePlaylist.DeleteGamePlayList(item.GamePlayListId);
             }
 
-            ReloadGamePlaylist();
+            await ReloadGamePlaylist();
         }
 
         public static string? GetSteamAppId(string url)
@@ -103,7 +154,7 @@ namespace JTSA.Panels
             return match.Success ? match.Groups[1].Value : null;
         }
 
-        private void ImageItem_RightClick(object sender, MouseButtonEventArgs e)
+        private async void ImageItem_RightClick(object sender, MouseButtonEventArgs e)
         {
             e.Handled = true;
 
@@ -113,21 +164,25 @@ namespace JTSA.Panels
                     item.Status == PlaylistItemForm.GameStatus.Playing
                         ? PlaylistItemForm.GameStatus.None
                         : PlaylistItemForm.GameStatus.Playing;
-
-                SaveObsHtml();
             }
+
+            UpdatePlaylistData();
+
+            await ReloadGamePlaylist();
         }
 
-        private void DeleteButton_Click(object sender, RoutedEventArgs e)
+        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
             e.Handled = true;
 
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 playlistItemFormList.Remove(item);
-
-                SaveObsHtml();
             }
+
+            UpdatePlaylistData();
+
+            await ReloadGamePlaylist();
         }
 
         /// <summary>
@@ -146,60 +201,51 @@ namespace JTSA.Panels
             if (dialog.ShowDialog() != true) return;
 
             exportFilePath = dialog.FileName;
-            SaveObsHtml();
 
             MessageBox.Show("OBS用HTMLを書き出しました。\n以降は追加・削除・完了切替時に自動更新します。");
         }
 
-        
-        /// <summary>
-        /// ゲームプレイリスト新規保存ボタン押下時
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void GamePlayListUpdateButton_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
-
 
         /// <summary>
         /// ゲームプレイリスト新規保存ボタン押下時
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void GamePlayListSaveButton_Click(object sender, RoutedEventArgs e)
+        private async void GamePlayListSaveButton_Click(object sender, RoutedEventArgs e)
         {
-            //ログ出力
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "ゲームプレイリスト", "追加処理開始");
-
-            // DB接続処理
-            using var db = new AppDbContext();
-
-            // データチェック
-            if (playlistItemFormList.Count == 0) return;
+            CurrentGamePlaylistId = JTSAHelper.GetCurrentUnixTimestampMillis();
+            CurrentGamePlaylistName = "";
 
             // データ作成
-
-            // 挿入処理
             var insertPlaylistHeader = FormConvertToPlaylistHeadder();
-            var insertPlaylistItemList = FormConvertToPlalistItemList();
+            DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader);
 
-            DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader, insertPlaylistItemList);
-
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "ゲームプレイリスト", "追加処理終了");
-
-            ReloadGamePlaylist();
+            await ReloadGamePlaylist();
         }
 
-        private T_GamePlayListHeader FormConvertToPlaylistHeadder()
-        {
-            T_GamePlayListHeader result = null;
 
-            result = new T_GamePlayListHeader
+        private T_GamePlaylistHeader FormConvertToPlaylistHeadder()
+        {
+            T_GamePlaylistHeader result = null;
+
+            var playlistTitleText = CurrentGamePlaylistName;
+
+            if (string.IsNullOrEmpty(playlistTitleText)) {
+                playlistTitleText = "名称未設定";
+            }
+
+            var playlistId = CurrentGamePlaylistId;
+
+            if (playlistId == 0)
             {
-                GamePlayListName = GamePlayListTitleEdit.Text,
-                ThumbnailCategoryUrl = playlistItemFormList[0].CategoryId,
+                playlistId = JTSAHelper.GetCurrentUnixTimestampMillis();
+            }
+
+            result = new T_GamePlaylistHeader
+            {
+                GamePlayListId = playlistId,
+                GamePlayListName = playlistTitleText,
+                ThumbnailCategoryUrl = playlistItemFormList.Count == 0 ? "" : playlistItemFormList[0].CategoryId,
                 SelectedCount = 0,
                 SortNumber = 9999,
                 LastUsedDateTime = DateTime.Now,
@@ -210,16 +256,23 @@ namespace JTSA.Panels
             return result;
         }
 
-        private List<T_GamePlayListItem> FormConvertToPlalistItemList()
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="playlistId"></param>
+        /// <returns></returns>
+        private List<T_GamePlaylistItem> FormConvertToPlalistItemList(long playlistId)
         {
-            List<T_GamePlayListItem> resultList = [];
+            List<T_GamePlaylistItem> resultList = [];
             foreach (var item in playlistItemFormList)
             {
                 resultList.Add(
-                    new T_GamePlayListItem
+                    new T_GamePlaylistItem
                     {
-                        GamePlayListId = item.PlaylistId,
+                        GamePlayListId = playlistId,
                         CategoryId = item.CategoryId,
+                        Status = (int)item.Status,
                         LastUsedDateTime = DateTime.Now,
                         CreatedDateTime = DateTime.Now,
                         UpdatedDateTime = DateTime.Now
@@ -229,15 +282,8 @@ namespace JTSA.Panels
             return resultList;
         }
 
-        private void SaveObsHtml()
-        {
-            if (string.IsNullOrEmpty(exportFilePath)) return;
 
-            File.WriteAllText(exportFilePath, CreateObsHtml(), Encoding.UTF8);
-
-        }
-
-        private void ImageItem_Click(object sender, MouseButtonEventArgs e)
+        private async void ImageItem_Click(object sender, MouseButtonEventArgs e)
         {
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
@@ -245,91 +291,169 @@ namespace JTSA.Panels
                     item.Status == PlaylistItemForm.GameStatus.Completed
                         ? PlaylistItemForm.GameStatus.None
                         : PlaylistItemForm.GameStatus.Completed;
-
-                SaveObsHtml();
             }
+
+            UpdatePlaylistData();
+
+            await ReloadGamePlaylist();
+        }
+
+        private string CreateObsJson()
+        {
+            return JsonSerializer.Serialize(
+                playlistItemFormList.Select(x => new
+                {
+                    imageUrl = x.ImageUrl,
+                    status = x.Status.ToString()
+                }));
         }
 
         private string CreateObsHtml()
         {
-            var itemsHtml = string.Join(Environment.NewLine, playlistItemFormList.Select(item =>
-                $"""
-                <div class="imageItem{item.StatusClass}">
-                    <img src="{item.ImageUrl}">
-                    <div class="completeText">完了</div>
-                    <div class="playingText">プレイ中</div>
-                </div>
-                """));
+            return """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>OBS表示用</title>
 
-            return $$"""
-        <!DOCTYPE html>
-        <html lang="ja">
-        <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="refresh" content="1">
-        <title>OBS表示用</title>
-        <style>
-        body{
-            margin:20px;
-            background:transparent;
-            overflow:hidden;
-        }
-        #imageList{
-            display:flex;
-            flex-wrap:wrap;
-            gap:16px;
-        }
-        .imageItem{
-            position:relative;
-            width:230px;
-            height:107px;
-            overflow:hidden;
-        }
-        .imageItem img{
-            width:100%;
-            height:100%;
-            object-fit:cover;
-            display:block;
-        }
-        .completeText{
-            position:absolute;
-            inset:0;
-            display:none;
-            justify-content:center;
-            align-items:center;
-            font-size:30px;
-            font-weight:bold;
-            color:#00ff80;
-            background:rgba(0,0,0,.55);
-        }
-        .imageItem.completed .completeText{
-            display:flex;
-        }
-        .playingText{
-            position:absolute;
-            left:8px;
-            bottom:8px;
-            display:none;
-            padding:4px 10px;
-            border-radius:5px;
-            background:#2196F3;
-            color:white;
-            font-size:14px;
-            font-weight:bold;
+<style>
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    overflow: hidden;
+    font-family: sans-serif;
+}
+
+#imageList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 0;
+}
+
+.imageItem {
+    position: relative;
+    width: 230px;
+    height: 107px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.imageItem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* 完了：画像全体を暗くして中央表示 */
+.completeText {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    color: #00ff80;
+    background: rgba(0, 0, 0, 0.55);
+
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.imageItem.completed .completeText {
+    display: flex;
+}
+
+/* プレイ中：左下に表示 */
+.playingText {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+
+    display: none;
+
+    padding: 4px 10px;
+    border-radius: 5px;
+
+    color: white;
+    background: #2196f3;
+
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.imageItem.playing .playingText {
+    display: block;
+}
+</style>
+</head>
+
+<body>
+
+<div id="imageList"></div>
+
+<script>
+async function load() {
+    try {
+        const response = await fetch("/data?t=" + Date.now(), {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("データ取得失敗: " + response.status);
         }
 
-        .imageItem.playing .playingText{
-            display:block;
+        const items = await response.json();
+        const list = document.getElementById("imageList");
+
+        list.innerHTML = "";
+
+        for (const item of items) {
+            const div = document.createElement("div");
+            div.className = "imageItem";
+
+            if (item.status === "Completed") {
+                div.classList.add("completed");
+            }
+            else if (item.status === "Playing") {
+                div.classList.add("playing");
+            }
+
+            const img = document.createElement("img");
+            img.src = item.imageUrl;
+            img.alt = "";
+
+            const completeText = document.createElement("div");
+            completeText.className = "completeText";
+            completeText.textContent = "完了";
+
+            const playingText = document.createElement("div");
+            playingText.className = "playingText";
+            playingText.textContent = "プレイ中";
+
+            div.appendChild(img);
+            div.appendChild(completeText);
+            div.appendChild(playingText);
+
+            list.appendChild(div);
         }
-        </style>
-        </head>
-        <body>
-        <div id="imageList">
-        {{itemsHtml}}
-        </div>
-        </body>
-        </html>
-        """;
+    }
+    catch (error) {
+        console.error(error);
+    }
+}
+
+load();
+setInterval(load, 500);
+</script>
+
+</body>
+</html>
+""";
         }
 
 
@@ -350,35 +474,31 @@ namespace JTSA.Panels
                 ImageUrl = string.IsNullOrEmpty(url) ? url : categoryData.BoxArtUrl,
             });
 
-            SaveObsHtml();
+            UpdatePlaylistData();
+
+            await ReloadGamePlaylist();
         }
 
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="appId"></param>
-        /// <returns></returns>
-        public static async Task<string?> GetSteamHeaderImageUrlAsync(string appId)
+        public void UpdatePlaylistData()
         {
-            var apiUrl =
-                $"https://store.steampowered.com/api/appdetails?appids={appId}&cc=JP&l=japanese";
+            // データ作成
+            var insertPlaylistHeader = FormConvertToPlaylistHeadder();
+            var insertPlaylistItemList = FormConvertToPlalistItemList(insertPlaylistHeader.GamePlayListId);
 
-            var json = await httpClient.GetStringAsync(apiUrl);
-
-            using var doc = JsonDocument.Parse(json);
-
-            var root = doc.RootElement.GetProperty(appId);
-
-            if (!root.GetProperty("success").GetBoolean())
-                return null;
-
-            var data = root.GetProperty("data");
-
-            if (data.TryGetProperty("header_image", out var headerImage))
-                return headerImage.GetString();
-
-            return null;
+            // 挿入処理
+            DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader, insertPlaylistItemList);
         }
+
+        private async void GamePlaylistListBox_DoubleClick(object sender, EventArgs e)
+        {
+            if (GamePlaylistListBox.SelectedItem is PlaylistHeaderForm selectedItem)
+            {
+                // データ登録
+                CurrentGamePlaylistId = selectedItem.GamePlayListId;
+            }
+
+            // 再読み込み処理
+            await ReloadGamePlaylist();
+        } 
     }
 }

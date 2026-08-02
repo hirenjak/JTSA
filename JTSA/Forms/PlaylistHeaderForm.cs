@@ -8,11 +8,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace JTSA
+namespace JTSA.Forms
 {
     public class PlaylistHeaderForm
     {
-        public required int GamePlayListId { get; set; }
+        public required long GamePlayListId { get; set; }
         public required string GamePlayListName { get; set; }
         public required string LastUsedDate { get; set; }
         public required string ImageUrl { get; set; }

@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace JTSA
+namespace JTSA.Forms
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT

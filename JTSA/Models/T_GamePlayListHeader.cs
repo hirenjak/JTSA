@@ -9,11 +9,10 @@ using System.Threading.Tasks;
 
 namespace JTSA.Models
 {
-    public class T_GamePlayListHeader : DBBaseTransaction
+    public class T_GamePlaylistHeader : DBBaseTransaction
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int GamePlayListId { get; set; }
+        public long GamePlayListId { get; set; }
 
         public required string GamePlayListName { get; set; }
 

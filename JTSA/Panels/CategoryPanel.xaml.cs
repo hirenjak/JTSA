@@ -1,5 +1,7 @@
 ﻿using JTSA.Dao;
+using JTSA.Forms;
 using JTSA.Models;
+using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -116,42 +118,6 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// カテゴリテーブル：挿入更新処理
-        /// </summary>
-        /// <param name="title"></param>
-        public void AddCategory(String gameId, String displayName, String boxArtUrl)
-        {
-            // DB接続処理
-            using var db = new AppDbContext();
-
-            // データチェック
-            if (string.IsNullOrWhiteSpace(displayName)) return;
-
-            // データ作成
-            var isnertData = new M_Category
-            {
-                CategoryId = gameId,
-                DisplayName = displayName,
-                BoxArtUrl = boxArtUrl,
-                SteamHeaderArtUrl = "",
-                SteamUrl = "",
-                LastUsedDateTime = DateTime.Now,
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now
-            };
-
-            // 挿入処理
-            mainWindow.AppLogPanel.AddSwitchLog(DAO_Category.Insert(isnertData), GetType().Name,
-                "データを追加しました。",
-                "既にデータが存在します。"
-            );
-
-            // 再読み込み処理
-            ReloadCategory();
-        }
-
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="sender"></param>
@@ -169,7 +135,7 @@ namespace JTSA.Panels
                 string? appId = PlayingGamePanel.GetSteamAppId(item.SteamUrl);
                 if (appId == null) return;
 
-                updateCategory.SteamHeaderArtUrl = await PlayingGamePanel.GetSteamHeaderImageUrlAsync(appId);
+                updateCategory.SteamHeaderArtUrl = await SteamHelper.GetSteamHeaderImageUrlAsync(appId);
                 DAO_Category.Update(updateCategory);
             }
 
@@ -230,7 +196,7 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CategorySearchTitleSerchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void CategorySearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             lastCategorySearchText = CategorySearchTitleSerchTextBox.Text;
             categorySearchDebounceTimer.Stop();
@@ -243,13 +209,17 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CategorySearchListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void CategorySearchListBox_DoubleClick(object sender, EventArgs e)
         {
             if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
             {
-                mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
-                mainWindow.SetDisplayFromEditFrom();
+                // データ登録
+                var isnertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId);
+                DAO_Category.Insert(isnertData);
             }
+
+            // 再読み込み処理
+            ReloadCategory();
         }
 
 

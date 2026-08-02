@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace JTSA.Models
 {
-    public class T_GamePlayListItem : DBBaseTransaction
+    public class T_GamePlaylistItem : DBBaseTransaction
     {
         /// <summary> テーブルID [複合キー] </summary>
-        public required int GamePlayListId { get; set; }
+        public required long GamePlayListId { get; set; }
 
         /// <summary> カテゴリーID [複合キー] </summary>
         public required string CategoryId { get; set; }

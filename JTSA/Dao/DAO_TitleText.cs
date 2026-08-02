@@ -18,7 +18,7 @@ namespace JTSA.Dao
         {
             List<T_TitleText> results = new();
 
-            foreach (var record in db.M_TitleTextList.OrderByDescending(x => x.Id))
+            foreach (var record in db.T_TitleTextList.OrderByDescending(x => x.Id))
             {
                 results.Add(new()
                 {
@@ -48,7 +48,7 @@ namespace JTSA.Dao
         {
             List<T_TitleText> results = [];
 
-            foreach (var record in db.M_TitleTextList.OrderByDescending(x => x.LastUsedDateTime))
+            foreach (var record in db.T_TitleTextList.OrderByDescending(x => x.LastUsedDateTime))
             {
                 results.Add(new()
                 {
@@ -74,11 +74,11 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static T_TitleText SelectOneById(int id)
+        public static T_TitleText SelectOneById(long id)
         {
             using var db = new AppDbContext();
 
-            return db.M_TitleTextList.Single(x => x.Id == id);
+            return db.T_TitleTextList.Single(x => x.Id == id);
         }
 
 
@@ -93,7 +93,7 @@ namespace JTSA.Dao
 
             List<T_TitleText> results = [];
 
-            foreach (var record in db.M_TitleTextList.Where(x => x.SortNumber == 9999).OrderByDescending(x => x.UpdatedDateTime))
+            foreach (var record in db.T_TitleTextList.Where(x => x.SortNumber == 9999).OrderByDescending(x => x.UpdatedDateTime))
             {
                 results.Add(new()
                 {
@@ -124,7 +124,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            db.M_TitleTextList.Add(insertData);
+            db.T_TitleTextList.Add(insertData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -144,7 +144,7 @@ namespace JTSA.Dao
             var targetRecord = SelectOneById(updateData.Id);
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
-            db.M_TitleTextList.Update(updateData);
+            db.T_TitleTextList.Update(updateData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -171,15 +171,15 @@ namespace JTSA.Dao
         /// Delete
         /// </summary>
         /// <param name="id"></param>
-        public static void Delete(int id)
+        public static void Delete(long id)
         {
             using var db = new AppDbContext();
 
-            var entity = db.M_TitleTextList.FirstOrDefault(x => x.Id == id);
+            var entity = db.T_TitleTextList.FirstOrDefault(x => x.Id == id);
 
             if (entity != null)
             {
-                db.M_TitleTextList.Remove(entity);
+                db.T_TitleTextList.Remove(entity);
                 db.SaveChanges();
             }
         }

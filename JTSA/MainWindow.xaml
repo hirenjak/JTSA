@@ -44,7 +44,7 @@
                     <Button Grid.Column ="0" x:Name="SetTitleButton" Content="送信" 
                             HorizontalAlignment="Stretch"
                             Margin="2, 2, 2, 4"
-                            Click="SetTitleButton_Click"/>
+                            Click="SendTitleButton_Click"/>
                     
                     <Button Grid.Row="1" Content="X告知" 
                             Margin="2, 2, 2, 4"
@@ -235,7 +235,7 @@
                     </Grid>
 
                     <!-- 読込画面 -->
-                    <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Visible">
+                    <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
                             <StackPanel Name="LoadSubPanel" Visibility="Visible">
@@ -279,23 +279,19 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="【フレンド】">
+            <TabItem Header="フレンド">
                 <panels:FriendPanel x:Name="FriendPanel"/>
             </TabItem>
 
-            <TabItem Header="【カテゴリ】">
+            <TabItem Header="カテゴリ">
                 <panels:CategoryPanel x:Name="CategoryPanel"/>
             </TabItem>
 
-            <TabItem Header="【プレイ中ゲーム】">
+            <TabItem Header="プレイ中ゲーム">
                 <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
             </TabItem>
 
-            <TabItem Header="【アプリ配置】">
-                <panels:AppArrangePanel x:Name="AppArrangePanel"/>
-            </TabItem>
-
-            <TabItem Header="【レイド】">
+            <TabItem Header="レイド">
                 <panels:RaidPanel x:Name="RaidPanel"/>
             </TabItem>
 

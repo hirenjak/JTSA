@@ -46,25 +46,6 @@ namespace JTSA.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "M_GamePlayList",
-                columns: table => new
-                {
-                    GamePlayListId = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    GamePlayListName = table.Column<string>(type: "TEXT", nullable: false),
-                    ThumbnailCategoryUrl = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUsedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    SelectedCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    SortNumber = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_M_GamePlayList", x => x.GamePlayListId);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "M_SettingList",
                 columns: table => new
                 {
@@ -81,32 +62,10 @@ namespace JTSA.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "M_StreamWindowList",
-                columns: table => new
-                {
-                    ProcessName = table.Column<string>(type: "TEXT", nullable: false),
-                    WindowTitle = table.Column<string>(type: "TEXT", nullable: false),
-                    AppExePath = table.Column<string>(type: "TEXT", nullable: false),
-                    X = table.Column<int>(type: "INTEGER", nullable: false),
-                    Y = table.Column<int>(type: "INTEGER", nullable: false),
-                    Width = table.Column<int>(type: "INTEGER", nullable: false),
-                    Height = table.Column<int>(type: "INTEGER", nullable: false),
-                    LastUsedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    SelectedCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    SortNumber = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_M_StreamWindowList", x => x.ProcessName);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "M_TitleTagList",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     DisplayName = table.Column<string>(type: "TEXT", nullable: false),
                     LastUsedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -121,10 +80,47 @@ namespace JTSA.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "M_TitleTextList",
+                name: "T_GamePlaylistHeader",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    GamePlayListId = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    GamePlayListName = table.Column<string>(type: "TEXT", nullable: false),
+                    ThumbnailCategoryUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUsedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    SelectedCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    SortNumber = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_T_GamePlaylistHeader", x => x.GamePlayListId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "T_GamePlaylistItem",
+                columns: table => new
+                {
+                    GamePlayListId = table.Column<long>(type: "INTEGER", nullable: false),
+                    CategoryId = table.Column<string>(type: "TEXT", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    LastUsedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    SelectedCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    SortNumber = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_T_GamePlaylistItem", x => new { x.GamePlayListId, x.CategoryId });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "T_TitleTextList",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Content = table.Column<string>(type: "TEXT", nullable: false),
                     CategoryId = table.Column<string>(type: "TEXT", nullable: false),
@@ -138,25 +134,7 @@ namespace JTSA.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_M_TitleTextList", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "T_GamePlayListItem",
-                columns: table => new
-                {
-                    GamePlayListId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CategoryId = table.Column<string>(type: "TEXT", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    LastUsedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CreatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedDateTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    SelectedCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    SortNumber = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_T_GamePlayListItem", x => new { x.GamePlayListId, x.CategoryId });
+                    table.PrimaryKey("PK_T_TitleTextList", x => x.Id);
                 });
         }
 
@@ -170,22 +148,19 @@ namespace JTSA.Migrations
                 name: "M_FriendList");
 
             migrationBuilder.DropTable(
-                name: "M_GamePlayList");
-
-            migrationBuilder.DropTable(
                 name: "M_SettingList");
-
-            migrationBuilder.DropTable(
-                name: "M_StreamWindowList");
 
             migrationBuilder.DropTable(
                 name: "M_TitleTagList");
 
             migrationBuilder.DropTable(
-                name: "M_TitleTextList");
+                name: "T_GamePlaylistHeader");
 
             migrationBuilder.DropTable(
-                name: "T_GamePlayListItem");
+                name: "T_GamePlaylistItem");
+
+            migrationBuilder.DropTable(
+                name: "T_TitleTextList");
         }
     }
 }

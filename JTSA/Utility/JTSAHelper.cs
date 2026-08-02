@@ -8,19 +8,19 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace JTSA
+namespace JTSA.Utility
 {
     public class UserInformation()
     {
-        public required String BroadcastId { get; set; }
-        public required String UserId { get; set; }
-        public required String DisplayName { get; set; }
+        public required string BroadcastId { get; set; }
+        public required string UserId { get; set; }
+        public required string DisplayName { get; set; }
     }
 
-    static class Utility
+    static class JTSAHelper
     {
-        public static String UserName { get; set; } = "";
-        public static String RedirectUri = "http://localhost:8080/";
+        public static string UserName { get; set; } = "";
+        public static string RedirectUri = "http://localhost:8080/";
 
 
         /// <summary>
@@ -46,6 +46,24 @@ namespace JTSA
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 現在の日時をUNIXタイムスタンプ形式（1970年1月1日からの経過ミリ秒）として取得
+        /// </summary>
+        /// <returns>
+        /// UNIXエポック（1970年1月1日 00:00:00 UTC）から現在までの経過時間をミリ秒単位で表す長整数値
+        /// </returns>
+        public static long GetCurrentUnixTimestampMillis()
+        {
+            // 現在の日時を取得
+            DateTime now = DateTime.UtcNow;
+
+            // UNIX時間の基準点 (1970年1月1日 00:00:00 UTC)
+            DateTime unixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            // 経過ミリ秒を計算
+            return (long)(now - unixEpoch).TotalMilliseconds;
         }
     }
 }

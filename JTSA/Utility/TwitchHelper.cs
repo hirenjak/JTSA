@@ -1,34 +1,15 @@
-﻿using JTSA.Forms.Twitch;
-using JTSA.Panels;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
+﻿using JTSA.Forms.TwitchIF;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
-using System.Security.Policy;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using TwitchLib.Api;
-using TwitchLib.Api.Core;
-using TwitchLib.Api.Helix;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
-using TwitchLib.Api.Helix.Models.Games;
-using TwitchLib.Api.Helix.Models.Search;
 
-namespace JTSA
+namespace JTSA.Utility
 {
-
     static class TwitchHelper
     {
         public static string ClientID { get; } = "tbpy1q9lh9pkyrqhde6o4f4dkq9rj0";
@@ -69,7 +50,7 @@ namespace JTSA
         /// <returns></returns>
         public static async Task<UserInformation?> GetBroadcasterIdAsync()
         {
-            return await GetBroadcasterIdAsync(Utility.UserName);
+            return await GetBroadcasterIdAsync(JTSAHelper.UserName);
         }
 
 
@@ -241,7 +222,7 @@ namespace JTSA
                         BoxArtUrl = responseData.BoxArtUrl
                     };
 
-                    result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "52").Replace("{height}", "72");
+                    result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "128").Replace("{height}", "192");
                 }
             }
             catch (Exception ex)

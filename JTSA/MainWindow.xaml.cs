@@ -1,6 +1,8 @@
 ﻿using JTSA.Dao;
+using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Panels;
+using JTSA.Utility;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -90,9 +92,9 @@ namespace JTSA
             
 			AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 ユーザー名 」");
 
-			// ユーザー名の取得に成功していれば画面とアプリメモリに値を登録
-			Utility.UserName = settingUserName.Value;
-			UserName_TextBox.Text = Utility.UserName;
+            // ユーザー名の取得に成功していれば画面とアプリメモリに値を登録
+            JTSAHelper.UserName = settingUserName.Value;
+			UserName_TextBox.Text = JTSAHelper.UserName;
 
 			// リフレッシュトークンからアクセストークンを再取得
 			bool isProcessSuccess = await ResetAccessTokenAsync();
@@ -106,7 +108,9 @@ namespace JTSA
 			// アクセストークンの確認を持って起動時設定を完了
             await StreamerDataSet();
 
-			// ロード画面を非表示
+			await PlayingGamePanel.ReloadGamePlaylist();
+
+            // ロード画面を非表示
             LoadScreen.Visibility = Visibility.Collapsed;
 
             AppLogPanel.AddProcessLog(GetType().Name, "アプリ起動", "処理終了");
@@ -234,8 +238,8 @@ namespace JTSA
 			// Loading画面表示
 			LoadScreen.Visibility = Visibility.Visible;
 
-			Utility.UserName = LoadPanelUserNameTextBox.Text.Trim();
-			UserName_TextBox.Text = Utility.UserName;
+            JTSAHelper.UserName = LoadPanelUserNameTextBox.Text.Trim();
+			UserName_TextBox.Text = JTSAHelper.UserName;
 
 			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
 
@@ -245,7 +249,7 @@ namespace JTSA
 			LoadSubPanel.Visibility = Visibility.Visible;
 
 			// 認証ページを自動で開く（オプション）
-			Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={Utility.UserName}") { UseShellExecute = true });
+			Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={JTSAHelper.UserName}") { UseShellExecute = true });
 
 			// ポーリングでトークン取得
 			var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
@@ -270,7 +274,7 @@ namespace JTSA
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)M_Setting.SettingName.UserName,
-				Value = Utility.UserName,
+				Value = JTSAHelper.UserName,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
                 LastUsedDateTime = DateTime.Now
@@ -405,7 +409,7 @@ namespace JTSA
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		private async void SetTitleButton_Click(object sender, RoutedEventArgs e)
+		private async void SendTitleButton_Click(object sender, RoutedEventArgs e)
         {
             AppLogPanel.AddProcessLog(GetType().Name, "配信タイトル送信", "処理開始");
 
@@ -473,7 +477,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-            var isProcessSuccess = Utility.CopyClipBoad(CurrentTitleTextBlock.Text);
+            var isProcessSuccess = JTSAHelper.CopyClipBoad(CurrentTitleTextBlock.Text);
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "クリップボードコピー成功 「 タイトル 」",
                 "クリップボードコピー失敗 「 タイトル 」"
@@ -559,7 +563,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-            AppLogPanel.AddSwitchLog(Utility.CopyClipBoad(SelectCategoryNameTextBlock.Text), GetType().Name,
+            AppLogPanel.AddSwitchLog(JTSAHelper.CopyClipBoad(SelectCategoryNameTextBlock.Text), GetType().Name,
                 "クリップボードコピー成功 「 カテゴリ 」",
                 "クリップボードコピー失敗 「 カテゴリ 」"
             );
@@ -670,7 +674,7 @@ namespace JTSA
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
 			var categoryText = "配信カテゴリ：" + categoryNameText;
-			var streamUrlText = $"https://www.twitch.tv/" + Utility.UserName;
+			var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.UserName;
 
             stremTitleText = stremTitleText.Replace("#", "＃");
 
@@ -705,41 +709,8 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void TokenCodeCopyButton_Click(object sender, RoutedEventArgs e)
 		{
-			Utility.CopyClipBoad(LoadPanelSubTextBox.Text);
+            JTSAHelper.CopyClipBoad(LoadPanelSubTextBox.Text);
 		}
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-        private void StreamAppAllStart(object sender, RoutedEventArgs e)
-        {
-            AppArrangePanel.RegistAllAppStart();
-        }
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-        private void StreamAppAllStop(object sender, RoutedEventArgs e)
-        {
-            AppArrangePanel.RegistAllAppStop();
-        }
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-        private void StreamAppAllMove(object sender, RoutedEventArgs e)
-        {
-			AppArrangePanel.RegistAppAllMove();
-        }
 
 
 		/// <summary>

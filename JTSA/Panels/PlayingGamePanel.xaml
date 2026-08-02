@@ -12,14 +12,22 @@
     
     <Grid Margin="8">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*"/>
-            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="300"/>
         </Grid.ColumnDefinitions>
 
         <DockPanel Grid.Column="0"
             Margin="16">
 
             <StackPanel DockPanel.Dock="Top">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Grid.Column="0" Text="ID："
+                               Foreground="White">
+                    </TextBlock>
+                    <TextBlock x:Name="CurrentGamePlaylistIdTextBlock" Grid.Column="0" Text=""
+                               Foreground="White">
+                    </TextBlock>
+                </StackPanel>
                 <Grid HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -42,9 +50,6 @@
                     <Button Content="新規保存"
                             Width="160"
                             Click="GamePlayListSaveButton_Click"/>
-                    <Button Content="上書き"
-                            Width="160"
-                            Click="GamePlayListUpdateButton_Click"/>
                 </StackPanel>
             </StackPanel>
 
@@ -65,9 +70,9 @@
                                     MouseLeftButtonUp="ImageItem_Click"
                                     MouseRightButtonUp="ImageItem_RightClick">
 
-                                <Grid>
+                                <Grid Background="#FF202020">
                                     <Image Source="{Binding ImageUrl}"
-                                           Stretch="UniformToFill"/>
+                                           Stretch="Uniform"/>
 
                                     <Border Background="#88000000"
                                             Visibility="{Binding CompletedVisibility}">
@@ -110,17 +115,14 @@
         </DockPanel>
 
         <ListBox Grid.Row="1" Grid.Column="1" 
-                 x:Name="GamePlayListBox" 
-                 d:ItemsSource="{d:SampleData ItemCount = 3}" 
-
+                 x:Name="GamePlaylistListBox" 
+                 d:ItemsSource="{d:SampleData ItemCount = 3}"
                  Height="Auto" Width="Auto"
                  Background="#FF404040" 
-                 
-                 HorizontalAlignment="Stretch" 
-                 HorizontalContentAlignment="Stretch"
-                 
+                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
-                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 MouseDoubleClick="GamePlaylistListBox_DoubleClick">
 
             <ListBox.ItemTemplate>
                 <DataTemplate>

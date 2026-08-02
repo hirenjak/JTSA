@@ -1,4 +1,5 @@
 ﻿using JTSA.Models;
+using JTSA.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,6 +77,23 @@ namespace JTSA.Dao
         }
 
 
+        public static async Task<M_Category> InsertDataCreate(string categoryId)
+        {
+
+            var selectCategory = await TwitchHelper.GetCategoryByGameId(categoryId);
+
+            return new M_Category
+            {
+                CategoryId = categoryId,
+                DisplayName = selectCategory.Name,
+                BoxArtUrl = selectCategory.BoxArtUrl,
+                SteamHeaderArtUrl = "",
+                SteamUrl = "",
+                LastUsedDateTime = DateTime.Now,
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now
+            };
+        }
 
 
         /// <summary>

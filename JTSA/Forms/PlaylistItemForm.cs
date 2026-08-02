@@ -12,7 +12,7 @@ namespace JTSA.Forms
     public class PlaylistItemForm : INotifyPropertyChanged
     {
         /// <summary> カテゴリーID </summary>
-        public int PlaylistId { get; set; }
+        public long PlaylistId { get; set; }
 
         /// <summary> カテゴリーID </summary>
         public string CategoryId { get; set; } = "";
@@ -39,9 +39,9 @@ namespace JTSA.Forms
 
         public enum GameStatus
         {
-            None,
-            Playing,
-            Completed
+            None = 0,
+            Playing = 1,
+            Completed = 2
         }
 
 

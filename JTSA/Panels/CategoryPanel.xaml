@@ -10,7 +10,7 @@
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
@@ -105,7 +105,6 @@
                 </Grid>
             </Grid>
             <Grid Grid.Column="1" 
-                  Width="300"
                   Margin="8, 0, 0, 0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -114,7 +113,7 @@
 
                 <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
                     <Label Content="Twitchカテゴリの検索" Foreground="White"/>
-                    <TextBox x:Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTitleSerchTextBox_TextChanged"/>
+                    <TextBox x:Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTextBox_TextChanged"/>
                 </StackPanel>
 
                 <Grid Height="Auto" Grid.Row="2">
@@ -127,7 +126,7 @@
                     <ListBox ItemsSource="{Binding SearchCategoryFormList}" Grid.Row="1" Grid.Column="3" Background="#FF404040"
                              x:Name="CategorySearchListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             MouseDoubleClick="CategorySearchListBox_SelectionChanged">
+                             MouseDoubleClick="CategorySearchListBox_DoubleClick">
 
                         <ListBox.ItemTemplate>
                             <DataTemplate>

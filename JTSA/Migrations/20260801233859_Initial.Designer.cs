@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260801133836_Initial")]
+    [Migration("20260801233859_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -20,9 +20,9 @@ namespace JTSA.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
 
-            modelBuilder.Entity("JTSA.Models.T_GamePlayListHeader", b =>
+            modelBuilder.Entity("JTSA.Models.T_GamePlaylistHeader", b =>
                 {
-                    b.Property<int>("GamePlayListId")
+                    b.Property<long>("GamePlayListId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -51,12 +51,12 @@ namespace JTSA.Migrations
 
                     b.HasKey("GamePlayListId");
 
-                    b.ToTable("M_GamePlayList");
+                    b.ToTable("T_GamePlaylistHeader");
                 });
 
-            modelBuilder.Entity("JTSA.Models.T_GamePlayListItem", b =>
+            modelBuilder.Entity("JTSA.Models.T_GamePlaylistItem", b =>
                 {
-                    b.Property<int>("GamePlayListId")
+                    b.Property<long>("GamePlayListId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CategoryId")
@@ -82,7 +82,7 @@ namespace JTSA.Migrations
 
                     b.HasKey("GamePlayListId", "CategoryId");
 
-                    b.ToTable("T_GamePlayListItem");
+                    b.ToTable("T_GamePlaylistItem");
                 });
 
             modelBuilder.Entity("M_Category", b =>
@@ -171,7 +171,7 @@ namespace JTSA.Migrations
 
             modelBuilder.Entity("M_TitleTag", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -199,54 +199,9 @@ namespace JTSA.Migrations
                     b.ToTable("M_TitleTagList");
                 });
 
-            modelBuilder.Entity("T_StreamWindow", b =>
-                {
-                    b.Property<string>("ProcessName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AppExePath")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Height")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUsedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SelectedCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SortNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Width")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("WindowTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("X")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Y")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ProcessName");
-
-                    b.ToTable("M_StreamWindowList");
-                });
-
             modelBuilder.Entity("T_TitleText", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
@@ -283,7 +238,7 @@ namespace JTSA.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("M_TitleTextList");
+                    b.ToTable("T_TitleTextList");
                 });
 #pragma warning restore 612, 618
         }

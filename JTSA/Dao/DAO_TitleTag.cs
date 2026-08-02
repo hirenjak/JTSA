@@ -43,7 +43,7 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static M_TitleTag SelectOneById(int id)
+        public static M_TitleTag SelectOneById(long id)
         {
             using var db = new AppDbContext();
 
@@ -55,7 +55,7 @@ namespace JTSA.Dao
         /// Delete
         /// </summary>
         /// <param name="id"></param>
-        public static void Delete(int id)
+        public static void Delete(long id)
         {
             using var db = new AppDbContext();
 
