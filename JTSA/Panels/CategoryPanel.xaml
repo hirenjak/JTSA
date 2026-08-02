@@ -19,10 +19,6 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-                    <Label Content="検索欄" Foreground="White"/>
-                    <TextBox Name="CategorySerchTextBox" ToolTip="検索欄（※未実装）" TextChanged="CategoryTextBox_TextChanged"></TextBox>
-                </StackPanel>
 
                 <Grid Height="Auto" Grid.Row="2">
                     <Grid.RowDefinitions>

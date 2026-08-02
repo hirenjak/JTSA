@@ -294,9 +294,9 @@
                 <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
             </TabItem>
 
-            <TabItem Header="レイド">
+            <!--TabItem Header="レイド">
                 <panels:RaidPanel x:Name="RaidPanel"/>
-            </TabItem>
+            </TabItem-->
 
             <TabItem Header="AppLog">
                 <StackPanel>

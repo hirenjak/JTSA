@@ -29,8 +29,6 @@ namespace JTSA.Panels
             InitializeComponent();
 
             DataContext = this;
-            var client = new TwitchClient();
-            client.OnMessageReceived += Client_OnMessageReceived;
         }
 
         public event Action<TwitchChatData>? MessageReceived;
