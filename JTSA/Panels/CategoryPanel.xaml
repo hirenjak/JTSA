@@ -122,7 +122,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Label Grid.Row="0" Content="※クリックすると選択カテゴリを変更" Foreground="White"/>
+                    <Label Grid.Row="0" Content="※ダブルクリックすると左のカテゴリ一覧に追加" Foreground="White"/>
                     <ListBox ItemsSource="{Binding SearchCategoryFormList}" Grid.Row="1" Grid.Column="3" Background="#FF404040"
                              x:Name="CategorySearchListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"

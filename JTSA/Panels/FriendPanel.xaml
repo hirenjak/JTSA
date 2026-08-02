@@ -126,7 +126,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Label Grid.Row="0" Content="※クリックするとタイトル編集のカーソルを入れてる部分に挿入" Foreground="White"/>
+                <Label Grid.Row="0" Content="※クリックすると左の選択ユーザーに追加される" Foreground="White"/>
 
                 <ListBox Grid.Row="2" x:Name="FriendListBox" 
                          d:ItemsSource="{d:SampleData ItemCount = 3}"

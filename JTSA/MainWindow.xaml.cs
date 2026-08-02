@@ -29,7 +29,18 @@ namespace JTSA
 
 		private DispatcherTimer accessTokenRefreshTimer;
 
-		public string CurrentTitleText { get{ return CurrentTitleTextBlock.Text; } set{ CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(value); }}
+		public string CurrentTitleText 
+		{ 
+			get
+			{ 
+				return CurrentTitleTextBlock.Text; 
+			}
+			set
+			{ 
+				CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(value); 
+				TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";  
+			} 
+		}
 
 
         /// <summary>
@@ -742,6 +753,8 @@ namespace JTSA
         public void CurrentTitleTextUpdate()
 		{
             CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(TitleEditTextBox.Text);
+
+            TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
         }
     }
 }

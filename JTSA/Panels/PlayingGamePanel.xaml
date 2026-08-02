@@ -62,6 +62,14 @@
                         </TextBlock>
                     </Button>
                 </Grid>
+                <TextBlock Text="左クリック：完了と取り消しを交互に設定、右クリック：プレイ中（選択カテゴリに自動で設定、送信ボタンでTwitchに反映）"
+                                   FontSize="12"
+                                   Padding="0, 0, 0, 3"
+                                   TextAlignment="Left"
+                                   Foreground="White"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center">
+                </TextBlock>
             </StackPanel>
 
             <ScrollViewer Margin="0, 4, 0, 0">
@@ -130,6 +138,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <Button Grid.Row="0" 
@@ -146,11 +155,19 @@
                            VerticalAlignment="Center">
                 </TextBlock>
             </Button>
+            <TextBlock Grid.Row="1" Text="※ダブルクリックでプレイリストを読込"
+                       FontSize="12"
+                       Margin="0, 4, 0, 0"
+                       Padding="0, 0, 0, 3"
+                       TextAlignment="Left"
+                       Foreground="White"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center">
+            </TextBlock>
 
-            <ListBox Grid.Row="1" x:Name="GamePlaylistListBox" 
+            <ListBox Grid.Row="2" x:Name="GamePlaylistListBox" 
                      d:ItemsSource="{d:SampleData ItemCount = 3}"
                      Height="Auto" Width="Auto"
-                     Margin="0, 4, 0, 0"
                      Background="#FF404040" 
                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" 

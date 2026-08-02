@@ -96,7 +96,8 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Label Grid.Row="0" Content="現在タイトルの表示 ※文面をクリックでクリップボードにコピー"
+                    <Label Grid.Row="0" x:Name="TitleWordNum"
+                           Content="0/140"
                            Padding="0, 0, 0, 0"
                            Foreground="White" />
 
@@ -174,6 +175,8 @@
                                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
                                     <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
+
+                                    <Label Margin="0, 0, 0, 0" Foreground="White" Content="${friend}をタイトル編集に入れるとフレンドで選択したユーザーがタイトルに追加される"/>
 
                                     <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
                                              Height="48" Width="Auto" 
