@@ -740,7 +740,11 @@ namespace JTSA
             {
                 friendText += friendItem.DisplayName + "、";
             }
-			friendText = friendText.Substring(0, friendText.Length - 1);
+
+			if(friendText.Length > 0)
+            {
+                friendText = friendText.Substring(0, friendText.Length - 1);
+            }
 
             titleText = titleText.Replace("${friend}", friendText);
             return titleText;

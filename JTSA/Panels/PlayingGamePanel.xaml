@@ -70,6 +70,14 @@
                                    HorizontalAlignment="Left"
                                    VerticalAlignment="Center">
                 </TextBlock>
+                <TextBlock Text="OBS側で表示する場合には「http://localhost:8026/obs」をブラウザソースで設定してください。(カテゴリ追加はカテゴリ画面にて追加してください。)"
+                                   FontSize="12"
+                                   Padding="0, 0, 0, 3"
+                                   TextAlignment="Left"
+                                   Foreground="White"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center">
+                </TextBlock>
             </StackPanel>
 
             <ScrollViewer Margin="0, 4, 0, 0">

@@ -15,7 +15,7 @@ public class ObsHttpServer
         this.htmlProvider = htmlProvider;
         this.jsonProvider = jsonProvider;
 
-        listener.Prefixes.Add("http://localhost:8080/");
+        listener.Prefixes.Add("http://localhost:8026/");
     }
 
     public async Task StartAsync()

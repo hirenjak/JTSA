@@ -28,7 +28,7 @@ namespace JTSA.Dao
             using var db = new AppDbContext();
             if (db.M_SettingList.Count() == 0) return null;
 
-            return db.M_SettingList.Single(x => x.Name == (int)id);
+            return db.M_SettingList.SingleOrDefault(x => x.Name == (int)id);
         }
 
 

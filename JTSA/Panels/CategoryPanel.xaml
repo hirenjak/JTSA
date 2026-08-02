@@ -23,10 +23,13 @@
                 <Grid Height="Auto" Grid.Row="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="24"/>
+                        <RowDefinition Height="24"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
                     <Label Grid.Row="0" Content="※ダブルクリックすると選択カテゴリを変更" Foreground="White"/>
+
+                    <Label Grid.Row="1" Content="※プレイ中追加をクリックすると右タブ画面のOBS表示用のプレイ中ゲーム画面にカテゴリを追加します。" Foreground="White"/>
 
                     <ListBox ItemsSource="{Binding CategoryFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="2" Background="#FF404040"
                 x:Name="CategoryListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
