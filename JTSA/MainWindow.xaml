@@ -298,6 +298,10 @@
                 <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
             </TabItem>
 
+            <TabItem Header="チャット">
+                <panels:ChatPanel x:Name="ChatPanel"/>
+            </TabItem>
+
             <!--TabItem Header="レイド">
                 <panels:RaidPanel x:Name="RaidPanel"/>
             </TabItem-->
