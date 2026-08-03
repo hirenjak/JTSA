@@ -20,7 +20,7 @@ namespace JTSA.Utility
 
         public static string AccessToken { get { return api.Settings.AccessToken; } set { api.Settings.AccessToken = value; }}
 
-        private static readonly TwitchAPI api;
+        public static readonly TwitchAPI api;
 
         static TwitchHelper()
         {

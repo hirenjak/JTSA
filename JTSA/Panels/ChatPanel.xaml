@@ -5,16 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:JTSA.Panels"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800"
-             Loaded="UserControl_Loaded">
+             d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
         <ListBox Grid.Row="2" x:Name="ChatListBox" 
-         d:ItemsSource="{d:SampleData ItemCount = 3}"
-         Height="Auto" Width="Auto"
-         Background="#FF404040" 
-         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-         ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
-         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                 ItemsSource="{Binding TwitchChatFormList}"
+                 d:ItemsSource="{d:SampleData ItemCount = 3}"
+                 Height="Auto" Width="Auto"
+                 Background="#FF404040" 
+                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                 ScrollViewer.VerticalScrollBarVisibility="Auto">
 
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -22,11 +22,11 @@
                         <StackPanel Margin="8, 0, 8, 0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="48"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Image Grid.Column="0"  Source="{Binding ImageUrl}"
+                                <Image Grid.Column="0" Source="{Binding ImageUrl}"
                                        Height="48"
                                        Stretch="UniformToFill"/>
 
@@ -42,21 +42,49 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- プレイリストタイトル -->
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding GamePlayListName}"
-                                   d:Text="GamePlayListName"
-                                   Width="Auto" 
-                                   Foreground="White" 
-                                   FontSize="20" >
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- ユーザー名 -->
+                                        <TextBlock Grid.Column="0" 
+                                                   Text="{Binding DisplayName}"
+                                                   d:Text="GamePlayListName"
+                                                   Width="Auto" 
+                                                   Foreground="White" 
+                                                   FontSize="14" >
+                                        </TextBlock>
+
+                                        <!-- ユーザー名 -->
+                                        <TextBlock Grid.Column="1" 
+                                                   Text="{Binding UserName, StringFormat=({0})}"
+                                                   d:Text="GamePlayListName"
+                                                   Width="Auto" 
+                                                   Margin="4, 0, 0, 0"
+                                                   Foreground="White" 
+                                                   FontSize="14" >
+                                        </TextBlock>
+                                    </Grid>
+                                    
+                                    <!-- メッセージ -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                                               Text="{Binding Message}"
+                                               d:Text="Message"
+                                               TextWrapping="Wrap"
+                                               Width="Auto" 
+                                               Foreground="White" 
+                                               FontSize="20" >
                                     </TextBlock>
 
-                                    <!-- 最終使用日時 -->
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding LastUsedDate}"
-                                       d:Text="9999/99/99"
-                                       Width="Auto" 
-                                       Foreground="White" 
-                                       HorizontalAlignment="Right"
-                                       FontSize="12" >
+                                    <!-- 受信日時 -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                                               Text="{Binding LastUsedDate}"
+                                               d:Text="9999/99/99"
+                                               Width="Auto" 
+                                               FontSize="12" Foreground="White"
+                                               HorizontalAlignment="Right">
                                     </TextBlock>
                                 </Grid>
                             </Grid>

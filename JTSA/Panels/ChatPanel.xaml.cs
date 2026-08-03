@@ -1,11 +1,13 @@
 ﻿using JTSA.Utility;
 using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using JTSA.Forms;
 
 namespace JTSA.Panels
 {
@@ -14,30 +16,78 @@ namespace JTSA.Panels
     /// </summary>
     public partial class ChatPanel : UserControl
     {
+        private TwitchChatService? twitchChatService;
+
+        private TwitchEventSubService? twitchEventSubService;
+
+        public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
+
+
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         public ChatPanel()
         {
+            DataContext = this;
+
             InitializeComponent();
         }
 
-        private TwitchChatService? twitchChatService;
 
-        private async void UserControl_Loaded(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// コントロール読み込み時
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public async Task Initialize()
         {
-            twitchChatService = new TwitchChatService("hiren_jak");
-
-            twitchChatService.MessageReceived += message =>
+            if(twitchChatService == null)
             {
-                Dispatcher.Invoke(() =>
+                twitchChatService = new TwitchChatService("hiren_jak");
+                twitchEventSubService = new TwitchEventSubService(TwitchHelper.api, TwitchHelper.BroadcasterId);
+
+                twitchChatService.MessageReceived += message =>
                 {
-                    ChatListBox.Items.Add(
-                        $"{message.DisplayName}: {message.Message}");
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        ChatAdd(new TwitchChatForm
+                        {
+                            Channel = message.Channel,
+                            UserId = message.UserId,
+                            UserName = message.UserName,
+                            DisplayName = message.DisplayName,
+                            Message = message.Message,
+                            ColorHex = message.ColorHex,
+                            MessageId = message.MessageId,
+                            IsModerator = message.IsModerator,
+                            IsSubscriber = message.IsSubscriber,
+                            IsVip = message.IsVip
+                        });
+                    });
+                };
 
-                    ChatListBox.ScrollIntoView(
-                        ChatListBox.Items[^1]);
-                });
-            };
+                twitchEventSubService.ChannelPointRedeemed += channelPoint =>
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        ChatAdd(new TwitchChatForm
+                        {
+                            UserName = channelPoint.UserLogin,
+                            DisplayName = channelPoint.UserName,
+                            Message = "CP交換：" + channelPoint.RewardTitle,
+                        });
+                    });
+                };
 
-            await twitchChatService.ConnectAsync();
+                await twitchChatService.ConnectAsync();
+                await twitchEventSubService.ConnectAsync();
+            }
+        }
+
+        private void ChatAdd(TwitchChatForm form)
+        {
+            TwitchChatFormList.Add(form);
         }
     }
 }

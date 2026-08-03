@@ -37,8 +37,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-preview.6.26359.118" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.6.26359.118" />
     <PackageReference Include="TwitchLib.Api" Version="3.10.1-preview.199.347b75c" />
     <PackageReference Include="TwitchLib.Client" Version="4.0.1" />
+    <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.9.0-preview.91.e7a2a33" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
