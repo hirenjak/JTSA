@@ -3,7 +3,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:JTSA"
-        Title="JakTwtchStreamerAssistant v0.6.2" Height="700" Width="1100">
+        Title="JakTwtchStreamerAssistant v0.6.3" Height="700" Width="1100">
 
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#FF404040">
         <Grid.ColumnDefinitions>
