@@ -59,5 +59,23 @@ namespace JTSA.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   System.IO.MemoryStream に類似した型 System.IO.UnmanagedMemoryStream のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.IO.UnmanagedMemoryStream CommentNotification {
+            get {
+                return ResourceManager.GetStream("CommentNotification", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   System.IO.MemoryStream に類似した型 System.IO.UnmanagedMemoryStream のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.IO.UnmanagedMemoryStream JoinChat {
+            get {
+                return ResourceManager.GetStream("JoinChat", resourceCulture);
+            }
+        }
     }
 }

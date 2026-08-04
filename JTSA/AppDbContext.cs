@@ -14,6 +14,8 @@ namespace JTSA.Models
         public DbSet<M_TitleTag> M_TitleTag { get; set; }
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
+        public DbSet<T_ChatUser> T_ChatUser { get; set; }
+        
 
         /// <summary>
         /// •¡‡ƒL[‚Ìİ’è

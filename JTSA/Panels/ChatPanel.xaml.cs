@@ -1,10 +1,13 @@
 ﻿using JTSA.Dao;
 using JTSA.Forms;
+using JTSA.Models;
 using JTSA.Utility;
 using System;
 using System.Collections.ObjectModel;
 using System.Drawing;
+using System.IO;
 using System.IO.Packaging;
+using System.Media;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,6 +29,10 @@ namespace JTSA.Panels
 
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
+        private SoundPlayer? ChatNotificationPlayer;
+
+        private SoundPlayer? JoinChatPlayer;
+
 
         /// <summary>
         /// コンストラクタ
@@ -35,6 +42,16 @@ namespace JTSA.Panels
             DataContext = this;
 
             InitializeComponent();
+
+            var JoinChatSoundData = Properties.Resources.JoinChat;
+            JoinChatSoundData.Position = 0;
+            JoinChatPlayer ??= new SoundPlayer(JoinChatSoundData);
+            JoinChatPlayer.Load();
+
+            var NotificationSoundData = Properties.Resources.CommentNotification;
+            NotificationSoundData.Position = 0;
+            ChatNotificationPlayer ??= new SoundPlayer(NotificationSoundData);
+            ChatNotificationPlayer.Load();
         }
 
 
@@ -45,6 +62,8 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         public async Task Initialize()
         {
+            DAO_ChatUser.AllDelete();
+
             if(twitchChatService == null)
             {
                 twitchChatService = new TwitchChatService("hiren_jak");
@@ -88,6 +107,7 @@ namespace JTSA.Panels
             }
         }
 
+
         private async void ChatAddAsync(TwitchChatForm form, bool isChannelPoint)
         {
             var userData = DAO_User.SelectOneByUserId(form.UserId);
@@ -126,6 +146,32 @@ namespace JTSA.Panels
                 form.MessageColor = "#AAAAAA";
                 form.ColorHex = "#FFFFFF";
             }
+
+            var chatedUser = DAO_ChatUser.SelectOneByUserId(form.UserId);
+
+            UnmanagedMemoryStream soundData;
+
+            if (chatedUser == null)
+            {
+                JoinChatPlayer.Stop();
+                JoinChatPlayer.Play();
+                var inserData = new T_ChatUser
+                {
+                    UserId = form.UserId,
+                    CreatedDateTime = DateTime.Now,
+                    UpdatedDateTime = DateTime.Now,
+                    LastUsedDateTime = DateTime.Now
+                };
+
+                DAO_ChatUser.InsertUpdate(inserData);
+            }
+            else
+            {
+                ChatNotificationPlayer.Stop();
+                ChatNotificationPlayer.Play();
+            }
+
+
 
             TwitchChatFormList.Insert(0, form);
         }

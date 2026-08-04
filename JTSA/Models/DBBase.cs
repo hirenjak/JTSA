@@ -2,9 +2,9 @@
 {
     public abstract class DBBase
     {
-        public required DateTime LastUsedDateTime { get; set; }
+        public DateTime LastUsedDateTime { get; set; }
 
-        public required DateTime CreatedDateTime { get; set; }
+        public DateTime CreatedDateTime { get; set; }
 
         public required DateTime UpdatedDateTime { get; set; }
     }
