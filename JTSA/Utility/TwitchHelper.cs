@@ -1,4 +1,5 @@
 ﻿using JTSA.Forms.TwitchIF;
+using JTSA.TwitchIF;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -40,18 +41,6 @@ namespace JTSA.Utility
             var json = await response.Content.ReadAsStringAsync();
 
             return JsonSerializer.Deserialize<DeviceCodeResponseIF>(json);
-        }
-
-        /// <summary>
-        /// 配信者情報取得処理
-        /// </summary>
-        /// <param name="userName"></param>
-        /// <param name="clientId"></param>
-        /// <param name="accessToken"></param>
-        /// <returns></returns>
-        public static async Task<UserInformation?> GetBroadcasterIdAsync()
-        {
-            return await GetBroadcasterIdAsync(JTSAHelper.UserName);
         }
 
 
@@ -165,38 +154,36 @@ namespace JTSA.Utility
         /// <param name="clientId"></param>
         /// <param name="accessToken"></param>
         /// <returns></returns>
-        public static async Task<UserInformation?> GetBroadcasterIdAsync(string userName)
+        public static async Task<TwitchUserIF?> GetBroadcasterIdAsync(string userName)
         {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", api.Settings.AccessToken);
-            client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
-
-            var response = await client.GetAsync($"https://api.twitch.tv/helix/users?login={userName}");
-
-            // レスポンスの処理
-            if (!response.IsSuccessStatusCode) return null;
-
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            var data = doc.RootElement.GetProperty("data");
-            if (data.GetArrayLength() == 0) return null;
-
-            var broadcastId = data[0].GetProperty("id").GetString();
-            if (broadcastId == null) return null;
-
-            var userId = data[0].GetProperty("login").GetString();
-            if (userId == null) return null;
-
-            var displayName = data[0].GetProperty("display_name").GetString();
-            if (displayName == null) return null;
-
-
-            return new UserInformation()
+            TwitchUserIF result = null;
+            try
             {
-                BroadcastId = broadcastId,
-                UserId = userId,
-                DisplayName = displayName
-            };
+                var apiResponse = await api.Helix.Users.GetUsersAsync(logins: new List<string>() { userName });
+
+                if (apiResponse?.Users != null)
+                {
+                    var responseData = apiResponse.Users.FirstOrDefault();
+
+                    result = new TwitchUserIF()
+                    {
+                        UserId = responseData.Id,
+                        Login = responseData.Login,
+                        BroadcasterType = responseData.BroadcasterType, 
+                        CreatedAt = responseData.CreatedAt,
+                        DisplayName = responseData.DisplayName,
+                        Description = responseData.Description,
+                        OfflineImageUrl = responseData.OfflineImageUrl,
+                        ProfileImageUrl = responseData.ProfileImageUrl,
+                        UserType = responseData.Type, 
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+
+            return result;
         }
 
 
@@ -250,7 +237,7 @@ namespace JTSA.Utility
             try
             {
                 var apiResponse = await api.Helix.Channels.ModifyChannelInformationAsync(
-                                            broadcasterId: TwitchHelper.BroadcasterId,
+                                            broadcasterId: BroadcasterId,
                                             request: channelUpdateInfo);
             }
             catch (Exception ex)

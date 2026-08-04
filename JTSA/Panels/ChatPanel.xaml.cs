@@ -1,13 +1,17 @@
-﻿using JTSA.Utility;
+﻿using JTSA.Dao;
+using JTSA.Forms;
+using JTSA.Utility;
 using System;
 using System.Collections.ObjectModel;
+using System.Drawing;
+using System.IO.Packaging;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using TwitchLib.Api.Helix;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using JTSA.Forms;
 
 namespace JTSA.Panels
 {
@@ -50,7 +54,7 @@ namespace JTSA.Panels
                 {
                     Dispatcher.InvokeAsync(() =>
                     {
-                        ChatAdd(new TwitchChatForm
+                        ChatAddAsync(new TwitchChatForm
                         {
                             Channel = message.Channel,
                             UserId = message.UserId,
@@ -61,8 +65,8 @@ namespace JTSA.Panels
                             MessageId = message.MessageId,
                             IsModerator = message.IsModerator,
                             IsSubscriber = message.IsSubscriber,
-                            IsVip = message.IsVip
-                        });
+                            IsVip = message.IsVip,
+                        }, false);
                     });
                 };
 
@@ -70,12 +74,12 @@ namespace JTSA.Panels
                 {
                     Dispatcher.InvokeAsync(() =>
                     {
-                        ChatAdd(new TwitchChatForm
+                        ChatAddAsync(new TwitchChatForm
                         {
                             UserName = channelPoint.UserLogin,
-                            DisplayName = channelPoint.UserName,
-                            Message = "CP交換：" + channelPoint.RewardTitle,
-                        });
+                            DisplayName = "ChannelPonint",
+                            Message = channelPoint.RewardTitle + " by." + channelPoint.UserName,
+                        }, true);
                     });
                 };
 
@@ -84,8 +88,45 @@ namespace JTSA.Panels
             }
         }
 
-        private void ChatAdd(TwitchChatForm form)
+        private async void ChatAddAsync(TwitchChatForm form, bool isChannelPoint)
         {
+            var userData = DAO_User.SelectOneByUserId(form.UserId);
+
+            if (userData == null)
+            {
+                // 配信者情報取得
+                var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(form.UserName);
+
+                // データチェック
+                if (streamerInfo == null) return;
+                if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return;
+
+                // データ作成
+                var insertData = new M_User
+                {
+                    UserId = streamerInfo.UserId,
+                    LoginId = streamerInfo.Login,
+                    DisplayName = streamerInfo.DisplayName,
+                    ProfielImageUrl = streamerInfo.ProfileImageUrl,
+                    LastUsedDateTime = DateTime.Now,
+                    CreatedDateTime = DateTime.Now,
+                    UpdatedDateTime = DateTime.Now
+                };
+
+                DAO_User.Insert(insertData);
+
+                userData = insertData;
+            }
+
+            form.ProfielImageUrl = userData?.ProfielImageUrl.Replace("-300x300.png", "-70x70.png");
+            form.CreatedDateTime = DateTime.Now;
+
+            if (isChannelPoint)
+            {
+                form.MessageColor = "#AAAAAA";
+                form.ColorHex = "#FFFFFF";
+            }
+
             TwitchChatFormList.Insert(0, form);
         }
     }

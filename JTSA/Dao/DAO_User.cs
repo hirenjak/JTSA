@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace JTSA.Dao
 {
-    class DAO_Friend
+    class DAO_User
     {
         /// <summary>
         /// SELECT * FROM M_TitleText ORDER BY BroadcastId DESC
@@ -18,12 +18,12 @@ namespace JTSA.Dao
         {
             List<M_User> results = new();
 
-            foreach (var record in db.M_User.OrderByDescending(x => x.BroadcastId))
+            foreach (var record in db.M_User.OrderByDescending(x => x.UserId))
             {
                 results.Add(new()
                 {
-                    BroadcastId = record.BroadcastId,
                     UserId = record.UserId,
+                    LoginId = record.LoginId,
                     DisplayName = record.DisplayName,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
@@ -50,8 +50,8 @@ namespace JTSA.Dao
             {
                 results.Add(new()
                 {
-                    BroadcastId = record.BroadcastId,
                     UserId = record.UserId,
+                    LoginId = record.LoginId,
                     DisplayName = record.DisplayName,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
@@ -64,15 +64,14 @@ namespace JTSA.Dao
 
 
         /// <summary>
-        /// SELECT * FROM M_TitleText ORDER BY Id DESC
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static M_User SelectOneByBroadcasterId(string broadcasterId)
+        public static M_User SelectOneByUserId(string userId)
         {
             using var db = new AppDbContext();
 
-            return db.M_User.Single(x => x.BroadcastId == broadcasterId);
+            return db.M_User.SingleOrDefault(x => x.UserId == userId);
         }
 
 
@@ -86,7 +85,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            if (!db.M_User.Any(x => x.BroadcastId == insertData.BroadcastId))
+            if (!db.M_User.Any(x => x.UserId == insertData.UserId))
             {
                 db.M_User.Add(insertData);
             }
@@ -107,7 +106,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            var targetRecord = SelectOneByBroadcasterId(updateData.BroadcastId);
+            var targetRecord = SelectOneByUserId(updateData.UserId);
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
             db.M_User.Update(updateData);
@@ -124,7 +123,7 @@ namespace JTSA.Dao
         /// <returns></returns>
         public static bool UpdateLastUse(string broadcastId)
         {
-            var targetRecord = SelectOneByBroadcasterId(broadcastId);
+            var targetRecord = SelectOneByUserId(broadcastId);
 
             targetRecord.LastUsedDateTime = DateTime.Now;
 
@@ -139,7 +138,7 @@ namespace JTSA.Dao
         public static void Delete(string broadcastId)
         {
             using var db = new AppDbContext();
-            var entity = db.M_User.FirstOrDefault(x => x.BroadcastId == broadcastId);
+            var entity = db.M_User.FirstOrDefault(x => x.UserId == broadcastId);
 
             if (entity != null)
             {

@@ -105,8 +105,8 @@ namespace JTSA
 			AppLogPanel.AddSuccessLog(GetType().Name, "取得成功 「 ユーザー名 」");
 
             // ユーザー名の取得に成功していれば画面とアプリメモリに値を登録
-            JTSAHelper.UserName = settingUserName.Value;
-			UserName_TextBox.Text = JTSAHelper.UserName;
+            JTSAHelper.LoginName = settingUserName.Value;
+			UserName_TextBox.Text = JTSAHelper.LoginName;
 
 			// リフレッシュトークンからアクセストークンを再取得
 			bool isProcessSuccess = await ResetAccessTokenAsync();
@@ -190,10 +190,10 @@ namespace JTSA
         {
             AppLogPanel.AddProcessLog(GetType().Name, "配信者情報設定", "処理開始");
 
-            var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync();
+            var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(JTSAHelper.LoginName);
             if (streamerInfo == null) return;
 
-            var isProcessSuccess = streamerInfo != null && !string.IsNullOrEmpty(streamerInfo.BroadcastId);
+            var isProcessSuccess = streamerInfo != null && !string.IsNullOrEmpty(streamerInfo.UserId);
             AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
                 "取得成功 「 配信者ID 」",
                 "取得失敗 「 配信者ID 」"
@@ -201,7 +201,7 @@ namespace JTSA
 
             if (!isProcessSuccess) return;
 
-			TwitchHelper.BroadcasterId = streamerInfo.BroadcastId;
+			TwitchHelper.BroadcasterId = streamerInfo.UserId;
 
 
             bool isExistAccessToken =!string.IsNullOrEmpty(TwitchHelper.AccessToken);
@@ -252,8 +252,8 @@ namespace JTSA
 			// Loading画面表示
 			LoadScreen.Visibility = Visibility.Visible;
 
-            JTSAHelper.UserName = LoadPanelUserNameTextBox.Text.Trim();
-			UserName_TextBox.Text = JTSAHelper.UserName;
+            JTSAHelper.LoginName = LoadPanelUserNameTextBox.Text.Trim();
+			UserName_TextBox.Text = JTSAHelper.LoginName;
 
 			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
 
@@ -263,7 +263,7 @@ namespace JTSA
 			LoadSubPanel.Visibility = Visibility.Visible;
 
 			// 認証ページを自動で開く（オプション）
-			Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={JTSAHelper.UserName}") { UseShellExecute = true });
+			Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={JTSAHelper.LoginName}") { UseShellExecute = true });
 
 			// ポーリングでトークン取得
 			var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
@@ -288,7 +288,7 @@ namespace JTSA
 			DAO_Setting.InsertUpdate(new M_Setting
 			{
 				Name = (int)DAO_Setting.SettingName.UserName,
-				Value = JTSAHelper.UserName,
+				Value = JTSAHelper.LoginName,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now,
                 LastUsedDateTime = DateTime.Now
@@ -649,7 +649,7 @@ namespace JTSA
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
 			var categoryText = "配信カテゴリ：" + categoryNameText;
-			var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.UserName;
+			var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.LoginName;
 
             stremTitleText = stremTitleText.Replace("#", "＃");
 

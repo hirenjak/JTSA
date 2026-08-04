@@ -38,6 +38,12 @@ namespace JTSA.Panels
                 FriendPrefixWordTextBox.Text = settingPrefixWord.Value;
             }
 
+            Loaded += FriendPanel_Loaded;
+        }
+
+        private void FriendPanel_Loaded(object sender, RoutedEventArgs e)
+        {
+            ReloadFriend();
         }
 
 
@@ -62,7 +68,7 @@ namespace JTSA.Panels
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is FriendForm item)
             {
-                DAO_Friend.Delete(item.BroadcastId);
+                DAO_User.Delete(item.BroadcastId);
             }
 
             ReloadFriend();
@@ -107,30 +113,31 @@ namespace JTSA.Panels
         /// フレンドDB追加処理
         /// </summary>
         /// <param name="title"></param>
-        private async void AddFriendAsync(String userId)
+        public async void AddFriendAsync(String userId)
         {
             // 配信者情報取得
             var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(userId);
 
             // データチェック
             if (streamerInfo == null) return;
-            if (string.IsNullOrWhiteSpace(streamerInfo.BroadcastId)) return;
+            if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return;
 
-            using var db = new AppDbContext();
+            var profielImage = JTSAHelper.LoadBitmapAsync(streamerInfo.ProfileImageUrl).Result;
 
             // データ作成
             var isnertData = new M_User
             {
-                BroadcastId = streamerInfo.BroadcastId,
                 UserId = streamerInfo.UserId,
+                LoginId = streamerInfo.Login,
                 DisplayName = streamerInfo.DisplayName,
+                ProfielImageUrl = JTSAHelper.BitmapToBase64(profielImage),
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now
             };
 
             // 挿入処理
-            DAO_Friend.Insert(isnertData);
+            DAO_User.Insert(isnertData);
 
             // 再読み込み処理
             ReloadFriend();
@@ -147,15 +154,15 @@ namespace JTSA.Panels
             FriendFormList.Clear();
 
             // データの取得
-            var records = DAO_Friend.SelectAllOrderbyLastUser();
+            var records = DAO_User.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
                 FriendFormList.Add(new()
                 {
-                    BroadcastId = item.BroadcastId,
-                    UserId = item.UserId,
+                    BroadcastId = item.UserId,
+                    UserId = item.LoginId,
                     DisplayName = item.DisplayName,
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });

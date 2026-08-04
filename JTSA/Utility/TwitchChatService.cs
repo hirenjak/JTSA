@@ -83,7 +83,7 @@ public sealed class TwitchChatService
 
             IsModerator = message.UserDetail.IsModerator,
             IsSubscriber = message.UserDetail.IsSubscriber,
-            IsVip = message.UserDetail.IsVip
+            IsVip = message.UserDetail.IsVip,
         };
 
         MessageReceived?.Invoke(data);

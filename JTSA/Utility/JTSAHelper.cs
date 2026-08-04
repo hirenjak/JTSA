@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace JTSA.Utility
 {
@@ -19,9 +21,55 @@ namespace JTSA.Utility
 
     static class JTSAHelper
     {
-        public static string UserName { get; set; } = "";
+        public static string LoginName { get; set; } = "";
         public static string RedirectUri = "http://localhost:8080/";
 
+
+        public static string BitmapToBase64(BitmapSource bitmap)
+        {
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using var ms = new MemoryStream();
+            encoder.Save(ms);
+
+            return Convert.ToBase64String(ms.ToArray());
+        }
+
+        public static BitmapImage Base64ToBitmap(string base64)
+        {
+            byte[] bytes = Convert.FromBase64String(base64);
+
+            using var ms = new MemoryStream(bytes);
+
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = ms;
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return bitmap;
+        }
+
+        private static readonly HttpClient HttpClient = new();
+
+        public static async Task<BitmapImage> LoadBitmapAsync(string url)
+        {
+            byte[] imageData = await HttpClient.GetByteArrayAsync(url);
+
+            using var stream = new MemoryStream(imageData);
+
+            var bitmap = new BitmapImage();
+
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(url, UriKind.Absolute);
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+            bitmap.Freeze(); // 別スレッドでも使える
+
+            return bitmap;
+        }
 
         /// <summary>
         /// クリップボードにコピー
