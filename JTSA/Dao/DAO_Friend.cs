@@ -14,11 +14,11 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static List<M_Friend> SelectAllOrderbyBroadcastId(AppDbContext db)
+        public static List<M_User> SelectAllOrderbyBroadcastId(AppDbContext db)
         {
-            List<M_Friend> results = new();
+            List<M_User> results = new();
 
-            foreach (var record in db.M_FriendList.OrderByDescending(x => x.BroadcastId))
+            foreach (var record in db.M_User.OrderByDescending(x => x.BroadcastId))
             {
                 results.Add(new()
                 {
@@ -40,13 +40,13 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static List<M_Friend> SelectAllOrderbyLastUser()
+        public static List<M_User> SelectAllOrderbyLastUser()
         {
             using var db = new AppDbContext();
 
-            List<M_Friend> results = new();
+            List<M_User> results = new();
 
-            foreach (var record in db.M_FriendList.OrderByDescending(x => x.LastUsedDateTime))
+            foreach (var record in db.M_User.OrderByDescending(x => x.LastUsedDateTime))
             {
                 results.Add(new()
                 {
@@ -68,11 +68,11 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static M_Friend SelectOneByBroadcasterId(string broadcasterId)
+        public static M_User SelectOneByBroadcasterId(string broadcasterId)
         {
             using var db = new AppDbContext();
 
-            return db.M_FriendList.Single(x => x.BroadcastId == broadcasterId);
+            return db.M_User.Single(x => x.BroadcastId == broadcasterId);
         }
 
 
@@ -82,13 +82,13 @@ namespace JTSA.Dao
         /// <param name="db"></param>
         /// <param name="insertData"></param>
         /// <returns></returns>
-        public static bool Insert(M_Friend insertData)
+        public static bool Insert(M_User insertData)
         {
             using var db = new AppDbContext();
 
-            if (!db.M_FriendList.Any(x => x.BroadcastId == insertData.BroadcastId))
+            if (!db.M_User.Any(x => x.BroadcastId == insertData.BroadcastId))
             {
-                db.M_FriendList.Add(insertData);
+                db.M_User.Add(insertData);
             }
 
             int result = db.SaveChanges();
@@ -103,14 +103,14 @@ namespace JTSA.Dao
         /// <param name="db"></param>
         /// <param name="insertData"></param>
         /// <returns></returns>
-        public static bool Update(M_Friend updateData)
+        public static bool Update(M_User updateData)
         {
             using var db = new AppDbContext();
 
             var targetRecord = SelectOneByBroadcasterId(updateData.BroadcastId);
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
-            db.M_FriendList.Update(updateData);
+            db.M_User.Update(updateData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -139,11 +139,11 @@ namespace JTSA.Dao
         public static void Delete(string broadcastId)
         {
             using var db = new AppDbContext();
-            var entity = db.M_FriendList.FirstOrDefault(x => x.BroadcastId == broadcastId);
+            var entity = db.M_User.FirstOrDefault(x => x.BroadcastId == broadcastId);
 
             if (entity != null)
             {
-                db.M_FriendList.Remove(entity);
+                db.M_User.Remove(entity);
                 db.SaveChanges();
             }
         }

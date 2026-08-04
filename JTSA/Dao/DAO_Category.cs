@@ -21,7 +21,7 @@ namespace JTSA.Dao
         {
             using (var db = new AppDbContext())
             {
-                return db.M_CategoryList.SingleOrDefault(x => x.CategoryId == categoryId);
+                return db.M_Category.SingleOrDefault(x => x.CategoryId == categoryId);
             }
         }
 
@@ -58,7 +58,7 @@ namespace JTSA.Dao
 
             List<M_Category> results = new();
 
-            foreach (var record in db.M_CategoryList.OrderByDescending(x => x.LastUsedDateTime))
+            foreach (var record in db.M_Category.OrderByDescending(x => x.LastUsedDateTime))
             {
                 results.Add(new()
                 {
@@ -106,9 +106,9 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            if (db.M_CategoryList.SingleOrDefault(x => x.CategoryId == insertData.CategoryId) == null)
+            if (db.M_Category.SingleOrDefault(x => x.CategoryId == insertData.CategoryId) == null)
             {
-                db.M_CategoryList.Add(insertData);
+                db.M_Category.Add(insertData);
 
                 db.SaveChanges();
 
@@ -135,7 +135,7 @@ namespace JTSA.Dao
 
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
-            db.M_CategoryList.Update(updateData);
+            db.M_Category.Update(updateData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -149,11 +149,11 @@ namespace JTSA.Dao
         public static void Delete(string categoryId)
         {
             using var db = new AppDbContext();
-            var entity = db.M_CategoryList.FirstOrDefault(x => x.CategoryId == categoryId);
+            var entity = db.M_Category.FirstOrDefault(x => x.CategoryId == categoryId);
 
             if (entity != null)
             {
-                db.M_CategoryList.Remove(entity);
+                db.M_Category.Remove(entity);
                 db.SaveChanges();
             }
         }

@@ -1,7 +1,7 @@
 using JTSA.Models;
 using System.ComponentModel.DataAnnotations;
 
-public class M_Friend : DBBase
+public class M_User : DBBase
 {
     [Key]
     public required string BroadcastId { get; set; }

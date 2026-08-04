@@ -18,7 +18,7 @@ namespace JTSA.Dao
         {
             List<T_TitleText> results = new();
 
-            foreach (var record in db.T_TitleTextList.OrderByDescending(x => x.Id))
+            foreach (var record in db.T_TitleText.OrderByDescending(x => x.Id))
             {
                 results.Add(new()
                 {
@@ -48,7 +48,7 @@ namespace JTSA.Dao
         {
             List<T_TitleText> results = [];
 
-            foreach (var record in db.T_TitleTextList.OrderByDescending(x => x.LastUsedDateTime))
+            foreach (var record in db.T_TitleText.OrderByDescending(x => x.LastUsedDateTime))
             {
                 results.Add(new()
                 {
@@ -78,7 +78,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            return db.T_TitleTextList.Single(x => x.Id == id);
+            return db.T_TitleText.Single(x => x.Id == id);
         }
 
 
@@ -93,7 +93,7 @@ namespace JTSA.Dao
 
             List<T_TitleText> results = [];
 
-            foreach (var record in db.T_TitleTextList.Where(x => x.SortNumber == 9999).OrderByDescending(x => x.UpdatedDateTime))
+            foreach (var record in db.T_TitleText.Where(x => x.SortNumber == 9999).OrderByDescending(x => x.UpdatedDateTime))
             {
                 results.Add(new()
                 {
@@ -124,7 +124,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            db.T_TitleTextList.Add(insertData);
+            db.T_TitleText.Add(insertData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -144,7 +144,7 @@ namespace JTSA.Dao
             var targetRecord = SelectOneById(updateData.Id);
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
-            db.T_TitleTextList.Update(updateData);
+            db.T_TitleText.Update(updateData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -175,11 +175,11 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            var entity = db.T_TitleTextList.FirstOrDefault(x => x.Id == id);
+            var entity = db.T_TitleText.FirstOrDefault(x => x.Id == id);
 
             if (entity != null)
             {
-                db.T_TitleTextList.Remove(entity);
+                db.T_TitleText.Remove(entity);
                 db.SaveChanges();
             }
         }

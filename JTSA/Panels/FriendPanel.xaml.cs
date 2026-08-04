@@ -119,7 +119,7 @@ namespace JTSA.Panels
             using var db = new AppDbContext();
 
             // データ作成
-            var isnertData = new M_Friend
+            var isnertData = new M_User
             {
                 BroadcastId = streamerInfo.BroadcastId,
                 UserId = streamerInfo.UserId,

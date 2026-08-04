@@ -26,9 +26,9 @@ namespace JTSA.Dao
         public static M_Setting? SelectOneById(SettingName id)
         {
             using var db = new AppDbContext();
-            if (db.M_SettingList.Count() == 0) return null;
+            if (db.M_Setting.Count() == 0) return null;
 
-            return db.M_SettingList.SingleOrDefault(x => x.Name == (int)id);
+            return db.M_Setting.SingleOrDefault(x => x.Name == (int)id);
         }
 
 
@@ -42,16 +42,16 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            var count = db.M_SettingList.Count(x => x.Name == insertData.Name);
+            var count = db.M_Setting.Count(x => x.Name == insertData.Name);
             //db.M_SettingList.UpdateRange(insertData);
 
             if (count == 0)
             {
-                db.M_SettingList.AddRange(insertData);
+                db.M_Setting.AddRange(insertData);
             }
             else
             {
-                db.M_SettingList.UpdateRange(insertData);
+                db.M_Setting.UpdateRange(insertData);
             }
     ;
             int result = db.SaveChanges();

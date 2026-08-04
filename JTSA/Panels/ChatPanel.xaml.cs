@@ -23,7 +23,6 @@ namespace JTSA.Panels
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
 
-
         /// <summary>
         /// コンストラクタ
         /// </summary>
@@ -87,7 +86,7 @@ namespace JTSA.Panels
 
         private void ChatAdd(TwitchChatForm form)
         {
-            TwitchChatFormList.Add(form);
+            TwitchChatFormList.Insert(0, form);
         }
     }
 }

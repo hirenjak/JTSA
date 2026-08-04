@@ -7,11 +7,11 @@ namespace JTSA.Models
     {
         public static string dbDirectory;
 
-        public DbSet<T_TitleText> T_TitleTextList { get; set; }
-        public DbSet<M_Category> M_CategoryList { get; set; }
-        public DbSet<M_Friend> M_FriendList { get; set; }
-        public DbSet<M_Setting> M_SettingList { get; set; }
-        public DbSet<M_TitleTag> M_TitleTagList { get; set; }
+        public DbSet<T_TitleText> T_TitleText { get; set; }
+        public DbSet<M_Category> M_Category { get; set; }
+        public DbSet<M_User> M_User { get; set; }
+        public DbSet<M_Setting> M_Setting { get; set; }
+        public DbSet<M_TitleTag> M_TitleTag { get; set; }
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
 

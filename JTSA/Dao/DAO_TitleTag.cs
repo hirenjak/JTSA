@@ -20,7 +20,7 @@ namespace JTSA.Dao
 
             List<M_TitleTag> results = new();
 
-            foreach (var record in db.M_TitleTagList.OrderByDescending(x => x.LastUsedDateTime))
+            foreach (var record in db.M_TitleTag.OrderByDescending(x => x.LastUsedDateTime))
             {
                 results.Add(new()
                 {
@@ -47,7 +47,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            return db.M_TitleTagList.Single(x => x.Id == id);
+            return db.M_TitleTag.Single(x => x.Id == id);
         }
 
 
@@ -59,11 +59,11 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            var entity = db.M_TitleTagList.FirstOrDefault(x => x.Id == id);
+            var entity = db.M_TitleTag.FirstOrDefault(x => x.Id == id);
 
             if (entity != null)
             {
-                db.M_TitleTagList.Remove(entity);
+                db.M_TitleTag.Remove(entity);
                 db.SaveChanges();
             }
         }
@@ -79,7 +79,7 @@ namespace JTSA.Dao
         {
             using var db = new AppDbContext();
 
-            db.M_TitleTagList.Add(insertData);
+            db.M_TitleTag.Add(insertData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
@@ -100,7 +100,7 @@ namespace JTSA.Dao
 
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
-            db.M_TitleTagList.Update(updateData);
+            db.M_TitleTag.Update(updateData);
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
