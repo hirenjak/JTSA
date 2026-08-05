@@ -420,12 +420,27 @@ namespace JTSA.Panels
         /// <returns></returns>
         private string CreateObsJson()
         {
-            return JsonSerializer.Serialize(
-                playlistItemFormList.Select(x => new
+            string title = "";
+            bool showTitle = false;
+
+            Dispatcher.Invoke(() =>
+            {
+                title = CurrentGamePlaylistName;
+                showTitle =  true;
+            });
+
+            var obj = new
+            {
+                showTitle,
+                title,
+                items = playlistItemFormList.Select(x => new
                 {
                     imageUrl = x.ImageUrl,
-                    status = x.Status.ToString()
-                }));
+                    status = x.Status.ToString(),
+                }).ToList()
+            };
+
+            return JsonSerializer.Serialize(obj);
         }
 
 
@@ -436,160 +451,181 @@ namespace JTSA.Panels
         private string CreateObsHtml()
         {
             return """
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>OBS表示用</title>
+        <!DOCTYPE html>
+        <html lang="ja">
+        <head>
+            <meta charset="UTF-8">
+            <title>OBS表示用</title>
 
-<style>
-html,
-body {
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    overflow: hidden;
-    font-family: sans-serif;
-}
+            <style>
+                html,
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    overflow: hidden;
+                    font-family: sans-serif;
+                }
 
-#imageList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    padding: 0;
-}
+                .playlistTitle {
+                    display: none;
 
-#imageList{
-    display:flex;
-    flex-wrap:wrap;
-    gap:16px;
-    align-items:flex-start;
-}
+                    margin: 0 0 10px 0;
+                    padding: 8px 12px;
 
-.imageItem{
-    position:relative;
-    display:inline-block;
-    overflow:hidden;
-    flex-shrink:0;
-}
+                    color: white;
+                    background: rgba(0, 0, 0, 0.65);
 
-.imageItem img{
-    display:block;
-    width:auto;
-    height:auto;
+                    font-size: 28px;
+                    font-weight: bold;
 
-    max-width:230px;
-    max-height:107px;
-}
+                    box-sizing: border-box;
+                }
 
-/* 完了：画像全体を暗くして中央表示 */
-.completeText {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
+                #imageList {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 16px;
+                    align-items: flex-start;
+                    padding: 0;
+                }
 
-    color: #00ff80;
-    background: rgba(0, 0, 0, 0.55);
+                .imageItem {
+                    position: relative;
+                    display: inline-block;
+                    overflow: hidden;
+                    flex-shrink: 0;
+                }
 
-    font-size: 30px;
-    font-weight: bold;
-}
+                .imageItem img {
+                    display: block;
+                    width: auto;
+                    height: auto;
+                    max-width: 230px;
+                    max-height: 107px;
+                }
 
-.imageItem.completed .completeText {
-    display: flex;
-}
+                .completeText {
+                    position: absolute;
+                    inset: 0;
 
-/* プレイ中：左下に表示 */
-.playingText {
-    position: absolute;
-    left: 4px;
-    bottom: 8px;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
 
-    display: none;
+                    color: #00ff80;
+                    background: rgba(0, 0, 0, 0.55);
 
-    padding: 2px 10px;
-    border-radius: 5px;
+                    font-size: 30px;
+                    font-weight: bold;
+                }
 
-    color: white;
-    background: #2196f3;
+                .imageItem.completed .completeText {
+                    display: flex;
+                }
 
-    font-size: 11px;
-    font-weight: bold;
+                .playingText {
+                    position: absolute;
+                    left: 4px;
+                    bottom: 8px;
 
-    white-space: nowrap;
-}
+                    display: none;
 
-.imageItem.playing .playingText {
-    display: block;
-}
-</style>
-</head>
+                    padding: 2px 10px;
+                    border-radius: 5px;
 
-<body>
+                    color: white;
+                    background: #2196f3;
 
-<div id="imageList"></div>
+                    font-size: 11px;
+                    font-weight: bold;
 
-<script>
-async function load() {
-    try {
-        const response = await fetch("/data?t=" + Date.now(), {
-            cache: "no-store"
-        });
+                    white-space: nowrap;
+                }
 
-        if (!response.ok) {
-            throw new Error("データ取得失敗: " + response.status);
+                .imageItem.playing .playingText {
+                    display: block;
+                }
+            </style>
+        </head>
+
+        <body>
+            <div id="playlistTitle" class="playlistTitle"></div>
+            <div id="imageList"></div>
+
+            <script>
+                async function load() {
+                    try {
+                        const response = await fetch("/data?t=" + Date.now(), {
+                            cache: "no-store"
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("データ取得失敗: " + response.status);
+                        }
+
+                        const data = await response.json();
+
+                        const titleElement =
+                            document.getElementById("playlistTitle");
+
+                        if (data.showTitle && data.title) {
+                            titleElement.style.display = "block";
+                            titleElement.textContent = data.title;
+                        }
+                        else {
+                            titleElement.style.display = "none";
+                            titleElement.textContent = "";
+                        }
+
+                        const list = document.getElementById("imageList");
+                        list.innerHTML = "";
+
+                        for (const item of data.items ?? []) {
+                            const div = document.createElement("div");
+                            div.className = "imageItem";
+
+                            if (item.status === "Completed") {
+                                div.classList.add("completed");
+                            }
+                            else if (item.status === "Playing") {
+                                div.classList.add("playing");
+                            }
+
+                            const img = document.createElement("img");
+                            img.src = item.imageUrl;
+                            img.alt = "";
+
+                            const completeText =
+                                document.createElement("div");
+
+                            completeText.className = "completeText";
+                            completeText.textContent = "完了";
+
+                            const playingText =
+                                document.createElement("div");
+
+                            playingText.className = "playingText";
+                            playingText.textContent = "プレイ中";
+
+                            div.appendChild(img);
+                            div.appendChild(completeText);
+                            div.appendChild(playingText);
+
+                            list.appendChild(div);
+                        }
+                    }
+                    catch (error) {
+                        console.error(error);
+                    }
+                }
+
+                load();
+                setInterval(load, 500);
+            </script>
+        </body>
+        </html>
+        """;
         }
-
-        const items = await response.json();
-        const list = document.getElementById("imageList");
-
-        list.innerHTML = "";
-
-        for (const item of items) {
-            const div = document.createElement("div");
-            div.className = "imageItem";
-
-            if (item.status === "Completed") {
-                div.classList.add("completed");
-            }
-            else if (item.status === "Playing") {
-                div.classList.add("playing");
-            }
-
-            const img = document.createElement("img");
-            img.src = item.imageUrl;
-            img.alt = "";
-
-            const completeText = document.createElement("div");
-            completeText.className = "completeText";
-            completeText.textContent = "完了";
-
-            const playingText = document.createElement("div");
-            playingText.className = "playingText";
-            playingText.textContent = "プレイ中";
-
-            div.appendChild(img);
-            div.appendChild(completeText);
-            div.appendChild(playingText);
-
-            list.appendChild(div);
-        }
-    }
-    catch (error) {
-        console.error(error);
-    }
-}
-
-load();
-setInterval(load, 500);
-</script>
-
-</body>
-</html>
-""";
-        }
-
     }
 }

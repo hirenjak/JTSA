@@ -3,7 +3,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:JTSA"
-        Title="JakTwtchStreamerAssistant v0.6.6" Height="700" Width="1100">
+        Title="JakTwtchStreamerAssistant v0.6.7" Height="700" Width="1100">
 
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#FF404040">
         <Grid.ColumnDefinitions>
@@ -166,9 +166,8 @@
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" VerticalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="560"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="260" />
                             </Grid.ColumnDefinitions>
 
                             <!-- メインUI（今までのDockPanelやStackPanelなど） -->
@@ -236,7 +235,7 @@
                             </DockPanel>
 
                             <!-- サイドパネル（タイトルテキストタグ） -->
-                            <panels:TitleTagSidePanel Grid.Column="2" Margin="8" Height="Auto" Width="Auto" x:Name="TitleTagSidePanel" Visibility="Visible"/>
+                            <panels:TitleTagSidePanel Grid.Column="1" Margin="8" Height="Auto" Width="Auto" x:Name="TitleTagSidePanel" Visibility="Visible"/>
 
                         </Grid>
                     </Grid>
