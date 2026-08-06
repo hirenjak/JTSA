@@ -13,26 +13,14 @@ using System.Threading.Tasks;
 namespace JTSA.Forms
 {
     // アプリ情報用クラス
-    public class RaidUserForm : INotifyPropertyChanged
+    public class RaidUserForm
     {
-        /// <summary>  </summary>
-        private string? _userName;
-        public string UserName
-        {
-            get => _userName ?? "";
-            set
-            {
-                if (_userName != value)
-                {
-                    _userName = value;
-                    OnPropertyChanged(nameof(UserName));
-                }
-            }
-        }
-        
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        public string UserId;
+        public string UserName;
+        public string UserLogin;
+        public string ThumbnailUrl;
+        public string StreamTitle;
+        public string StreamGameId;
+        public string StreamingTime;
     }
 }

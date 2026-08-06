@@ -1,4 +1,5 @@
 ﻿using JTSA.Forms;
+using JTSA.Utility;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
@@ -28,9 +29,35 @@ namespace JTSA.Panels
         /// </summary>
         public RaidPanel()
         {
+            DataContext = this;
+
             InitializeComponent();
 
-            DataContext = this;
+            Loaded += RaidPanel_Loaded;
+        }
+
+        private async void RaidPanel_Loaded(object sender, RoutedEventArgs e)
+        {
+            RaidUserList.Clear();
+            var apiResluts = await TwitchHelper.GetStreamingFollowUserAsync();
+
+            var nowTime = DateTime.Now;
+
+            foreach (var data in apiResluts)
+            {
+                var timeSpan = (nowTime - data.StartedAt);
+
+                RaidUserList.Add(new RaidUserForm
+                {
+                    UserId = data.UserId,
+                    UserName = data.UserName,
+                    UserLogin = data.UserLogin,
+                    StreamTitle = data.Title,
+                    StreamGameId = data.GameId,
+                    StreamingTime = timeSpan.Hours + "時間" + timeSpan.Minutes + "分" + +timeSpan.Seconds + "秒",
+                    ThumbnailUrl = data.ThumbnailUrl
+                });
+            }
         }
 
 

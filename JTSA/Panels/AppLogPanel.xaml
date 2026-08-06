@@ -18,15 +18,18 @@
 
             <ListBox ItemsSource="{Binding AppLogFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="1" Background="#FF404040" 
                             x:Name="AppLogListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                            MouseLeftButtonUp="AppLogListBox_MouseLeftButtonUp">
+                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
 
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding LogDateTime}" Width="Auto" Foreground="{Binding Color}" FontSize="10" TextWrapping="Wrap" Margin="4, 0, 4, 0"/>
-                            <TextBlock Text="{Binding Content}" Width="Auto" Foreground="{Binding Color}" FontSize="10" TextWrapping="Wrap" Margin="4, 0, 4, 0"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding LogDateTime}" Width="Auto" Foreground="{Binding Color}" FontSize="10" TextWrapping="Wrap" Margin="4, 0, 4, 0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Content}" Width="Auto" Foreground="{Binding Color}" FontSize="10" TextWrapping="Wrap" Margin="4, 0, 4, 0"/>
+                        </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

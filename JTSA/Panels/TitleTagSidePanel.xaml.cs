@@ -114,7 +114,7 @@ namespace JTSA.Panels
         /// </summary>
         public void ReloadTitleTag()
         {
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグリスト再読み込み", "処理開始");
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "タイトルタグリスト再読み込み");
 
             // DB接続と初期化処理
             using var db = new AppDbContext();
@@ -134,7 +134,7 @@ namespace JTSA.Panels
                 });
             }
 
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグリスト再読み込み", "処理終了");
+            mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }
 
 
@@ -144,7 +144,7 @@ namespace JTSA.Panels
         /// <param name="title"></param>
         private void AddTitleTag(string displayName)
         {
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグDB追加", "処理開始");
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "タイトルタグDB追加");
 
             // DB接続処理
             using var db = new AppDbContext();
@@ -172,7 +172,7 @@ namespace JTSA.Panels
             // 再読み込み処理
             ReloadTitleTag();
 
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "タイトルタグDB追加", "処理終了");
+            mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }
     }    
 }

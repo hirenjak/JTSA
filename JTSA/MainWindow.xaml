@@ -129,28 +129,55 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Label  Content="TwiName"
+                                        Foreground="White" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
+                                         Width="Auto"
+                                         VerticalAlignment="Center"
+                                         Foreground="Black" FontSize="12"
+                                         Background="DarkGray" Height="18">
+                                </TextBlock>
+                            </Grid>
 
-                            <Label Grid.Column="0" Grid.Row="0" Content="TwiName"
-                                   Foreground="White" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
-                                     Width="Auto"
-                                     VerticalAlignment="Center"
-                                     Foreground="Black" FontSize="12"
-                                     Background="DarkGray" Height="18">
-                            </TextBlock>
-                            <Label Grid.Column="0" Grid.Row="1" Content="AccToken"
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid Grid.Column="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Content="AccToken"
                                    Foreground="White" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
+                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
                                        Width="Auto" 
                                        VerticalAlignment="Center" 
                                        Foreground="Black" FontSize="12" 
                                        Background="DarkGray" Height="18" >
-                            </TextBlock>
-
+                                    </TextBlock>
+                                </Grid>
+                                <Grid Grid.Column="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Content="AccToken"
+                                   Foreground="White" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="BroadcasterId_TextBlock" 
+                                       Width="Auto" 
+                                       VerticalAlignment="Center" 
+                                       Foreground="Black" FontSize="12" 
+                                       Background="DarkGray" Height="18" >
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
                         </Grid>
                     </Grid>
                 </Grid>
@@ -305,6 +332,12 @@
                 <panels:RaidPanel x:Name="RaidPanel"/>
             </TabItem>
 
+            <TabItem Header="Setting">
+                <StackPanel>
+                    <panels:SettingPanel x:Name="SettingPanel"/>
+                </StackPanel>
+            </TabItem>
+            
             <TabItem Header="AppLog">
                 <StackPanel>
                     <panels:AppLogPanel x:Name="AppLogPanel"/>

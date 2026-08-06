@@ -91,7 +91,7 @@ namespace JTSA.Panels
         }
         public async void ReloadChannnelPoint(bool forceReload = false)
         {
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "チャンネルポイントリスト再読み込み", "処理開始");
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "チャンネルポイントリスト再読み込み");
             ChannelPointGetStatus.Text = "チャンネルポイント取得中...";
             ChannelPointListView.ItemsSource = null;
 
@@ -109,15 +109,15 @@ namespace JTSA.Panels
                 rewards.Sort((a, b) => a.Cost.CompareTo(b.Cost));
                 ChannelPointListView.ItemsSource = rewards;
                 ChannelPointGetStatus.Text = $"取得成功！ ({rewards.Count}件)\n{info}";
-                mainWindow.AppLogPanel.AddSuccessLog(GetType().Name, "チャンネルポイントリスト取得成功");
+                mainWindow.AppLogPanel.Success(GetType().Name, appLogProcessName);
             }
             else
             {
                 ChannelPointGetStatus.Text = $"チャンネルポイントの取得に失敗しました。\n{info}";
-                mainWindow.AppLogPanel.AddErrorLog(GetType().Name, "チャンネルポイントリスト取得失敗");
+                mainWindow.AppLogPanel.Error(GetType().Name, "チャンネルポイントリスト取得失敗");
             }
 
-            mainWindow.AppLogPanel.AddProcessLog(GetType().Name, "チャンネルポイントリスト再読み込み", "処理終了");
+            mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }
 
         // 有効/無効トグル

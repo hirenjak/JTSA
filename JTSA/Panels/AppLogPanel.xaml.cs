@@ -1,4 +1,5 @@
 ﻿using JTSA.Forms;
+using Microsoft.VisualBasic.Logging;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
@@ -48,7 +49,7 @@ namespace JTSA.Panels
             mainWindow.StatusTextBlock.Text = log;
             mainWindow.StatusTextBlock.Foreground = color;
 
-            AppLogFormList.Insert(0,
+            AppLogFormList.Add(
                 new AppLogForm() { 
                 LogDateTime = DateTime.Now,
                 Content = "【 " + traceClassName + "】 " + log,  
@@ -56,14 +57,25 @@ namespace JTSA.Panels
             });
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="log"></param>
+        public string ProcessStart(string traceClassName, string processTitle)
+        {
+            AddLog($"{traceClassName} ： {processTitle} ", "処理Start", NORMAL_COLOR);
+            return processTitle;
+        }
+
+
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddProcessLog(string traceClassName, string processTitle ,string log)
+        public void ProcessEnd(string traceClassName, string processTitle)
         {
-            AddLog($"{traceClassName} ： {processTitle} ", log, NORMAL_COLOR);
+            AddLog($"{traceClassName} ： {processTitle} ", "処理End", NORMAL_COLOR);
         }
 
 
@@ -71,9 +83,9 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddSuccessLog(string traceClassName, string log)
+        public void Success(string traceClassName, string log)
         {
-            AddLog(traceClassName, log, SUCCSESS_COLOR);
+            AddLog(traceClassName, "Success：" + log, SUCCSESS_COLOR);
         }
 
 
@@ -81,9 +93,9 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddErrorLog(string traceClassName, string log)
+        public void Error(string traceClassName, string log)
         {
-            AddLog(traceClassName, log, ERROR_COLOR);
+            AddLog(traceClassName, "Error：" + log, ERROR_COLOR);
         }
 
 
@@ -91,7 +103,7 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <param name="log"></param>
-        public void AddCriticalErrorLog(string traceClassName, string log)
+        public void CriticalError(string traceClassName, string log)
         {
             AddLog(traceClassName, log, CRITICAL_ERROR_COLOR);
         }
@@ -123,24 +135,6 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void ClearLogButton_Click(object sender, RoutedEventArgs e)
         {
-        }
-
-        private void AppLogListBox_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            var item = (sender as ListBox)?.SelectedItem;
-            if (item != null)
-            {
-                // AppLogForm型でContentプロパティがある前提
-                var contentProp = item.GetType().GetProperty("Content");
-                if (contentProp != null)
-                {
-                    var content = contentProp.GetValue(item)?.ToString();
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        Clipboard.SetText(content);
-                    }
-                }
-            }
         }
     }
 }

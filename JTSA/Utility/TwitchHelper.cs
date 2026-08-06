@@ -2,6 +2,7 @@
 using JTSA.TwitchIF;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
 using TwitchLib.Api;
@@ -35,7 +36,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions")
+                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -188,11 +189,59 @@ namespace JTSA.Utility
 
 
         /// <summary>
+        /// 配信者情報取得処理
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <param name="clientId"></param>
+        /// <param name="accessToken"></param>
+        /// <returns></returns>
+        public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync()
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "フォロー中配信中チャンネル取得");
+
+            List<TwitchStreamIF> results = [];
+            try
+            {
+                var apiResponse = await api.Helix.Streams.GetFollowedStreamsAsync(BroadcasterId);
+
+                if (apiResponse?.Data != null)
+                {
+                    var responseData = apiResponse.Data;
+
+                    foreach (var data in responseData)
+                    {
+                        results.Add(new TwitchStreamIF()
+                        {
+                            UserId = data.Id,
+                            Title = data.Title,
+                            UserName = data.UserName,
+                            UserLogin = data.UserLogin,
+                            GameId = data.GameId,
+                            StartedAt = data.StartedAt,
+                            ThumbnailUrl = data.ThumbnailUrl
+                        });
+                    }
+                }
+
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return results;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
+            }
+
+            return results;
+        }
+
+
+        /// <summary>
         /// カテゴリの取得
         /// </summary>
         /// <param name="gameId"></param>
         /// <returns></returns>
-        public static async Task<TwitchCategoryIF>? GetCategoryByGameId(string gameId)
+        public static async Task<TwitchCategoryIF> GetCategoryByGameId(string gameId)
         {
             TwitchCategoryIF result = null;
             try
@@ -215,6 +264,7 @@ namespace JTSA.Utility
             }
             catch (Exception ex)
             {
+                
             }
 
             return result;
@@ -320,11 +370,11 @@ namespace JTSA.Utility
         public static async Task<List<CustomReward>?> GetCustomRewardsAsync()
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得", "処理開始");
+            mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得中断", "broadcaster_id 不詳");
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得中断" + "broadcaster_id不詳");
                 return null;
             }
             api.Settings.AccessToken = TwitchHelper.api.Settings.AccessToken;
@@ -342,7 +392,7 @@ namespace JTSA.Utility
             }
             catch (Exception ex)
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得失敗", ex.Message);
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得失敗" + ex.Message);
             }
 
             return null;
@@ -361,11 +411,11 @@ namespace JTSA.Utility
             UpdateCustomRewardRequest updateCustomRewardRequest)
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新", "処理開始");
+            mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新中断", "broadcaster_id 不詳");
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新中断:broadcaster_id 不詳");
                 return null;
             }
             api.Settings.AccessToken = TwitchHelper.api.Settings.AccessToken;
@@ -381,13 +431,13 @@ namespace JTSA.Utility
 
                 if (response?.Data != null)
                 {
-                    mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新", "成功");
+                    mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新");
                     return response.Data.ToList();
                 }
             }
             catch (Exception ex)
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新失敗", ex.Message);
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新失敗:" + ex.Message);
             }
 
             return null;
@@ -403,11 +453,11 @@ namespace JTSA.Utility
         public static async Task<List<CustomReward>?> CreateCustomRewardAsync(CreateCustomRewardsRequest createCustomRewardRequest)
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成", "処理開始");
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成中断", "broadcaster_id 不詳");
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "broadcaster_id 不詳");
                 return null;
             }
             api.Settings.AccessToken = TwitchHelper.api.Settings.AccessToken;
@@ -422,13 +472,13 @@ namespace JTSA.Utility
 
                 if (response?.Data != null)
                 {
-                    mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成", "成功");
+                    mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                     return response.Data.ToList();
                 }
             }
             catch (Exception ex)
             {
-                mainWindow.AppLogPanel.AddProcessLog(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成失敗", ex.Message);
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成失敗：" + ex.Message);
             }
 
             return null;
