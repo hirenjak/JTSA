@@ -7,7 +7,43 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <ScrollViewer Grid.Row="2" x:Name="ChatListBox" 
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="チャット通知音量"
+                    Width="Auto" 
+                           Foreground="White"
+                           FontSize="14" />
+
+                <Slider x:Name="ChatNotificationVolumeSlider"
+                    Width="200"
+                    Minimum="0"
+                    Maximum="100"
+                    TickFrequency="10"
+                    IsSnapToTickEnabled="False"
+                    ValueChanged="ChatNotificationVolumeSlider_ValueChanged"/>
+
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="チャット参加音量"
+                    Width="Auto" 
+                           Foreground="White"
+                           FontSize="14" />
+                <Slider x:Name="JoinChatVolumeSlider"
+                        Width="200"
+                        Minimum="0"
+                        Maximum="100"
+                        TickFrequency="10"
+                        IsSnapToTickEnabled="False"
+                        ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
+            </StackPanel>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" x:Name="ChatListBox" 
                       HorizontalScrollBarVisibility="Disabled" 
                       VerticalScrollBarVisibility="Auto"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -104,7 +140,7 @@
 
 
                                     <StackPanel Grid.Column="1" 
-                                Orientation="Vertical">
+                                                Orientation="Vertical">
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>

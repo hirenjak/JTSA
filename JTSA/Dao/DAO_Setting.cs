@@ -16,6 +16,8 @@ namespace JTSA.Dao
             RefreshToken = 2,
             ExpiresIn = 3,
             FriendPrefixWord = 4,
+            ChatNotificationVolume = 5,
+            JoinChatVolume = 6,
         }
 
         /// <summary>
@@ -38,20 +40,31 @@ namespace JTSA.Dao
         /// <param name="db"></param>
         /// <param name="insertData"></param>
         /// <returns></returns>
-        public static bool InsertUpdate(M_Setting insertData)
+        public static bool InsertUpdate(int name, string value)
         {
             using var db = new AppDbContext();
 
-            var count = db.M_Setting.Count(x => x.Name == insertData.Name);
-            //db.M_SettingList.UpdateRange(insertData);
+            var count = db.M_Setting.Count(x => x.Name == name);
 
             if (count == 0)
             {
-                db.M_Setting.AddRange(insertData);
+                db.M_Setting.AddRange(new M_Setting { 
+                    Name = name,
+                    Value = value,
+                    UpdatedDateTime = DateTime.Now,
+                    CreatedDateTime = DateTime.Now,
+                    LastUsedDateTime = DateTime.Now
+                });
             }
             else
             {
-                db.M_Setting.UpdateRange(insertData);
+                db.M_Setting.UpdateRange(new M_Setting
+                {
+                    Name = name,
+                    Value = value,
+                    UpdatedDateTime = DateTime.Now,
+                    LastUsedDateTime = DateTime.Now
+                });
             }
     ;
             int result = db.SaveChanges();

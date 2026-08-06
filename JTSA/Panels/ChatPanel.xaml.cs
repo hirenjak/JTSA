@@ -15,6 +15,8 @@ using TwitchLib.Api.Helix;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using NAudio.Wave;
+using TwitchLib.Api;
 
 namespace JTSA.Panels
 {
@@ -29,9 +31,11 @@ namespace JTSA.Panels
 
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
-        private SoundPlayer? ChatNotificationPlayer;
+        private WaveFileReader? ChatNotificationReader = new(Properties.Resources.CommentNotification);
+        private WaveOutEvent? ChatNotificationPlayer = new();
 
-        private SoundPlayer? JoinChatPlayer;
+        private WaveFileReader? JoinChatReader = new(Properties.Resources.JoinChat);
+        private WaveOutEvent? JoinChatPlayer = new();
 
 
         /// <summary>
@@ -43,15 +47,14 @@ namespace JTSA.Panels
 
             InitializeComponent();
 
-            var JoinChatSoundData = Properties.Resources.JoinChat;
-            JoinChatSoundData.Position = 0;
-            JoinChatPlayer ??= new SoundPlayer(JoinChatSoundData);
-            JoinChatPlayer.Load();
+            ChatNotificationVolumeSlider.Value = 
+               double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatNotificationVolume)?.Value ?? "50");
 
-            var NotificationSoundData = Properties.Resources.CommentNotification;
-            NotificationSoundData.Position = 0;
-            ChatNotificationPlayer ??= new SoundPlayer(NotificationSoundData);
-            ChatNotificationPlayer.Load();
+            JoinChatVolumeSlider.Value =
+               double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
+
+            ChatNotificationPlayer.Init(ChatNotificationReader);
+            JoinChatPlayer.Init(JoinChatReader);
         }
 
 
@@ -153,8 +156,10 @@ namespace JTSA.Panels
 
             if (chatedUser == null)
             {
-                JoinChatPlayer.Stop();
+                JoinChatReader.Position = 0;
+                JoinChatPlayer.Volume = (float)JoinChatVolumeSlider.Value / 100f;
                 JoinChatPlayer.Play();
+
                 var inserData = new T_ChatUser
                 {
                     UserId = form.UserId,
@@ -167,13 +172,28 @@ namespace JTSA.Panels
             }
             else
             {
-                ChatNotificationPlayer.Stop();
+                ChatNotificationReader.Position = 0;
+                ChatNotificationPlayer.Volume = (float)ChatNotificationVolumeSlider.Value / 100f;
                 ChatNotificationPlayer.Play();
             }
 
-
-
             TwitchChatFormList.Insert(0, form);
+        }
+
+        private void ChatNotificationVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            DAO_Setting.InsertUpdate(
+                (int)DAO_Setting.SettingName.ChatNotificationVolume,
+                e.NewValue.ToString()
+            );
+        }
+
+        private void JoinChatVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            DAO_Setting.InsertUpdate(
+                (int)DAO_Setting.SettingName.JoinChatVolume,
+                e.NewValue.ToString()
+            );
         }
     }
 }

@@ -198,14 +198,10 @@ namespace JTSA.Panels
 
         private void FriendPrefixWordTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            DAO_Setting.InsertUpdate(new M_Setting()
-            {
-                Name = (int)DAO_Setting.SettingName.FriendPrefixWord,
-                Value = FriendPrefixWordTextBox.Text,
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now,
-                LastUsedDateTime = DateTime.Now
-            });
+            DAO_Setting.InsertUpdate(
+                (int)DAO_Setting.SettingName.FriendPrefixWord,
+                FriendPrefixWordTextBox.Text
+            );
         }
     }
 }

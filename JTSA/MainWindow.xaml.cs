@@ -159,23 +159,15 @@ namespace JTSA
 
             TwitchHelper.AccessToken = accessTokenResponse.accessToken;
 
-            DAO_Setting.InsertUpdate(new M_Setting
-            {
-                Name = (int)DAO_Setting.SettingName.RefreshToken,
-                Value = accessTokenResponse.refreshToken,
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now,
-                LastUsedDateTime = DateTime.Now
-            });
+            DAO_Setting.InsertUpdate(
+				(int)DAO_Setting.SettingName.RefreshToken,
+                accessTokenResponse.refreshToken
+			);
 
-            DAO_Setting.InsertUpdate(new M_Setting
-            {
-                Name = (int)DAO_Setting.SettingName.ExpiresIn,
-                Value = accessTokenResponse.expiresIn.ToString(),
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now,
-                LastUsedDateTime = DateTime.Now
-            });
+            DAO_Setting.InsertUpdate(
+				(int)DAO_Setting.SettingName.ExpiresIn,
+                accessTokenResponse.expiresIn.ToString()
+			);
 
             AppLogPanel.AddProcessLog(GetType().Name, "アクセストークン再取得", "処理終了");
 			return true;
@@ -285,32 +277,20 @@ namespace JTSA
 			}
 
 			// --- 設定情報保存処理 ---
-			DAO_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)DAO_Setting.SettingName.UserName,
-				Value = JTSAHelper.LoginName,
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now,
-                LastUsedDateTime = DateTime.Now
-            });
+			DAO_Setting.InsertUpdate(
+				(int)DAO_Setting.SettingName.UserName,
+				JTSAHelper.LoginName
+			);
 
-			DAO_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)DAO_Setting.SettingName.RefreshToken,
-				Value = accessTokenResponse.refreshToken,
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now,
-                LastUsedDateTime = DateTime.Now
-            });
+			DAO_Setting.InsertUpdate(
+				(int)DAO_Setting.SettingName.RefreshToken,
+				accessTokenResponse.refreshToken
+			);
 
-			DAO_Setting.InsertUpdate(new M_Setting
-			{
-				Name = (int)DAO_Setting.SettingName.ExpiresIn,
-				Value = accessTokenResponse.expiresIn.ToString(),
-                CreatedDateTime = DateTime.Now,
-                UpdatedDateTime = DateTime.Now,
-                LastUsedDateTime = DateTime.Now
-            });
+			DAO_Setting.InsertUpdate(
+				(int)DAO_Setting.SettingName.ExpiresIn,
+				accessTokenResponse.expiresIn.ToString()
+			);
 
 			await StreamerDataSet();
 
