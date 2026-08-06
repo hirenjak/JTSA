@@ -2,21 +2,11 @@
 using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
-using System;
 using System.Collections.ObjectModel;
-using System.Drawing;
 using System.IO;
-using System.IO.Packaging;
-using System.Media;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using TwitchLib.Api.Helix;
-using TwitchLib.Client;
-using TwitchLib.Client.Events;
-using TwitchLib.Client.Models;
 using NAudio.Wave;
-using TwitchLib.Api;
 
 namespace JTSA.Panels
 {
@@ -57,7 +47,6 @@ namespace JTSA.Panels
             JoinChatPlayer.Init(JoinChatReader);
         }
 
-
         /// <summary>
         /// コントロール読み込み時
         /// </summary>
@@ -69,7 +58,7 @@ namespace JTSA.Panels
 
             if(twitchChatService == null)
             {
-                twitchChatService = new TwitchChatService("hiren_jak");
+                twitchChatService = new TwitchChatService(JTSAHelper.LoginName);
                 twitchEventSubService = new TwitchEventSubService(TwitchHelper.api, TwitchHelper.BroadcasterId);
 
                 twitchChatService.MessageReceived += message =>

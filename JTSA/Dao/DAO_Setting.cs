@@ -1,10 +1,4 @@
 ﻿using JTSA.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static M_Setting;
 
 namespace JTSA.Dao
 {
@@ -19,6 +13,7 @@ namespace JTSA.Dao
             ChatNotificationVolume = 5,
             JoinChatVolume = 6,
         }
+
 
         /// <summary>
         /// SELECT * FROM M_TitleText ORDER BY Id DESC
@@ -65,8 +60,8 @@ namespace JTSA.Dao
                     UpdatedDateTime = DateTime.Now,
                     LastUsedDateTime = DateTime.Now
                 });
-            }
-    ;
+            };
+
             int result = db.SaveChanges();
 
             return result > 0 ? true : false;
