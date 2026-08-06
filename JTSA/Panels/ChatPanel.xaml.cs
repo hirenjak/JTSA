@@ -28,6 +28,7 @@ namespace JTSA.Panels
         private WaveOutEvent? JoinChatPlayer = new();
 
 
+
         /// <summary>
         /// コンストラクタ
         /// </summary>
@@ -183,6 +184,29 @@ namespace JTSA.Panels
                 (int)DAO_Setting.SettingName.JoinChatVolume,
                 e.NewValue.ToString()
             );
+        }
+
+
+        ChatOverlayWindow transparentWindow;
+
+
+        private void TransparentWindowOpen_Click(object sender, RoutedEventArgs e)
+        {
+            if(transparentWindow != null)
+            {
+                transparentWindow.Close();
+                transparentWindow = null;
+            }
+            else
+            {
+                transparentWindow = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
+                transparentWindow.Show();
+            }
+        }
+
+        private void TransparentWindowOpenSetting_Click(object sender, RoutedEventArgs e)
+        {
+            transparentWindow.SwitchSettingClick();
         }
     }
 }

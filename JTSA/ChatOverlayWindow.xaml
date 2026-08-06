@@ -1,82 +1,53 @@
-﻿<UserControl x:Class="JTSA.Panels.ChatPanel"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:JTSA.Panels"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+﻿<Window x:Class="JTSA.ChatOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="ChatOverlayWindow"
+        Width="300"
+        Height="320"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
-        <StackPanel Grid.Row="0">
+    <Grid Background="Transparent">
 
-            <Grid Grid.Column="0" >
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" x:Name="TransparentWindowOpenButton" Content="チャットオーバーレイ" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"
-                            Click="TransparentWindowOpen_Click"/>
-                <Button Grid.Column="1" x:Name="TransparentWindowSettingButton" Content="操作可能切替" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"
-                            Click="TransparentWindowOpenSetting_Click"/>
-            </Grid>
-            
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="チャット通知音量"
-                    Width="Auto" 
-                           Foreground="White"
-                           FontSize="14" />
+        <!-- 少しだけ黒背景を付ける場合 -->
+        <Border x:Name="WindowBackgroundBorder"
+                Background="#44000000"
+                CornerRadius="12"
+                Padding="12"
+                Margin="10">
 
-                <Slider x:Name="ChatNotificationVolumeSlider"
-                    Width="200"
-                    Minimum="0"
-                    Maximum="100"
-                    TickFrequency="10"
-                    IsSnapToTickEnabled="False"
-                    ValueChanged="ChatNotificationVolumeSlider_ValueChanged"/>
-
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="チャット参加音量"
-                    Width="Auto" 
-                           Foreground="White"
-                           FontSize="14" />
-                <Slider x:Name="JoinChatVolumeSlider"
-                        Width="200"
-                        Minimum="0"
-                        Maximum="100"
-                        TickFrequency="10"
-                        IsSnapToTickEnabled="False"
-                        ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
-            </StackPanel>
-        </StackPanel>
-
-        <ScrollViewer Grid.Row="1" x:Name="ChatListBox" 
-                      HorizontalScrollBarVisibility="Disabled" 
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                      Height="Auto" Width="Auto" 
-                      Background="#FF404040" >
-            <ItemsControl ItemsSource="{Binding TwitchChatFormList}"
-                          d:ItemsSource="{d:SampleData ItemCount = 3}">
-                <ItemsControl.ItemTemplate>
+            <ListBox x:Name="OverlayTwitchChatListBox"
+                     ItemsSource="{Binding OverlayTwitchChatFormList}"
+                     d:ItemsSource="{d:SampleData ItemCount = 3}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Foreground="White"
+                     IsHitTestVisible="False"
+                     ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment"
+                Value="Stretch"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel>
+                        <StackPanel HorizontalAlignment="Stretch">
                             <StackPanel Margin="8, 4, 8, 0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="48"/>
+                                        <ColumnDefinition Width="28"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Ellipse Grid.Column="0" Width="42" Height="42">
+                                    <Ellipse Grid.Column="0" Width="26" Height="28">
                                         <Ellipse.Fill>
                                             <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
                                         </Ellipse.Fill>
@@ -106,7 +77,7 @@
                                                    d:Text="GamePlayListName"
                                                    Width="Auto" 
                                                    Foreground="{Binding ColorHex}"
-                                                   FontSize="14" >
+                                                   FontSize="10" >
                                             </TextBlock>
 
                                             <!-- ユーザー名 -->
@@ -116,7 +87,7 @@
                                                    Width="Auto" 
                                                    Margin="4, 0, 0, 0"
                                                    Foreground="White"
-                                                   FontSize="14" >
+                                                   FontSize="10" >
                                             </TextBlock>
                                         </Grid>
 
@@ -133,18 +104,8 @@
                                               TextWrapping="Wrap"
                                               Width="Auto" 
                                               Foreground="{Binding MessageColor}" 
-                                              FontSize="20" >
+                                              FontSize="12" >
                                         </TextBox>
-
-                                        <!-- 受信日時 -->
-                                        <TextBlock Grid.Row="1" Grid.Column="0" 
-                                               Text="{Binding CreatedDateTime, StringFormat={}{0:yyyy/MM/dd HH:mm}}"
-                                               d:Text="9999/99/99"
-                                               Width="Auto" 
-                                               FontSize="12" Foreground="White"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Bottom">
-                                        </TextBlock>
                                     </Grid>
                                 </Grid>
 
@@ -163,8 +124,9 @@
                             <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
                         </StackPanel>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+        </Border>
     </Grid>
-</UserControl>
+</Window>
