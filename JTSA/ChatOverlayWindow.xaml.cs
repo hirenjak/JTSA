@@ -16,6 +16,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace JTSA
 {
@@ -33,7 +34,13 @@ namespace JTSA
             InitializeComponent();
 
             TwitchChatFormList = twitchChatFormList;
-            
+
+            // 既存のチャットを逆順で格納
+            foreach (var item in TwitchChatFormList.Reverse())
+            {
+                OverlayTwitchChatFormList.Add(item);
+            }
+
             DataContext = this;
 
 
@@ -44,6 +51,12 @@ namespace JTSA
 
             Loaded += ChatOverlayWindow_Loaded;
 
+
+            Closed += (_, _) =>
+            {
+                TwitchChatFormList.CollectionChanged -=
+                    TwitchChatFormList_CollectionChanged;
+            };
         }
 
         private void ChatOverlayWindow_Loaded(object sender, RoutedEventArgs e)
@@ -60,17 +73,29 @@ namespace JTSA
         /// <param name="e"></param>
         private void TwitchChatFormList_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.Action == NotifyCollectionChangedAction.Add &&
-                e.NewItems is not null)
+            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems is null)
             {
-                foreach (TwitchChatForm item in e.NewItems)
-                {
-                    // 新着を先頭に追加
-                    OverlayTwitchChatFormList.Add(item);
-
-                    OverlayTwitchChatListBox.ScrollIntoView(OverlayTwitchChatListBox.Items[^1]);
-                }
+                return;
             }
+
+            foreach (TwitchChatForm item in e.NewItems)
+            {
+                // 元リストは新着が先頭
+                // オーバーレイは新着を末尾
+                OverlayTwitchChatFormList.Add(item);
+            }
+
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (OverlayTwitchChatListBox.Items.Count == 0)
+                    return;
+
+                var lastItem =
+                    OverlayTwitchChatListBox.Items[
+                        OverlayTwitchChatListBox.Items.Count - 1];
+
+                OverlayTwitchChatListBox.ScrollIntoView(lastItem);
+            }, DispatcherPriority.Loaded);
         }
 
 

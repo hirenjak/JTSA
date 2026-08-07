@@ -10,7 +10,7 @@ public sealed class TwitchChatService
     private readonly TwitchClient client;
     private readonly string channelName;
 
-    public event Action<TwitchChatData>? MessageReceived;
+    public event Action<ChatMessage>? MessageReceived;
 
     public TwitchChatService(string channelName)
     {
@@ -29,9 +29,10 @@ public sealed class TwitchChatService
         client.OnConnectionError += Client_OnConnectionError;
     }
 
-    private async Task Client_OnDisconnected(object? sender, OnDisconnectedArgs e)
+    private Task Client_OnDisconnected(object? sender, OnDisconnectedArgs e)
     {
-        throw new NotImplementedException();
+        Console.WriteLine("Twitchチャットから切断されました。");
+        return Task.CompletedTask;
     }
 
     public async Task ConnectAsync()
@@ -50,50 +51,23 @@ public sealed class TwitchChatService
         await client.DisconnectAsync();
     }
 
-    private async Task Client_OnConnected(
-        object? sender,
-        TwitchLib.Client.Events.OnConnectedEventArgs e)
+    private async Task Client_OnConnected(object? sender, TwitchLib.Client.Events.OnConnectedEventArgs e)
     {
         await client.JoinChannelAsync(channelName);
     }
 
-    private Task Client_OnJoinedChannel(
-        object? sender,
-        OnJoinedChannelArgs e)
+    private Task Client_OnJoinedChannel(object? sender, OnJoinedChannelArgs e)
     {
         Console.WriteLine($"チャンネル参加: {e.Channel}");
         return Task.CompletedTask;
     }
 
-    private Task Client_OnMessageReceived(
-        object? sender,
-        OnMessageReceivedArgs e)
+    private Task Client_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
     {
         var message = e.ChatMessage;
 
-        var data = new TwitchChatData
-        {
-            Channel = message.Channel,
-            UserId = message.UserId,
-            UserName = message.Username,
-            DisplayName = message.DisplayName,
-            Message = message.Message,
-            ColorHex = message.HexColor,
-            MessageId = message.Id,
+        MessageReceived?.Invoke(message);
 
-            IsModerator = message.UserDetail.IsModerator,
-            IsSubscriber = message.UserDetail.IsSubscriber,
-            IsVip = message.UserDetail.IsVip,
-        };
-
-        MessageReceived?.Invoke(data);
-
-        return Task.CompletedTask;
-    }
-
-    private Task Client_OnDisconnected(object? sender, OnDisconnectedEventArgs e)
-    {
-        Console.WriteLine("Twitchチャットから切断されました。");
         return Task.CompletedTask;
     }
 
@@ -102,19 +76,4 @@ public sealed class TwitchChatService
         Console.WriteLine($"Twitch接続エラー: {e.Error.Message}");
         return Task.CompletedTask;
     }
-}
-
-public sealed class TwitchChatData
-{
-    public string Channel { get; set; } = "";
-    public string UserId { get; set; } = "";
-    public string UserName { get; set; } = "";
-    public string DisplayName { get; set; } = "";
-    public string Message { get; set; } = "";
-    public string ColorHex { get; set; } = "";
-    public string MessageId { get; set; } = "";
-
-    public bool IsModerator { get; set; }
-    public bool IsSubscriber { get; set; }
-    public bool IsVip { get; set; }
 }

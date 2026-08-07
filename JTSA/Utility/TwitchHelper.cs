@@ -1,4 +1,5 @@
 ﻿using JTSA.Forms.TwitchIF;
+using JTSA.Panels;
 using JTSA.TwitchIF;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -11,6 +12,7 @@ using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Client;
+using TwitchLib.Client.Models;
 
 namespace JTSA.Utility
 {
@@ -582,6 +584,82 @@ namespace JTSA.Utility
         }
 
         #endregion
+
+        public static List<TwitchChatPart> CreateParts(ChatMessage chatMessage)
+        {
+            var result = new List<TwitchChatPart>();
+            var message = chatMessage.Message;
+
+            var emotes = chatMessage.EmoteSet.Emotes
+                .OrderBy(x => x.StartIndex)
+                .ToList();
+
+            int currentIndex = 0;
+
+            foreach (var emote in emotes)
+            {
+                // スタンプより前の通常文字
+                if (emote.StartIndex > currentIndex)
+                {
+                    result.Add(new TwitchChatPart
+                    {
+                        Text = message.Substring(
+                            currentIndex,
+                            emote.StartIndex - currentIndex)
+                    });
+                }
+
+                result.Add(new TwitchChatPart
+                {
+                    Text = emote.Name,
+
+                    // 1.0 / 2.0 / 3.0でサイズ変更可能
+                    ImageUrl =
+                        $"https://static-cdn.jtvnw.net/emoticons/v2/" +
+                        $"{emote.Id}/default/dark/2.0"
+                });
+
+                currentIndex = emote.EndIndex + 1;
+            }
+
+            // 最後に残った通常文字
+            if (currentIndex < message.Length)
+            {
+                result.Add(new TwitchChatPart
+                {
+                    Text = message.Substring(currentIndex)
+                });
+            }
+
+            // スタンプがない場合
+            if (result.Count == 0)
+            {
+                result.Add(new TwitchChatPart
+                {
+                    Text = message
+                });
+            }
+
+            return result;
+        }
+
+
+        public static List<TwitchChatPart> CreateParts(string chatMessage)
+        {
+            var result = new List<TwitchChatPart>();
+            var message = chatMessage;
+
+            // スタンプがない場合
+            if (result.Count == 0)
+            {
+                result.Add(new TwitchChatPart
+                {
+                    Text = message
+                });
+            }
+
+            return result;
+        }
     }
 }
 

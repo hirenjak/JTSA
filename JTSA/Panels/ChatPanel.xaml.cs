@@ -10,6 +10,15 @@ using NAudio.Wave;
 
 namespace JTSA.Panels
 {
+    public class TwitchChatPart
+    {
+        public string? Text { get; set; }
+
+        public string? ImageUrl { get; set; }
+
+        public bool IsEmote => !string.IsNullOrEmpty(ImageUrl);
+    }
+
     /// <summary>
     /// ChatPanel.xaml の相互作用ロジック
     /// </summary>
@@ -87,14 +96,15 @@ namespace JTSA.Panels
                         {
                             Channel = message.Channel,
                             UserId = message.UserId,
-                            UserName = message.UserName,
+                            UserName = message.Username,
                             DisplayName = message.DisplayName,
                             Message = message.Message,
-                            ColorHex = message.ColorHex,
-                            MessageId = message.MessageId,
-                            IsModerator = message.IsModerator,
-                            IsSubscriber = message.IsSubscriber,
-                            IsVip = message.IsVip,
+                            HexColor = message.HexColor,
+                            MessageId = message.Id,
+                            IsModerator = message.UserDetail.IsModerator,
+                            IsSubscriber = message.UserDetail.IsSubscriber,
+                            IsVip = message.UserDetail.IsVip,
+                            MessageParts = TwitchHelper.CreateParts(message)
                         }, false);
                     });
                 };
@@ -105,9 +115,11 @@ namespace JTSA.Panels
                     {
                         ChatAddAsync(new TwitchChatForm
                         {
+                            UserId = channelPoint.UserId,
                             UserName = channelPoint.UserLogin,
                             DisplayName = "ChannelPonint",
                             Message = channelPoint.RewardTitle + " by." + channelPoint.UserName,
+                            MessageParts = TwitchHelper.CreateParts(channelPoint.RewardTitle + " by." + channelPoint.UserName)
                         }, true);
                     });
                 };
@@ -154,7 +166,7 @@ namespace JTSA.Panels
             if (isChannelPoint)
             {
                 form.MessageColor = "#AAAAAA";
-                form.ColorHex = "#FFFFFF";
+                form.HexColor = "#FFFFFF";
             }
 
             var chatedUser = DAO_ChatUser.SelectOneByUserId(form.UserId);
@@ -187,6 +199,12 @@ namespace JTSA.Panels
             TwitchChatFormList.Insert(0, form);
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ChatNotificationVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             DAO_Setting.InsertUpdate(
@@ -195,6 +213,12 @@ namespace JTSA.Panels
             );
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void JoinChatVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             DAO_Setting.InsertUpdate(

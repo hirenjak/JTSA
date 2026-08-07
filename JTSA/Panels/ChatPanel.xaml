@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:controls="clr-namespace:JTSA.Controls"
              xmlns:local="clr-namespace:JTSA.Panels"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -31,7 +32,7 @@
             
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="チャット通知音量"
-                    Width="Auto" 
+                           Width="Auto" 
                            Foreground="White"
                            FontSize="14" />
 
@@ -123,7 +124,7 @@
                                                    Text="{Binding DisplayName}"
                                                    d:Text="GamePlayListName"
                                                    Width="Auto" 
-                                                   Foreground="{Binding ColorHex}"
+                                                   Foreground="{Binding HexColor}"
                                                    FontSize="14" >
                                             </TextBlock>
 
@@ -139,23 +140,22 @@
                                         </Grid>
 
                                         <!-- メッセージ -->
-                                        <TextBox  Grid.Row="1" Grid.Column="0" 
-                                              Text="{Binding Message}"
-                                              IsReadOnly="True"
-                                              BorderThickness="0"
-                                              Background="Transparent" CaretBrush="Transparent"
-                                              FocusVisualStyle="{x:Null}"
-                                              AcceptsReturn="True"
-                                              Padding="0" Margin="0"
-                                              d:Text="Message"
-                                              TextWrapping="Wrap"
-                                              Width="Auto" 
-                                              Foreground="{Binding MessageColor}" 
-                                              FontSize="20" >
-                                        </TextBox>
+                                        <controls:TwitchMessageRichTextBox 
+                                            Grid.Row="1" Grid.Column="0" 
+                                            MessageParts="{Binding MessageParts}"
+                                            Foreground="{Binding MessageColor}" 
+                                            FontSize="16"
+                                            IsReadOnly="True"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="0"
+                                            IsTabStop="False"
+                                            IsUndoEnabled="False"
+                                            VerticalScrollBarVisibility="Hidden"
+                                            HorizontalScrollBarVisibility="Hidden"/>
 
                                         <!-- 受信日時 -->
-                                        <TextBlock Grid.Row="1" Grid.Column="0" 
+                                        <TextBlock Grid.Row="1" Grid.Column="1" 
                                                Text="{Binding CreatedDateTime, StringFormat={}{0:yyyy/MM/dd HH:mm}}"
                                                d:Text="9999/99/99"
                                                Width="Auto" 

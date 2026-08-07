@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JTSA.Panels;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -15,7 +16,7 @@ namespace JTSA.Forms
         public string UserName { get; set; } = "";
         public string DisplayName { get; set; } = "";
         public string Message { get; set; } = "";
-        public string ColorHex { get; set; } = "";
+        public string HexColor { get; set; } = "";
         public string MessageId { get; set; } = "";
         public string ProfielImageUrl { get; set; } = "";
 
@@ -26,5 +27,7 @@ namespace JTSA.Forms
         public DateTime CreatedDateTime { get; set; }
 
         public string MessageColor { get; set; } = "#FFFFFF";
+
+        public List<TwitchChatPart> MessageParts { get; set; } = new();
     }
 }

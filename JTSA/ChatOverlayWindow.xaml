@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:JTSA.Controls"
         mc:Ignorable="d"
         Title="ChatOverlayWindow"
-        Width="300"
-        Height="320"
+        Width="300"  Height="320"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -78,7 +78,7 @@
                                                    Text="{Binding DisplayName}"
                                                    d:Text="GamePlayListName"
                                                    Width="Auto" 
-                                                   Foreground="{Binding ColorHex}"
+                                                   Foreground="{Binding HexColor}"
                                                    FontSize="10" >
                                             </TextBlock>
 
@@ -94,20 +94,19 @@
                                         </Grid>
 
                                         <!-- メッセージ -->
-                                        <TextBox  Grid.Row="1" Grid.Column="0" 
-                                              Text="{Binding Message}"
-                                              IsReadOnly="True"
-                                              BorderThickness="0"
-                                              Background="Transparent" CaretBrush="Transparent"
-                                              FocusVisualStyle="{x:Null}"
-                                              AcceptsReturn="True"
-                                              Padding="0" Margin="0"
-                                              d:Text="Message"
-                                              TextWrapping="Wrap"
-                                              HorizontalAlignment="Stretch"
-                                              Foreground="{Binding MessageColor}" 
-                                              FontSize="12" >
-                                        </TextBox>
+                                        <controls:TwitchMessageRichTextBox 
+                                            Grid.Row="1" Grid.Column="0" 
+                                            MessageParts="{Binding MessageParts}"
+                                            Foreground="{Binding MessageColor}" 
+                                            FontSize="16"
+                                            IsReadOnly="True"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="0"
+                                            IsUndoEnabled="False"
+                                            IsTabStop="False"
+                                            VerticalScrollBarVisibility="Hidden"
+                                            HorizontalScrollBarVisibility="Hidden"/>
                                     </Grid>
                                 </Grid>
 

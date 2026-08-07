@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -112,6 +113,22 @@ namespace JTSA.Utility
 
             // 経過ミリ秒を計算
             return (long)(now - unixEpoch).TotalMilliseconds;
+        }
+
+
+        /// <summary>
+        /// 自配信を開く
+        /// </summary>
+        /// <param name="BroadcasterLogin"></param>
+        public static void OpenMyTwitchChannel()
+        {
+            var url = $"https://www.twitch.tv/{LoginName}";
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
         }
     }
 }

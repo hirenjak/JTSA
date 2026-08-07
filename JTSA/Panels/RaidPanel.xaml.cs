@@ -91,6 +91,7 @@ namespace JTSA.Panels
             if ((sender as ListBox)?.SelectedItem is RaidUserForm item)
             {
                 await TwitchHelper.StreamRaid(item.UserId);
+                JTSAHelper.OpenMyTwitchChannel();
             }
         }
 
