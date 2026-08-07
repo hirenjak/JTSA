@@ -16,136 +16,16 @@ namespace JTSA.Utility
 {
     static class TwitchHelper
     {
-        public static string ClientID { get; } = "tbpy1q9lh9pkyrqhde6o4f4dkq9rj0";
-
-        public static string RedirectUri = @"http://localhost:8080/";
-        public static string BroadcasterId = "";
-
-        public static string AccessToken { get { return api.Settings.AccessToken; } set { api.Settings.AccessToken = value; }}
-
         public static readonly TwitchAPI api;
 
+
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         static TwitchHelper()
         {
             api = new TwitchAPI();
             api.Settings.ClientId = ClientID;
-        }
-
-        public static async Task<DeviceCodeResponseIF> RequestDeviceCodeAsync()
-        {
-            using var client = new HttpClient();
-            var content = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages")
-            });
-            var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
-            var json = await response.Content.ReadAsStringAsync();
-
-            return JsonSerializer.Deserialize<DeviceCodeResponseIF>(json);
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="deviceCode"></param>
-        /// <param name="interval"></param>
-        /// <param name="expiresIn"></param>
-        /// <returns></returns>
-        public static async Task<AccessTokenResponseIF> PollDeviceTokenAsync(string deviceCode, int interval, int expiresIn)
-        {
-            using var client = new HttpClient();
-            var start = DateTime.UtcNow;
-            while ((DateTime.UtcNow - start).TotalSeconds < expiresIn)
-            {
-                await Task.Delay(interval * 1000);
-
-                var content = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>("client_id", ClientID),
-                    new KeyValuePair<string, string>("device_code", deviceCode),
-                    new KeyValuePair<string, string>("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
-                });
-                var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
-                var json = await response.Content.ReadAsStringAsync();
-
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("access_token", out var tokenElem))
-                {
-                    AccessTokenResponseIF elem = new()
-                    {
-                        accessToken = tokenElem.GetString() ?? "",
-                        refreshToken = doc.RootElement.GetProperty("refresh_token").GetString() ?? "",
-                        expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
-                    };
-
-                    return elem;
-                }
-                else if (doc.RootElement.TryGetProperty("error", out var errorElem))
-                {
-                    var error = errorElem.GetString();
-                    if (error == "authorization_pending" || error == "slow_down")
-                    {
-                        // 認証待ち or ポーリング間隔を守る
-                        continue; 
-                    }
-                    else
-                    {
-                        // その他のエラー
-                        break; 
-                    }
-                }
-            }
-            return new() {
-                accessToken = "",
-                refreshToken = "",
-                expiresIn = 0
-            };
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="refreshToken"></param>
-        /// <returns></returns>
-        public static async Task<AccessTokenResponseIF> RefreshAccessTokenAsync(string refreshToken)
-        {
-            using var client = new HttpClient();
-            var content = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                new KeyValuePair<string, string>("refresh_token", refreshToken)
-            });
-
-            var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
-            if (!response.IsSuccessStatusCode) return new()
-            {
-                accessToken = "",
-                refreshToken = "",
-                expiresIn = 0
-            };
-
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-
-            if (doc.RootElement.TryGetProperty("access_token", out var tokenElem))
-            {
-                return new AccessTokenResponseIF
-                {
-                    accessToken = tokenElem.GetString() ?? "",
-                    refreshToken = doc.RootElement.GetProperty("refresh_token").GetString() ?? "",
-                    expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
-                };
-            }
-            return new()
-            {
-                accessToken = "",
-                refreshToken = "",
-                expiresIn = 0
-            };
         }
 
 
@@ -214,7 +94,7 @@ namespace JTSA.Utility
                     {
                         results.Add(new TwitchStreamIF()
                         {
-                            UserId = data.Id,
+                            UserId = data.UserId,
                             Title = data.Title,
                             UserName = data.UserName,
                             UserLogin = data.UserLogin,
@@ -234,41 +114,6 @@ namespace JTSA.Utility
             }
 
             return results;
-        }
-
-
-        /// <summary>
-        /// カテゴリの取得
-        /// </summary>
-        /// <param name="gameId"></param>
-        /// <returns></returns>
-        public static async Task<TwitchCategoryIF> GetCategoryByGameId(string gameId)
-        {
-            TwitchCategoryIF result = null;
-            try
-            {
-                var apiResponse = await api.Helix.Games.GetGamesAsync(gameIds: [gameId]);
-
-                if (apiResponse?.Data != null)
-                {
-                    var responseData = apiResponse.Data.FirstOrDefault();
-
-                    result = new TwitchCategoryIF()
-                    {
-                        Id = responseData.Id,
-                        Name = responseData.Name,
-                        BoxArtUrl = responseData.BoxArtUrl
-                    };
-
-                    result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "128").Replace("{height}", "192");
-                }
-            }
-            catch (Exception ex)
-            {
-                
-            }
-
-            return result;
         }
 
 
@@ -296,36 +141,6 @@ namespace JTSA.Utility
             }
 
             return true;
-        }
-
-
-        /// <summary>
-        /// カテゴリ検索
-        /// </summary>
-        /// <param name="categoryName"></param>
-        /// <returns></returns>
-        public static async Task<List<TwitchCategoryIF>>? SearchCategoriesByGameNameAsync(string categoryName)
-        {
-            List<TwitchCategoryIF> list = [];
-            try
-            {
-                var apiResponse = await api.Helix.Search.SearchCategoriesAsync(categoryName);
-
-                foreach (var responseItem in apiResponse.Games)
-                {
-                    list.Add(new TwitchCategoryIF
-                    {
-                        Id = responseItem.Id ?? "",
-                        Name = responseItem.Name ?? "",
-                        BoxArtUrl = responseItem.BoxArtUrl ?? ""
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-            }
-
-            return list;
         }
 
 
@@ -361,6 +176,229 @@ namespace JTSA.Utility
 
             return result;
         }
+
+
+        public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
+
+            try
+            {
+                var apiResponse = await api.Helix.Raids.StartRaidAsync(BroadcasterId, toRaidBroadcasterId);
+
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return apiResponse.Data.FirstOrDefault().CreatedAt;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
+            }
+
+            return null;
+        }
+
+
+        #region ==================== 認証関連 ====================
+
+        public static string ClientID { get; } = "tbpy1q9lh9pkyrqhde6o4f4dkq9rj0";
+
+        public static string RedirectUri = @"http://localhost:8080/";
+        public static string BroadcasterId = "";
+
+        public static string AccessToken { get { return api.Settings.AccessToken; } set { api.Settings.AccessToken = value; } }
+
+        public static async Task<DeviceCodeResponseIF> RequestDeviceCodeAsync()
+        {
+            using var client = new HttpClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("client_id", ClientID),
+                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages")
+            });
+            var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
+            var json = await response.Content.ReadAsStringAsync();
+
+            return JsonSerializer.Deserialize<DeviceCodeResponseIF>(json);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="deviceCode"></param>
+        /// <param name="interval"></param>
+        /// <param name="expiresIn"></param>
+        /// <returns></returns>
+        public static async Task<AccessTokenResponseIF> PollDeviceTokenAsync(string deviceCode, int interval, int expiresIn)
+        {
+            using var client = new HttpClient();
+            var start = DateTime.UtcNow;
+            while ((DateTime.UtcNow - start).TotalSeconds < expiresIn)
+            {
+                await Task.Delay(interval * 1000);
+
+                var content = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("client_id", ClientID),
+                    new KeyValuePair<string, string>("device_code", deviceCode),
+                    new KeyValuePair<string, string>("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+                });
+                var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
+                var json = await response.Content.ReadAsStringAsync();
+
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("access_token", out var tokenElem))
+                {
+                    AccessTokenResponseIF elem = new()
+                    {
+                        accessToken = tokenElem.GetString() ?? "",
+                        refreshToken = doc.RootElement.GetProperty("refresh_token").GetString() ?? "",
+                        expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
+                    };
+
+                    return elem;
+                }
+                else if (doc.RootElement.TryGetProperty("error", out var errorElem))
+                {
+                    var error = errorElem.GetString();
+                    if (error == "authorization_pending" || error == "slow_down")
+                    {
+                        // 認証待ち or ポーリング間隔を守る
+                        continue;
+                    }
+                    else
+                    {
+                        // その他のエラー
+                        break;
+                    }
+                }
+            }
+            return new()
+            {
+                accessToken = "",
+                refreshToken = "",
+                expiresIn = 0
+            };
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="refreshToken"></param>
+        /// <returns></returns>
+        public static async Task<AccessTokenResponseIF> RefreshAccessTokenAsync(string refreshToken)
+        {
+            using var client = new HttpClient();
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("client_id", ClientID),
+                new KeyValuePair<string, string>("grant_type", "refresh_token"),
+                new KeyValuePair<string, string>("refresh_token", refreshToken)
+            });
+
+            var response = await client.PostAsync("https://id.twitch.tv/oauth2/token", content);
+            if (!response.IsSuccessStatusCode) return new()
+            {
+                accessToken = "",
+                refreshToken = "",
+                expiresIn = 0
+            };
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("access_token", out var tokenElem))
+            {
+                return new AccessTokenResponseIF
+                {
+                    accessToken = tokenElem.GetString() ?? "",
+                    refreshToken = doc.RootElement.GetProperty("refresh_token").GetString() ?? "",
+                    expiresIn = doc.RootElement.GetProperty("expires_in").GetInt32()
+                };
+            }
+            return new()
+            {
+                accessToken = "",
+                refreshToken = "",
+                expiresIn = 0
+            };
+        }
+
+        #endregion
+
+
+        #region ==================== カテゴリ取得関連 ====================
+
+        /// <summary>
+        /// カテゴリ検索
+        /// </summary>
+        /// <param name="categoryName"></param>
+        /// <returns></returns>
+        public static async Task<List<TwitchCategoryIF>>? SearchCategoriesByGameNameAsync(string categoryName)
+        {
+            List<TwitchCategoryIF> list = [];
+            try
+            {
+                var apiResponse = await api.Helix.Search.SearchCategoriesAsync(categoryName);
+
+                foreach (var responseItem in apiResponse.Games)
+                {
+                    list.Add(new TwitchCategoryIF
+                    {
+                        Id = responseItem.Id ?? "",
+                        Name = responseItem.Name ?? "",
+                        BoxArtUrl = responseItem.BoxArtUrl ?? ""
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+
+            return list;
+        }
+
+
+        /// <summary>
+        /// カテゴリの取得
+        /// </summary>
+        /// <param name="gameId"></param>
+        /// <returns></returns>
+        public static async Task<TwitchCategoryIF> GetCategoryByGameId(string gameId)
+        {
+            TwitchCategoryIF result = null;
+            try
+            {
+                var apiResponse = await api.Helix.Games.GetGamesAsync(gameIds: [gameId]);
+
+                if (apiResponse?.Data != null)
+                {
+                    var responseData = apiResponse.Data.FirstOrDefault();
+
+                    result = new TwitchCategoryIF()
+                    {
+                        Id = responseData.Id,
+                        Name = responseData.Name,
+                        BoxArtUrl = responseData.BoxArtUrl
+                    };
+
+                    result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "128").Replace("{height}", "192");
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            return result;
+        }
+
+        #endregion
+
+
+        #region ==================== チャンネルポイント関連 ====================
 
         /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬リストを取得する
@@ -398,6 +436,7 @@ namespace JTSA.Utility
 
             return null;
         }
+
 
         /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬を修正する
@@ -444,6 +483,7 @@ namespace JTSA.Utility
             return null;
         }
 
+
         /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬を新規作成する
         /// API: POST https://api.twitch.tv/helix/channel_points/custom_rewards
@@ -485,28 +525,10 @@ namespace JTSA.Utility
             return null;
         }
 
-
-        public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
-        {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
-
-            try
-            {
-                var apiResponse = await api.Helix.Raids.StartRaidAsync(BroadcasterId, toRaidBroadcasterId);
-
-                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
-                return apiResponse.Data.FirstOrDefault().CreatedAt;
-            }
-            catch (Exception ex)
-            {
-                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
-            }
-
-            return null;
-        }
+        #endregion
 
 
+        #region ==================== チャット関連 ====================
 
         public static async Task<string?> SendChat(string chatContent)
         {
@@ -558,6 +580,8 @@ namespace JTSA.Utility
 
             return true;
         }
+
+        #endregion
     }
 }
 

@@ -31,7 +31,9 @@
                      BorderThickness="0"
                      Foreground="White"
                      IsHitTestVisible="False"
-                     ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                     HorizontalContentAlignment="Stretch">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment"
@@ -68,7 +70,7 @@
                                         <Grid Grid.Row="0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
 
                                             <!-- ユーザー名 -->
@@ -102,7 +104,7 @@
                                               Padding="0" Margin="0"
                                               d:Text="Message"
                                               TextWrapping="Wrap"
-                                              Width="Auto" 
+                                              HorizontalAlignment="Stretch"
                                               Foreground="{Binding MessageColor}" 
                                               FontSize="12" >
                                         </TextBox>

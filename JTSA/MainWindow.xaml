@@ -3,7 +3,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:JTSA"
-        Title="JakTwtchStreamerAssistant v0.6.8" Height="700" Width="1100">
+        Title="JakTwtchStreamerAssistant v0.6.9" Height="700" Width="1100">
 
     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#FF404040">
         <Grid.ColumnDefinitions>
@@ -330,6 +330,12 @@
 
             <TabItem Header="レイド">
                 <panels:RaidPanel x:Name="RaidPanel"/>
+            </TabItem>
+            
+            <TabItem Header="CP">
+                <StackPanel>
+                    <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
+                </StackPanel>
             </TabItem>
 
             <TabItem Header="Setting">

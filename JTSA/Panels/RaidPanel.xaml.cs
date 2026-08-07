@@ -33,8 +33,16 @@ namespace JTSA.Panels
             DataContext = this;
 
             Loaded += RaidPanel_Loaded;
+
+            RaidUserListBox.MouseDoubleClick += RaidUserListBox_MouseDoubleClick;
         }
 
+
+        /// <summary>
+        /// パネル読み込み時イベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void RaidPanel_Loaded(object sender, RoutedEventArgs e)
         {
             RaidUserList.Clear();
@@ -71,61 +79,21 @@ namespace JTSA.Panels
             }
         }
 
+        #region ==================== レイド関連イベントハンドラ ====================
 
         /// <summary>
-        /// 配信視聴ボタンクリック時
+        /// レイドユーザーダブルクリック時イベント
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void StreamShowButton_Click(object sender, RoutedEventArgs e)
+        private async void RaidUserListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-
-        }
-
-
-        /// <summary>
-        /// レイド開始ボタンクリック時
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void RaidButton_Click(object sender, RoutedEventArgs e)
-        {
-            if ((sender as Button)?.DataContext is RaidUserForm item)
+            if ((sender as ListBox)?.SelectedItem is RaidUserForm item)
             {
-                 await TwitchHelper.StreamRaid(item.UserId);
+                await TwitchHelper.StreamRaid(item.UserId);
             }
         }
 
-
-        /// <summary>
-        /// レイドユーザーリストボックスクリック時
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void RaidUserListBox_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-
-        }
-
-
-        /// <summary>
-        /// レイドユーザーリストボックス選択変更時
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void RaidUserListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
-        }
-
-        private void SubscribeUserListBox_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-
-        }
-
-        private void SubscribeUserListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
-        }
+        #endregion
     }
 }
