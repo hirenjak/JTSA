@@ -9,6 +9,7 @@ using TwitchLib.Api;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
+using TwitchLib.Api.Helix.Models.Channels.SendChatMessage;
 using TwitchLib.Client;
 
 namespace JTSA.Utility
@@ -36,7 +37,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows")
+                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -484,5 +485,79 @@ namespace JTSA.Utility
             return null;
         }
 
+
+        public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
+
+            try
+            {
+                var apiResponse = await api.Helix.Raids.StartRaidAsync(BroadcasterId, toRaidBroadcasterId);
+
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return apiResponse.Data.FirstOrDefault().CreatedAt;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
+            }
+
+            return null;
+        }
+
+
+
+        public static async Task<string?> SendChat(string chatContent)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "チャット送信");
+
+            try
+            {
+                var sendChatMessageRequest = new SendChatMessageRequest
+                {
+                    BroadcasterId = BroadcasterId,
+                    SenderId = BroadcasterId,
+                    Message = chatContent
+                };
+                var apiResponse = await api.Helix.Chat.SendChatMessage(sendChatMessageRequest);
+
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return apiResponse.Data.FirstOrDefault().MessageId;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
+            }
+
+            return null;
+        }
+
+
+        public static async Task<bool?> PinedChat(string chatId)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
+
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+            var response = await client.PutAsync($"https://api.twitch.tv/helix/chat/pins" +
+                                                $"?broadcaster_id={BroadcasterId}" +
+                                                $"&moderator_id={BroadcasterId}" +
+                                                $"&message_id={chatId}", null);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return false;
+            }
+
+            return true;
+        }
     }
 }
+

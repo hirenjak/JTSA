@@ -57,6 +57,24 @@
                         IsSnapToTickEnabled="False"
                         ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
             </StackPanel>
+
+            <TextBox x:Name="sendChatTextBox" Text=""
+                         Width="Auto" 
+                         Foreground="Black"
+                         Background="LightGray"
+                         FontSize="14" />
+            <Grid Grid.Column="0" >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" x:Name="sendChatButton" Content="送信" 
+                            HorizontalAlignment="Stretch"
+                            Margin="2, 2, 2, 4"/>
+                <Button Grid.Column="1" x:Name="pinedChatButton" Content="ピン止め送信" 
+                            HorizontalAlignment="Stretch"
+                            Margin="2, 2, 2, 4"/>
+            </Grid>
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" x:Name="ChatListBox" 

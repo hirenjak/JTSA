@@ -29,9 +29,8 @@ namespace JTSA.Panels
         /// </summary>
         public RaidPanel()
         {
-            DataContext = this;
-
             InitializeComponent();
+            DataContext = this;
 
             Loaded += RaidPanel_Loaded;
         }
@@ -43,9 +42,21 @@ namespace JTSA.Panels
 
             var nowTime = DateTime.Now;
 
+            apiResluts = apiResluts.OrderBy(x => x.StartedAt).ToList();
+            apiResluts.Reverse();
+
             foreach (var data in apiResluts)
             {
-                var timeSpan = (nowTime - data.StartedAt);
+                
+                var timeSpan =  nowTime.ToUniversalTime() - data.StartedAt.ToUniversalTime();
+
+                var ThumbnailUrl = data.ThumbnailUrl.Replace("{width}", "320").Replace("{height}", "180");
+
+                var categoryData = await TwitchHelper.GetCategoryByGameId(data.GameId);
+                var StreamGameBoxArtUrl = categoryData?.BoxArtUrl?.Replace("{width}", "32").Replace("{height}", "48");
+
+                // TotalHoursの小数点以下を切り捨てて合計時間（Time部分）を取得
+                int totalHours = (int)Math.Floor(timeSpan.TotalHours);
 
                 RaidUserList.Add(new RaidUserForm
                 {
@@ -53,9 +64,9 @@ namespace JTSA.Panels
                     UserName = data.UserName,
                     UserLogin = data.UserLogin,
                     StreamTitle = data.Title,
-                    StreamGameId = data.GameId,
-                    StreamingTime = timeSpan.Hours + "時間" + timeSpan.Minutes + "分" + +timeSpan.Seconds + "秒",
-                    ThumbnailUrl = data.ThumbnailUrl
+                    GameBoxArtUrl = StreamGameBoxArtUrl,
+                    StreamingTime = $"{totalHours}:{timeSpan:mm\\:ss}",
+                    ThumbnailUrl = ThumbnailUrl
                 });
             }
         }
@@ -77,9 +88,12 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void RaidButton_Click(object sender, RoutedEventArgs e)
+        private async void RaidButton_Click(object sender, RoutedEventArgs e)
         {
-
+            if ((sender as Button)?.DataContext is RaidUserForm item)
+            {
+                 await TwitchHelper.StreamRaid(item.UserId);
+            }
         }
 
 

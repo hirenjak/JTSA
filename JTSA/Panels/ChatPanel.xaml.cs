@@ -46,6 +46,23 @@ namespace JTSA.Panels
 
             ChatNotificationPlayer.Init(ChatNotificationReader);
             JoinChatPlayer.Init(JoinChatReader);
+
+            sendChatButton.Click += SendChatButton_Click;
+            pinedChatButton.Click += PinedChatButton_Click;
+        }
+
+        private async void PinedChatButton_Click(object sender, RoutedEventArgs e)
+        {
+            var chatId = await TwitchHelper.SendChat(sendChatTextBox.Text);
+            var result = await TwitchHelper.PinedChat(chatId);
+
+            sendChatTextBox.Text = string.Empty;
+        }
+
+        private async void SendChatButton_Click(object sender, RoutedEventArgs e)
+        {
+            await TwitchHelper.SendChat(sendChatTextBox.Text);
+            sendChatTextBox.Text = string.Empty;
         }
 
         /// <summary>

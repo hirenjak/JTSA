@@ -15,12 +15,18 @@ namespace JTSA.Forms
     // アプリ情報用クラス
     public class RaidUserForm
     {
-        public string UserId;
-        public string UserName;
-        public string UserLogin;
-        public string ThumbnailUrl;
-        public string StreamTitle;
-        public string StreamGameId;
-        public string StreamingTime;
+        public string UserId { get; set; }
+
+        public string UserName { get; set; }
+        
+        public string UserLogin { get; set; }
+        
+        public string ThumbnailUrl { get; set; }
+        
+        public string StreamTitle { get; set; }
+        
+        public string GameBoxArtUrl { get; set; }
+        
+        public string StreamingTime { get; set; }
     }
 }
