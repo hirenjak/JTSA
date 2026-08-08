@@ -1,4 +1,5 @@
-﻿using JTSA.Forms;
+﻿using JTSA.Dao;
+using JTSA.Forms;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -28,6 +29,12 @@ namespace JTSA
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
         public ObservableCollection<TwitchChatForm> OverlayTwitchChatFormList { get; } = new();
         
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="owner"></param>
+        /// <param name="twitchChatFormList"></param>
         public ChatOverlayWindow(Window owner, ObservableCollection<TwitchChatForm> twitchChatFormList)
         {
             this.Owner = owner;
@@ -48,21 +55,81 @@ namespace JTSA
 
             TwitchChatFormList.CollectionChanged += TwitchChatFormList_CollectionChanged;
 
-
             Loaded += ChatOverlayWindow_Loaded;
-
 
             Closed += (_, _) =>
             {
                 TwitchChatFormList.CollectionChanged -=
                     TwitchChatFormList_CollectionChanged;
             };
+
+            MouseLeftButtonDown += Window_MouseLeftButtonDown;
+
+            MouseLeftButtonUp += ChatOverlayWindow_MouseLeftButtonUp;
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ChatOverlayWindow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            // 最大化・最小化中は通常状態の位置を使う
+            Rect position = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, Width, Height)
+                : RestoreBounds;
+
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayPosX, ((int)position.X).ToString());
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayPosY, ((int)position.Y).ToString());
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ChatOverlayWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            IsSettingEnabled = false;
+            IsSettingEnabled = true;
             SetClickThrough(IsSettingEnabled);
+
+            var settingChatOverlayPosX = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosX);
+            var settingChatOverlayPosY = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosY);
+
+            if (settingChatOverlayPosX == null || settingChatOverlayPosY == null)
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+            else
+            {
+                double chatOverlayPosX = double.Parse(settingChatOverlayPosX.Value);
+                double chatOverlayPosY = double.Parse(settingChatOverlayPosY.Value);
+
+
+                // 現在接続されている画面内か確認
+                bool isVisible =
+                    chatOverlayPosX < SystemParameters.VirtualScreenLeft
+                                + SystemParameters.VirtualScreenWidth &&
+                    chatOverlayPosY < SystemParameters.VirtualScreenTop
+                               + SystemParameters.VirtualScreenHeight &&
+                    chatOverlayPosX + Width > SystemParameters.VirtualScreenLeft &&
+                    chatOverlayPosY + Height > SystemParameters.VirtualScreenTop;
+
+                if (isVisible)
+                {
+                    WindowStartupLocation = WindowStartupLocation.Manual;
+                    Left = chatOverlayPosX;
+                    Top = chatOverlayPosY;
+                }
+                else
+                {
+                    // モニター構成が変わって画面外になった場合
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                }
+            }
         }
 
 

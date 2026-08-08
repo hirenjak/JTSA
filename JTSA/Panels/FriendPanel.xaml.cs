@@ -199,7 +199,7 @@ namespace JTSA.Panels
         private void FriendPrefixWordTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             DAO_Setting.InsertUpdate(
-                (int)DAO_Setting.SettingName.FriendPrefixWord,
+                DAO_Setting.SettingName.FriendPrefixWord,
                 FriendPrefixWordTextBox.Text
             );
         }

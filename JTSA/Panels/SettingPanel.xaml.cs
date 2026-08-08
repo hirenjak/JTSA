@@ -64,17 +64,17 @@ namespace JTSA.Panels
 
             // --- 設定情報保存処理 ---
             DAO_Setting.InsertUpdate(
-                (int)DAO_Setting.SettingName.UserName,
+                DAO_Setting.SettingName.UserName,
                 JTSAHelper.LoginName
             );
 
             DAO_Setting.InsertUpdate(
-                (int)DAO_Setting.SettingName.RefreshToken,
+                DAO_Setting.SettingName.RefreshToken,
                 accessTokenResponse.refreshToken
             );
 
             DAO_Setting.InsertUpdate(
-                (int)DAO_Setting.SettingName.ExpiresIn,
+                DAO_Setting.SettingName.ExpiresIn,
                 accessTokenResponse.expiresIn.ToString()
             );
 

@@ -1,8 +1,10 @@
-﻿using JTSA.Forms.TwitchIF;
+﻿using JTSA.Forms;
+using JTSA.Forms.TwitchIF;
 using JTSA.Panels;
 using JTSA.TwitchIF;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
@@ -581,6 +583,54 @@ namespace JTSA.Utility
             }
 
             return true;
+        }
+
+
+        public static async Task<bool?> PinedDeleteChat()
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
+
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+            var response = await client.DeleteAsync($"https://api.twitch.tv/helix/chat/pins" +
+                                                $"?broadcaster_id={BroadcasterId}" +
+                                                $"&moderator_id={BroadcasterId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static async Task<TwitchChatForm?> GetPinedChat()
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+            var response = await client.GetAsync($"https://api.twitch.tv/helix/chat/pins" +
+                                                $"?broadcaster_id={BroadcasterId}" +
+                                                $"&moderator_id={BroadcasterId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return null;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<TwitchChatForm>();
+
+            return result;
         }
 
         #endregion

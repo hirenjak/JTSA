@@ -30,6 +30,8 @@ namespace JTSA.Panels
 
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
+        public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
+
         private WaveFileReader? ChatNotificationReader = new(Properties.Resources.CommentNotification);
         private WaveOutEvent? ChatNotificationPlayer = new();
 
@@ -58,8 +60,41 @@ namespace JTSA.Panels
 
             sendChatButton.Click += SendChatButton_Click;
             pinedChatButton.Click += PinedChatButton_Click;
+
+            IsStartShowChatOverlayDisp.Checked += IsStartShowChatOverlayDisp_Checked;
+            IsStartShowChatOverlayDisp.Unchecked += IsStartShowChatOverlayDisp_Unchecked;
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void IsStartShowChatOverlayDisp_Unchecked(object sender, RoutedEventArgs e)
+        {
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.IsChatOverlay, "0");
+            IsStartShowChatOverlayDisp.IsChecked = false;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void IsStartShowChatOverlayDisp_Checked(object sender, RoutedEventArgs e)
+        {
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.IsChatOverlay, "1");
+            IsStartShowChatOverlayDisp.IsChecked = true;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void PinedChatButton_Click(object sender, RoutedEventArgs e)
         {
             var chatId = await TwitchHelper.SendChat(sendChatTextBox.Text);
@@ -68,11 +103,18 @@ namespace JTSA.Panels
             sendChatTextBox.Text = string.Empty;
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void SendChatButton_Click(object sender, RoutedEventArgs e)
         {
             await TwitchHelper.SendChat(sendChatTextBox.Text);
             sendChatTextBox.Text = string.Empty;
         }
+
 
         /// <summary>
         /// コントロール読み込み時
@@ -118,6 +160,7 @@ namespace JTSA.Panels
                             UserId = channelPoint.UserId,
                             UserName = channelPoint.UserLogin,
                             DisplayName = "ChannelPonint",
+                            HexColor = "White",
                             Message = channelPoint.RewardTitle + " by." + channelPoint.UserName,
                             MessageParts = TwitchHelper.CreateParts(channelPoint.RewardTitle + " by." + channelPoint.UserName)
                         }, true);
@@ -127,9 +170,28 @@ namespace JTSA.Panels
                 await twitchChatService.ConnectAsync();
                 await twitchEventSubService.ConnectAsync();
             }
+
+
+            var settingIsChatOverlay = DAO_Setting.SelectOneById(DAO_Setting.SettingName.IsChatOverlay);
+            if (settingIsChatOverlay != null && settingIsChatOverlay.Value == "1")
+            {
+                transparentWindow = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
+                transparentWindow.Show();
+                IsStartShowChatOverlayDisp.IsChecked = true;
+            }
+            else
+            {
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.IsChatOverlay, "0");
+                IsStartShowChatOverlayDisp.IsChecked = false;
+            }
         }
 
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="form"></param>
+        /// <param name="isChannelPoint"></param>
         private async void ChatAddAsync(TwitchChatForm form, bool isChannelPoint)
         {
             var userData = DAO_User.SelectOneByUserId(form.UserId);
@@ -197,6 +259,17 @@ namespace JTSA.Panels
             }
 
             TwitchChatFormList.Insert(0, form);
+
+            await PinedChatLoad();
+        }
+
+        private async Task PinedChatLoad()
+        {
+            PinedTwitchChatFormList.Clear();
+
+            var message = await TwitchHelper.GetPinedChat();
+
+            PinedTwitchChatFormList.Add(message);
         }
 
 
@@ -208,7 +281,7 @@ namespace JTSA.Panels
         private void ChatNotificationVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             DAO_Setting.InsertUpdate(
-                (int)DAO_Setting.SettingName.ChatNotificationVolume,
+                DAO_Setting.SettingName.ChatNotificationVolume,
                 e.NewValue.ToString()
             );
         }
@@ -222,15 +295,20 @@ namespace JTSA.Panels
         private void JoinChatVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             DAO_Setting.InsertUpdate(
-                (int)DAO_Setting.SettingName.JoinChatVolume,
+                DAO_Setting.SettingName.JoinChatVolume,
                 e.NewValue.ToString()
             );
         }
 
-
+        /// <summary>  </summary>
         ChatOverlayWindow transparentWindow;
 
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TransparentWindowOpen_Click(object sender, RoutedEventArgs e)
         {
             if(transparentWindow != null)
@@ -245,9 +323,21 @@ namespace JTSA.Panels
             }
         }
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TransparentWindowOpenSetting_Click(object sender, RoutedEventArgs e)
         {
+            if (transparentWindow == null) return;
             transparentWindow.SwitchSettingClick();
+        }
+
+        private async void PinedChatPurgeButton_Click(object sender, RoutedEventArgs e)
+        {
+            await TwitchHelper.PinedDeleteChat();
         }
     }
 }

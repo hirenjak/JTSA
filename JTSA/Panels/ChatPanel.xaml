@@ -7,75 +7,129 @@
              xmlns:local="clr-namespace:JTSA.Panels"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid>
+    <Grid
+        Margin="8, 4, 8, 0">
+        
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
+        <StackPanel 
+            Grid.Row="0">
 
-            <Grid Grid.Column="0" >
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="240"/>
+                    <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" x:Name="TransparentWindowOpenButton" Content="チャットオーバーレイ" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"
-                            Click="TransparentWindowOpen_Click"/>
-                <Button Grid.Column="1" x:Name="TransparentWindowSettingButton" Content="操作可能切替" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"
-                            Click="TransparentWindowOpenSetting_Click"/>
+
+
+                <StackPanel
+                    Grid.Column="0" 
+                    Margin="0, 0, 0, 0">
+
+                    <StackPanel 
+                        Orientation="Horizontal">
+
+                        <TextBlock 
+                            Text="チャット通知音量"
+                            Width="Auto" 
+                            Foreground="White" FontSize="14" />
+
+                        <Slider 
+                            x:Name="ChatNotificationVolumeSlider"
+                            Width="200"
+                            Minimum="0" Maximum="100"
+                            TickFrequency="10"
+                            IsSnapToTickEnabled="False"
+                            ValueChanged="ChatNotificationVolumeSlider_ValueChanged"/>
+
+                    </StackPanel>
+
+                    <StackPanel 
+                        Orientation="Horizontal">
+                        <TextBlock 
+                            Text="チャット参加音量"
+                            Width="Auto" 
+                            Foreground="White" FontSize="14" />
+                        <Slider 
+                            x:Name="JoinChatVolumeSlider"
+                            Width="200"
+                            Minimum="0" Maximum="100"
+                            TickFrequency="10"
+                            IsSnapToTickEnabled="False"
+                            ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
+                    </StackPanel>
+
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Height="28">
+
+                        <TextBlock 
+                            Text="アプリ開始時表示"
+                            Width="Auto" 
+                            Foreground="White" FontSize="14" 
+                            VerticalAlignment="Center"/>
+                        <CheckBox 
+                            x:Name="IsStartShowChatOverlayDisp" 
+                            Margin="4, 2, 0, 0"
+                            VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="1" 
+                    Orientation="Vertical"
+                    Margin="8, 0, 0, 0">
+
+                    <Button 
+                        x:Name="TransparentWindowOpenButton" 
+                        Content="オーバーレイ切替" 
+                        HorizontalAlignment="Stretch"
+                        Height="28"
+                        Click="TransparentWindowOpen_Click"/>
+
+                    <Button x:Name="TransparentWindowSettingButton" 
+                        Content="位置調整モード切替" 
+                        HorizontalAlignment="Stretch"
+                        Height="28"
+                        Margin="0, 4, 0, 0"
+                        Click="TransparentWindowOpenSetting_Click"/>
+                </StackPanel>
+
             </Grid>
             
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="チャット通知音量"
-                           Width="Auto" 
-                           Foreground="White"
-                           FontSize="14" />
-
-                <Slider x:Name="ChatNotificationVolumeSlider"
-                    Width="200"
-                    Minimum="0"
-                    Maximum="100"
-                    TickFrequency="10"
-                    IsSnapToTickEnabled="False"
-                    ValueChanged="ChatNotificationVolumeSlider_ValueChanged"/>
-
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="チャット参加音量"
-                    Width="Auto" 
-                           Foreground="White"
-                           FontSize="14" />
-                <Slider x:Name="JoinChatVolumeSlider"
-                        Width="200"
-                        Minimum="0"
-                        Maximum="100"
-                        TickFrequency="10"
-                        IsSnapToTickEnabled="False"
-                        ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
-            </StackPanel>
-
-            <TextBox x:Name="sendChatTextBox" Text=""
-                         Width="Auto" 
-                         Foreground="Black"
-                         Background="LightGray"
-                         FontSize="14" />
-            <Grid Grid.Column="0" >
+            <!-- チャット送信部 -->
+            <Grid
+                Height="42">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="64"/>
+                    <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" x:Name="sendChatButton" Content="送信" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"/>
-                <Button Grid.Column="1" x:Name="pinedChatButton" Content="ピン止め送信" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"/>
+
+                <Button 
+                    Grid.Column="0" x:Name="sendChatButton" Content="送信" 
+                    Margin="2, 0, 0, 0"/>
+                
+                <Button 
+                    Grid.Column="1" x:Name="pinedChatButton" Content="ピン留め" 
+                    HorizontalAlignment="Stretch"
+                    Margin="4, 0, 0, 0"/>
+
+                <TextBox 
+                    Grid.Column="2"
+                    x:Name="sendChatTextBox"
+                    Margin="8, 0, 0, 0"
+                    Foreground="Black" FontSize="14"
+                    Background="LightGray"/>
             </Grid>
+
+            <Border Margin="0, 8, 0, 0" Width="Auto" Height="2" Background="White"/>
+            
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" x:Name="ChatListBox" 
@@ -165,18 +219,6 @@
                                         </TextBlock>
                                     </Grid>
                                 </Grid>
-
-                                <Grid >
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-
-                                    <StackPanel Grid.Column="1" 
-                                                Orientation="Vertical">
-                                    </StackPanel>
-                                </Grid>
                             </StackPanel>
                             <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
                         </StackPanel>
@@ -184,5 +226,113 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+
+        <StackPanel
+            Grid.Row="2">
+            <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
+
+            <ScrollViewer Grid.Row="1" x:Name="PinedChatListBox" 
+                  HorizontalScrollBarVisibility="Disabled" 
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                  Height="Auto" Width="Auto" 
+                  Background="#FF404040" >
+                <ItemsControl ItemsSource="{Binding PinedTwitchChatFormList}"
+                      d:ItemsSource="{d:SampleData ItemCount = 1}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <StackPanel Margin="8, 4, 8, 0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="48"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Grid.Column="0" Width="42" Height="42">
+                                            <Ellipse.Fill>
+                                                <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
+                                            </Ellipse.Fill>
+                                        </Ellipse>
+
+                                        <!-- アイテム上部ステータス部分 -->
+                                        <Grid Grid.Column="1"
+                                  Margin="8, 0, 0, 0">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Grid Grid.Row="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- ユーザー名 -->
+                                                <TextBlock Grid.Column="0" 
+                                                    Text="{Binding DisplayName}"
+                                                    d:Text="GamePlayListName"
+                                                    Width="Auto" 
+                                                    Foreground="{Binding HexColor}"
+                                                    FontSize="14" >
+                                                </TextBlock>
+
+                                                <!-- ユーザー名 -->
+                                                <TextBlock Grid.Column="1" 
+                                                    Text="{Binding UserName, StringFormat=({0})}"
+                                                    d:Text="GamePlayListName"
+                                                    Width="Auto" 
+                                                    Margin="4, 0, 0, 0"
+                                                    Foreground="White"
+                                                    FontSize="14" >
+                                                </TextBlock>
+                                            </Grid>
+
+                                            <!-- メッセージ -->
+                                            <controls:TwitchMessageRichTextBox 
+                                                Grid.Row="1" Grid.Column="0" 
+                                                MessageParts="{Binding MessageParts}"
+                                                Foreground="{Binding MessageColor}" 
+                                                FontSize="16"
+                                                IsReadOnly="True"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0"
+                                                IsTabStop="False"
+                                                IsUndoEnabled="False"
+                                                VerticalScrollBarVisibility="Hidden"
+                                                HorizontalScrollBarVisibility="Hidden"/>
+
+                                            <!-- 受信日時 -->
+                                            <TextBlock Grid.Row="1" Grid.Column="1" 
+                                                Text="{Binding CreatedDateTime, StringFormat={}{0:yyyy/MM/dd HH:mm}}"
+                                                d:Text="9999/99/99"
+                                                Width="Auto" 
+                                                FontSize="12" Foreground="White"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom">
+                                            </TextBlock>
+                                        </Grid>
+                
+                <Button 
+                    Grid.Column="1" x:Name="PinedChatPurgeButton" Content="解除" 
+                    HorizontalAlignment="Stretch"
+                    Margin="4, 0, 0, 0"
+                    Click="PinedChatPurgeButton_Click"/>
+                                    </Grid>
+                                </StackPanel>
+                                <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+        </StackPanel>
     </Grid>
 </UserControl>

@@ -12,6 +12,9 @@ namespace JTSA.Dao
             FriendPrefixWord = 4,
             ChatNotificationVolume = 5,
             JoinChatVolume = 6,
+            IsChatOverlay = 7,
+            ChatOverlayPosX = 8,
+            ChatOverlayPosY = 9,
         }
 
 
@@ -35,16 +38,16 @@ namespace JTSA.Dao
         /// <param name="db"></param>
         /// <param name="insertData"></param>
         /// <returns></returns>
-        public static bool InsertUpdate(int name, string value)
+        public static bool InsertUpdate(SettingName name, string value)
         {
             using var db = new AppDbContext();
 
-            var count = db.M_Setting.Count(x => x.Name == name);
+            var count = db.M_Setting.Count(x => x.Name == (int)name);
 
             if (count == 0)
             {
                 db.M_Setting.AddRange(new M_Setting { 
-                    Name = name,
+                    Name = (int)name,
                     Value = value,
                     UpdatedDateTime = DateTime.Now,
                     CreatedDateTime = DateTime.Now,
@@ -55,7 +58,7 @@ namespace JTSA.Dao
             {
                 db.M_Setting.UpdateRange(new M_Setting
                 {
-                    Name = name,
+                    Name = (int)name,
                     Value = value,
                     UpdatedDateTime = DateTime.Now,
                     LastUsedDateTime = DateTime.Now
