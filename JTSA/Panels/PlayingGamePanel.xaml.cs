@@ -161,8 +161,9 @@ namespace JTSA.Panels
                 {
                     var categoryData = await TwitchHelper.GetCategoryByGameId(item.CategoryId);
 
-                    mainWindow.editTitleTextForm.SetCategory(categoryData.Id, categoryData.Name, categoryData.BoxArtUrl);
-                    mainWindow.SetDisplayFromEditFrom();
+                    mainWindow.CurrentCategoryId = categoryData.Id;
+                    mainWindow.CurrentCategoryName = categoryData.Name;
+                    mainWindow.CurrentCategoryBoxArtUrl = categoryData.BoxArtUrl;
                 }
             }
 

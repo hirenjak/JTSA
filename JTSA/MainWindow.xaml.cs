@@ -26,21 +26,109 @@ namespace JTSA
 		/// <summary>  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
-		public EditTitleTextForm editTitleTextForm = new();
+		//public EditTitleTextForm editTitleTextForm = new();
 
 		private DispatcherTimer accessTokenRefreshTimer;
 
+
+		/// <summary>
+		/// 
+		/// </summary>
 		public string CurrentTitleText 
 		{ 
 			get
 			{ 
 				return CurrentTitleTextBlock.Text; 
 			}
+
 			set
 			{ 
 				CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(value); 
 				TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";  
 			} 
+		}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		public string CurrentCategorySteamUrl
+		{
+			get
+			{
+				return SteamUrlTextBlock.Text;
+            }
+
+			set
+			{
+				SteamUrlTextBlock.Text = value;
+				
+			}
+		}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		public string CurrentTtitleTextPreview
+		{
+			get
+			{
+				return CurrentTitleTextBlock.Text;
+			}
+
+			set
+			{
+				CurrentTitleTextBlock.Text = value;
+
+            }
+		}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		public string CurrentCategoryId
+		{
+			get
+			{
+				return SelectCategoryIdTextBlock.Text;
+			}
+
+			set
+			{
+				SelectCategoryIdTextBlock.Text = value;
+
+            }
+		}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		public string CurrentCategoryName
+		{
+			get
+			{
+				return SelectCategoryNameTextBlock.Text;
+            }
+
+			set
+			{
+				SelectCategoryNameTextBlock.Text = value;
+            }
+		}
+
+
+		/// <summary>
+		/// 
+		/// </summary>
+		public string CurrentCategoryBoxArtUrl
+		{
+			set
+			{
+				SelectCategoryBoxArt.Source = new BitmapImage(new Uri(value)); ;
+            }
 		}
 
 
@@ -81,15 +169,30 @@ namespace JTSA
 
             // イベント登録
             Loaded += MainWindow_LoadedAsync;
+            SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
         }
 
-
 		/// <summary>
-		/// コンストラクタ終了時の処理
+		/// 
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
-		private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
+        private void SteamUrlTextBlock_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var isProcessSuccess = JTSAHelper.CopyClipBoad(SteamUrlTextBlock.Text);
+            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
+                "クリップボードコピー成功 「 SteamUrl 」",
+                "クリップボードコピー失敗 「 SteamUrl 」"
+            );
+        }
+
+
+        /// <summary>
+        /// コンストラクタ終了時の処理
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
         {
            　var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アプリ起動処理");
 
@@ -217,14 +320,16 @@ namespace JTSA
             // カテゴリ名取得処理
             var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
 
-            editTitleTextForm.Content = TitleEditTextBox.Text;
-            editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
-            SetDisplayFromEditFrom();
+            CurrentTitleText = TitleEditTextBox.Text;
+
+			CurrentCategoryId = category.Id;
+			CurrentCategoryName = category.Name;
+            CurrentCategoryBoxArtUrl = category.BoxArtUrl;
+
 
             // リスト読み込み処理
             ReloadTitleText();
-			TitleTagSidePanel.ReloadTitleTag();
-			FriendPanel.ReloadFriend();
+            TitleTagSidePanel.ReloadTitleTag();
 
             AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }
@@ -375,22 +480,6 @@ namespace JTSA
 
 		#region =============== メインパネル：編集部分 ===============
 
-
-		/// <summary>
-		/// 読み込み処理：編集部分
-		/// </summary>
-		public void SetDisplayFromEditFrom()
-		{
-			TitleEditTextBox.Text = editTitleTextForm.Content;
-			SelectCategoryIdTextBlock.Text = editTitleTextForm.CategoryId;
-			SelectCategoryNameTextBlock.Text = editTitleTextForm.CategoryName;
-			if (!string.IsNullOrEmpty(editTitleTextForm.CategoryBoxArtUrl))
-            {
-                SelectCategoryBoxArt.Source = new BitmapImage(new Uri(editTitleTextForm.CategoryBoxArtUrl));
-            }
-        }
-
-
 		/// <summary>
 		/// 送信ボタンクリック時
 		/// </summary>
@@ -445,10 +534,10 @@ namespace JTSA
             var getCategory = await TwitchHelper.GetCategoryByGameId(gameId);
 
             CurrentTitleText = getTitleText;
-            editTitleTextForm.SetCategory(getCategory.Id, getCategory.Name, getCategory.BoxArtUrl);
-
-            SetDisplayFromEditFrom();
-
+            
+			CurrentCategoryId = getCategory.Id;
+			CurrentCategoryName = getCategory.Name;
+			CurrentCategoryBoxArtUrl = getCategory.BoxArtUrl;
 
             DAO_Category.UpdateLastUsed(getCategory.Id);
             CategoryPanel.ReloadCategory();
@@ -491,8 +580,9 @@ namespace JTSA
 
             CurrentTitleText = streamInfo.title;
 
-            editTitleTextForm.SetCategory(category.Id, category.Name, category.BoxArtUrl);
-            SetDisplayFromEditFrom();
+			CurrentCategoryId = category.Id;
+			CurrentCategoryName= category.Name;
+			CurrentCategoryBoxArtUrl = category.BoxArtUrl;
 
             AppLogPanel.ProcessEnd(GetType().Name, processLogName);
         }
@@ -524,19 +614,6 @@ namespace JTSA
 
 		/// <summary>
 		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void AddCategoryButton_Click(object sender, RoutedEventArgs e)
-		{
-			String categoryId = editTitleTextForm.CategoryId;
-			String categoryName = editTitleTextForm.CategoryName;
-			String boxArtUrl = editTitleTextForm.CategoryBoxArtUrl;
-		}
-
-
-		/// <summary>
-		/// カテゴリIDテキストクリック時
 		/// </summary>
 		/// <param name="sender"></param>
 		/// <param name="e"></param>
@@ -608,8 +685,8 @@ namespace JTSA
 		private void TweetButton_Click(object sender, RoutedEventArgs e)
 		{
 			// 必要データの取得
-			var stremTitleText = TitleTextFriendTagToXReplace(editTitleTextForm.Content);
-			var categoryNameText = editTitleTextForm.CategoryName;
+			var stremTitleText = TitleTextFriendTagToXReplace(TitleEditTextBox.Text);
+			var categoryNameText = CurrentCategoryName;
 
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
@@ -637,8 +714,7 @@ namespace JTSA
 		/// <param name="e"></param>
 		private void TitleEditTextBox_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			editTitleTextForm.Content = TitleEditTextBox.Text;
-            CurrentTitleText = editTitleTextForm.Content;
+            CurrentTitleText = TitleEditTextBox.Text;
         }
 
 

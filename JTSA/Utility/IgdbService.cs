@@ -16,6 +16,13 @@ namespace JTSA.Utility
         private readonly string clientId;
         private readonly string accessToken;
 
+        public IgdbService(HttpClient httpClient, string clientID, string accessToken)
+        {
+            this.httpClient = httpClient;
+            clientId = clientID;
+            this.accessToken = accessToken;
+        }
+
         public sealed class TwitchGameResponse
         {
             [JsonPropertyName("data")]

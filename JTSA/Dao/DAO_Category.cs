@@ -77,18 +77,20 @@ namespace JTSA.Dao
         }
 
 
-        public static async Task<M_Category> InsertDataCreate(string categoryId)
+        public static async Task<M_Category> InsertDataCreate(string categoryId, string steamUrl = "")
         {
 
             var selectCategory = await TwitchHelper.GetCategoryByGameId(categoryId);
+            var appId = SteamHelper.GetSteamAppId(steamUrl);
+            var steamHeaderArtUrl = await SteamHelper.GetSteamHeaderImageUrlAsync(appId);
 
             return new M_Category
             {
                 CategoryId = categoryId,
                 DisplayName = selectCategory.Name,
                 BoxArtUrl = selectCategory.BoxArtUrl,
-                SteamHeaderArtUrl = "",
-                SteamUrl = "",
+                SteamHeaderArtUrl = steamHeaderArtUrl,
+                SteamUrl = steamUrl,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now

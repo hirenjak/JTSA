@@ -6,8 +6,15 @@
             mc:Ignorable="d"
             Background="#FF404040">
     <StackPanel>
-        <Button x:Name="ReOAuthButton" Content="再認証" Width="64" Height="20" Margin="8, 0, 0, 4" />
-        <TextBox x:Name="SettingOAuthCodeBox" Foreground="White" FontSize="20" Background="#FF4A4747" BorderBrush="White" TextAlignment="Center" IsReadOnly="True" Width="200" Height="Auto"/>
-        <Button x:Name="SettingOAuthCodeCopyButton" FontSize="18" Padding="4, 0, 4, 0"  Content="Copy"/>
+        <Button 
+            x:Name="ReOAuthButton" Content="再認証" 
+            Width="64" Height="20" 
+            Margin="8, 0, 0, 4" 
+            HorizontalAlignment="Left"/>
+
+        <StackPanel Orientation="Horizontal">
+            <TextBox x:Name="SettingOAuthCodeBox" Foreground="White" FontSize="20" Background="#FF4A4747" BorderBrush="White" TextAlignment="Center" IsReadOnly="True" Width="200" Height="Auto"/>
+            <Button x:Name="SettingOAuthCodeCopyButton" FontSize="18" Padding="4, 0, 4, 0"  Content="Copy"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>

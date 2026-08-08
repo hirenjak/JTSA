@@ -1,8 +1,12 @@
 ﻿using JTSA.Dao;
 using JTSA.Forms;
+using JTSA.Forms.TwitchIF;
 using JTSA.Models;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -57,13 +61,14 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CategoryListBox_SelectionChanged(object sender, EventArgs e)
+        private void CategoryListBox_MouseDoubleClick(object sender, EventArgs e)
         {
-            if (CategoryListBox.SelectedItem is not CategoryForm selectedItem)
-                return;
+            if (CategoryListBox.SelectedItem is not CategoryForm selectedItem) return;
 
-            mainWindow.editTitleTextForm.SetCategory(selectedItem.CategoryId, selectedItem.DisplayName, selectedItem.BoxArtUrl);
-            mainWindow.SetDisplayFromEditFrom();
+            mainWindow.CurrentCategoryId = selectedItem.CategoryId;
+            mainWindow.CurrentCategoryName = selectedItem.DisplayName;
+            mainWindow.CurrentCategoryBoxArtUrl = selectedItem.BoxArtUrl;
+            mainWindow.CurrentCategorySteamUrl = selectedItem.SteamUrl;
 
             // 選択状態を解除
             CategoryListBox.SelectedIndex = -1;
@@ -148,13 +153,13 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CategorySeteButton_Click(object sender, RoutedEventArgs e)
+        private void CategorySetButton_Click(object sender, RoutedEventArgs e)
         {
-            // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
-                mainWindow.editTitleTextForm.SetCategory(item.CategoryId, item.DisplayName, item.BoxArtUrl);
-                mainWindow.SetDisplayFromEditFrom();
+                mainWindow.CurrentCategoryId = item.CategoryId;
+                mainWindow.CurrentCategoryName = item.DisplayName;
+                mainWindow.CurrentCategoryBoxArtUrl = item.BoxArtUrl;
             }
 
             ReloadCategory();
@@ -166,13 +171,13 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void PlayCategoryAddButton_Click(object sender, RoutedEventArgs e)
+        private async void PlayCategoryAddButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
                 M_Category category = DAO_Category.SelectOneById(item.CategoryId);
-                mainWindow.PlayingGamePanel.AddSteamImageAsync(item.CategoryId, category.SteamHeaderArtUrl);
+                await mainWindow.PlayingGamePanel.AddSteamImageAsync(item.CategoryId, category.SteamHeaderArtUrl);
             }
 
             ReloadCategory();
@@ -213,8 +218,16 @@ namespace JTSA.Panels
         {
             if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
             {
+                var service = new IgdbService(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+
+                List<string> steamUrls =
+                    await service.GetSteamUrlsAsync(selectedItem.CategoryId);
+
+                string? steamUrl = steamUrls.FirstOrDefault();
+
+
                 // データ登録
-                var isnertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId);
+                var isnertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl + "/");
                 DAO_Category.Insert(isnertData);
             }
 

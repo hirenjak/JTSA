@@ -5,178 +5,180 @@
         xmlns:local="clr-namespace:JTSA"
         Title="JakTwtchStreamerAssistant v0.6.9" Height="700" Width="1100">
 
-    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#FF404040">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="37*"/>
-            <ColumnDefinition Width="238*"/>
-        </Grid.ColumnDefinitions>
+    <Grid
+        Background="#FF404040"
+        VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Width="Auto" Grid.ColumnSpan="2">
+        <!-- ログ出力用テキストボックス -->
+        <StackPanel
+            Grid.Row="0"
+            Width="Auto" HorizontalAlignment="Stretch">
+            <TextBlock 
+                Grid.Column="0" Grid.Row="0" 
+                VerticalAlignment="Top" 
+                Height="Auto" Width="Auto" 
+                x:Name="StatusTextBlock"
+                Foreground="Red" Background="DimGray" TextAlignment="Left"/>
+        </StackPanel>
+
+        <!--  -->
+        <Grid 
+            Grid.Row="1" 
+            Margin="8, -2, 8, 0" 
+            Width="Auto" Height="72">
+            
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="60"/>
+                <ColumnDefinition Width="60"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="480"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Grid.RowDefinitions>
-                <RowDefinition Height="20"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
 
-            <StackPanel Width="Auto" HorizontalAlignment="Stretch">
-                <TextBlock Grid.Column="0" Grid.Row="0" VerticalAlignment="Top" Height="Auto" Width="Auto" x:Name="StatusTextBlock" Foreground="Red" Background="DimGray" TextAlignment="Left"/>
-            </StackPanel>
+            <Grid Grid.Column="0" Margin="0, 4, 0, 0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <Grid Grid.Row="1" Margin="8, -2, 8, 0" Width="Auto" Height="72">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="58"/>
-                    <ColumnDefinition Width="60"/>
-                    <ColumnDefinition Width="160"/>
-                    <ColumnDefinition Width="480"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                <Button Grid.Column ="0" x:Name="SetTitleButton" Content="送信" 
+                    HorizontalAlignment="Stretch"
+                    Margin="2, 2, 2, 4"
+                    Click="SendTitleButton_Click"/>
 
+                <Button Grid.Row="1" Content="X告知" 
+                    Margin="2, 2, 2, 4"
+                    Click="TweetButton_Click"/>
+            </Grid>
 
-                <Grid Grid.Column="0" Margin="0, 4, 0, 0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <Grid Grid.Column="1" >
+                <StackPanel Grid.Column="0" Grid.Row="0"
+                        Margin="8, 8, 8, 4"
+                        Background="Black">
+                    <Image x:Name="SelectCategoryBoxArt"
+                       HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
 
-                    <Button Grid.Column ="0" x:Name="SetTitleButton" Content="送信" 
-                            HorizontalAlignment="Stretch"
-                            Margin="2, 2, 2, 4"
-                            Click="SendTitleButton_Click"/>
+            <Grid Grid.Column="2" Margin="-8, 12, 0, 4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="2*"/>
+                </Grid.RowDefinitions>
 
-                    <Button Grid.Row="1" Content="X告知" 
-                            Margin="2, 2, 2, 4"
-                            Click="TweetButton_Click"/>
-                </Grid>
+                <Grid Grid.Row="0"
+                  Margin="8, 0, 8, 0" >
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="52"/>
+                    </Grid.ColumnDefinitions>
 
-                <Grid Grid.Column="1" >
-                    <StackPanel Grid.Column="0" Grid.Row="0"
-                                Margin="8, 8, 8, 4"
-                                Background="Black">
-                        <Image x:Name="SelectCategoryBoxArt"
-                               HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Grid>
-
-                <Grid Grid.Column="2" Margin="-8, 12, 0, 4">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="1*"/>
-                        <RowDefinition Height="2*"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0"
-                          Margin="8, 0, 8, 0" >
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="52"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0" x:Name="SelectCategoryIdTextBlock" 
-                               Padding="2, 2, 2, 2" 
-                               Foreground="Black" FontSize="12" Background="DarkGray">
-                        </TextBlock>
-                        <Button Grid.Column="1" Content="更新" 
-                                Height="24" Margin="8, 0, 0, 0" 
-                                VerticalAlignment="Center"
-                                Click="GetTitleButton_Click"/>
-                    </Grid>
-                    <TextBlock Grid.Row="1" x:Name="SelectCategoryNameTextBlock" 
-                               TextWrapping="Wrap" Padding="2, 2, 2, 2" Margin="8, 8, 8, 0" 
-                               Foreground="Black" FontSize="9" Background="DarkGray" 
-                               MouseLeftButtonDown="SelectCategpryNameTextBlock_MouseLeftButtonDown">
+                    <TextBlock Grid.Column="0" x:Name="SelectCategoryIdTextBlock" 
+                       Padding="2, 2, 2, 2" 
+                       Foreground="Black" FontSize="12" Background="DarkGray">
                     </TextBlock>
+                    <Button Grid.Column="1" Content="更新" 
+                        Height="24" Margin="8, 0, 0, 0" 
+                        VerticalAlignment="Center"
+                        Click="GetTitleButton_Click"/>
                 </Grid>
+                <TextBlock Grid.Row="1" x:Name="SelectCategoryNameTextBlock" 
+                       TextWrapping="Wrap" Padding="2, 2, 2, 2" Margin="8, 8, 8, 0" 
+                       Foreground="Black" FontSize="9" Background="DarkGray" 
+                       MouseLeftButtonDown="SelectCategpryNameTextBlock_MouseLeftButtonDown">
+                </TextBlock>
+            </Grid>
 
-                <Grid Grid.Column="3" Margin="0, 0, 0, 4"
-                            VerticalAlignment="Stretch">
+            <Grid Grid.Column="3" Margin="0, 0, 0, 4"
+                    VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Label Grid.Row="0" x:Name="TitleWordNum"
+                   Content="0/140"
+                   Padding="0, 0, 0, 0"
+                   Foreground="White" />
+
+                <TextBlock Grid.Row="1" x:Name="CurrentTitleTextBlock" 
+                       Padding="2, 2, 2, 2"
+                       TextWrapping="Wrap" Foreground="Black" FontSize="12" Background="DarkGray" 
+                       MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown">
+                </TextBlock>
+            </Grid>
+
+            <!-- ヘッダー：設定周り -->
+            <Grid Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="24"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Label Grid.Row="0" x:Name="TitleWordNum"
-                           Content="0/140"
-                           Padding="0, 0, 0, 0"
-                           Foreground="White" />
-
-                    <TextBlock Grid.Row="1" x:Name="CurrentTitleTextBlock" 
-                               Padding="2, 2, 2, 2"
-                               TextWrapping="Wrap" Foreground="Black" FontSize="12" Background="DarkGray" 
-                               MouseLeftButtonDown="CurrentTitleTextBlock_MouseLeftButtonDown">
-                    </TextBlock>
-                </Grid>
-
-                <!-- ヘッダー：設定周り -->
-                <Grid Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Grid>
+                    <Button Grid.Row="0" Content="DBフォルダ" 
+                        Width="72" Height="20" Margin="8, 0, 0, 0" 
+                        VerticalAlignment="Center" HorizontalAlignment="Right" 
+                        Click="DBFolderOpen"/>
+                    <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Label  Content="TwiName"
+                                Foreground="White" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
+                                 Width="Auto"
+                                 VerticalAlignment="Center"
+                                 Foreground="Black" FontSize="12"
+                                 Background="DarkGray" Height="18">
+                            </TextBlock>
+                        </Grid>
 
-                        <Button Grid.Row="0" Content="DBフォルダ" 
-                                Width="72" Height="20" Margin="8, 0, 0, 0" 
-                                VerticalAlignment="Center" HorizontalAlignment="Right" 
-                                Click="DBFolderOpen"/>
                         <Grid Grid.Row="1">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Label  Content="TwiName"
-                                        Foreground="White" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
-                                         Width="Auto"
-                                         VerticalAlignment="Center"
-                                         Foreground="Black" FontSize="12"
-                                         Background="DarkGray" Height="18">
+                                <Label Content="AccToken"
+                           Foreground="White" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
+                               Width="Auto" 
+                               VerticalAlignment="Center" 
+                               Foreground="Black" FontSize="12" 
+                               Background="DarkGray" Height="18" >
                                 </TextBlock>
                             </Grid>
-
-                            <Grid Grid.Row="1">
+                            <Grid Grid.Column="1">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Grid Grid.Column="0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Label Content="AccToken"
-                                   Foreground="White" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
-                                       Width="Auto" 
-                                       VerticalAlignment="Center" 
-                                       Foreground="Black" FontSize="12" 
-                                       Background="DarkGray" Height="18" >
-                                    </TextBlock>
-                                </Grid>
-                                <Grid Grid.Column="1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Label Content="AccToken"
-                                   Foreground="White" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1" Grid.Row="1" x:Name="BroadcasterId_TextBlock" 
-                                       Width="Auto" 
-                                       VerticalAlignment="Center" 
-                                       Foreground="Black" FontSize="12" 
-                                       Background="DarkGray" Height="18" >
-                                    </TextBlock>
-                                </Grid>
+                                <Label Content="AccToken"
+                           Foreground="White" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="BroadcasterId_TextBlock" 
+                               Width="Auto" 
+                               VerticalAlignment="Center" 
+                               Foreground="Black" FontSize="12" 
+                               Background="DarkGray" Height="18" >
+                                </TextBlock>
                             </Grid>
                         </Grid>
                     </Grid>
@@ -184,171 +186,206 @@
             </Grid>
         </Grid>
 
-        <TabControl Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2" >
-            <TabItem Header="配信概要設定">
-                <Grid >
-                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid Grid.Row="0" VerticalAlignment="Stretch">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="260" />
-                            </Grid.ColumnDefinitions>
+        <!-- StemaURL -->
+        <Grid
+            Grid.Row="2"
+            Margin="8, 0, 8, 0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-                            <!-- メインUI（今までのDockPanelやStackPanelなど） -->
-                            <DockPanel Grid.Column="0" Name="MainDockPanel" 
-                                       MinWidth="560" Width="Auto">
+            <Label
+                Grid.Column="0" Content="SteamURL"
+                Foreground="White" />
+            <TextBlock 
+                Grid.Column="1"
+                x:Name="SteamUrlTextBlock" 
+                Margin="8, 0, 0, 0"
+                Height="16"
+                Foreground="Black" FontSize="8" Background="DarkGray" >
+            </TextBlock>
+        </Grid>
 
-                                <StackPanel DockPanel.Dock="Top" 
-                                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid 
+            Grid.Row="3"
+            HorizontalAlignment="Stretch" 
+            VerticalAlignment="Stretch" >
 
-                                    <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="37*"/>
+                <ColumnDefinition Width="238*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                                    <Label Margin="0, 0, 0, 0" Foreground="White" Content="${friend}をタイトル編集に入れるとフレンドで選択したユーザーがタイトルに追加される"/>
+            <TabControl Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2" >
+                <TabItem Header="配信概要設定">
+                    <Grid >
+                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" VerticalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="260" />
+                                </Grid.ColumnDefinitions>
 
-                                    <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
-                                             Height="48" Width="Auto" 
-                                             HorizontalAlignment="Stretch" 
-                                             VerticalAlignment="Top" Text="" 
-                                             Margin="8, 0, 0, 0" TextWrapping="Wrap" 
-                                             TextChanged="TitleEditTextBox_TextChanged"/>
+                                <!-- メインUI（今までのDockPanelやStackPanelなど） -->
+                                <DockPanel Grid.Column="0" Name="MainDockPanel" 
+                                           MinWidth="560" Width="Auto">
+
+                                    <StackPanel DockPanel.Dock="Top" 
+                                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+                                        <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
+
+                                        <Label Margin="0, 0, 0, 0" Foreground="White" Content="${friend}をタイトル編集に入れるとフレンドで選択したユーザーがタイトルに追加される"/>
+
+                                        <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
+                                                 Height="48" Width="Auto" 
+                                                 HorizontalAlignment="Stretch" 
+                                                 VerticalAlignment="Top" Text="" 
+                                                 Margin="8, 0, 0, 0" TextWrapping="Wrap" 
+                                                 TextChanged="TitleEditTextBox_TextChanged"/>
+                                    </StackPanel>
+
+                                    <Grid Margin="8" Height="Auto" >
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="24"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Label Grid.Row="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
+                                        <ListBox Grid.Row="1" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Image Source="{Binding CategoryBoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
+
+                                                            <StackPanel Grid.Column="1" Margin="8, 0, 8, 0">
+                                                                <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="Black" FontSize="16" TextWrapping="Wrap"></TextBlock>
+
+                                                                <Grid Margin="0" Height="Auto">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+
+                                                                    <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="Black" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                                    <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
+                                                                        <Label Margin="0" VerticalAlignment="Bottom" Foreground="Black" FontSize="10">最終使用日：</Label>
+                                                                        <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="Black" TextWrapping="Wrap"></TextBlock>
+                                                                    </StackPanel>
+                                                                    <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTextLogDeleteButton_Click"/>
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                        <Border Width="Auto" Height="2" Background="White"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </DockPanel>
+                                <!-- サイドパネル（タイトルテキストタグ） -->
+                                <panels:TitleTagSidePanel Grid.Column="1" Margin="8"  x:Name="TitleTagSidePanel" Visibility="Visible"/>
+
+                            </Grid>
+                        </Grid>
+
+                        <!-- 読込画面 -->
+                        <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
+                                <StackPanel Name="LoadSubPanel" Visibility="Visible">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="Twithcユーザー名："
+                                            HorizontalAlignment="Center" 
+                                            Foreground="White" FontSize="20" />
+                                        <TextBox x:Name="LoadPanelUserNameTextBox" 
+                                             Width="200" Height="Auto"
+                                             Foreground="White" FontSize="20" TextAlignment="Center" 
+                                             Background="#FF4A4747" 
+                                             BorderBrush="White">
+                                        </TextBox>
+                                    </StackPanel>
+                                    <TextBlock Text="Twitchユーザー名を入力してOAuth認証ボタンをクリック" 
+                                               HorizontalAlignment="Center" 
+                                               Foreground="White" FontSize="20"/>
+                                    <TextBlock Text="その後下のテキストボックスに表示される認証コードを認証画面に入力" 
+                                               HorizontalAlignment="Center" 
+                                               Foreground="White" FontSize="20"/>
+                                    <Button DockPanel.Dock="Right" x:Name="OAuthButton" Content="OAuth認証"
+                                            Width="112" Height="36" 
+                                            FontSize="20"
+                                            Margin="0, 24, 0, 0" 
+                                            VerticalAlignment="Center" 
+                                            Click="OAuthButton_Click"/>
+
+                                    <TextBlock Text="以下の認証コードをブラウザの認証画面に入力してください" 
+                                               HorizontalAlignment="Center" 
+                                               Foreground="White" FontSize="20" 
+                                               Margin="0, 8, 0, 0"/>
+                                    <StackPanel Orientation="Horizontal" 
+                                                HorizontalAlignment="Center">
+                                        <TextBox x:Name="LoadPanelSubTextBox" Foreground="White" FontSize="20" Background="#FF4A4747" BorderBrush="White" TextAlignment="Center" IsReadOnly="True" Width="200" Height="Auto"></TextBox>
+                                        <Button FontSize="18" Padding="4, 0, 4, 0"  Content="Copy" Click="TokenCodeCopyButton_Click" />
+                                    </StackPanel>
+
                                 </StackPanel>
-
-                                <Grid Margin="8" Height="Auto" >
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="24"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <Label Grid.Row="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
-                                    <ListBox Grid.Row="1" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel>
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <Image Source="{Binding CategoryBoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
-
-                                                        <StackPanel Grid.Column="1" Margin="8, 0, 8, 0">
-                                                            <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="Black" FontSize="16" TextWrapping="Wrap"></TextBlock>
-
-                                                            <Grid Margin="0" Height="Auto">
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                </Grid.ColumnDefinitions>
-
-                                                                <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="Black" FontSize="10" VerticalAlignment="Center"></TextBlock>
-                                                                <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
-                                                                    <Label Margin="0" VerticalAlignment="Bottom" Foreground="Black" FontSize="10">最終使用日：</Label>
-                                                                    <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="Black" TextWrapping="Wrap"></TextBlock>
-                                                                </StackPanel>
-                                                                <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTextLogDeleteButton_Click"/>
-                                                            </Grid>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                    <Border Width="Auto" Height="2" Background="White"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </Grid>
-                            </DockPanel>
-
-                            <!-- サイドパネル（タイトルテキストタグ） -->
-                            <panels:TitleTagSidePanel Grid.Column="1" Margin="8" Height="Auto" Width="Auto" x:Name="TitleTagSidePanel" Visibility="Visible"/>
-
+                            </StackPanel>
                         </Grid>
                     </Grid>
+                </TabItem>
 
-                    <!-- 読込画面 -->
-                    <Grid Name="LoadScreen" Background="Gray" Height="Auto" Width="Auto" Margin="0, 0, 0, 0" Visibility="Collapsed">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
-                            <StackPanel Name="LoadSubPanel" Visibility="Visible">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <TextBlock Text="Twithcユーザー名："
-                                        HorizontalAlignment="Center" 
-                                        Foreground="White" FontSize="20" />
-                                    <TextBox x:Name="LoadPanelUserNameTextBox" 
-                                         Width="200" Height="Auto"
-                                         Foreground="White" FontSize="20" TextAlignment="Center" 
-                                         Background="#FF4A4747" 
-                                         BorderBrush="White">
-                                    </TextBox>
-                                </StackPanel>
-                                <TextBlock Text="Twitchユーザー名を入力してOAuth認証ボタンをクリック" 
-                                           HorizontalAlignment="Center" 
-                                           Foreground="White" FontSize="20"/>
-                                <TextBlock Text="その後下のテキストボックスに表示される認証コードを認証画面に入力" 
-                                           HorizontalAlignment="Center" 
-                                           Foreground="White" FontSize="20"/>
-                                <Button DockPanel.Dock="Right" x:Name="OAuthButton" Content="OAuth認証"
-                                        Width="112" Height="36" 
-                                        FontSize="20"
-                                        Margin="0, 24, 0, 0" 
-                                        VerticalAlignment="Center" 
-                                        Click="OAuthButton_Click"/>
+                <TabItem Header="フレンド">
+                    <panels:FriendPanel x:Name="FriendPanel"/>
+                </TabItem>
 
-                                <TextBlock Text="以下の認証コードをブラウザの認証画面に入力してください" 
-                                           HorizontalAlignment="Center" 
-                                           Foreground="White" FontSize="20" 
-                                           Margin="0, 8, 0, 0"/>
-                                <StackPanel Orientation="Horizontal" 
-                                            HorizontalAlignment="Center">
-                                    <TextBox x:Name="LoadPanelSubTextBox" Foreground="White" FontSize="20" Background="#FF4A4747" BorderBrush="White" TextAlignment="Center" IsReadOnly="True" Width="200" Height="Auto"></TextBox>
-                                    <Button FontSize="18" Padding="4, 0, 4, 0"  Content="Copy" Click="TokenCodeCopyButton_Click" />
-                                </StackPanel>
+                <TabItem Header="カテゴリ">
+                    <panels:CategoryPanel x:Name="CategoryPanel"/>
+                </TabItem>
 
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </TabItem>
+                <TabItem Header="プレイ中ゲーム">
+                    <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
+                </TabItem>
 
-            <TabItem Header="フレンド">
-                <panels:FriendPanel x:Name="FriendPanel"/>
-            </TabItem>
+                <TabItem Header="チャット">
+                    <panels:ChatPanel x:Name="ChatPanel"/>
+                </TabItem>
 
-            <TabItem Header="カテゴリ">
-                <panels:CategoryPanel x:Name="CategoryPanel"/>
-            </TabItem>
+                <TabItem Header="レイド">
+                    <panels:RaidPanel x:Name="RaidPanel"/>
+                </TabItem>
 
-            <TabItem Header="プレイ中ゲーム">
-                <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
-            </TabItem>
+                <TabItem Header="CP">
+                    <StackPanel>
+                        <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
+                    </StackPanel>
+                </TabItem>
 
-            <TabItem Header="チャット">
-                <panels:ChatPanel x:Name="ChatPanel"/>
-            </TabItem>
+                <TabItem Header="Setting">
+                    <StackPanel>
+                        <panels:SettingPanel x:Name="SettingPanel"/>
+                    </StackPanel>
+                </TabItem>
 
-            <TabItem Header="レイド">
-                <panels:RaidPanel x:Name="RaidPanel"/>
-            </TabItem>
-            
-            <TabItem Header="CP">
-                <StackPanel>
-                    <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
-                </StackPanel>
-            </TabItem>
-
-            <TabItem Header="Setting">
-                <StackPanel>
-                    <panels:SettingPanel x:Name="SettingPanel"/>
-                </StackPanel>
-            </TabItem>
-            
-            <TabItem Header="AppLog">
-                <StackPanel>
-                    <panels:AppLogPanel x:Name="AppLogPanel"/>
-                </StackPanel>
-            </TabItem>
-        </TabControl>
+                <TabItem Header="AppLog">
+                    <StackPanel>
+                        <panels:AppLogPanel x:Name="AppLogPanel"/>
+                    </StackPanel>
+                </TabItem>
+            </TabControl>
+        </Grid>
     </Grid>
 </Window>
