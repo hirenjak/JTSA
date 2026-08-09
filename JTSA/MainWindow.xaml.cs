@@ -131,7 +131,22 @@ namespace JTSA
 		{
 			set
 			{
-				SelectCategoryBoxArt.Source = new BitmapImage(new Uri(value)); ;
+				// URLが無いカテゴリもあるため、空ならクリアするだけにする
+				if (string.IsNullOrWhiteSpace(value))
+				{
+					SelectCategoryBoxArt.Source = null;
+					return;
+				}
+
+				try
+				{
+					SelectCategoryBoxArt.Source = new BitmapImage(new Uri(value));
+				}
+				catch (Exception)
+				{
+					SelectCategoryBoxArt.Source = null;
+					AppLogPanel.Error(GetType().Name, $"ボックスアート表示失敗 「 {value} 」");
+				}
             }
 		}
 
@@ -192,12 +207,28 @@ namespace JTSA
             );
         }
 
+		/// <summary>
+		/// カテゴリIDからSteamのストアURLを引いて画面に反映する。
+		/// Art や Software and Game Development のような非ゲームカテゴリはSteamに存在しないため、
+		/// 取得できないことは異常ではない（その場合は空欄にする）。
+		/// </summary>
+		/// <param name="categoryId">カテゴリID</param>
 		private async void SteamUrlTextSet(string categoryId)
 		{
+			CurrentCategorySteamUrl = "";
 
-			var result = await IgdbService.GetSteamUrlsAsync(categoryId);
-			CurrentCategorySteamUrl = result[0];
+			if (string.IsNullOrWhiteSpace(categoryId)) return;
 
+			try
+			{
+				var result = await IgdbService.GetSteamUrlsAsync(categoryId);
+				CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
+			}
+			catch (Exception)
+			{
+				// async voidのため、ここで握らないと未処理例外でアプリが落ちる
+				AppLogPanel.Error(GetType().Name, $"SteamURL取得失敗 「 {categoryId} 」");
+			}
         }
 
 
@@ -575,7 +606,8 @@ namespace JTSA
             var title = CurrentTitleText;
 			var categoryId = SelectCategoryIdTextBlock.Text;
 			var categoryName = SelectCategoryNameTextBlock.Text;
-			var categoryBoxArtUrl = SelectCategoryBoxArt.Source.ToString();
+			// ボックスアートが無いカテゴリではSourceがnullになる
+			var categoryBoxArtUrl = SelectCategoryBoxArt.Source?.ToString() ?? "";
 
 
             using var client = new HttpClient();
