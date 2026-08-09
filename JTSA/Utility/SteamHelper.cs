@@ -18,22 +18,33 @@ namespace JTSA.Utility
             var apiUrl =
                 $"https://store.steampowered.com/api/appdetails?appids={appId}&cc=JP&l=japanese";
 
-            HttpClient httpClient = new();
-            var json = await httpClient.GetStringAsync(apiUrl);
+            // 通信失敗やレスポンス形式の想定外は「画像なし」として扱う。
+            // 呼び出し元はasync voidのイベントハンドラなので、ここで握らないとアプリが落ちる
+            try
+            {
+                HttpClient httpClient = new();
+                var json = await httpClient.GetStringAsync(apiUrl);
 
-            using var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
 
-            var root = doc.RootElement.GetProperty(appId);
+                if (!doc.RootElement.TryGetProperty(appId, out var root))
+                    return null;
 
-            if (!root.GetProperty("success").GetBoolean())
+                if (!root.TryGetProperty("success", out var success) || !success.GetBoolean())
+                    return null;
+
+                if (!root.TryGetProperty("data", out var data))
+                    return null;
+
+                if (data.TryGetProperty("header_image", out var headerImage))
+                    return headerImage.GetString();
+
                 return null;
-
-            var data = root.GetProperty("data");
-
-            if (data.TryGetProperty("header_image", out var headerImage))
-                return headerImage.GetString();
-
-            return null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
 

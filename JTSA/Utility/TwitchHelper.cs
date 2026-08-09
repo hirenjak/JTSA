@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using TwitchLib.Api;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
@@ -376,6 +377,27 @@ namespace JTSA.Utility
         #region ==================== カテゴリ取得関連 ====================
 
         /// <summary>
+        /// TwitchのボックスアートURLを指定サイズに整える。
+        /// Twitchは「...-{width}x{height}.jpg」というテンプレート形式で返すが、
+        /// DBには展開済み（-128x192.jpg）で保存されているものもあるため両方を受け付ける。
+        /// </summary>
+        /// <param name="boxArtUrl">ボックスアートURL</param>
+        /// <param name="width">横幅</param>
+        /// <param name="height">高さ</param>
+        /// <returns>サイズを差し替えたURL。URLが無ければ空文字</returns>
+        public static string ResizeBoxArtUrl(string? boxArtUrl, int width = 128, int height = 192)
+        {
+            if (string.IsNullOrWhiteSpace(boxArtUrl)) return "";
+
+            var url = boxArtUrl
+                .Replace("{width}", width.ToString())
+                .Replace("{height}", height.ToString());
+
+            return Regex.Replace(url, @"-\d+x\d+(\.\w+)$", $"-{width}x{height}$1");
+        }
+
+
+        /// <summary>
         /// カテゴリ検索
         /// </summary>
         /// <param name="categoryName"></param>
@@ -393,7 +415,8 @@ namespace JTSA.Utility
                     {
                         Id = responseItem.Id ?? "",
                         Name = responseItem.Name ?? "",
-                        BoxArtUrl = responseItem.BoxArtUrl ?? ""
+                        // 検索APIは{width}/{height}のテンプレートのまま返すので展開する
+                        BoxArtUrl = ResizeBoxArtUrl(responseItem.BoxArtUrl)
                     });
                 }
             }
@@ -417,18 +440,16 @@ namespace JTSA.Utility
             {
                 var apiResponse = await api.Helix.Games.GetGamesAsync(gameIds: [gameId]);
 
-                if (apiResponse?.Data != null)
-                {
-                    var responseData = apiResponse.Data.FirstOrDefault();
+                var responseData = apiResponse?.Data?.FirstOrDefault();
 
+                if (responseData != null)
+                {
                     result = new TwitchCategoryIF()
                     {
                         Id = responseData.Id,
                         Name = responseData.Name,
-                        BoxArtUrl = responseData.BoxArtUrl
+                        BoxArtUrl = ResizeBoxArtUrl(responseData.BoxArtUrl)
                     };
-
-                    result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "128").Replace("{height}", "192");
                 }
             }
             catch (Exception ex)

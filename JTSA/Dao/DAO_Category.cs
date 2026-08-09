@@ -78,12 +78,17 @@ namespace JTSA.Dao
         }
 
 
-        public static async Task<M_Category> InsertDataCreate(string categoryId, string steamUrl = "")
+        public static async Task<M_Category?> InsertDataCreate(string categoryId, string steamUrl = "")
         {
 
             var selectCategory = await TwitchHelper.GetCategoryByGameId(categoryId);
+            if (selectCategory == null) return null;
+
+            // Steamに無いカテゴリではappIdが取れないため、ヘッダー画像もnullになる
             var appId = SteamHelper.GetSteamAppId(steamUrl);
-            var steamHeaderArtUrl = await SteamHelper.GetSteamHeaderImageUrlAsync(appId);
+            var steamHeaderArtUrl = appId == null
+                ? null
+                : await SteamHelper.GetSteamHeaderImageUrlAsync(appId);
 
             return new M_Category
             {

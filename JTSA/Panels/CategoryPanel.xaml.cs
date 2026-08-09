@@ -225,13 +225,12 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void PlayCategoryAddButton_Click(object sender, RoutedEventArgs e)
+        private void PlayCategoryAddButton_Click(object sender, RoutedEventArgs e)
         {
-            // ボタンのDataContextから削除対象を取得
+            // ボタンのDataContextから追加対象を取得
             if ((sender as Button)?.DataContext is CategoryForm item)
             {
-                M_Category category = DAO_Category.SelectOneById(item.CategoryId);
-                await mainWindow.PlayingGamePanel.AddSteamImageAsync(item.CategoryId, category.SteamHeaderArtUrl);
+                mainWindow.PlayingGamePanel.AddPlaylistItem(item.CategoryId);
             }
 
             ReloadCategory();

@@ -77,16 +77,18 @@ namespace JTSA.Panels
         {
             if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
             {
+                // Steamに存在しないカテゴリ（Art等）ではURLが取れないため、空文字として扱う
                 List<string> steamUrls =  await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
 
-                string? steamUrl = steamUrls.FirstOrDefault();
+                string steamUrl = steamUrls.FirstOrDefault() ?? "";
 
                 // データ登録
-                var isnertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl + "/");
+                var isnertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl);
+                if (isnertData == null) return;
+
                 DAO_Category.Insert(isnertData);
 
-                M_Category category = DAO_Category.SelectOneById(selectedItem.CategoryId);
-                await mainWindow.PlayingGamePanel.AddSteamImageAsync(selectedItem.CategoryId, category.SteamHeaderArtUrl);
+                mainWindow.PlayingGamePanel.AddPlaylistItem(selectedItem.CategoryId);
 
                 CategorySearchTitleSerchTextBox.Text = "";
             }
