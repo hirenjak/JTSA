@@ -3,6 +3,7 @@ using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
+using System.Security.Policy;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -382,7 +383,10 @@ namespace JTSA.Panels
         /// <returns></returns>
         public async Task AddSteamImageAsync(string categoryId, string urlText)
         {
-            string url = urlText.Trim();
+            string url = "";
+            if (!string.IsNullOrEmpty(urlText)) { 
+                url = urlText.Trim();
+            }
 
             var categoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
 
