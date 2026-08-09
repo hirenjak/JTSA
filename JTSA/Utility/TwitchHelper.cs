@@ -409,8 +409,12 @@ namespace JTSA.Utility
         /// API: GET https://api.twitch.tv/helix/channel_points/custom_rewards
         /// Scope: channel:read:redemptions
         /// </summary>
+        /// <param name="onlyManageableRewards">
+        /// trueの場合、このアプリ（同一client_id）が作成した報酬のみを返す。
+        /// falseの結果との差分がTwitchのWeb画面や他アプリで作成された「操作不可」な報酬になる。
+        /// </param>
         /// <returns>TwitchLibのCustomReward型のリスト。失敗した場合はnull。</returns>
-        public static async Task<List<CustomReward>?> GetCustomRewardsAsync()
+        public static async Task<List<CustomReward>?> GetCustomRewardsAsync(bool onlyManageableRewards = false)
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得");
@@ -425,7 +429,7 @@ namespace JTSA.Utility
             {
                 var response = await api.Helix.ChannelPoints.GetCustomRewardAsync(
                     broadcasterId: TwitchHelper.BroadcasterId,
-                    onlyManageableRewards: false
+                    onlyManageableRewards: onlyManageableRewards
                 );
 
                 if (response?.Data != null)

@@ -272,6 +272,7 @@ namespace JTSA
             // 各パネルの初期化処理
             ChatPanel.Initialize();
 			CategoryPanel.Initialize();
+			await ChannelPointPanel.Initialize();
 
             PlayingGamePanel.ReloadPlaylistHeader();
             PlayingGamePanel.ReloadGamePlaylistItem();

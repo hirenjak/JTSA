@@ -1,23 +1,11 @@
-﻿using JTSA.Models;
-using System;
-using System.Collections.Generic;
+using JTSA.Forms;
+using JTSA.Utility;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using TwitchLib.Api.Helix.Models.ChannelPoints; // CustomReward用
-using TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomReward;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
-using JTSA.Utility;
 
 namespace JTSA.Panels
 {
@@ -27,37 +15,62 @@ namespace JTSA.Panels
     public partial class ChannelPointPanel : UserControl
     {
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+
+        /// <summary> 画面に表示している報酬一覧 </summary>
+        public ObservableCollection<ChannelPointRewardForm> ChannelPointRewardFormList { get; } = [];
+
+        /// <summary> 一覧の下に常時出す注意書き </summary>
+        private const string INFO_TEXT = "※画像追加はTwitch公式UIのみ対応です。画像サイズ調整ツール: https://xipher.booth.pm/items/6573903";
+
+        /// <summary> 最後にソートした列と方向 </summary>
+        private GridViewColumnHeader? _lastHeaderClicked = null;
+        private ListSortDirection _lastDirection = ListSortDirection.Ascending;
+
+
         public ChannelPointPanel()
         {
             InitializeComponent();
+
+            // 画面紐づけ
+            DataContext = this;
         }
 
-        // ★追加：最後にソートした列と方向を記憶するための変数
-        private GridViewColumnHeader _lastHeaderClicked = null;
-        private ListSortDirection _lastDirection = ListSortDirection.Ascending;
 
-        // キャッシュされた報酬のリスト
-        private List<CustomReward> _cachedRewards = null;
+        /// <summary>
+        /// 遅延初期化。認証が終わっていないとAPIを叩けないため、
+        /// コンストラクタではなくMainWindowの起動シーケンスから呼ばれる。
+        /// </summary>
+        public async Task Initialize()
+        {
+            await ReloadChannnelPoint();
+        }
 
-        // ★追加：ヘッダークリック時のイベントハンドラ
+
+        /// <summary>
+        /// ヘッダークリック時（列ソート）
+        /// </summary>
         private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e)
         {
             if (e.OriginalSource is GridViewColumnHeader headerClicked)
             {
                 // ヘッダーに対応するプロパティ名を取得
                 string sortBy = "";
-                if (headerClicked.Column.DisplayMemberBinding is Binding binding)
+                if (headerClicked.Column?.DisplayMemberBinding is Binding binding)
                 {
                     sortBy = binding.Path.Path;
                 }
                 // 画像など、DisplayMemberBinding以外を使っている列の場合の対応
-                else if (headerClicked.Column.Header.ToString() == "有効")
+                else if (headerClicked.Column?.Header?.ToString() == "有効")
                 {
-                    sortBy = "IsEnabled";
+                    sortBy = nameof(ChannelPointRewardForm.IsEnabled);
                 }
-                else if (headerClicked.Column.Header.ToString() == "一時停止")
+                else if (headerClicked.Column?.Header?.ToString() == "一時停止")
                 {
-                    sortBy = "IsPaused";
+                    sortBy = nameof(ChannelPointRewardForm.IsPaused);
+                }
+                else if (headerClicked.Column?.Header?.ToString() == "操作可能")
+                {
+                    sortBy = nameof(ChannelPointRewardForm.IsManageable);
                 }
 
                 if (string.IsNullOrEmpty(sortBy)) return;
@@ -66,8 +79,10 @@ namespace JTSA.Panels
                 ListSortDirection direction;
                 if (headerClicked != _lastHeaderClicked)
                 {
-                    // IsEnabled, IsPaused の場合は初回降順、それ以外は昇順
-                    if (sortBy == "IsEnabled" || sortBy == "IsPaused")
+                    // 真偽値の列は初回降順、それ以外は昇順
+                    if (sortBy == nameof(ChannelPointRewardForm.IsEnabled)
+                     || sortBy == nameof(ChannelPointRewardForm.IsPaused)
+                     || sortBy == nameof(ChannelPointRewardForm.IsManageable))
                         direction = ListSortDirection.Descending;
                     else
                         direction = ListSortDirection.Ascending;
@@ -89,111 +104,139 @@ namespace JTSA.Panels
                 _lastDirection = direction;
             }
         }
-        public async void ReloadChannnelPoint(bool forceReload = false)
+
+
+        /// <summary>
+        /// 更新ボタン押下
+        /// </summary>
+        private async void ReloadButton_Click(object sender, RoutedEventArgs e)
+        {
+            await ReloadChannnelPoint();
+        }
+
+
+        /// <summary>
+        /// チャンネルポイント一覧をAPIから取り直して画面へ反映する
+        /// </summary>
+        public async Task ReloadChannnelPoint()
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "チャンネルポイントリスト再読み込み");
+
+            ReloadButton.IsEnabled = false;
             ChannelPointGetStatus.Text = "チャンネルポイント取得中...";
-            ChannelPointListView.ItemsSource = null;
 
-            // キャッシュがなければ取得、forceReload指定時は再取得
-            if (_cachedRewards == null || forceReload)
-            {
-                _cachedRewards = await TwitchHelper.GetCustomRewardsAsync();
-            }
-            var rewards = _cachedRewards;
+            var rewards = await ChannelPointService.FetchRewardsAsync();
 
-            string info = "※画像追加はTwitch公式UIのみ対応です。画像サイズ調整ツール: https://xipher.booth.pm/items/6573903";
+            ChannelPointRewardFormList.Clear();
 
             if (rewards != null)
             {
-                rewards.Sort((a, b) => a.Cost.CompareTo(b.Cost));
-                ChannelPointListView.ItemsSource = rewards;
-                ChannelPointGetStatus.Text = $"取得成功！ ({rewards.Count}件)\n{info}";
+                foreach (var reward in rewards)
+                {
+                    ChannelPointRewardFormList.Add(reward);
+                }
+
+                var lockedCount = rewards.Count(x => !x.IsManageable);
+                var lockedText = lockedCount > 0
+                    ? $" / 🔒 操作不可 {lockedCount}件（Twitchの Web 画面から作成された報酬です）"
+                    : "";
+
+                ChannelPointGetStatus.Text = $"取得成功！ ({rewards.Count}件){lockedText}\n{INFO_TEXT}";
                 mainWindow.AppLogPanel.Success(GetType().Name, appLogProcessName);
             }
             else
             {
-                ChannelPointGetStatus.Text = $"チャンネルポイントの取得に失敗しました。\n{info}";
+                ChannelPointGetStatus.Text = $"チャンネルポイントの取得に失敗しました。\n{INFO_TEXT}";
                 mainWindow.AppLogPanel.Error(GetType().Name, "チャンネルポイントリスト取得失敗");
             }
+
+            ReloadButton.IsEnabled = true;
 
             mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }
 
-        // 有効/無効トグル
+
+        /// <summary>
+        /// 有効/無効トグル
+        /// </summary>
         private async void ToggleIsEnabled_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is CheckBox checkBox && checkBox.DataContext is CustomReward reward)
-            {
-                // キャッシュから該当する CustomReward を取得
-                var cached = _cachedRewards?.FirstOrDefault(r => r.Id == reward.Id);
-                if (cached == null)
-                {
-                    MessageBox.Show("キャッシュから該当のリワードが見つかりませんでした");
-                    return;
-                }
+            // クリックされたチェックボックス自身の行を対象にする（選択行ではない）
+            if (sender is not CheckBox checkBox || checkBox.DataContext is not ChannelPointRewardForm reward) return;
 
-                var request = new UpdateCustomRewardRequest
-                {
-                    // キャッシュの値を元に反転
-                    IsEnabled = !cached.IsEnabled
-                };
-                var updated = await TwitchHelper.UpdateCustomRewardAsync(cached.Id, request);
-                if (updated != null)
-                {
-                    // キャッシュをクリアして再取得
-                    _cachedRewards = null;
-                    ReloadChannnelPoint();
-                }
-                else
-                {
-                    MessageBox.Show("有効/無効の切り替えに失敗しました");
-                }
+            // TwoWayバインドによりクリック時点でFormへ反映済み。その値をそのままAPIへ送る
+            var requestValue = reward.IsEnabled;
+
+            var isSuccess = await ChannelPointService.SetEnabledAsync(reward, requestValue);
+
+            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+                $"有効/無効の切り替え成功 「 {reward.Title} 」→ {(requestValue ? "有効" : "無効")}",
+                $"有効/無効の切り替え失敗 「 {reward.Title} 」"
+            );
+
+            if (!isSuccess)
+            {
+                // 送信に失敗したので画面の見た目を元に戻す
+                reward.IsEnabled = !requestValue;
+                MessageBox.Show("有効/無効の切り替えに失敗しました");
             }
         }
 
-        // 一時停止トグル
+
+        /// <summary>
+        /// 一時停止トグル
+        /// </summary>
         private async void ToggleIsPaused_Click(object sender, RoutedEventArgs e)
         {
-            if (ChannelPointListView.SelectedItem is CustomReward reward)
+            // クリックされたチェックボックス自身の行を対象にする（選択行ではない）
+            if (sender is not CheckBox checkBox || checkBox.DataContext is not ChannelPointRewardForm reward) return;
+
+            // TwoWayバインドによりクリック時点でFormへ反映済み。その値をそのままAPIへ送る
+            var requestValue = reward.IsPaused;
+
+            var isSuccess = await ChannelPointService.SetPausedAsync(reward, requestValue);
+
+            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+                $"一時停止の切り替え成功 「 {reward.Title} 」→ {(requestValue ? "一時停止" : "再開")}",
+                $"一時停止の切り替え失敗 「 {reward.Title} 」"
+            );
+
+            if (!isSuccess)
             {
-                var request = new UpdateCustomRewardRequest
-                {
-                    IsPaused = !reward.IsPaused
-                };
-                var updated = await TwitchHelper.UpdateCustomRewardAsync(reward.Id, request);
-                if (updated != null)
-                {
-                    ReloadChannnelPoint();
-                }
-                else
-                {
-                    MessageBox.Show("一時停止の切り替えに失敗しました");
-                }
+                // 送信に失敗したので画面の見た目を元に戻す
+                reward.IsPaused = !requestValue;
+                MessageBox.Show("一時停止の切り替えに失敗しました");
             }
         }
 
-        // 新規作成ボタン押下
+
+        /// <summary>
+        /// 新規作成ボタン押下
+        /// </summary>
         private void CreateRewardButton_Click(object sender, RoutedEventArgs e)
         {
             RewardFormPanel.Visibility = Visibility.Visible;
             RewardNameTextBox.Text = "";
             RewardCostTextBox.Text = "";
-            RewardImageUrlTextBox.Text = "";
         }
 
-        // キャンセルボタン押下
+
+        /// <summary>
+        /// キャンセルボタン押下
+        /// </summary>
         private void CreateRewardCancelButton_Click(object sender, RoutedEventArgs e)
         {
             RewardFormPanel.Visibility = Visibility.Collapsed;
         }
 
-        // 作成ボタン押下
+
+        /// <summary>
+        /// 作成ボタン押下
+        /// </summary>
         private async void CreateRewardSubmitButton_Click(object sender, RoutedEventArgs e)
         {
             string name = RewardNameTextBox.Text.Trim();
             string costText = RewardCostTextBox.Text.Trim();
-            string imageUrl = RewardImageUrlTextBox.Text.Trim();
 
             if (string.IsNullOrEmpty(name) || !int.TryParse(costText, out int cost) || cost < 1)
             {
@@ -205,8 +248,7 @@ namespace JTSA.Panels
             {
                 Title = name,
                 Cost = cost,
-                // 画像URLはTwitch APIの仕様上、作成時には直接指定できません（TwitchのUIでのみ設定可能）。
-                // ここでは説明用にプロンプトや他の項目を追加できます。
+                // 画像URLはTwitch APIの仕様上、作成時には直接指定できない（TwitchのWeb画面でのみ設定可能）
                 Prompt = "",
                 IsEnabled = true
             };
@@ -216,8 +258,7 @@ namespace JTSA.Panels
             {
                 MessageBox.Show("作成しました。");
                 RewardFormPanel.Visibility = Visibility.Collapsed;
-                _cachedRewards = null;
-                ReloadChannnelPoint(true);
+                await ReloadChannnelPoint();
             }
             else
             {

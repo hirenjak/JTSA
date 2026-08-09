@@ -1,6 +1,6 @@
-﻿<UserControl x:Class="JTSA.Panels.ChannelPointPanel"
+<UserControl x:Class="JTSA.Panels.ChannelPointPanel"
             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
             mc:Ignorable="d"
@@ -9,21 +9,27 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- ステータス -->
             <RowDefinition Height="Auto"/> <!-- 入力フォーム用 -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 1行目: ステータス＋新規作成ボタン -->
-        <DockPanel Grid.Row="0" Margin="5">
-            <TextBlock x:Name="ChannelPointGetStatus" Foreground="White" VerticalAlignment="Center" />
-            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90" Margin="8,0,0,0"
-                    HorizontalAlignment="Right" Click="CreateRewardButton_Click" />
-        </DockPanel>
+        <!-- 1行目: ツールバー -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
+            <Button x:Name="ReloadButton" Content="更新" Width="70" Margin="0,0,8,0"
+                    Click="ReloadButton_Click" />
+            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90"
+                    Click="CreateRewardButton_Click" />
+        </StackPanel>
 
-        <!-- 2行目: 入力フォーム（初期は非表示） -->
-        <Border Grid.Row="1" Margin="5" Background="#222" CornerRadius="4" Padding="8"
+        <!-- 2行目: ステータス表示 -->
+        <TextBlock Grid.Row="1" x:Name="ChannelPointGetStatus" Foreground="White"
+                   Margin="5,0,5,5" TextWrapping="Wrap" />
+
+        <!-- 3行目: 入力フォーム（初期は非表示） -->
+        <Border Grid.Row="2" Margin="5" Background="#222" CornerRadius="4" Padding="8"
                 x:Name="RewardFormPanel" Visibility="Collapsed">
-            <StackPanel Tag="False">
+            <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <TextBlock Text="名前:" Width="60" Foreground="White" VerticalAlignment="Center"/>
                     <TextBox x:Name="RewardNameTextBox" Width="200"/>
@@ -32,10 +38,8 @@
                     <TextBlock Text="コスト:" Width="60" Foreground="White" VerticalAlignment="Center"/>
                     <TextBox x:Name="RewardCostTextBox" Width="100"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <TextBlock Text="画像:" Width="60" Foreground="White" VerticalAlignment="Center"/>
-                    <TextBox x:Name="RewardImageUrlTextBox" IsEnabled="False" Width="300"/>
-                </StackPanel>
+                <TextBlock Foreground="#FFBBBBBB" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Text="※ 画像は Twitch API では設定できません。作成後に Twitch の Web 画面から設定してください。"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="作成" Width="80" Margin="0,0,8,0" Click="CreateRewardSubmitButton_Click"/>
                     <Button Content="キャンセル" Width="80" Click="CreateRewardCancelButton_Click"/>
@@ -43,8 +47,9 @@
             </StackPanel>
         </Border>
 
-        <!-- 3行目: リスト -->
-        <ListView x:Name="ChannelPointListView" Grid.Row="2" Margin="5">
+        <!-- 4行目: リスト -->
+        <ListView x:Name="ChannelPointListView" Grid.Row="3" Margin="5"
+                  ItemsSource="{Binding ChannelPointRewardFormList}">
             <ListView.Resources>
                 <Style TargetType="{x:Type GridViewColumnHeader}">
                     <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
@@ -52,34 +57,46 @@
             </ListView.Resources>
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="操作可能">
+                    <GridViewColumn Header="操作可能" Width="60">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="画像" Width="50">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Image Source="{Binding Image.Url1x}" Height="28" />
+                                <TextBlock Text="{Binding ManageableMark}"
+                                           ToolTip="{Binding ManageableToolTip}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="14" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="有効">
+                    <GridViewColumn Header="画像" Width="50">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
+                                <Image Source="{Binding ImageUrl}" Height="28" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="有効" Width="45">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- OneWayだとクリック時にバインドが外れるためTwoWay。失敗時はコードビハインドで戻す -->
                                 <CheckBox
-                                    IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                    IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                    IsEnabled="{Binding IsManageable}"
+                                    ToolTip="{Binding ManageableToolTip}"
                                     Click="ToggleIsEnabled_Click"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="一時停止">
+
+                    <GridViewColumn Header="一時停止" Width="65">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
+                                <!-- OneWayだとクリック時にバインドが外れるためTwoWay。失敗時はコードビハインドで戻す -->
                                 <CheckBox
-                                    IsChecked="{Binding IsPaused, Mode=OneWay}"
+                                    IsChecked="{Binding IsPaused, Mode=TwoWay}"
+                                    IsEnabled="{Binding IsManageable}"
+                                    ToolTip="{Binding ManageableToolTip}"
                                     Click="ToggleIsPaused_Click"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
