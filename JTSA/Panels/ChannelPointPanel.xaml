@@ -1,6 +1,6 @@
-﻿<UserControl x:Class="JTSA.Panels.ChannelPointPanel"
+<UserControl x:Class="JTSA.Panels.ChannelPointPanel"
             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
             mc:Ignorable="d"
@@ -9,21 +9,90 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- プリセット -->
+            <RowDefinition Height="Auto"/> <!-- ステータス -->
             <RowDefinition Height="Auto"/> <!-- 入力フォーム用 -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 1行目: ステータス＋新規作成ボタン -->
-        <DockPanel Grid.Row="0" Margin="5">
-            <TextBlock x:Name="ChannelPointGetStatus" Foreground="White" VerticalAlignment="Center" />
-            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90" Margin="8,0,0,0"
-                    HorizontalAlignment="Right" Click="CreateRewardButton_Click" />
-        </DockPanel>
+        <!-- 1行目: ツールバー -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
+            <Button x:Name="ReloadButton" Content="更新" Width="70" Margin="0,0,8,0"
+                    Click="ReloadButton_Click" />
+            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90" Margin="0,0,8,0"
+                    Click="CreateRewardButton_Click" />
+            <Button x:Name="CopySelectedButton" Content="選択をコピー" Width="110" Margin="0,0,8,0"
+                    Click="CopySelectedButton_Click"
+                    ToolTip="チェックした「操作不可（🔒）」の報酬を、このアプリから操作できる報酬としてコピーします。" />
+            <Button x:Name="OpenTwitchRewardPageButton" Content="Twitchの報酬設定を開く" Width="160"
+                    Click="OpenTwitchRewardPageButton_Click"
+                    ToolTip="コピー元の報酬の削除や画像設定は Twitch の Web 画面から行います。" />
+        </StackPanel>
 
-        <!-- 2行目: 入力フォーム（初期は非表示） -->
-        <Border Grid.Row="1" Margin="5" Background="#222" CornerRadius="4" Padding="8"
+        <!-- 2行目: プリセット -->
+        <Border Grid.Row="1" Margin="5,0,5,5" Background="#333" CornerRadius="4" Padding="8">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="プリセット:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="PresetComboBox" Width="220" Margin="0,0,8,0"
+                              ItemsSource="{Binding ChannelPointPresetFormList}"
+                              DisplayMemberPath="DisplayText"
+                              SelectionChanged="PresetComboBox_SelectionChanged"/>
+                    <Button x:Name="ApplyPresetButton" Content="適用" Width="70" Margin="0,0,8,0"
+                            Click="ApplyPresetButton_Click"
+                            ToolTip="選択したプリセットの状態に、報酬の有効/無効をまとめて切り替えます。"/>
+                    <Button x:Name="OverwritePresetButton" Content="上書き保存" Width="90" Margin="0,0,8,0"
+                            Click="OverwritePresetButton_Click"
+                            ToolTip="今の一覧の有効/無効で、選択中のプリセットを上書きします。"/>
+                    <Button x:Name="DeletePresetButton" Content="削除" Width="60"
+                            Click="DeletePresetButton_Click"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="名前:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox x:Name="PresetNameTextBox" Width="220" Margin="0,0,8,0"
+                             ToolTip="新規保存する名前、または選択中プリセットの新しい名前を入力します。"/>
+                    <Button x:Name="SavePresetButton" Content="この名前で新規保存" Width="150" Margin="0,0,8,0"
+                            Click="SavePresetButton_Click"
+                            ToolTip="今の一覧の有効/無効を、新しいプリセットとして保存します。"/>
+                    <Button x:Name="RenamePresetButton" Content="名前変更" Width="80"
+                            Click="RenamePresetButton_Click"
+                            ToolTip="選択中のプリセットの名前を、入力した名前へ変更します。"/>
+                </StackPanel>
+
+                <!-- 選択中プリセットの内訳 -->
+                <TextBlock x:Name="PresetDetailStatus" Foreground="#FFBBBBBB" Margin="0,6,0,0"
+                           TextWrapping="Wrap"
+                           Text="プリセットを選択すると内容が表示されます。"/>
+                <ListView x:Name="PresetItemListView" Height="110" Margin="0,4,0,0"
+                          ItemsSource="{Binding ChannelPointPresetItemFormList}"
+                          Visibility="Collapsed">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="有効" Width="45">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <!-- ここは表示専用。変更は一覧側で行って「上書き保存」する -->
+                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" IsHitTestVisible="False"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="報酬名" Width="260" DisplayMemberBinding="{Binding RewardTitle}"/>
+                            <GridViewColumn Header="状態" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </StackPanel>
+        </Border>
+
+        <!-- 3行目: ステータス表示 -->
+        <TextBlock Grid.Row="2" x:Name="ChannelPointGetStatus" Foreground="White"
+                   Margin="5,0,5,5" TextWrapping="Wrap" />
+
+        <!-- 4行目: 入力フォーム（初期は非表示） -->
+        <Border Grid.Row="3" Margin="5" Background="#222" CornerRadius="4" Padding="8"
                 x:Name="RewardFormPanel" Visibility="Collapsed">
-            <StackPanel Tag="False">
+            <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <TextBlock Text="名前:" Width="60" Foreground="White" VerticalAlignment="Center"/>
                     <TextBox x:Name="RewardNameTextBox" Width="200"/>
@@ -32,10 +101,8 @@
                     <TextBlock Text="コスト:" Width="60" Foreground="White" VerticalAlignment="Center"/>
                     <TextBox x:Name="RewardCostTextBox" Width="100"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <TextBlock Text="画像:" Width="60" Foreground="White" VerticalAlignment="Center"/>
-                    <TextBox x:Name="RewardImageUrlTextBox" IsEnabled="False" Width="300"/>
-                </StackPanel>
+                <TextBlock Foreground="#FFBBBBBB" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Text="※ 画像は Twitch API では設定できません。作成後に Twitch の Web 画面から設定してください。"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="作成" Width="80" Margin="0,0,8,0" Click="CreateRewardSubmitButton_Click"/>
                     <Button Content="キャンセル" Width="80" Click="CreateRewardCancelButton_Click"/>
@@ -43,8 +110,9 @@
             </StackPanel>
         </Border>
 
-        <!-- 3行目: リスト -->
-        <ListView x:Name="ChannelPointListView" Grid.Row="2" Margin="5">
+        <!-- 5行目: リスト -->
+        <ListView x:Name="ChannelPointListView" Grid.Row="4" Margin="5"
+                  ItemsSource="{Binding ChannelPointRewardFormList}">
             <ListView.Resources>
                 <Style TargetType="{x:Type GridViewColumnHeader}">
                     <EventSetter Event="Click" Handler="GridViewColumnHeader_Click"/>
@@ -52,34 +120,57 @@
             </ListView.Resources>
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="操作可能">
+                    <GridViewColumn Header="選択" Width="40">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="画像" Width="50">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <Image Source="{Binding Image.Url1x}" Height="28" />
+                                <!-- 一括コピー用。コピーできるのは操作不可の報酬だけ -->
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          IsEnabled="{Binding CanCopy}"
+                                          HorizontalAlignment="Center" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
 
-                    <GridViewColumn Header="有効">
+                    <GridViewColumn Header="操作可能" Width="60">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
+                                <TextBlock Text="{Binding ManageableMark}"
+                                           ToolTip="{Binding ManageableToolTip}"
+                                           HorizontalAlignment="Center"
+                                           FontSize="14" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="画像" Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Image Source="{Binding ImageUrl}" Height="28" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="有効" Width="45">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- OneWayだとクリック時にバインドが外れるためTwoWay。失敗時はコードビハインドで戻す -->
                                 <CheckBox
-                                    IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                    IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                    IsEnabled="{Binding IsManageable}"
+                                    ToolTip="{Binding ManageableToolTip}"
                                     Click="ToggleIsEnabled_Click"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="一時停止">
+
+                    <GridViewColumn Header="一時停止" Width="65">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
+                                <!-- OneWayだとクリック時にバインドが外れるためTwoWay。失敗時はコードビハインドで戻す -->
                                 <CheckBox
-                                    IsChecked="{Binding IsPaused, Mode=OneWay}"
+                                    IsChecked="{Binding IsPaused, Mode=TwoWay}"
+                                    IsEnabled="{Binding IsManageable}"
+                                    ToolTip="{Binding ManageableToolTip}"
                                     Click="ToggleIsPaused_Click"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
@@ -88,6 +179,19 @@
                     <GridViewColumn Header="タイトル" Width="200" DisplayMemberBinding="{Binding Title}" />
 
                     <GridViewColumn Header="コスト" Width="80" DisplayMemberBinding="{Binding Cost}" />
+
+                    <GridViewColumn Header="コピー" Width="70">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- 操作不可の報酬にだけ出す -->
+                                <Button Content="コピー" Width="60"
+                                        Visibility="{Binding CopyButtonVisibility}"
+                                        Tag="{Binding}"
+                                        Click="CopyRewardButton_Click"
+                                        ToolTip="この報酬と同じ設定で、このアプリから操作できる報酬を作成します。" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
                 </GridView>
             </ListView.View>
         </ListView>

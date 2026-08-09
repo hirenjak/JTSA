@@ -15,6 +15,8 @@ namespace JTSA.Dao
             IsChatOverlay = 7,
             ChatOverlayPosX = 8,
             ChatOverlayPosY = 9,
+            /// <summary> チャンネルポイントのコピー時に元のタイトルへ付ける接尾辞 </summary>
+            ChannelPointCopySuffix = 10,
         }
 
 

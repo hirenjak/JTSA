@@ -13,4 +13,10 @@ public class M_Category : DBBase
     public string? SteamUrl { get; set; }
 
     public string? SteamHeaderArtUrl { get; set; }
+
+    /// <summary>
+    /// このカテゴリに紐づくチャンネルポイントプリセットID。
+    /// null（未紐づけ）の場合はカテゴリを切り替えてもプリセットを適用しない。
+    /// </summary>
+    public long? ChannelPointPresetId { get; set; }
 }

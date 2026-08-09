@@ -18,20 +18,26 @@ namespace JTSA.Models
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
         public DbSet<T_ChatUser> T_ChatUser { get; set; }
-        
+        public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
+        public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
+        public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
+
 
         /// <summary>
-        /// 複合キーの設定
+        /// �����L�[�̐ݒ�
         /// </summary>
         /// <param name="modelBuilder"></param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<T_GamePlaylistItem>()
                 .HasKey(c => new { c.GamePlayListId, c.CategoryId });
+
+            modelBuilder.Entity<T_ChannelPointPresetItem>()
+                .HasKey(c => new { c.PresetId, c.RewardId });
         }
 
         /// <summary>
-        /// DBの物理ファイル位置などの設定
+        /// DB�̕����t�@�C���ʒu�Ȃǂ̐ݒ�
         /// </summary>
         /// <param name="optionsBuilder"></param>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

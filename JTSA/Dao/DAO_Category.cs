@@ -67,6 +67,7 @@ namespace JTSA.Dao
                     BoxArtUrl = record.BoxArtUrl,
                     SteamUrl = record.SteamUrl,
                     SteamHeaderArtUrl = record.SteamHeaderArtUrl,
+                    ChannelPointPresetId = record.ChannelPointPresetId,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
