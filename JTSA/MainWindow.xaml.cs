@@ -270,7 +270,9 @@ namespace JTSA
             await StreamerDataSet();
 
             // 各パネルの初期化処理
-            await ChatPanel.Initialize();
+            ChatPanel.Initialize();
+			CategoryPanel.Initialize();
+
             PlayingGamePanel.ReloadPlaylistHeader();
             PlayingGamePanel.ReloadGamePlaylistItem();
 

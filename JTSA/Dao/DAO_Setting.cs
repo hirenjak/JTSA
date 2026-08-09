@@ -26,7 +26,6 @@ namespace JTSA.Dao
         public static M_Setting? SelectOneById(SettingName id)
         {
             using var db = new AppDbContext();
-            if (db.M_Setting.Count() == 0) return null;
 
             return db.M_Setting.SingleOrDefault(x => x.Name == (int)id);
         }

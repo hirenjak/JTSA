@@ -32,7 +32,10 @@ namespace JTSA.Panels
             InitializeComponent();
 
             DataContext = this;
+        }
 
+        public void Initialize()
+        {
             ReloadCategory();
         }
 

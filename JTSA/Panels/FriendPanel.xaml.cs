@@ -32,17 +32,17 @@ namespace JTSA.Panels
 
             InitializeComponent();
 
+            Loaded += FriendPanel_Loaded;
+        }
+
+        private void FriendPanel_Loaded(object sender, RoutedEventArgs e)
+        {
             var settingPrefixWord = DAO_Setting.SelectOneById(DAO_Setting.SettingName.FriendPrefixWord);
             if (settingPrefixWord != null)
             {
                 FriendPrefixWordTextBox.Text = settingPrefixWord.Value;
             }
 
-            Loaded += FriendPanel_Loaded;
-        }
-
-        private void FriendPanel_Loaded(object sender, RoutedEventArgs e)
-        {
             ReloadFriend();
         }
 

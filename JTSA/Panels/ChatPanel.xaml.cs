@@ -45,15 +45,8 @@ namespace JTSA.Panels
         /// </summary>
         public ChatPanel()
         {
-            DataContext = this;
-
             InitializeComponent();
-
-            ChatNotificationVolumeSlider.Value = 
-               double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatNotificationVolume)?.Value ?? "50");
-
-            JoinChatVolumeSlider.Value =
-               double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
+            DataContext = this;
 
             ChatNotificationPlayer.Init(ChatNotificationReader);
             JoinChatPlayer.Init(JoinChatReader);
@@ -121,8 +114,14 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public async Task Initialize()
+        public async void Initialize()
         {
+            ChatNotificationVolumeSlider.Value =
+               double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatNotificationVolume)?.Value ?? "50");
+
+            JoinChatVolumeSlider.Value =
+               double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
+
             DAO_ChatUser.AllDelete();
 
             if(twitchChatService == null)
