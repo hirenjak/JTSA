@@ -56,9 +56,28 @@ JTSA の CP タブ（`ChannelPointPanel`）を実用に足る管理画面へ整�
 - [x] P1-10 ビルド確認
 - [ ] P1-11 実機動作確認
 
+### Phase 1.5 — OAuth 認証まわりの緊急修正（計画外・実機検証の前提として追加）
+
+Phase 1 の動作確認でアプリを起動したところ、OAuth 認証直後に NullReferenceException で強制終了した。
+CP タブの初期化まで到達できず検証不能だったため、ユーザー判断のうえこのブランチで修正した。
+
+- [x] P1.5-1 `OAuthButton_Click` に認証後の初期化処理が無く落ちる問題を修正（`InitializeAfterAuthAsync` へ共通化）
+- [x] P1.5-2 `accessTokenResponse` / `deviceCodeResponse` が null でも参照していた箇所に null チェックを追加
+- [x] P1.5-3 `StreamerDataSet` の null 参照 2 箇所を修正（`streamInfo` が null、未登録カテゴリで `dbCategoryData` が null のまま代入）
+- [x] P1.5-4 Twitch ユーザー名の手入力を廃止（`TwitchHelper.GetAuthenticatedUserAsync` でアクセストークンから特定）
+- [x] P1.5-5 デバイスコード認証 URL に `user_code` としてログイン名を連結していた誤りを修正（`verification_uri_complete` を使用）
+
 ### Phase 2 — 報酬コピー機能
 
-（Phase 1 完了時に具体化する）
+- [x] P2-1 `Utility/TwitchApiResult.cs` 新規作成（失敗理由を分類して呼び出し元へ返す）
+- [x] P2-2 `TwitchHelper` の作成/更新を `TwitchApiResult` 返却へ変更、`DeleteCustomRewardAsync` を追加
+- [x] P2-3 `SettingName.ChannelPointCopySuffix = 10` を追加（既定値 `'`）
+- [x] P2-4 `ChannelPointService.CopyRewardAsync`（45 文字制限・重複時の接尾辞リトライ・画像以外の全項目引き継ぎ）
+- [x] P2-5 一覧に「選択」チェック列と行内「コピー」ボタン列を追加、ツールバーに「選択をコピー」を追加
+- [x] P2-6 コピー結果ダイアログ（画像とコピー元の後始末を案内）と「Twitchの報酬設定を開く」ボタン
+- [x] P2-7 トグル失敗時に理由（403/400 等）をダイアログとログに表示
+- [x] P2-8 ビルド確認
+- [ ] P2-9 実機動作確認
 
 ### Phase 3 — プリセット機能
 
@@ -73,7 +92,9 @@ JTSA の CP タブ（`ChannelPointPanel`）を実用に足る管理画面へ整�
 | 日付 | タスクID | 内容 | 変更ファイル | コミット | 動作確認 |
 |---|---|---|---|---|---|
 | 2026-08-09 | P0-1〜3 | develop 最新化、feature ブランチ作成、本ドキュメント作成 | `docs/CHANNELPOINT-SYSTEM-TASKS.md` | — | 対象なし |
-| 2026-08-09 | P1-1〜10 | 土台整備（Form/Service 追加）と既存バグ 3 件の修正 | `Forms/ChannelPointRewardForm.cs`(新), `Utility/ChannelPointService.cs`(新), `Utility/TwitchHelper.cs`, `Panels/ChannelPointPanel.xaml(.cs)`, `MainWindow.xaml.cs` | — | `dotnet build` 成功（0 エラー／新規ファイルの警告なし）。**実機動作は未検証** |
+| 2026-08-09 | P1-1〜10 | 土台整備（Form/Service 追加）と既存バグ 3 件の修正 | `Forms/ChannelPointRewardForm.cs`(新), `Utility/ChannelPointService.cs`(新), `Utility/TwitchHelper.cs`, `Panels/ChannelPointPanel.xaml(.cs)`, `MainWindow.xaml.cs` | `3bc99c5` | `dotnet build` 成功（0 エラー／新規ファイルの警告なし）。**実機動作は未検証** |
+| 2026-08-09 | P1.5-1〜5 | Phase 1 の実機確認で OAuth 認証直後のクラッシュが発覚し修正。合わせてユーザー名の手入力を廃止 | `MainWindow.xaml(.cs)`, `Utility/TwitchHelper.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P2-1〜8 | 報酬コピー機能と API エラー理由の伝播 | `Utility/TwitchApiResult.cs`(新), `Utility/ChannelPointService.cs`, `Utility/TwitchHelper.cs`, `Dao/DAO_Setting.cs`, `Forms/ChannelPointRewardForm.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 
 ## 4. 課題・保留
 
@@ -83,4 +104,6 @@ JTSA の CP タブ（`ChannelPointPanel`）を実用に足る管理画面へ整�
 | 2 | コピー後の元報酬（操作不可）はアプリから削除できないため、Web UI での無効化/削除をユーザーに案内する必要がある | 設計に反映済み |
 | 3 | `DAO_GamePlaylist.InsertUpdate(header, items)` に既存アイテム削除の未実装バグがある（本改修の対象外だが、プリセット DAO で同じ実装を真似しないこと） | 別課題として放置 |
 | 4 | `only_manageable_rewards=true` の GET に失敗した場合、操作可否が判定できない。安全側に倒して**全件を操作不可**として表示する仕様にした（誤操作で 403 を踏むより良いと判断） | 仕様として確定 |
-| 5 | Phase 1 時点では新規作成フォームは名前・コストのみ（従来どおり）。Prompt・背景色・クールダウン等の入力は Phase 2 でコピー機能と共用する形で追加する | Phase 2 で対応 |
+| 5 | 新規作成フォームは名前・コストのみのまま。Prompt・背景色・クールダウン等はコピー機能では引き継ぐが、手動作成時の入力欄は未実装 | 未対応（優先度低） |
+| 6 | `SettingName.UserName` は表示と Twitch ダッシュボード URL 用にのみ使う値になった（認証の前提条件ではなくなり、アクセストークンから毎回上書きされる） | 仕様変更として確定 |
+| 7 | `TwitchHelper.GetBroadcasterIdAsync(userName)` は起動経路からは呼ばれなくなったが、FriendPanel / ChatPanel が他ユーザーの情報取得に使っているため残す | 確認済み・残置 |

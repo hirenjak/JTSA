@@ -218,19 +218,16 @@ namespace JTSA
 				return;
             }
 
-			// ユーザー名取得確認
-			M_Setting? settingUserName = DAO_Setting.SelectOneById(DAO_Setting.SettingName.UserName) ?? null;
-			if (settingUserName == null || string.IsNullOrEmpty(settingUserName.Value))
+			// リフレッシュトークン取得確認
+			// ユーザー名はアクセストークンから特定できるため、保存済みトークンの有無だけを見る
+			M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken) ?? null;
+			if (settingRefreshToken == null || string.IsNullOrEmpty(settingRefreshToken.Value))
             {
-                UserName_TextBox.Text = "NG";
-                AppLogPanel.Error(GetType().Name, appLogProcessName + "：ユーザー名未設定");
+                AccessToken_TextBlock.Text = "NG";
+                AppLogPanel.Error(GetType().Name, appLogProcessName + "：未認証（OAuth認証が必要）");
                 LoadSubPanel.Visibility = Visibility.Visible;
 				return;
 			}
-
-            // メモリに登録
-            JTSAHelper.LoginName = settingUserName.Value;
-			UserName_TextBox.Text = JTSAHelper.LoginName;
 
 			// リフレッシュトークンからアクセストークンを再取得
 			string accessToken = await ResetAccessTokenAsync();
@@ -248,40 +245,61 @@ namespace JTSA
 
             AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
 
-			// 配信者IDの取得
-            var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(JTSAHelper.LoginName);
-            if (streamerInfo == null)
-            {
-                AppLogPanel.Error(GetType().Name, "配信者情報未取得");
-                return;
-            }
+			// 認証後の初期化（OAuth認証直後と共通）
+			await InitializeAfterAuthAsync();
+        }
+
+
+		/// <summary>
+		/// アクセストークン取得後の初期化処理。
+		/// 起動時（リフレッシュトークン経由）とOAuth認証直後の両方から呼ばれる共通処理。
+		///
+		/// 以前はこの処理が起動時シーケンスにしか無く、OAuth認証直後は
+		/// BroadcasterIdもIgdbServiceも未設定のままStreamerDataSet()を呼んで落ちていた。
+		/// </summary>
+		private async Task InitializeAfterAuthAsync()
+		{
+			var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アプリ初期化処理");
+
+			// 配信者情報の取得（アクセストークンの持ち主＝配信者本人）
+			var streamerInfo = await TwitchHelper.GetAuthenticatedUserAsync();
+			if (streamerInfo == null)
+			{
+				BroadcasterId_TextBlock.Text = "NG";
+				AppLogPanel.Error(GetType().Name, "配信者情報未取得");
+				LoadSubPanel.Visibility = Visibility.Visible;
+				return;
+			}
 
 			// メモリに登録
-            TwitchHelper.BroadcasterId = streamerInfo.UserId;
-            BroadcasterId_TextBlock.Text = "OK!";
+			TwitchHelper.BroadcasterId = streamerInfo.UserId;
+			BroadcasterId_TextBlock.Text = "OK!";
 
-            appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アプリ初期化処理");
+			JTSAHelper.LoginName = streamerInfo.Login;
+			UserName_TextBox.Text = JTSAHelper.LoginName;
 
+			// 表示・Twitchダッシュボードのリンク用に保存しておく
+			DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
 
-            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+			IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
 
+			// アクセストークンの確認を持って起動時設定を完了
+			await StreamerDataSet();
 
-            // アクセストークンの確認を持って起動時設定を完了
-            await StreamerDataSet();
-
-            // 各パネルの初期化処理
-            ChatPanel.Initialize();
+			// 各パネルの初期化処理
+			ChatPanel.Initialize();
 			CategoryPanel.Initialize();
 			await ChannelPointPanel.Initialize();
 
-            PlayingGamePanel.ReloadPlaylistHeader();
-            PlayingGamePanel.ReloadGamePlaylistItem();
+			PlayingGamePanel.ReloadPlaylistHeader();
+			PlayingGamePanel.ReloadGamePlaylistItem();
 
-            // ロード画面を非表示
-            LoadScreen.Visibility = Visibility.Collapsed;
+			// ロード画面を非表示
+			LoadScreen.Visibility = Visibility.Collapsed;
+			LoadSubPanel.Visibility = Visibility.Collapsed;
 
-            AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
-        }
+			AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+		}
 
 
         /// <summary>
@@ -332,6 +350,12 @@ namespace JTSA
 
             // タイトル取得処理
             var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            if (streamInfo == null)
+            {
+                AppLogPanel.Error(GetType().Name, "配信情報の取得に失敗しました");
+                return;
+            }
+
             CurrentTitleText = streamInfo.title;
 
             TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
@@ -340,14 +364,33 @@ namespace JTSA
 
 			if(dbCategoryData == null)
 			{
-                // カテゴリ名取得処理
+                // DBに未登録のカテゴリなので、Twitch/IGDBから取得して組み立てる
                 var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
+                if (category == null)
+                {
+                    // カテゴリ未設定で配信している場合などはここに来る。タイトルだけ反映して終了する
+                    AppLogPanel.Error(GetType().Name, "カテゴリ情報の取得に失敗しました");
+
+                    CurrentTitleText = TitleEditTextBox.Text;
+                    ReloadTitleText();
+                    TitleTagSidePanel.ReloadTitleTag();
+
+                    AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+                    return;
+                }
+
 				var steamUrl = await IgdbService.GetSteamUrlsAsync(category.Id);
 
-                dbCategoryData.CategoryId = category.Id;
-				dbCategoryData.DisplayName = category.Name;
-				dbCategoryData.SteamUrl = steamUrl[0] ?? string.Empty;
-				dbCategoryData.BoxArtUrl = category.BoxArtUrl;
+                dbCategoryData = new M_Category
+                {
+                    CategoryId = category.Id,
+                    DisplayName = category.Name,
+                    SteamUrl = steamUrl?.FirstOrDefault() ?? string.Empty,
+                    BoxArtUrl = category.BoxArtUrl,
+                    LastUsedDateTime = DateTime.Now,
+                    CreatedDateTime = DateTime.Now,
+                    UpdatedDateTime = DateTime.Now
+                };
             }
 
             CurrentTitleText = TitleEditTextBox.Text;
@@ -375,41 +418,46 @@ namespace JTSA
 		/// <param name="e"></param>
 		private async void OAuthButton_Click(object sender, RoutedEventArgs e)
 		{
+			var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "OAuth認証");
+
 			// Loading画面表示
 			LoadScreen.Visibility = Visibility.Visible;
-
-            JTSAHelper.LoginName = LoadPanelUserNameTextBox.Text.Trim();
-			UserName_TextBox.Text = JTSAHelper.LoginName;
+			LoadSubPanel.Visibility = Visibility.Visible;
 
 			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
+			if (deviceCodeResponse == null)
+			{
+				AccessToken_TextBlock.Text = "NG";
+				AppLogPanel.Error(GetType().Name, "デバイスコードの取得に失敗しました");
+				return;
+			}
 
 			// 認証URLとユーザーコードをユーザーに表示
 			LoadPanelSubTextBox.Text = deviceCodeResponse.user_code;
 
-			LoadSubPanel.Visibility = Visibility.Visible;
-
 			// 認証ページを自動で開く
-			Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={JTSAHelper.LoginName}") { UseShellExecute = true });
+			// verification_uri_complete はユーザーコードを埋め込み済みのURL
+			var verificationUrl = string.IsNullOrEmpty(deviceCodeResponse.verification_uri_complete)
+				? deviceCodeResponse.verification_uri
+				: deviceCodeResponse.verification_uri_complete;
+
+			Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
 
 			// アクセストークン取得
 			var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
 
-            if (accessTokenResponse != null)
-			{
-				TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-				AccessToken_TextBlock.Text = "OK!";
-			}
-			else
+			if (accessTokenResponse == null)
 			{
 				AccessToken_TextBlock.Text = "NG";
+				AppLogPanel.Error(GetType().Name, "アクセストークンの取得に失敗しました");
+				return;
 			}
 
-			// --- 設定情報保存処理 ---
-			DAO_Setting.InsertUpdate(
-				DAO_Setting.SettingName.UserName,
-				JTSAHelper.LoginName
-			);
+			TwitchHelper.AccessToken = accessTokenResponse.accessToken;
+			AccessToken_TextBlock.Text = "OK!";
 
+			// --- 設定情報保存処理 ---
+			// ユーザー名はこの後 InitializeAfterAuthAsync がアクセストークンから特定して保存する
 			DAO_Setting.InsertUpdate(
 				DAO_Setting.SettingName.RefreshToken,
 				accessTokenResponse.refreshToken
@@ -420,9 +468,10 @@ namespace JTSA
 				accessTokenResponse.expiresIn.ToString()
 			);
 
-			await StreamerDataSet();
+			AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
 
-			LoadScreen.Visibility = Visibility.Collapsed;
+			// 認証後の初期化（起動時と共通）
+			await InitializeAfterAuthAsync();
 		}
 
 		#endregion

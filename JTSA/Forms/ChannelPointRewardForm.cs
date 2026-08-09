@@ -55,6 +55,7 @@ namespace JTSA.Forms
                 OnPropertyChanged(nameof(IsManageable));
                 OnPropertyChanged(nameof(ManageableMark));
                 OnPropertyChanged(nameof(ManageableToolTip));
+                OnPropertyChanged(nameof(CanCopy));
                 OnPropertyChanged(nameof(CopyButtonVisibility));
             }
         }
@@ -106,6 +107,9 @@ namespace JTSA.Forms
         public string ManageableToolTip => IsManageable
             ? "このアプリから操作できます。"
             : "Twitch の Web 画面（または他アプリ）から作成されたため、このアプリからは操作できません。コピーを作成してください。";
+
+        /// <summary> コピーできるのは操作不可の報酬だけ（操作可能なものは既にアプリ管理下） </summary>
+        public bool CanCopy => !IsManageable;
 
         /// <summary> コピーボタンは操作不可の報酬にだけ出す </summary>
         public Visibility CopyButtonVisibility =>

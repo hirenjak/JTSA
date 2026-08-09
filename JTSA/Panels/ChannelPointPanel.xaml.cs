@@ -167,18 +167,18 @@ namespace JTSA.Panels
             // TwoWayバインドによりクリック時点でFormへ反映済み。その値をそのままAPIへ送る
             var requestValue = reward.IsEnabled;
 
-            var isSuccess = await ChannelPointService.SetEnabledAsync(reward, requestValue);
+            var result = await ChannelPointService.SetEnabledAsync(reward, requestValue);
 
-            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+            mainWindow.AppLogPanel.AddSwitchLog(result.IsSuccess, GetType().Name,
                 $"有効/無効の切り替え成功 「 {reward.Title} 」→ {(requestValue ? "有効" : "無効")}",
-                $"有効/無効の切り替え失敗 「 {reward.Title} 」"
+                $"有効/無効の切り替え失敗 「 {reward.Title} 」：{result.ErrorMessage}"
             );
 
-            if (!isSuccess)
+            if (!result.IsSuccess)
             {
                 // 送信に失敗したので画面の見た目を元に戻す
                 reward.IsEnabled = !requestValue;
-                MessageBox.Show("有効/無効の切り替えに失敗しました");
+                MessageBox.Show($"有効/無効の切り替えに失敗しました。\n\n{result.ErrorMessage}");
             }
         }
 
@@ -194,18 +194,18 @@ namespace JTSA.Panels
             // TwoWayバインドによりクリック時点でFormへ反映済み。その値をそのままAPIへ送る
             var requestValue = reward.IsPaused;
 
-            var isSuccess = await ChannelPointService.SetPausedAsync(reward, requestValue);
+            var result = await ChannelPointService.SetPausedAsync(reward, requestValue);
 
-            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+            mainWindow.AppLogPanel.AddSwitchLog(result.IsSuccess, GetType().Name,
                 $"一時停止の切り替え成功 「 {reward.Title} 」→ {(requestValue ? "一時停止" : "再開")}",
-                $"一時停止の切り替え失敗 「 {reward.Title} 」"
+                $"一時停止の切り替え失敗 「 {reward.Title} 」：{result.ErrorMessage}"
             );
 
-            if (!isSuccess)
+            if (!result.IsSuccess)
             {
                 // 送信に失敗したので画面の見た目を元に戻す
                 reward.IsPaused = !requestValue;
-                MessageBox.Show("一時停止の切り替えに失敗しました");
+                MessageBox.Show($"一時停止の切り替えに失敗しました。\n\n{result.ErrorMessage}");
             }
         }
 
@@ -254,16 +254,151 @@ namespace JTSA.Panels
             };
 
             var result = await TwitchHelper.CreateCustomRewardAsync(req);
-            if (result != null && result.Count > 0)
+            if (result.IsSuccess)
             {
-                MessageBox.Show("作成しました。");
+                MessageBox.Show("作成しました。\n\n画像は Twitch の Web 画面から設定してください。");
                 RewardFormPanel.Visibility = Visibility.Collapsed;
                 await ReloadChannnelPoint();
             }
             else
             {
-                MessageBox.Show("作成に失敗しました。");
+                MessageBox.Show($"作成に失敗しました。\n\n{result.ErrorMessage}");
             }
         }
+
+
+        #region ==================== コピー ====================
+
+        /// <summary>
+        /// 行内のコピーボタン押下（1件だけコピー）
+        /// </summary>
+        private async void CopyRewardButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not ChannelPointRewardForm reward) return;
+
+            await CopyRewardsAsync([reward]);
+        }
+
+
+        /// <summary>
+        /// ツールバーの「選択をコピー」押下（チェックした分をまとめてコピー）
+        /// </summary>
+        private async void CopySelectedButton_Click(object sender, RoutedEventArgs e)
+        {
+            var targets = ChannelPointRewardFormList.Where(x => x.IsSelected && x.CanCopy).ToList();
+
+            if (targets.Count == 0)
+            {
+                MessageBox.Show("コピーする報酬にチェックを入れてください。\n\nコピーできるのは「操作可能」列が 🔒 の報酬だけです。");
+                return;
+            }
+
+            await CopyRewardsAsync(targets);
+        }
+
+
+        /// <summary>
+        /// 報酬のコピーを実行し、結果をまとめて通知する
+        /// </summary>
+        /// <param name="targets">コピー対象</param>
+        private async Task CopyRewardsAsync(List<ChannelPointRewardForm> targets)
+        {
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "チャンネルポイント報酬コピー");
+
+            CopySelectedButton.IsEnabled = false;
+
+            var suffix = ChannelPointService.GetCopySuffix();
+            var results = new List<ChannelPointCopyResult>();
+
+            foreach (var target in targets)
+            {
+                var result = await ChannelPointService.CopyRewardAsync(target, suffix);
+                results.Add(result);
+
+                mainWindow.AppLogPanel.AddSwitchLog(result.IsSuccess, GetType().Name,
+                    $"報酬コピー成功 「 {result.SourceTitle} 」→「 {result.CreatedTitle} 」",
+                    $"報酬コピー失敗 「 {result.SourceTitle} 」：{result.ErrorMessage}"
+                );
+            }
+
+            CopySelectedButton.IsEnabled = true;
+
+            // コピー分を一覧へ反映する
+            await ReloadChannnelPoint();
+
+            ShowCopyResult(results);
+
+            mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+        }
+
+
+        /// <summary>
+        /// コピー結果と、ユーザーが Web 画面で行う必要がある後始末を案内する
+        /// </summary>
+        /// <param name="results">コピー結果</param>
+        private void ShowCopyResult(List<ChannelPointCopyResult> results)
+        {
+            var successList = results.Where(x => x.IsSuccess).ToList();
+            var failureList = results.Where(x => !x.IsSuccess).ToList();
+
+            var message = new System.Text.StringBuilder();
+
+            if (successList.Count > 0)
+            {
+                message.AppendLine($"■ コピーしました（{successList.Count}件）");
+                foreach (var success in successList)
+                {
+                    message.AppendLine($"　「{success.SourceTitle}」→「{success.CreatedTitle}」");
+                }
+                message.AppendLine();
+                message.AppendLine("・画像は Twitch API では設定できないため引き継がれません。Twitch の Web 画面から設定してください。");
+                message.AppendLine("・コピー元の報酬はこのアプリからは削除できません。Twitch の Web 画面で無効化または削除してください。");
+            }
+
+            if (failureList.Count > 0)
+            {
+                if (successList.Count > 0) message.AppendLine();
+
+                message.AppendLine($"■ 失敗しました（{failureList.Count}件）");
+                foreach (var failure in failureList)
+                {
+                    message.AppendLine($"　「{failure.SourceTitle}」：{failure.ErrorMessage}");
+                }
+            }
+
+            MessageBox.Show(message.ToString(), "チャンネルポイントのコピー結果");
+        }
+
+
+        /// <summary>
+        /// Twitch のチャンネルポイント設定ページを開く
+        /// （コピー元の削除や画像設定は Web 画面でしか行えないため）
+        /// </summary>
+        private void OpenTwitchRewardPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            var url = $"https://dashboard.twitch.tv/u/{JTSAHelper.LoginName}/viewer-rewards/channel-points/rewards";
+
+            var isSuccess = true;
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                isSuccess = false;
+                mainWindow.AppLogPanel.Error(GetType().Name, "Twitch報酬設定ページを開けませんでした：" + ex.Message);
+            }
+
+            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+                "Twitch報酬設定ページを開きました",
+                "Twitch報酬設定ページを開けませんでした"
+            );
+        }
+
+        #endregion
     }
 }

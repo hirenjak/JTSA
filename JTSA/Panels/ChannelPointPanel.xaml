@@ -18,8 +18,14 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
             <Button x:Name="ReloadButton" Content="更新" Width="70" Margin="0,0,8,0"
                     Click="ReloadButton_Click" />
-            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90"
+            <Button x:Name="CreateRewardButton" Content="新規作成" Width="90" Margin="0,0,8,0"
                     Click="CreateRewardButton_Click" />
+            <Button x:Name="CopySelectedButton" Content="選択をコピー" Width="110" Margin="0,0,8,0"
+                    Click="CopySelectedButton_Click"
+                    ToolTip="チェックした「操作不可（🔒）」の報酬を、このアプリから操作できる報酬としてコピーします。" />
+            <Button x:Name="OpenTwitchRewardPageButton" Content="Twitchの報酬設定を開く" Width="160"
+                    Click="OpenTwitchRewardPageButton_Click"
+                    ToolTip="コピー元の報酬の削除や画像設定は Twitch の Web 画面から行います。" />
         </StackPanel>
 
         <!-- 2行目: ステータス表示 -->
@@ -57,6 +63,17 @@
             </ListView.Resources>
             <ListView.View>
                 <GridView>
+                    <GridViewColumn Header="選択" Width="40">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- 一括コピー用。コピーできるのは操作不可の報酬だけ -->
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          IsEnabled="{Binding CanCopy}"
+                                          HorizontalAlignment="Center" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
                     <GridViewColumn Header="操作可能" Width="60">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
@@ -105,6 +122,19 @@
                     <GridViewColumn Header="タイトル" Width="200" DisplayMemberBinding="{Binding Title}" />
 
                     <GridViewColumn Header="コスト" Width="80" DisplayMemberBinding="{Binding Cost}" />
+
+                    <GridViewColumn Header="コピー" Width="70">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- 操作不可の報酬にだけ出す -->
+                                <Button Content="コピー" Width="60"
+                                        Visibility="{Binding CopyButtonVisibility}"
+                                        Tag="{Binding}"
+                                        Click="CopyRewardButton_Click"
+                                        ToolTip="この報酬と同じ設定で、このアプリから操作できる報酬を作成します。" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
                 </GridView>
             </ListView.View>
         </ListView>
