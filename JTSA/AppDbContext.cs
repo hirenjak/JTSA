@@ -5,7 +5,10 @@ namespace JTSA.Models
 {
     public class AppDbContext : DbContext
     {
-        public static string dbDirectory;
+        public static string dbDirectory = string.Empty;
+
+        // DAO tests can redirect the database without touching the user's AppData DB.
+        internal static string? DatabasePathOverride { get; set; }
 
         public DbSet<T_TitleText> T_TitleText { get; set; }
         public DbSet<M_Category> M_Category { get; set; }
@@ -18,7 +21,7 @@ namespace JTSA.Models
         
 
         /// <summary>
-        /// •¡‡ƒL[‚Ìİ’è
+        /// è¤‡åˆã‚­ãƒ¼ã®è¨­å®š
         /// </summary>
         /// <param name="modelBuilder"></param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -28,19 +31,35 @@ namespace JTSA.Models
         }
 
         /// <summary>
-        /// DB‚Ì•¨—ƒtƒ@ƒCƒ‹ˆÊ’u‚È‚Ç‚Ìİ’è
+        /// DBã®ç‰©ç†ãƒ•ã‚¡ã‚¤ãƒ«ä½ç½®ãªã©ã®è¨­å®š
         /// </summary>
         /// <param name="optionsBuilder"></param>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             // AppData\Roaming\JTSA\userdata\JTSA.db
-            dbDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), // Roaming
-                "JTSA", "userdata");
-            Directory.CreateDirectory(dbDirectory); // ƒtƒHƒ‹ƒ_‚ª‚È‚¯‚ê‚Îì¬
-            var dbPath = Path.Combine(dbDirectory, "JTSA.db");
+            var dbPath = DatabasePathOverride;
+            var isTestDatabase = !string.IsNullOrWhiteSpace(dbPath);
+            if (string.IsNullOrWhiteSpace(dbPath))
+            {
+                dbDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), // Roaming
+                    "JTSA", "userdata");
+                Directory.CreateDirectory(dbDirectory); // ãƒ•ã‚©ãƒ«ãƒ€ãŒãªã‘ã‚Œã°ä½œæˆ
+                dbPath = Path.Combine(dbDirectory, "JTSA.db");
+            }
+            else
+            {
+                dbDirectory = Path.GetDirectoryName(dbPath) ?? string.Empty;
+                if (!string.IsNullOrEmpty(dbDirectory))
+                {
+                    Directory.CreateDirectory(dbDirectory);
+                }
+            }
 
-            optionsBuilder.UseSqlite($"Data Source={dbPath}");
+            optionsBuilder.UseSqlite(
+                isTestDatabase
+                    ? $"Data Source={dbPath};Pooling=False"
+                    : $"Data Source={dbPath}");
         }
     }
 }

@@ -10,6 +10,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JTSA.Tests", "JTSA.Tests\JTSA.Tests.csproj", "{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,26 @@ Global
 		{EFE3D2BF-84FD-44D0-A3A8-C7350C832EF1}.Release|x64.Build.0 = Release|Any CPU
 		{EFE3D2BF-84FD-44D0-A3A8-C7350C832EF1}.Release|x86.ActiveCfg = Release|Any CPU
 		{EFE3D2BF-84FD-44D0-A3A8-C7350C832EF1}.Release|x86.Build.0 = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|ARM.Build.0 = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|x64.Build.0 = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Debug|x86.Build.0 = Debug|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|ARM.ActiveCfg = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|ARM.Build.0 = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|ARM64.Build.0 = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|x64.ActiveCfg = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|x64.Build.0 = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|x86.ActiveCfg = Release|Any CPU
+		{3A3A1AAB-9383-4360-AD39-AD18A5E87EBB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

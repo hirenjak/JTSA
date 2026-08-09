@@ -1,0 +1,85 @@
+name: Build and deploy JTSA
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test, package, and publish
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore JTSA.sln
+
+      - name: Run tests
+        run: dotnet test JTSA.sln --configuration Release --no-restore
+
+      - name: Set release version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "1.0.${{ github.run_number }}"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish application
+        run: >-
+          dotnet publish JTSA/JTSA.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output publish
+          -p:Version=${{ steps.version.outputs.version }}
+          --no-restore
+
+      - name: Install Velopack CLI
+        run: dotnet tool install --global vpk --version 0.0.1298
+
+      - name: Download previous release
+        continue-on-error: true
+        run: >-
+          vpk download github
+          --repoUrl https://github.com/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package release
+        run: >-
+          vpk pack
+          --packId JTSA
+          --packVersion ${{ steps.version.outputs.version }}
+          --packDir publish
+          --mainExe JTSA.exe
+          --packTitle JTSA
+
+      - name: Publish GitHub release
+        run: >-
+          vpk upload github
+          --repoUrl https://github.com/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --publish
+          --releaseName "JTSA ${{ steps.version.outputs.version }}"
+          --tag "v${{ steps.version.outputs.version }}"

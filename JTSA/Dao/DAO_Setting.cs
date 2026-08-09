@@ -1,4 +1,4 @@
-﻿using JTSA.Models;
+using JTSA.Models;
 
 namespace JTSA.Dao
 {
@@ -55,13 +55,12 @@ namespace JTSA.Dao
             }
             else
             {
-                db.M_Setting.UpdateRange(new M_Setting
-                {
-                    Name = (int)name,
-                    Value = value,
-                    UpdatedDateTime = DateTime.Now,
-                    LastUsedDateTime = DateTime.Now
-                });
+                var existing = db.M_Setting.Single(x => x.Name == (int)name);
+                existing.Value = value;
+                existing.UpdatedDateTime = DateTime.Now;
+                existing.LastUsedDateTime = DateTime.Now;
+
+                db.M_Setting.Update(existing);
             };
 
             int result = db.SaveChanges();
