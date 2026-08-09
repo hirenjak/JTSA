@@ -13,6 +13,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -141,6 +142,8 @@ namespace JTSA
         public MainWindow()
         {
             InitializeComponent();
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            Title = $"JakTwtchStreamerAssistant v{version?.ToString(3)}";
             DataContext = this;
 
             using (var db = new AppDbContext())
