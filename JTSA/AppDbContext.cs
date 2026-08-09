@@ -24,7 +24,7 @@ namespace JTSA.Models
 
 
         /// <summary>
-        /// �����L�[�̐ݒ�
+        /// 複合キーの設定
         /// </summary>
         /// <param name="modelBuilder"></param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -37,7 +37,7 @@ namespace JTSA.Models
         }
 
         /// <summary>
-        /// DB�̕����t�@�C���ʒu�Ȃǂ̐ݒ�
+        /// DBの保存ファイル位置などの設定
         /// </summary>
         /// <param name="optionsBuilder"></param>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
