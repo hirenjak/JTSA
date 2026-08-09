@@ -1,11 +1,9 @@
 name: Build and deploy JTSA
 
 on:
-  pull_request:
+  push:
     branches:
       - master
-    types:
-      - closed
   workflow_dispatch:
 
 permissions:
@@ -18,7 +16,6 @@ concurrency:
 jobs:
   deploy:
     name: Test, package, and publish
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: windows-latest
 
     steps:
