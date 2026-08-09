@@ -54,7 +54,8 @@ JTSA の CP タブ（`ChannelPointPanel`）を実用に足る管理画面へ整�
 - [x] P1-8 バグ修正: 一時停止トグル後にキャッシュを更新せず古い状態を再表示する問題
 - [x] P1-9 バグ修正: `Mode=OneWay` バインドのチェックボックスをクリックするとバインドが外れる問題（TwoWay ＋ 失敗時ロールバックへ変更）
 - [x] P1-10 ビルド確認
-- [ ] P1-11 実機動作確認
+- [x] P1-11 実機動作確認（一覧取得まで。DB に 29 件の報酬キャッシュを確認）
+- [x] P1-12 操作可否の判定失敗と「本当に操作可能 0 件」を画面上で区別できるように（判定失敗時は警告文を出す）
 
 ### Phase 1.5 — OAuth 認証まわりの緊急修正（計画外・実機検証の前提として追加）
 
@@ -116,7 +117,9 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 | 2026-08-09 | P1.5-1〜5 | Phase 1 の実機確認で OAuth 認証直後のクラッシュが発覚し修正。合わせてユーザー名の手入力を廃止 | `MainWindow.xaml(.cs)`, `Utility/TwitchHelper.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 | 2026-08-09 | P2-1〜8 | 報酬コピー機能と API エラー理由の伝播 | `Utility/TwitchApiResult.cs`(新), `Utility/ChannelPointService.cs`, `Utility/TwitchHelper.cs`, `Dao/DAO_Setting.cs`, `Forms/ChannelPointRewardForm.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | `d687645` | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 | 2026-08-09 | P3-1〜8 | プリセット機能（モデル・マイグレーション・DAO・保存/適用・UI） | `Models/M_ChannelPoint.cs`(新), `Models/T_ChannelPointPreset*.cs`(新), `AppDbContext.cs`, `Migrations/`(新), `Dao/DAO_ChannelPoint*.cs`(新), `Forms/ChannelPointPresetForm.cs`(新), `Utility/ChannelPointService.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
-| 2026-08-09 | P4-1〜8 | カテゴリ紐づけと自動適用 | `Forms/CategoryForm.cs`, `Panels/CategoryPanel.xaml(.cs)`, `Panels/PlayingGamePanel.xaml.cs`, `MainWindow.xaml.cs`, `Dao/DAO_Category.cs`, `Dao/DAO_ChannelPointPreset.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P4-1〜8 | カテゴリ紐づけと自動適用 | `Forms/CategoryForm.cs`, `Panels/CategoryPanel.xaml(.cs)`, `Panels/PlayingGamePanel.xaml.cs`, `MainWindow.xaml.cs`, `Dao/DAO_Category.cs`, `Dao/DAO_ChannelPointPreset.cs` | `ae8789e` | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P1-11 | 実機起動による確認（DB をバックアップのうえ実施） | — | — | **成功**: 異常終了なし（前回は exit 82 で NRE）。マイグレーション `channel_point_preset` 適用済み（既存データ保持）。`M_Setting.UserName=xiphelier` がトークンから自動設定され、ユーザー名入力の廃止が機能。`M_ChannelPoint` に 29 件キャッシュ＝一覧取得が成功。**トグル・コピー・プリセット・カテゴリ連動は未検証** |
+| 2026-08-09 | P1-12 | 実機で「操作可能 0 件」となったため、判定失敗との区別が付くようステータス表示を改善 | `Utility/ChannelPointService.cs`, `Panels/ChannelPointPanel.xaml.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 
 ## 4. 課題・保留
 
@@ -133,3 +136,5 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 | 9 | `M_ChannelPoint`（報酬キャッシュ）は現状プリセット内訳の「削除済み」判定の補助のみで、実質は報酬一覧の取得結果から判定している。将来オフライン表示が必要になったら活用する | 用途限定 |
 | 10 | プリセット適用は差分のある報酬だけ PATCH する。報酬数が多い場合の Twitch レート制限は未検証 | 未検証 |
 | 11 | `dotnet-ef` 9.0.9 をグローバルツールとして導入した（マイグレーション生成に必要） | 環境構築として実施 |
+| 12 | **実機で 29 件すべてが「操作不可」と判定された。** 全件が Twitch の Web 画面から作成されたのであれば正しい結果だが、`only_manageable_rewards=true` の呼び出しが失敗して安全側に倒れた可能性も残る。P1-12 で両者を画面上で区別できるようにしたので、次回起動時のステータス表示で確定させる | **要確認** |
+| 13 | 操作可能な報酬が 0 件の間はプリセットを 1 つも保存できない（保存対象が操作可能な報酬のみのため）。まずコピーで操作可能な報酬を作る必要がある。ステータス表示でその旨を案内している | 仕様どおり |

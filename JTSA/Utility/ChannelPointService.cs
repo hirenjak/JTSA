@@ -29,6 +29,23 @@ namespace JTSA.Utility
 
 
     /// <summary>
+    /// 報酬一覧の取得結果
+    /// </summary>
+    public class ChannelPointFetchResult
+    {
+        /// <summary> 取得した報酬一覧（コスト昇順） </summary>
+        public List<ChannelPointRewardForm> Rewards { get; set; } = [];
+
+        /// <summary>
+        /// 操作可否の判定に成功したか。
+        /// falseの場合、IsManageableは全件falseになっているだけで実際の可否は不明。
+        /// 「本当に全件が操作不可」なのか「判定できなかった」のかを画面で区別するために持つ。
+        /// </summary>
+        public bool IsManageableCheckSucceeded { get; set; }
+    }
+
+
+    /// <summary>
     /// プリセット適用の結果
     /// </summary>
     public class ChannelPointApplyResult
@@ -90,8 +107,8 @@ namespace JTSA.Utility
         /// 「全件（only_manageable_rewards=false）」と「自アプリ作成分のみ（=true）」の
         /// 2回のGETを取り、後者に含まれるものだけ IsManageable = true とする。
         /// </summary>
-        /// <returns>取得できた報酬一覧（コスト昇順）。失敗した場合はnull。</returns>
-        public static async Task<List<ChannelPointRewardForm>?> FetchRewardsAsync()
+        /// <returns>取得結果。一覧そのものの取得に失敗した場合はnull。</returns>
+        public static async Task<ChannelPointFetchResult?> FetchRewardsAsync()
         {
             MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(ChannelPointService), "チャンネルポイント一覧取得");
@@ -114,19 +131,23 @@ namespace JTSA.Utility
 
             var manageableIds = manageableRewards?.Select(x => x.Id).ToHashSet() ?? [];
 
-            var results = allRewards
+            var rewards = allRewards
                 .Select(reward => ToForm(reward, manageableIds.Contains(reward.Id)))
                 .OrderBy(x => x.Cost)
                 .ToList();
 
             // プリセット編集画面がAPIを叩かずに報酬名を出せるようキャッシュしておく
-            SaveRewardCache(results);
+            SaveRewardCache(rewards);
 
             mainWindow.AppLogPanel.Success(nameof(ChannelPointService),
-                $"チャンネルポイント一覧取得（全{results.Count}件／操作可能{results.Count(x => x.IsManageable)}件）");
+                $"チャンネルポイント一覧取得（全{rewards.Count}件／操作可能{rewards.Count(x => x.IsManageable)}件）");
             mainWindow.AppLogPanel.ProcessEnd(nameof(ChannelPointService), appLogProcessName);
 
-            return results;
+            return new ChannelPointFetchResult
+            {
+                Rewards = rewards,
+                IsManageableCheckSucceeded = manageableRewards != null
+            };
         }
 
 
@@ -419,7 +440,7 @@ namespace JTSA.Utility
             var items = DAO_ChannelPointPreset.SelectItemsByPresetId(presetId);
 
             // 画面から渡されなかった場合はAPIから取り直す（カテゴリ紐づけの自動適用経路など）
-            var currentRewards = rewards ?? await FetchRewardsAsync();
+            var currentRewards = rewards ?? (await FetchRewardsAsync())?.Rewards;
             if (currentRewards == null)
             {
                 result.ErrorMessage = "チャンネルポイント一覧の取得に失敗したため適用できませんでした。";

@@ -134,23 +134,18 @@ namespace JTSA.Panels
             ReloadButton.IsEnabled = false;
             ChannelPointGetStatus.Text = "チャンネルポイント取得中...";
 
-            var rewards = await ChannelPointService.FetchRewardsAsync();
+            var fetchResult = await ChannelPointService.FetchRewardsAsync();
 
             ChannelPointRewardFormList.Clear();
 
-            if (rewards != null)
+            if (fetchResult != null)
             {
-                foreach (var reward in rewards)
+                foreach (var reward in fetchResult.Rewards)
                 {
                     ChannelPointRewardFormList.Add(reward);
                 }
 
-                var lockedCount = rewards.Count(x => !x.IsManageable);
-                var lockedText = lockedCount > 0
-                    ? $" / 🔒 操作不可 {lockedCount}件（Twitchの Web 画面から作成された報酬です）"
-                    : "";
-
-                ChannelPointGetStatus.Text = $"取得成功！ ({rewards.Count}件){lockedText}\n{INFO_TEXT}";
+                ChannelPointGetStatus.Text = BuildStatusText(fetchResult);
                 mainWindow.AppLogPanel.Success(GetType().Name, appLogProcessName);
             }
             else
@@ -162,6 +157,45 @@ namespace JTSA.Panels
             ReloadButton.IsEnabled = true;
 
             mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+        }
+
+
+        /// <summary>
+        /// 一覧上部に出すステータス文言を組み立てる。
+        ///
+        /// 「本当に操作可能な報酬が0件」なのか「操作可否を判定できなかった」のかは
+        /// 対処法が全く違うため、必ず区別して表示する。
+        /// </summary>
+        /// <param name="fetchResult">取得結果</param>
+        /// <returns>表示するステータス文言</returns>
+        private static string BuildStatusText(ChannelPointFetchResult fetchResult)
+        {
+            var totalCount = fetchResult.Rewards.Count;
+            var manageableCount = fetchResult.Rewards.Count(x => x.IsManageable);
+            var lockedCount = totalCount - manageableCount;
+
+            if (!fetchResult.IsManageableCheckSucceeded)
+            {
+                return $"取得成功！ ({totalCount}件)\n"
+                     + "⚠ 操作可否の判定に失敗したため、全件を操作不可として表示しています。"
+                     + "「更新」で再試行してください（解消しない場合は Setting タブから再認証）。\n"
+                     + INFO_TEXT;
+            }
+
+            var statusText = $"取得成功！ ({totalCount}件) / ✔ 操作可能 {manageableCount}件 / 🔒 操作不可 {lockedCount}件";
+
+            if (manageableCount == 0 && totalCount > 0)
+            {
+                statusText += "\n⚠ このアプリから操作できる報酬がありません。"
+                            + "🔒 の報酬にチェックを入れて「選択をコピー」すると、操作できる報酬が作られます。"
+                            + "（プリセットの保存も操作可能な報酬が必要です）";
+            }
+            else if (lockedCount > 0)
+            {
+                statusText += "\n🔒 は Twitch の Web 画面から作成された報酬です。コピーするとこのアプリから操作できるようになります。";
+            }
+
+            return statusText + "\n" + INFO_TEXT;
         }
 
 
