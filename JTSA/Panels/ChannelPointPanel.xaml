@@ -78,7 +78,8 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <GridViewColumn Header="報酬名" Width="260" DisplayMemberBinding="{Binding RewardTitle}"/>
-                            <GridViewColumn Header="状態" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
+                            <!-- Twitch の Web 画面や他アプリで消された報酬にだけ付く。次回表示時には行ごと消える -->
+                            <GridViewColumn Header="" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
                         </GridView>
                     </ListView.View>
                 </ListView>
@@ -180,15 +181,22 @@
 
                     <GridViewColumn Header="コスト" Width="80" DisplayMemberBinding="{Binding Cost}" />
 
-                    <GridViewColumn Header="コピー" Width="70">
+                    <GridViewColumn Header="操作" Width="80">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <!-- 操作不可の報酬にだけ出す -->
-                                <Button Content="コピー" Width="60"
-                                        Visibility="{Binding CopyButtonVisibility}"
-                                        Tag="{Binding}"
-                                        Click="CopyRewardButton_Click"
-                                        ToolTip="この報酬と同じ設定で、このアプリから操作できる報酬を作成します。" />
+                                <!-- コピーは操作不可の報酬、削除は操作可能な報酬にだけ出す（排他） -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="コピー" Width="60"
+                                            Visibility="{Binding CopyButtonVisibility}"
+                                            Tag="{Binding}"
+                                            Click="CopyRewardButton_Click"
+                                            ToolTip="この報酬と同じ設定で、このアプリから操作できる報酬を作成します。" />
+                                    <Button Content="削除" Width="60"
+                                            Visibility="{Binding DeleteButtonVisibility}"
+                                            Tag="{Binding}"
+                                            Click="DeleteRewardButton_Click"
+                                            ToolTip="この報酬を Twitch から削除します。元に戻せません。" />
+                                </StackPanel>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>

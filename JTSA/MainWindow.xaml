@@ -358,10 +358,9 @@
                     <panels:CategoryPanel x:Name="CategoryPanel"/>
                 </TabItem>
 
+                <!-- StackPanelで包むと子に無限の高さが渡り、一覧が伸びきってスクロールできなくなる -->
                 <TabItem Header="CP">
-                    <StackPanel>
-                        <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
-                    </StackPanel>
+                    <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
                 </TabItem>
 
                 <TabItem Header="Setting">

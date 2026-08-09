@@ -53,6 +53,26 @@ namespace JTSA.Dao
 
 
         /// <summary>
+        /// 指定の報酬を含むプリセットの名前を取得する。
+        /// 報酬を削除する前に「どのプリセットに影響するか」を利用者へ知らせるために使う。
+        /// </summary>
+        /// <param name="rewardId">報酬ID</param>
+        /// <returns>プリセット名の一覧</returns>
+        public static List<string> SelectPresetNamesByRewardId(string rewardId)
+        {
+            using var db = new AppDbContext();
+
+            return db.T_ChannelPointPresetItem
+                     .Where(item => item.RewardId == rewardId)
+                     .Join(db.T_ChannelPointPresetHeader,
+                           item => item.PresetId,
+                           header => header.PresetId,
+                           (item, header) => header.PresetName)
+                     .ToList();
+        }
+
+
+        /// <summary>
         /// プリセットごとのアイテム件数を取得する（一覧表示用）
         /// </summary>
         /// <returns>プリセットID → 件数</returns>
@@ -164,6 +184,54 @@ namespace JTSA.Dao
 
 
         #region ==================== DELETE ====================
+
+        /// <summary>
+        /// 指定の報酬を全プリセットから取り除く。
+        /// アプリから報酬を削除したときに、プリセット側へ残骸を残さないために使う。
+        /// </summary>
+        /// <param name="rewardId">報酬ID</param>
+        /// <returns>削除した件数</returns>
+        public static int DeleteItemsByRewardId(string rewardId)
+        {
+            using var db = new AppDbContext();
+
+            var targets = db.T_ChannelPointPresetItem.Where(x => x.RewardId == rewardId).ToList();
+            if (targets.Count == 0) return 0;
+
+            db.T_ChannelPointPresetItem.RemoveRange(targets);
+
+            // コミット処理
+            db.SaveChanges();
+
+            return targets.Count;
+        }
+
+
+        /// <summary>
+        /// 現存しない報酬をプリセットから取り除く。
+        /// Twitch の Web 画面や他アプリで報酬が削除された場合、アプリ側は削除の瞬間を知れないため、
+        /// 報酬一覧を取得できたタイミングで突き合わせて掃除する。
+        /// </summary>
+        /// <param name="existingRewardIds">現存する報酬IDの一覧（取得に成功したもの）</param>
+        /// <returns>削除した件数</returns>
+        public static int DeleteItemsNotInRewardIds(List<string> existingRewardIds)
+        {
+            using var db = new AppDbContext();
+
+            var targets = db.T_ChannelPointPresetItem
+                            .Where(x => !existingRewardIds.Contains(x.RewardId))
+                            .ToList();
+
+            if (targets.Count == 0) return 0;
+
+            db.T_ChannelPointPresetItem.RemoveRange(targets);
+
+            // コミット処理
+            db.SaveChanges();
+
+            return targets.Count;
+        }
+
 
         /// <summary>
         /// プリセットの削除（アイテムと、カテゴリからの紐づけも同時に削除）
