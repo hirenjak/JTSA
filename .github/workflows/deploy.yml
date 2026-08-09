@@ -60,7 +60,7 @@ jobs:
           dotnet publish JTSA/JTSA.csproj
           --configuration Release
           --runtime win-x64
-          --self-contained true
+          --self-contained false
           --output publish
           -p:Version=${{ steps.version.outputs.version }}
           --no-restore
@@ -83,6 +83,9 @@ jobs:
           --packDir publish
           --mainExe JTSA.exe
           --packTitle JTSA
+          --framework net8.0-x64-desktop
+          --exclude '(?i)JTSA\.db$'
+          --noPortable
 
       - name: Publish GitHub release
         run: >-
