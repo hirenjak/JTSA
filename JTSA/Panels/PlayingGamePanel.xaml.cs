@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using TwitchLib.Api.Helix.Models.Entitlements;
+using TwitchLib.Api.Helix.Models.Schedule;
+using static JTSA.Dao.DAO_GamePlaylist;
 using static JTSA.Forms.PlaylistItemForm;
 
 namespace JTSA.Panels
@@ -67,16 +70,17 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void GamePlaylistListBox_DoubleClick(object sender, EventArgs e)
+        private void GamePlaylistListBox_DoubleClick(object sender, EventArgs e)
         {
             if (GamePlaylistListBox.SelectedItem is PlaylistHeaderForm selectedItem)
             {
                 // データ登録
                 CurrentGamePlaylistId = selectedItem.GamePlayListId;
+                CurrentGamePlaylistName = selectedItem.GamePlayListName;
             }
 
             // 再読み込み処理
-            await ReloadGameAllPlaylist();
+            ReloadGamePlaylistItem();
         }
 
 
@@ -85,16 +89,17 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void GamePlayListSaveButton_Click(object sender, RoutedEventArgs e)
+        private void GamePlayListSaveButton_Click(object sender, RoutedEventArgs e)
         {
             CurrentGamePlaylistId = JTSAHelper.GetCurrentUnixTimestampMillis();
             CurrentGamePlaylistName = "";
 
             // データ作成
-            var insertPlaylistHeader = FormConvertToPlaylistHeadder();
+            var insertPlaylistHeader = FormConvertToPlaylistHeader();
             DAO_GamePlaylist.InsertUpdate(insertPlaylistHeader);
 
-            await ReloadGameAllPlaylist();
+            ReloadPlaylistHeader();
+            ReloadGamePlaylistItem();
         }
 
 
@@ -103,21 +108,19 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void ImageItem_Click(object sender, MouseButtonEventArgs e)
+        private void ImageItem_Click(object sender, MouseButtonEventArgs e)
         {
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 item.Status =
-                    item.Status == PlaylistItemForm.GameStatus.Completed
-                        ? PlaylistItemForm.GameStatus.None
-                        : PlaylistItemForm.GameStatus.Completed;
+                    item.Status == GameStatus.Completed
+                        ? GameStatus.None
+                        : GameStatus.Completed;
+
+                DAO_GamePlaylist.UpdatePlaylistItemStatus(CurrentGamePlaylistId, item.CategoryId, item.Status);
+
+                DAO_GamePlaylist.UpdateLastUsed(CurrentGamePlaylistId);
             }
-
-            UpdatePlaylistData();
-
-            DAO_GamePlaylist.UpdateLastUsed(CurrentGamePlaylistId);
-
-            await ReloadGameAllPlaylist();
         }
 
 
@@ -126,18 +129,17 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
+        private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
             e.Handled = true;
 
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 playlistItemFormList.Remove(item);
+
+                DAO_GamePlaylist.DeleteItem(CurrentGamePlaylistId, item.CategoryId);
             }
 
-            UpdatePlaylistData();
-
-            await ReloadGameAllPlaylist();
         }
 
 
@@ -153,11 +155,15 @@ namespace JTSA.Panels
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 item.Status =
-                    item.Status == PlaylistItemForm.GameStatus.Playing
-                        ? PlaylistItemForm.GameStatus.None
-                        : PlaylistItemForm.GameStatus.Playing;
+                    item.Status == GameStatus.Playing
+                        ? GameStatus.None
+                        : GameStatus.Playing;
 
-                if(item.Status == GameStatus.Playing)
+                DAO_GamePlaylist.UpdatePlaylistItemStatus(CurrentGamePlaylistId, item.CategoryId, item.Status);
+
+                DAO_GamePlaylist.UpdateLastUsed(CurrentGamePlaylistId);
+
+                if (item.Status == GameStatus.Playing)
                 {
                     var categoryData = await TwitchHelper.GetCategoryByGameId(item.CategoryId);
 
@@ -166,10 +172,6 @@ namespace JTSA.Panels
                     mainWindow.CurrentCategoryBoxArtUrl = categoryData.BoxArtUrl;
                 }
             }
-
-            UpdatePlaylistData();
-
-            await ReloadGameAllPlaylist();
         }
 
 
@@ -178,7 +180,7 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
+        private void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
             if ((sender as Button)?.DataContext is PlaylistHeaderForm item)
@@ -186,7 +188,9 @@ namespace JTSA.Panels
                 DAO_GamePlaylist.DeleteGamePlayList(item.GamePlayListId);
             }
 
-            await ReloadGameAllPlaylist();
+            // プレイリスト削除時は全て再読み込み
+            ReloadPlaylistHeader();
+            ReloadGamePlaylistItem();
         }
 
 
@@ -195,12 +199,13 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void GamePlayListTitleEdit_Click(object sender, EventArgs e)
+        private void GamePlayListTitleEdit_Click(object sender, EventArgs e)
         {
-            var currentHeader = FormConvertToPlaylistHeadder();
+            var currentHeader = FormConvertToPlaylistHeader();
             DAO_GamePlaylist.InsertUpdate(currentHeader);
 
-            await ReloadGamePlaylistHeader();
+            // ヘッダー一覧の名前を修正する必要があるので再読み込み
+            ReloadPlaylistHeader();
         }
 
         #endregion
@@ -215,7 +220,7 @@ namespace JTSA.Panels
         public void UpdatePlaylistData()
         {
             // データ作成
-            var insertPlaylistHeader = FormConvertToPlaylistHeadder();
+            var insertPlaylistHeader = FormConvertToPlaylistHeader();
             var insertPlaylistItemList = FormConvertToPlalistItemList(insertPlaylistHeader.GamePlayListId);
 
             // 挿入処理
@@ -227,7 +232,7 @@ namespace JTSA.Panels
         /// 
         /// </summary>
         /// <returns></returns>
-        private T_GamePlaylistHeader FormConvertToPlaylistHeadder()
+        private T_GamePlaylistHeader FormConvertToPlaylistHeader()
         {
             T_GamePlaylistHeader result = null;
 
@@ -286,19 +291,12 @@ namespace JTSA.Panels
             return resultList;
         }
 
-
-
         #endregion
 
 
-        /// <summary>
-        /// プレイリスト一覧画面の再読み込み
-        /// </summary>
-        /// <returns></returns>
-        public async Task ReloadGameAllPlaylist()
+        public async void ReloadPlaylistHeader()
         {
             //　リストの初期化
-            playlistItemFormList.Clear();
             playlistHeaderFormList.Clear();
 
             // プレイリストヘッダ一覧の読込
@@ -320,24 +318,33 @@ namespace JTSA.Panels
             // 画面に何も設定されていないかの確認
             if (CurrentGamePlaylistId == 0)
             {
-                // 未設定なら一番目のプレイリストを読込
                 CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
             }
 
+            // ヘッダ情報の取得
             var gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
 
-            // 画面に何も設定されていないかの確認
+            // 取得したデータが無ければ再取得
             if (gamePlaylist == null)
             {
-                // 未設定なら一番目のプレイリストを読込
                 CurrentGamePlaylistId = gamePlayListHeaders[0].GamePlayListId;
                 gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
             }
 
             CurrentGamePlaylistName = gamePlaylist.GamePlayListName;
 
+        }
 
-            // 画面に設定されている
+        /// <summary>
+        /// プレイリスト一覧画面の再読み込み
+        /// </summary>
+        /// <returns></returns>
+        public async void ReloadGamePlaylistItem()
+        {
+            //　リストの初期化
+            playlistItemFormList.Clear();
+
+            // 画面に設定されているプレイリストIDに紐づくプレイリストアイテムを取得
             var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
 
             // 
@@ -366,33 +373,6 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// プレイリスト一覧画面の再読み込み
-        /// </summary>
-        /// <returns></returns>
-        public async Task ReloadGamePlaylistHeader()
-        {
-            //　リストの初期化
-            playlistHeaderFormList.Clear();
-
-            // プレイリストヘッダ一覧の読込
-            var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
-            if (gamePlayListHeaders.Count == 0) return;
-
-            foreach (var gamePlayListHeader in gamePlayListHeaders)
-            {
-                playlistHeaderFormList.Add(new PlaylistHeaderForm()
-                {
-                    GamePlayListId = gamePlayListHeader.GamePlayListId,
-                    GamePlayListName = gamePlayListHeader.GamePlayListName,
-                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
-                    LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
-                    IsLoaded = false
-                });
-            }
-        }
-
-
-        /// <summary>
         /// 
         /// </summary>
         /// <param name="urlText"></param>
@@ -409,9 +389,26 @@ namespace JTSA.Panels
                 ImageUrl = string.IsNullOrEmpty(url) ? url : categoryData.BoxArtUrl,
             });
 
-            UpdatePlaylistData();
+            AddGamePlaylistItem(categoryId);
 
-            await ReloadGameAllPlaylist();
+            ReloadGamePlaylistItem();
+        }
+
+        public void AddGamePlaylistItem(string categoryId)
+        {
+            var insertList = new List<T_GamePlaylistItem>();
+            insertList.Add(new T_GamePlaylistItem()
+            {
+                GamePlayListId = CurrentGamePlaylistId,
+                CategoryId = categoryId,
+                Status = (int)GameStatus.None,
+                LastUsedDateTime = DateTime.Now,
+                CreatedDateTime = DateTime.Now,
+                UpdatedDateTime = DateTime.Now
+            });
+
+            DAO_GamePlaylist.InsertItemList(insertList);
+
         }
 
 

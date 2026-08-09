@@ -1,10 +1,11 @@
 ﻿<UserControl x:Class="JTSA.Panels.CategoryPanel"
-            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
-            xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-            mc:Ignorable="d"
-            Background="#FF404040">
+             xmlns:panels="clr-namespace:JTSA.Panels"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="#FF404040">
 
     <DockPanel>
         <Grid>
@@ -105,45 +106,10 @@
                     </ListBox>
                 </Grid>
             </Grid>
-            <Grid Grid.Column="1" 
-                  Margin="8, 0, 0, 0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-                    <Label Content="Twitchカテゴリの検索" Foreground="White"/>
-                    <TextBox x:Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTextBox_TextChanged"/>
-                </StackPanel>
-
-                <Grid Height="Auto" Grid.Row="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="24"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Label Grid.Row="0" Content="※ダブルクリックすると左のカテゴリ一覧に追加" Foreground="White"/>
-                    <ListBox ItemsSource="{Binding SearchCategoryFormList}" Grid.Row="1" Grid.Column="3" Background="#FF404040"
-                             x:Name="CategorySearchListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             MouseDoubleClick="CategorySearchListBox_DoubleClick">
-
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="8, 0, 8, 0">
-                                        <Image Source="{Binding BoxArtUrl}" Width="36" Height="48" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
-                                    </StackPanel>
-
-                                    <Border Width="Auto" Height="2" Background="White"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </Grid>
+            <panels:CategorySearchPanel 
+                x:Name="CategorySearchPanel"
+                Grid.Column="1"/>
         </Grid>
     </DockPanel>
 </UserControl>

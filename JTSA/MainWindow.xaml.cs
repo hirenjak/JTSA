@@ -5,6 +5,7 @@ using JTSA.Models;
 using JTSA.Panels;
 using JTSA.Utility;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -32,7 +33,7 @@ namespace JTSA
 
 
 		/// <summary>
-		/// 
+		/// 現在の設定タイトル
 		/// </summary>
 		public string CurrentTitleText 
 		{ 
@@ -50,7 +51,7 @@ namespace JTSA
 
 
 		/// <summary>
-		/// 
+		/// 現在のスチームURL
 		/// </summary>
 		public string CurrentCategorySteamUrl
 		{
@@ -98,6 +99,8 @@ namespace JTSA
 			set
 			{
 				SelectCategoryIdTextBlock.Text = value;
+
+                SteamUrlTextSet(value);
 
             }
 		}
@@ -186,6 +189,14 @@ namespace JTSA
             );
         }
 
+		private async void SteamUrlTextSet(string categoryId)
+		{
+
+			var result = await IgdbService.GetSteamUrlsAsync(categoryId);
+			CurrentCategorySteamUrl = result[0];
+
+        }
+
 
         /// <summary>
         /// コンストラクタ終了時の処理
@@ -251,12 +262,17 @@ namespace JTSA
 
             appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アプリ初期化処理");
 
+
+            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+
+
             // アクセストークンの確認を持って起動時設定を完了
             await StreamerDataSet();
 
             // 各パネルの初期化処理
             await ChatPanel.Initialize();
-            await PlayingGamePanel.ReloadGameAllPlaylist();
+            PlayingGamePanel.ReloadPlaylistHeader();
+            PlayingGamePanel.ReloadGamePlaylistItem();
 
             // ロード画面を非表示
             LoadScreen.Visibility = Visibility.Collapsed;
@@ -317,14 +333,26 @@ namespace JTSA
 
             TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
-            // カテゴリ名取得処理
-            var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
+			var dbCategoryData = DAO_Category.SelectOneById(streamInfo.gameId);
+
+			if(dbCategoryData == null)
+			{
+                // カテゴリ名取得処理
+                var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
+				var steamUrl = await IgdbService.GetSteamUrlsAsync(category.Id);
+
+                dbCategoryData.CategoryId = category.Id;
+				dbCategoryData.DisplayName = category.Name;
+				dbCategoryData.SteamUrl = steamUrl[0] ?? string.Empty;
+				dbCategoryData.BoxArtUrl = category.BoxArtUrl;
+            }
 
             CurrentTitleText = TitleEditTextBox.Text;
 
-			CurrentCategoryId = category.Id;
-			CurrentCategoryName = category.Name;
-            CurrentCategoryBoxArtUrl = category.BoxArtUrl;
+			CurrentCategoryId = dbCategoryData.CategoryId;
+			CurrentCategoryName = dbCategoryData.DisplayName;
+            CurrentCategoryBoxArtUrl = dbCategoryData.BoxArtUrl;
+			CurrentCategorySteamUrl = dbCategoryData.SteamUrl;
 
 
             // リスト読み込み処理

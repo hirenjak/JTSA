@@ -13,6 +13,8 @@ namespace JTSA.Utility
         /// <returns></returns>
         public static async Task<string?> GetSteamHeaderImageUrlAsync(string appId)
         {
+            if (appId == null) return null;
+
             var apiUrl =
                 $"https://store.steampowered.com/api/appdetails?appids={appId}&cc=JP&l=japanese";
 

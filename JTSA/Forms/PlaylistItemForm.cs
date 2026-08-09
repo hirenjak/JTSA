@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using static JTSA.Dao.DAO_GamePlaylist;
 
 namespace JTSA.Forms
 {
@@ -37,12 +38,6 @@ namespace JTSA.Forms
 
         // ============  ============
 
-        public enum GameStatus
-        {
-            None = 0,
-            Playing = 1,
-            Completed = 2
-        }
 
 
         public Visibility CompletedVisibility =>

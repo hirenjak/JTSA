@@ -10,17 +10,17 @@ using System.Threading.Tasks;
 
 namespace JTSA.Utility
 {
-    public class IgdbService
+    public static class IgdbService
     {
-        private readonly HttpClient httpClient;
-        private readonly string clientId;
-        private readonly string accessToken;
+        private static HttpClient httpClient;
+        private static string clientId;
+        private static string accessToken;
 
-        public IgdbService(HttpClient httpClient, string clientID, string accessToken)
+        public static void Initialize(HttpClient _httpClient, string _clientID, string _accessToken)
         {
-            this.httpClient = httpClient;
-            clientId = clientID;
-            this.accessToken = accessToken;
+            httpClient = _httpClient;
+            clientId = _clientID;
+            accessToken = _accessToken;
         }
 
         public sealed class TwitchGameResponse
@@ -65,7 +65,7 @@ namespace JTSA.Utility
         /// <summary>
         /// TwitchカテゴリIDからSteam URLを取得
         /// </summary>
-        public async Task<List<string>> GetSteamUrlsAsync(string twitchCategoryId)
+        public static async Task<List<string>> GetSteamUrlsAsync(string twitchCategoryId)
         {
             var igdbId = await GetIgdbIdAsync(twitchCategoryId);
 
@@ -81,8 +81,7 @@ namespace JTSA.Utility
         /// <summary>
         /// TwitchカテゴリIDからIGDB IDを取得
         /// </summary>
-        private async Task<string?> GetIgdbIdAsync(
-            string twitchCategoryId)
+        private static async Task<string?> GetIgdbIdAsync(string twitchCategoryId)
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
@@ -106,7 +105,7 @@ namespace JTSA.Utility
         /// <summary>
         /// IGDB IDからSteam URLを取得
         /// </summary>
-        private async Task<List<string>> GetSteamUrlsFromIgdbAsync(string igdbId)
+        private static async Task<List<string>> GetSteamUrlsFromIgdbAsync(string igdbId)
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Post,

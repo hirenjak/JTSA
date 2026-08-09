@@ -222,7 +222,7 @@
             </Grid.RowDefinitions>
 
             <TabControl Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2" >
-                <TabItem Header="配信概要設定">
+                <TabItem Header="配信概要">
                     <Grid >
                         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                             <Grid.RowDefinitions>
@@ -348,24 +348,24 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem Header="フレンド">
-                    <panels:FriendPanel x:Name="FriendPanel"/>
-                </TabItem>
-
-                <TabItem Header="カテゴリ">
-                    <panels:CategoryPanel x:Name="CategoryPanel"/>
-                </TabItem>
-
-                <TabItem Header="プレイ中ゲーム">
+                <TabItem Header="プレイリスト">
                     <panels:PlayingGamePanel x:Name="PlayingGamePanel"/>
                 </TabItem>
-
+                
                 <TabItem Header="チャット">
                     <panels:ChatPanel x:Name="ChatPanel"/>
                 </TabItem>
 
                 <TabItem Header="レイド">
                     <panels:RaidPanel x:Name="RaidPanel"/>
+                </TabItem>
+
+                <TabItem Header="フレンド">
+                    <panels:FriendPanel x:Name="FriendPanel"/>
+                </TabItem>
+
+                <TabItem Header="カテゴリ">
+                    <panels:CategoryPanel x:Name="CategoryPanel"/>
                 </TabItem>
 
                 <TabItem Header="CP">

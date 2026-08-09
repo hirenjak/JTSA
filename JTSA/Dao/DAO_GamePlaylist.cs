@@ -102,6 +102,31 @@ namespace JTSA.Dao
             return true;
         }
 
+        public enum GameStatus
+        {
+            None = 0,
+            Playing = 1,
+            Completed = 2
+        }
+
+        public static bool UpdatePlaylistItemStatus(long playlistId, string categoryId, GameStatus status)
+        {
+            using (var db = new AppDbContext())
+            {
+                // ヘッダの既存データの読込処理
+                var selectItemExeResult = db.T_GamePlaylistItem.SingleOrDefault(x => x.GamePlayListId == playlistId && x.CategoryId == categoryId);
+                if (selectItemExeResult == null) return false;
+
+                selectItemExeResult.LastUsedDateTime = DateTime.Now;
+                selectItemExeResult.Status = (int)status;
+
+                // コミット処理
+                db.SaveChanges();
+            }
+
+            return true;
+        }
+
 
         /// <summary>
         /// プレイリストの挿入更新処理
@@ -158,7 +183,6 @@ namespace JTSA.Dao
                 // ヘッダの既存データの読込処理
                 var selectHeaderExeResult = db.T_GamePlaylistHeader.SingleOrDefault(x => x.GamePlayListId == targetHeaderData.GamePlayListId);
 
-                // ヘッダが無い場合はアイテムもない想定なので新規追加処理として行う
                 List<T_GamePlaylistItem> selectItemExeResult = [];
                 if (selectHeaderExeResult != null)
                 {
@@ -168,6 +192,8 @@ namespace JTSA.Dao
                 // プレイリストヘッダの追加更新処理
                 if (selectHeaderExeResult == null)
                 {
+                    // ヘッダが無い場合はアイテムもない想定なので新規追加処理として行う
+
                     // SQL実行
                     db.T_GamePlaylistHeader.Add(targetHeaderData);
                 }
@@ -190,11 +216,7 @@ namespace JTSA.Dao
 
                     if (entityPlayListItem != null)
                     {
-                        // プレイリストアイテムの削除処理
-                        foreach (var item in entityPlayListItem)
-                        {
-                            db.T_GamePlaylistItem.Remove(item);
-                        }
+                        db.T_GamePlaylistItem.Where(x => x.GamePlayListId == selectHeaderExeResult.GamePlayListId);
                     }
 
                     // SQL実行
@@ -218,10 +240,8 @@ namespace JTSA.Dao
         /// <param name="db"></param>
         /// <param name="insertData"></param>
         /// <returns>true：登録成功 false：既にデータがある</returns>
-        public static List<T_GamePlaylistItem> InsertUpdateList(List<T_GamePlaylistItem> targetDataList)
+        public static void InsertItemList(List<T_GamePlaylistItem> targetDataList)
         {
-            List<T_GamePlaylistItem> results = [];
-
             using (var db = new AppDbContext())
             {
                 foreach (var targetData in targetDataList)
@@ -234,20 +254,12 @@ namespace JTSA.Dao
                     {
                         // SQL実行
                         var exeResult = db.T_GamePlaylistItem.Add(targetData);
-                        results.Add(exeResult.Entity);
-                    }
-                    else
-                    {
-                        var exeResult = db.T_GamePlaylistItem.Update(targetData);
-                        results.Add(exeResult.Entity);
                     }
                 }
 
                 // コミット処理
                 db.SaveChanges();
             }
-
-            return results;
         }
 
 
@@ -305,7 +317,7 @@ namespace JTSA.Dao
         /// プレイリストアイテムの削除処理
         /// </summary>
         /// <param name="id"></param>
-        public static bool DeleteItem(int gamePlaylistId, string CategoryId)
+        public static bool DeleteItem(long gamePlaylistId, string CategoryId)
         {
             using (var db = new AppDbContext())
             {
