@@ -235,6 +235,28 @@ namespace JTSA.Utility
         #endregion
 
 
+        #region ==================== 削除 ====================
+
+        /// <summary>
+        /// 報酬を削除する。
+        /// Twitchの仕様上、このアプリ（同一client_id）が作成した報酬しか削除できない。
+        /// </summary>
+        /// <param name="reward">削除する報酬</param>
+        /// <returns>成否と失敗理由</returns>
+        public static async Task<TwitchApiResult<bool>> DeleteRewardAsync(ChannelPointRewardForm reward)
+        {
+            if (!reward.IsManageable)
+            {
+                return TwitchApiResult<bool>.Failure(TwitchApiErrorKind.NotManageable,
+                    "Twitch の Web 画面から作成された報酬のため削除できません。Twitch の Web 画面から削除してください。");
+            }
+
+            return await TwitchHelper.DeleteCustomRewardAsync(reward.RewardId);
+        }
+
+        #endregion
+
+
         #region ==================== コピー ====================
 
         /// <summary>

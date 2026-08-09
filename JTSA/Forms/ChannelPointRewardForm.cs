@@ -57,6 +57,7 @@ namespace JTSA.Forms
                 OnPropertyChanged(nameof(ManageableToolTip));
                 OnPropertyChanged(nameof(CanCopy));
                 OnPropertyChanged(nameof(CopyButtonVisibility));
+                OnPropertyChanged(nameof(DeleteButtonVisibility));
             }
         }
         private bool isManageable;
@@ -114,6 +115,13 @@ namespace JTSA.Forms
         /// <summary> コピーボタンは操作不可の報酬にだけ出す </summary>
         public Visibility CopyButtonVisibility =>
             IsManageable ? Visibility.Collapsed : Visibility.Visible;
+
+        /// <summary>
+        /// 削除ボタンは操作可能な報酬にだけ出す。
+        /// Twitchの仕様上、Web画面から作成された報酬はこのアプリからは削除できないため。
+        /// </summary>
+        public Visibility DeleteButtonVisibility =>
+            IsManageable ? Visibility.Visible : Visibility.Collapsed;
 
 
         // ============ INotifyPropertyChanged ============

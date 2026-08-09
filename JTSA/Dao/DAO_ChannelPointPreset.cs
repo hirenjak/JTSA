@@ -53,6 +53,26 @@ namespace JTSA.Dao
 
 
         /// <summary>
+        /// 指定の報酬を含むプリセットの名前を取得する。
+        /// 報酬を削除する前に「どのプリセットに影響するか」を利用者へ知らせるために使う。
+        /// </summary>
+        /// <param name="rewardId">報酬ID</param>
+        /// <returns>プリセット名の一覧</returns>
+        public static List<string> SelectPresetNamesByRewardId(string rewardId)
+        {
+            using var db = new AppDbContext();
+
+            return db.T_ChannelPointPresetItem
+                     .Where(item => item.RewardId == rewardId)
+                     .Join(db.T_ChannelPointPresetHeader,
+                           item => item.PresetId,
+                           header => header.PresetId,
+                           (item, header) => header.PresetName)
+                     .ToList();
+        }
+
+
+        /// <summary>
         /// プリセットごとのアイテム件数を取得する（一覧表示用）
         /// </summary>
         /// <returns>プリセットID → 件数</returns>

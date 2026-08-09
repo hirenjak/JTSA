@@ -108,6 +108,16 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 - [x] P4-8 ビルド確認
 - [ ] P4-9 実機動作確認
 
+### Phase 5 — マージ後のフィードバック対応
+
+PR #39 のマージ後、実際に使ってもらって出た指摘への対応。
+
+- [x] P5-1 CP 一覧がスクロールできず全件見られない問題を修正（`MainWindow.xaml` の CP タブだけ `StackPanel` で包まれており、子に無限の高さが渡っていた）
+- [x] P5-2 アプリから作成した報酬をアプリ上で削除できるように（確認ダイアログ付き）
+- [x] P5-3 削除確認ダイアログで、影響するプリセット名を提示
+- [x] P5-4 ビルド確認
+- [ ] P5-5 実機動作確認
+
 ## 3. 実行ログ
 
 | 日付 | タスクID | 内容 | 変更ファイル | コミット | 動作確認 |
@@ -119,7 +129,9 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 | 2026-08-09 | P3-1〜8 | プリセット機能（モデル・マイグレーション・DAO・保存/適用・UI） | `Models/M_ChannelPoint.cs`(新), `Models/T_ChannelPointPreset*.cs`(新), `AppDbContext.cs`, `Migrations/`(新), `Dao/DAO_ChannelPoint*.cs`(新), `Forms/ChannelPointPresetForm.cs`(新), `Utility/ChannelPointService.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 | 2026-08-09 | P4-1〜8 | カテゴリ紐づけと自動適用 | `Forms/CategoryForm.cs`, `Panels/CategoryPanel.xaml(.cs)`, `Panels/PlayingGamePanel.xaml.cs`, `MainWindow.xaml.cs`, `Dao/DAO_Category.cs`, `Dao/DAO_ChannelPointPreset.cs` | `ae8789e` | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 | 2026-08-09 | P1-11 | 実機起動による確認（DB をバックアップのうえ実施） | — | — | **成功**: 異常終了なし（前回は exit 82 で NRE）。マイグレーション `channel_point_preset` 適用済み（既存データ保持）。`M_Setting.UserName=xiphelier` がトークンから自動設定され、ユーザー名入力の廃止が機能。`M_ChannelPoint` に 29 件キャッシュ＝一覧取得が成功。**トグル・コピー・プリセット・カテゴリ連動は未検証** |
-| 2026-08-09 | P1-12 | 実機で「操作可能 0 件」となったため、判定失敗との区別が付くようステータス表示を改善 | `Utility/ChannelPointService.cs`, `Panels/ChannelPointPanel.xaml.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P1-12 | 実機で「操作可能 0 件」となったため、判定失敗との区別が付くようステータス表示を改善 | `Utility/ChannelPointService.cs`, `Panels/ChannelPointPanel.xaml.cs` | `0dbcef4` | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | — | PR #39 を develop へマージ | — | `9e00999` | — |
+| 2026-08-09 | P5-1〜4 | 一覧スクロール不能の修正と、報酬削除機能の追加 | `MainWindow.xaml`, `Panels/ChannelPointPanel.xaml(.cs)`, `Forms/ChannelPointRewardForm.cs`, `Utility/ChannelPointService.cs`, `Dao/DAO_ChannelPointPreset.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 
 ## 4. 課題・保留
 
@@ -138,3 +150,6 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 | 11 | `dotnet-ef` 9.0.9 をグローバルツールとして導入した（マイグレーション生成に必要） | 環境構築として実施 |
 | 12 | **実機で 29 件すべてが「操作不可」と判定された。** 全件が Twitch の Web 画面から作成されたのであれば正しい結果だが、`only_manageable_rewards=true` の呼び出しが失敗して安全側に倒れた可能性も残る。P1-12 で両者を画面上で区別できるようにしたので、次回起動時のステータス表示で確定させる | **要確認** |
 | 13 | 操作可能な報酬が 0 件の間はプリセットを 1 つも保存できない（保存対象が操作可能な報酬のみのため）。まずコピーで操作可能な報酬を作る必要がある。ステータス表示でその旨を案内している | 仕様どおり |
+| 14 | 報酬の削除は操作可能（✔）な報酬のみ。🔒 の報酬は Twitch の Web 画面から削除してもらう（API 仕様上アプリからは削除できない） | 仕様として確定 |
+| 15 | 報酬を削除してもプリセットの項目は残る（「削除済み」表示となり適用時にスキップ）。プリセット側から自動で除去はしない | 仕様として確定 |
+| 16 | `Setting` / `AppLog` タブも `StackPanel` で包まれたまま。今回スクロール不具合が出たのは CP タブだけだが、同じ構造なので将来内容が増えると同様の問題が起きうる | 本改修の対象外 |
