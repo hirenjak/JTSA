@@ -43,7 +43,16 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $version = "1.0.${{ github.run_number }}"
+          [xml]$project = Get-Content "JTSA/JTSA.csproj"
+          $versionPrefix = $project.Project.PropertyGroup.VersionPrefix |
+            Where-Object { $_ } |
+            Select-Object -First 1
+
+          if (-not $versionPrefix) {
+            throw "VersionPrefix is not defined in JTSA/JTSA.csproj."
+          }
+
+          $version = "$versionPrefix.${{ github.run_number }}"
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Publish application
