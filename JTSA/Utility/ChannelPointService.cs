@@ -1,5 +1,6 @@
 using JTSA.Dao;
 using JTSA.Forms;
+using JTSA.Models;
 using System.Windows;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
 using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
@@ -24,6 +25,41 @@ namespace JTSA.Utility
 
         /// <summary> 失敗理由 </summary>
         public string ErrorMessage { get; set; } = "";
+    }
+
+
+    /// <summary>
+    /// プリセット適用の結果
+    /// </summary>
+    public class ChannelPointApplyResult
+    {
+        /// <summary> 適用処理を実行できたか（プリセット未存在や一覧取得失敗はfalse） </summary>
+        public bool IsSuccess { get; set; }
+
+        /// <summary> 適用したプリセット名 </summary>
+        public string PresetName { get; set; } = "";
+
+        /// <summary> 実際に変更した報酬の件数 </summary>
+        public int ChangedCount { get; set; }
+
+        /// <summary> 既に狙いの状態だったため変更不要だった件数 </summary>
+        public int UnchangedCount { get; set; }
+
+        /// <summary> 報酬が見つからない等でスキップした件数 </summary>
+        public int SkippedCount { get; set; }
+
+        /// <summary> 変更に失敗した件数 </summary>
+        public int FailedCount { get; set; }
+
+        /// <summary> 失敗理由（1件でも失敗した場合） </summary>
+        public string ErrorMessage { get; set; } = "";
+
+        /// <summary> ログ・画面に出す要約 </summary>
+        public string SummaryText =>
+            $"「{PresetName}」を適用（変更{ChangedCount}件／変更不要{UnchangedCount}件"
+            + (SkippedCount > 0 ? $"／スキップ{SkippedCount}件" : "")
+            + (FailedCount > 0 ? $"／失敗{FailedCount}件" : "")
+            + "）";
     }
 
 
@@ -83,11 +119,38 @@ namespace JTSA.Utility
                 .OrderBy(x => x.Cost)
                 .ToList();
 
+            // プリセット編集画面がAPIを叩かずに報酬名を出せるようキャッシュしておく
+            SaveRewardCache(results);
+
             mainWindow.AppLogPanel.Success(nameof(ChannelPointService),
                 $"チャンネルポイント一覧取得（全{results.Count}件／操作可能{results.Count(x => x.IsManageable)}件）");
             mainWindow.AppLogPanel.ProcessEnd(nameof(ChannelPointService), appLogProcessName);
 
             return results;
+        }
+
+
+        /// <summary>
+        /// 取得した報酬一覧を M_ChannelPoint へ同期する
+        /// </summary>
+        /// <param name="rewards">報酬一覧</param>
+        private static void SaveRewardCache(List<ChannelPointRewardForm> rewards)
+        {
+            var now = DateTime.Now;
+
+            var cacheData = rewards.Select(reward => new M_ChannelPoint
+            {
+                RewardId = reward.RewardId,
+                Title = reward.Title,
+                Cost = reward.Cost,
+                ImageUrl = reward.ImageUrl,
+                IsManageable = reward.IsManageable,
+                LastUsedDateTime = now,
+                CreatedDateTime = now,
+                UpdatedDateTime = now
+            }).ToList();
+
+            DAO_ChannelPoint.ReplaceAll(cacheData);
         }
 
         #endregion
@@ -270,6 +333,164 @@ namespace JTSA.Utility
             }
 
             return request;
+        }
+
+        #endregion
+
+
+        #region ==================== プリセット ====================
+
+        /// <summary>
+        /// 現在の「操作可能な全報酬」の有効／無効をプリセットとして保存する（全件スナップショット方式）。
+        ///
+        /// 操作不可な報酬を含めないのは、適用しても変更できず失敗するだけのため。
+        /// </summary>
+        /// <param name="presetName">プリセット名</param>
+        /// <param name="rewards">保存対象の報酬一覧（画面に表示中のもの）</param>
+        /// <param name="presetId">上書き対象のプリセットID。nullなら新規作成</param>
+        /// <returns>保存したプリセットID。対象が0件だった場合はnull</returns>
+        public static long? SavePreset(string presetName, List<ChannelPointRewardForm> rewards, long? presetId = null)
+        {
+            var targets = rewards.Where(x => x.IsManageable).ToList();
+            if (targets.Count == 0) return null;
+
+            var now = DateTime.Now;
+
+            // プレイリストと同じくUnixミリ秒で採番する
+            var savePresetId = presetId ?? JTSAHelper.GetCurrentUnixTimestampMillis();
+
+            var header = new T_ChannelPointPresetHeader
+            {
+                PresetId = savePresetId,
+                PresetName = presetName,
+                LastUsedDateTime = now,
+                CreatedDateTime = now,
+                UpdatedDateTime = now
+            };
+
+            var items = targets.Select(reward => new T_ChannelPointPresetItem
+            {
+                PresetId = savePresetId,
+                RewardId = reward.RewardId,
+                RewardTitle = reward.Title,
+                IsEnabled = reward.IsEnabled,
+                LastUsedDateTime = now,
+                CreatedDateTime = now,
+                UpdatedDateTime = now
+            }).ToList();
+
+            DAO_ChannelPointPreset.InsertUpdate(header, items);
+
+            return savePresetId;
+        }
+
+
+        /// <summary>
+        /// プリセットを適用する。
+        /// 現在の状態と突き合わせ、差分のある報酬だけ更新することで
+        /// 無駄なAPI呼び出しとレート制限を避ける。
+        /// </summary>
+        /// <param name="presetId">適用するプリセットID</param>
+        /// <param name="rewards">
+        /// 画面に表示中の報酬一覧。渡した場合はこのFormも更新されるので画面に即反映される。
+        /// nullの場合はAPIから取得し直す。
+        /// </param>
+        /// <returns>適用結果</returns>
+        public static async Task<ChannelPointApplyResult> ApplyPresetAsync(
+            long presetId,
+            List<ChannelPointRewardForm>? rewards = null)
+        {
+            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(ChannelPointService), "チャンネルポイントプリセット適用");
+
+            var result = new ChannelPointApplyResult();
+
+            var header = DAO_ChannelPointPreset.SelectHeaderById(presetId);
+            if (header == null)
+            {
+                result.ErrorMessage = "プリセットが見つかりませんでした。";
+                mainWindow.AppLogPanel.Error(nameof(ChannelPointService), result.ErrorMessage);
+                mainWindow.AppLogPanel.ProcessEnd(nameof(ChannelPointService), appLogProcessName);
+                return result;
+            }
+
+            result.PresetName = header.PresetName;
+
+            var items = DAO_ChannelPointPreset.SelectItemsByPresetId(presetId);
+
+            // 画面から渡されなかった場合はAPIから取り直す（カテゴリ紐づけの自動適用経路など）
+            var currentRewards = rewards ?? await FetchRewardsAsync();
+            if (currentRewards == null)
+            {
+                result.ErrorMessage = "チャンネルポイント一覧の取得に失敗したため適用できませんでした。";
+                mainWindow.AppLogPanel.Error(nameof(ChannelPointService), result.ErrorMessage);
+                mainWindow.AppLogPanel.ProcessEnd(nameof(ChannelPointService), appLogProcessName);
+                return result;
+            }
+
+            foreach (var item in items)
+            {
+                var reward = currentRewards.FirstOrDefault(x => x.RewardId == item.RewardId);
+
+                // 報酬が削除された、または操作不可になった場合はスキップする
+                if (reward == null || !reward.IsManageable)
+                {
+                    result.SkippedCount++;
+                    continue;
+                }
+
+                // 既に狙いの状態なら何もしない（API呼び出しを減らす）
+                if (reward.IsEnabled == item.IsEnabled)
+                {
+                    result.UnchangedCount++;
+                    continue;
+                }
+
+                var updateResult = await SetEnabledAsync(reward, item.IsEnabled);
+
+                if (updateResult.IsSuccess)
+                {
+                    result.ChangedCount++;
+                }
+                else
+                {
+                    result.FailedCount++;
+                    result.ErrorMessage = updateResult.ErrorMessage;
+
+                    mainWindow.AppLogPanel.Error(nameof(ChannelPointService),
+                        $"プリセット適用失敗 「 {item.RewardTitle} 」：{updateResult.ErrorMessage}");
+                }
+            }
+
+            result.IsSuccess = result.FailedCount == 0;
+
+            DAO_ChannelPointPreset.UpdateLastUsed(presetId);
+
+            mainWindow.AppLogPanel.AddSwitchLog(result.IsSuccess, nameof(ChannelPointService),
+                result.SummaryText,
+                result.SummaryText + "：" + result.ErrorMessage
+            );
+            mainWindow.AppLogPanel.ProcessEnd(nameof(ChannelPointService), appLogProcessName);
+
+            return result;
+        }
+
+
+        /// <summary>
+        /// カテゴリに紐づいたプリセットを適用する。
+        /// 紐づけが無い場合は何もしない（ユーザーの明示的な指定がないカテゴリでは
+        /// チャンネルポイントの状態を勝手に変えない、という方針）。
+        /// </summary>
+        /// <param name="categoryId">カテゴリID</param>
+        /// <returns>適用した場合は結果。紐づけが無い場合はnull</returns>
+        public static async Task<ChannelPointApplyResult?> ApplyPresetForCategoryAsync(string categoryId)
+        {
+            if (string.IsNullOrEmpty(categoryId)) return null;
+
+            var category = DAO_Category.SelectOneById(categoryId);
+            if (category?.ChannelPointPresetId == null) return null;
+
+            return await ApplyPresetAsync(category.ChannelPointPresetId.Value);
         }
 
         #endregion

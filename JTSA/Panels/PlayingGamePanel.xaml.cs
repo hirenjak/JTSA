@@ -170,6 +170,9 @@ namespace JTSA.Panels
                     mainWindow.CurrentCategoryId = categoryData.Id;
                     mainWindow.CurrentCategoryName = categoryData.Name;
                     mainWindow.CurrentCategoryBoxArtUrl = categoryData.BoxArtUrl;
+
+                    // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
+                    await mainWindow.ApplyChannelPointPresetForCategoryAsync(categoryData.Id);
                 }
             }
         }

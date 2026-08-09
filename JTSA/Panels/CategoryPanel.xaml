@@ -62,7 +62,8 @@
                                             <Grid Margin="0" Height="Auto" Grid.Column="2" >
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
                                                 <TextBlock Grid.Row="0" Text="{Binding DisplayName}" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
 
@@ -75,9 +76,21 @@
                                                     <Label Grid.Column="0" Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">SteamURL：</Label>
                                                     <TextBox Grid.Column="1" Width="Auto" Name="SteamURLTextBox" Text="{Binding SteamUrl}"></TextBox>
                                                     <Button
-                                                        Grid.Column="2" Grid.Row="1"  Content="URL更新" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" 
+                                                        Grid.Column="2" Grid.Row="1"  Content="URL更新" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center"
                                                         Click="SteamURLUpdateButton_Click"/>
                                                 </Grid>
+
+                                                <!-- カテゴリに紐づくチャンネルポイントプリセット（未設定なら切り替えを行わない） -->
+                                                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0, 4, 0, 0">
+                                                    <Label Margin="0" VerticalAlignment="Center" Foreground="White" FontSize="10">CPプリセット：</Label>
+                                                    <ComboBox Width="180" Height="20" VerticalAlignment="Center"
+                                                              ItemsSource="{Binding DataContext.ChannelPointPresetFormList, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                              DisplayMemberPath="PresetName"
+                                                              SelectedValuePath="PresetId"
+                                                              SelectedValue="{Binding ChannelPointPresetId, Mode=TwoWay}"
+                                                              SelectionChanged="CategoryPresetComboBox_SelectionChanged"
+                                                              ToolTip="このカテゴリを設定したときに自動適用するプリセット。「（自動適用しない）」を選ぶと何も変更しません。"/>
+                                                </StackPanel>
                                             </Grid>
                                         </Grid>
                                         <Grid Margin="0" Height="Auto">

@@ -622,8 +622,35 @@ namespace JTSA
             DAO_Category.UpdateLastUsed(getCategory.Id);
             CategoryPanel.ReloadCategory();
 
+            // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
+            await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
+
             AppLogPanel.ProcessEnd(GetType().Name, processLogName);
         }
+
+
+		/// <summary>
+		/// カテゴリに紐づいたチャンネルポイントプリセットを適用する。
+		/// カテゴリにプリセットが紐づいていない場合は何もしない。
+		///
+		/// カテゴリを切り替える経路（タイトル送信・プレイリストの「プレイ中」）から呼ばれる。
+		/// </summary>
+		/// <param name="categoryId">切り替え後のカテゴリID</param>
+		public async Task ApplyChannelPointPresetForCategoryAsync(string categoryId)
+		{
+			var result = await ChannelPointService.ApplyPresetForCategoryAsync(categoryId);
+
+			// 紐づけが無い場合はnullが返る。この場合は正常なので何も表示しない
+			if (result == null) return;
+
+			// 適用によって有効/無効が変わっているのでCPタブの一覧を作り直す
+			await ChannelPointPanel.ReloadChannnelPoint();
+
+			AppLogPanel.AddSwitchLog(result.IsSuccess, GetType().Name,
+				"カテゴリ連動：" + result.SummaryText,
+				"カテゴリ連動：" + result.SummaryText + "：" + result.ErrorMessage
+			);
+		}
 
 
 		/// <summary>

@@ -17,5 +17,11 @@ namespace JTSA.Forms
         public required String LastUsedDate { get; set; }
         public required String BoxArtUrl { get; set; }
         public required String SteamUrl { get; set; }
+
+        /// <summary>
+        /// 紐づくチャンネルポイントプリセットID。
+        /// ComboBoxのSelectedValueに使うため、未紐づけはnullではなく0で表す。
+        /// </summary>
+        public long ChannelPointPresetId { get; set; }
     }
 }

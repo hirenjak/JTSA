@@ -15,20 +15,26 @@ namespace JTSA.Models
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
         public DbSet<T_ChatUser> T_ChatUser { get; set; }
-        
+        public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
+        public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
+        public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
+
 
         /// <summary>
-        /// •¡‡ƒL[‚Ìİ’è
+        /// ï¿½ï¿½ï¿½ï¿½ï¿½Lï¿½[ï¿½Ìİ’ï¿½
         /// </summary>
         /// <param name="modelBuilder"></param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<T_GamePlaylistItem>()
                 .HasKey(c => new { c.GamePlayListId, c.CategoryId });
+
+            modelBuilder.Entity<T_ChannelPointPresetItem>()
+                .HasKey(c => new { c.PresetId, c.RewardId });
         }
 
         /// <summary>
-        /// DB‚Ì•¨—ƒtƒ@ƒCƒ‹ˆÊ’u‚È‚Ç‚Ìİ’è
+        /// DBï¿½Ì•ï¿½ï¿½ï¿½ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½Ê’uï¿½È‚Ç‚Ìİ’ï¿½
         /// </summary>
         /// <param name="optionsBuilder"></param>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -37,7 +43,7 @@ namespace JTSA.Models
             dbDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), // Roaming
                 "JTSA", "userdata");
-            Directory.CreateDirectory(dbDirectory); // ƒtƒHƒ‹ƒ_‚ª‚È‚¯‚ê‚Îì¬
+            Directory.CreateDirectory(dbDirectory); // ï¿½tï¿½Hï¿½ï¿½ï¿½_ï¿½ï¿½ï¿½È‚ï¿½ï¿½ï¿½Îì¬
             var dbPath = Path.Combine(dbDirectory, "JTSA.db");
 
             optionsBuilder.UseSqlite($"Data Source={dbPath}");

@@ -83,9 +83,29 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 
 （Phase 2 完了時に具体化する）
 
+### Phase 3 — プリセット機能
+
+- [x] P3-1 モデル 3 つ追加（`M_ChannelPoint` / `T_ChannelPointPresetHeader` / `T_ChannelPointPresetItem`）
+- [x] P3-2 `AppDbContext` に DbSet と複合キー定義を追加、`M_Category.ChannelPointPresetId` を追加
+- [x] P3-3 マイグレーション `20260809075615_channel_point_preset` を生成
+- [x] P3-4 `DAO_ChannelPoint`（キャッシュ同期）と `DAO_ChannelPointPreset`（ヘッダ＋アイテム）を追加
+- [x] P3-5 `Forms/ChannelPointPresetForm.cs`（一覧用＋内訳用）を追加
+- [x] P3-6 `ChannelPointService.SavePreset` / `ApplyPresetAsync`（差分のある報酬だけ更新）
+- [x] P3-7 CP タブにプリセット UI（選択・適用・新規保存・上書き・名前変更・削除・内訳表示）
+- [x] P3-8 ビルド確認
+- [ ] P3-9 実機動作確認
+
 ### Phase 4 — カテゴリ紐づけ自動適用
 
-（Phase 3 完了時に具体化する）
+- [x] P4-1 `CategoryForm.ChannelPointPresetId` を追加（0＝紐づけなし）
+- [x] P4-2 CategoryPanel の各カテゴリ行にプリセット選択 ComboBox を追加し、変更時に保存
+- [x] P4-3 `ChannelPointService.ApplyPresetForCategoryAsync`（紐づけが無ければ無操作）
+- [x] P4-4 `MainWindow.ApplyChannelPointPresetForCategoryAsync` を追加し、タイトル送信後に呼び出し
+- [x] P4-5 PlayingGamePanel の「プレイ中」設定時にも呼び出し
+- [x] P4-6 プリセット削除時にカテゴリからの紐づけも外す（存在しないプリセットを指し続けないため）
+- [x] P4-7 `DAO_Category.SelectAllOrderbyLastUser` の詰め替えに新列を追加（`Update` で紐づけが消えるのを防ぐ）
+- [x] P4-8 ビルド確認
+- [ ] P4-9 実機動作確認
 
 ## 3. 実行ログ
 
@@ -94,7 +114,9 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 | 2026-08-09 | P0-1〜3 | develop 最新化、feature ブランチ作成、本ドキュメント作成 | `docs/CHANNELPOINT-SYSTEM-TASKS.md` | — | 対象なし |
 | 2026-08-09 | P1-1〜10 | 土台整備（Form/Service 追加）と既存バグ 3 件の修正 | `Forms/ChannelPointRewardForm.cs`(新), `Utility/ChannelPointService.cs`(新), `Utility/TwitchHelper.cs`, `Panels/ChannelPointPanel.xaml(.cs)`, `MainWindow.xaml.cs` | `3bc99c5` | `dotnet build` 成功（0 エラー／新規ファイルの警告なし）。**実機動作は未検証** |
 | 2026-08-09 | P1.5-1〜5 | Phase 1 の実機確認で OAuth 認証直後のクラッシュが発覚し修正。合わせてユーザー名の手入力を廃止 | `MainWindow.xaml(.cs)`, `Utility/TwitchHelper.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
-| 2026-08-09 | P2-1〜8 | 報酬コピー機能と API エラー理由の伝播 | `Utility/TwitchApiResult.cs`(新), `Utility/ChannelPointService.cs`, `Utility/TwitchHelper.cs`, `Dao/DAO_Setting.cs`, `Forms/ChannelPointRewardForm.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P2-1〜8 | 報酬コピー機能と API エラー理由の伝播 | `Utility/TwitchApiResult.cs`(新), `Utility/ChannelPointService.cs`, `Utility/TwitchHelper.cs`, `Dao/DAO_Setting.cs`, `Forms/ChannelPointRewardForm.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | `d687645` | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P3-1〜8 | プリセット機能（モデル・マイグレーション・DAO・保存/適用・UI） | `Models/M_ChannelPoint.cs`(新), `Models/T_ChannelPointPreset*.cs`(新), `AppDbContext.cs`, `Migrations/`(新), `Dao/DAO_ChannelPoint*.cs`(新), `Forms/ChannelPointPresetForm.cs`(新), `Utility/ChannelPointService.cs`, `Panels/ChannelPointPanel.xaml(.cs)` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
+| 2026-08-09 | P4-1〜8 | カテゴリ紐づけと自動適用 | `Forms/CategoryForm.cs`, `Panels/CategoryPanel.xaml(.cs)`, `Panels/PlayingGamePanel.xaml.cs`, `MainWindow.xaml.cs`, `Dao/DAO_Category.cs`, `Dao/DAO_ChannelPointPreset.cs` | — | `dotnet build` 成功（0 エラー）。**実機動作は未検証** |
 
 ## 4. 課題・保留
 
@@ -107,3 +129,7 @@ CP タブの初期化まで到達できず検証不能だったため、ユー�
 | 5 | 新規作成フォームは名前・コストのみのまま。Prompt・背景色・クールダウン等はコピー機能では引き継ぐが、手動作成時の入力欄は未実装 | 未対応（優先度低） |
 | 6 | `SettingName.UserName` は表示と Twitch ダッシュボード URL 用にのみ使う値になった（認証の前提条件ではなくなり、アクセストークンから毎回上書きされる） | 仕様変更として確定 |
 | 7 | `TwitchHelper.GetBroadcasterIdAsync(userName)` は起動経路からは呼ばれなくなったが、FriendPanel / ChatPanel が他ユーザーの情報取得に使っているため残す | 確認済み・残置 |
+| 8 | プリセットの内訳リストは表示専用。ON/OFF の編集は報酬一覧側で行い「上書き保存」する運用にした（同じ状態を 2 箇所で編集できると食い違うため） | 仕様として確定 |
+| 9 | `M_ChannelPoint`（報酬キャッシュ）は現状プリセット内訳の「削除済み」判定の補助のみで、実質は報酬一覧の取得結果から判定している。将来オフライン表示が必要になったら活用する | 用途限定 |
+| 10 | プリセット適用は差分のある報酬だけ PATCH する。報酬数が多い場合の Twitch レート制限は未検証 | 未検証 |
+| 11 | `dotnet-ef` 9.0.9 をグローバルツールとして導入した（マイグレーション生成に必要） | 環境構築として実施 |

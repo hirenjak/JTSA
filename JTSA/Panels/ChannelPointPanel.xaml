@@ -9,6 +9,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- プリセット -->
             <RowDefinition Height="Auto"/> <!-- ステータス -->
             <RowDefinition Height="Auto"/> <!-- 入力フォーム用 -->
             <RowDefinition Height="*"/>
@@ -28,12 +29,68 @@
                     ToolTip="コピー元の報酬の削除や画像設定は Twitch の Web 画面から行います。" />
         </StackPanel>
 
-        <!-- 2行目: ステータス表示 -->
-        <TextBlock Grid.Row="1" x:Name="ChannelPointGetStatus" Foreground="White"
+        <!-- 2行目: プリセット -->
+        <Border Grid.Row="1" Margin="5,0,5,5" Background="#333" CornerRadius="4" Padding="8">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="プリセット:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="PresetComboBox" Width="220" Margin="0,0,8,0"
+                              ItemsSource="{Binding ChannelPointPresetFormList}"
+                              DisplayMemberPath="DisplayText"
+                              SelectionChanged="PresetComboBox_SelectionChanged"/>
+                    <Button x:Name="ApplyPresetButton" Content="適用" Width="70" Margin="0,0,8,0"
+                            Click="ApplyPresetButton_Click"
+                            ToolTip="選択したプリセットの状態に、報酬の有効/無効をまとめて切り替えます。"/>
+                    <Button x:Name="OverwritePresetButton" Content="上書き保存" Width="90" Margin="0,0,8,0"
+                            Click="OverwritePresetButton_Click"
+                            ToolTip="今の一覧の有効/無効で、選択中のプリセットを上書きします。"/>
+                    <Button x:Name="DeletePresetButton" Content="削除" Width="60"
+                            Click="DeletePresetButton_Click"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="名前:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox x:Name="PresetNameTextBox" Width="220" Margin="0,0,8,0"
+                             ToolTip="新規保存する名前、または選択中プリセットの新しい名前を入力します。"/>
+                    <Button x:Name="SavePresetButton" Content="この名前で新規保存" Width="150" Margin="0,0,8,0"
+                            Click="SavePresetButton_Click"
+                            ToolTip="今の一覧の有効/無効を、新しいプリセットとして保存します。"/>
+                    <Button x:Name="RenamePresetButton" Content="名前変更" Width="80"
+                            Click="RenamePresetButton_Click"
+                            ToolTip="選択中のプリセットの名前を、入力した名前へ変更します。"/>
+                </StackPanel>
+
+                <!-- 選択中プリセットの内訳 -->
+                <TextBlock x:Name="PresetDetailStatus" Foreground="#FFBBBBBB" Margin="0,6,0,0"
+                           TextWrapping="Wrap"
+                           Text="プリセットを選択すると内容が表示されます。"/>
+                <ListView x:Name="PresetItemListView" Height="110" Margin="0,4,0,0"
+                          ItemsSource="{Binding ChannelPointPresetItemFormList}"
+                          Visibility="Collapsed">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="有効" Width="45">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <!-- ここは表示専用。変更は一覧側で行って「上書き保存」する -->
+                                        <CheckBox IsChecked="{Binding IsEnabled, Mode=OneWay}" IsHitTestVisible="False"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="報酬名" Width="260" DisplayMemberBinding="{Binding RewardTitle}"/>
+                            <GridViewColumn Header="状態" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </StackPanel>
+        </Border>
+
+        <!-- 3行目: ステータス表示 -->
+        <TextBlock Grid.Row="2" x:Name="ChannelPointGetStatus" Foreground="White"
                    Margin="5,0,5,5" TextWrapping="Wrap" />
 
-        <!-- 3行目: 入力フォーム（初期は非表示） -->
-        <Border Grid.Row="2" Margin="5" Background="#222" CornerRadius="4" Padding="8"
+        <!-- 4行目: 入力フォーム（初期は非表示） -->
+        <Border Grid.Row="3" Margin="5" Background="#222" CornerRadius="4" Padding="8"
                 x:Name="RewardFormPanel" Visibility="Collapsed">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -53,8 +110,8 @@
             </StackPanel>
         </Border>
 
-        <!-- 4行目: リスト -->
-        <ListView x:Name="ChannelPointListView" Grid.Row="3" Margin="5"
+        <!-- 5行目: リスト -->
+        <ListView x:Name="ChannelPointListView" Grid.Row="4" Margin="5"
                   ItemsSource="{Binding ChannelPointRewardFormList}">
             <ListView.Resources>
                 <Style TargetType="{x:Type GridViewColumnHeader}">

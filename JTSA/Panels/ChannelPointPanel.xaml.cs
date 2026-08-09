@@ -1,3 +1,4 @@
+using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
@@ -18,6 +19,12 @@ namespace JTSA.Panels
 
         /// <summary> 画面に表示している報酬一覧 </summary>
         public ObservableCollection<ChannelPointRewardForm> ChannelPointRewardFormList { get; } = [];
+
+        /// <summary> プリセット一覧 </summary>
+        public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = [];
+
+        /// <summary> 選択中プリセットの内訳 </summary>
+        public ObservableCollection<ChannelPointPresetItemForm> ChannelPointPresetItemFormList { get; } = [];
 
         /// <summary> 一覧の下に常時出す注意書き </summary>
         private const string INFO_TEXT = "※画像追加はTwitch公式UIのみ対応です。画像サイズ調整ツール: https://xipher.booth.pm/items/6573903";
@@ -43,6 +50,8 @@ namespace JTSA.Panels
         public async Task Initialize()
         {
             await ReloadChannnelPoint();
+
+            ReloadPreset();
         }
 
 
@@ -265,6 +274,254 @@ namespace JTSA.Panels
                 MessageBox.Show($"作成に失敗しました。\n\n{result.ErrorMessage}");
             }
         }
+
+
+        #region ==================== プリセット ====================
+
+        /// <summary>
+        /// プリセット一覧を読み込み直す
+        /// </summary>
+        /// <param name="selectPresetId">読み込み後に選択しておくプリセットID</param>
+        public void ReloadPreset(long? selectPresetId = null)
+        {
+            var itemCounts = DAO_ChannelPointPreset.SelectItemCounts();
+
+            ChannelPointPresetFormList.Clear();
+
+            foreach (var header in DAO_ChannelPointPreset.SelectAllHeader())
+            {
+                ChannelPointPresetFormList.Add(new ChannelPointPresetForm
+                {
+                    PresetId = header.PresetId,
+                    PresetName = header.PresetName,
+                    ItemCount = itemCounts.TryGetValue(header.PresetId, out var count) ? count : 0,
+                    LastUsedDate = header.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm")
+                });
+            }
+
+            if (selectPresetId != null)
+            {
+                PresetComboBox.SelectedItem =
+                    ChannelPointPresetFormList.FirstOrDefault(x => x.PresetId == selectPresetId);
+            }
+
+            // カテゴリ画面にも増減を反映する。
+            // 選択肢だけ差し替えるとバインド中のComboBoxが選択を失って紐づけを壊すため、
+            // カテゴリ一覧ごと作り直す（ReloadCategory は一覧をクリアしてから選択肢を入れ替える）
+            mainWindow.CategoryPanel.ReloadCategory();
+        }
+
+
+        /// <summary>
+        /// プリセット選択時：内訳を表示する
+        /// </summary>
+        private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ChannelPointPresetItemFormList.Clear();
+
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            {
+                PresetItemListView.Visibility = Visibility.Collapsed;
+                PresetDetailStatus.Text = "プリセットを選択すると内容が表示されます。";
+                return;
+            }
+
+            // 名前変更しやすいよう、選択したプリセット名を入力欄へ入れておく
+            PresetNameTextBox.Text = preset.PresetName;
+
+            var items = DAO_ChannelPointPreset.SelectItemsByPresetId(preset.PresetId);
+
+            foreach (var item in items.OrderByDescending(x => x.IsEnabled).ThenBy(x => x.RewardTitle))
+            {
+                var reward = ChannelPointRewardFormList.FirstOrDefault(x => x.RewardId == item.RewardId);
+
+                ChannelPointPresetItemFormList.Add(new ChannelPointPresetItemForm
+                {
+                    RewardId = item.RewardId,
+                    RewardTitle = item.RewardTitle,
+                    IsEnabled = item.IsEnabled,
+                    IsExisting = reward != null && reward.IsManageable
+                });
+            }
+
+            var missingCount = ChannelPointPresetItemFormList.Count(x => !x.IsExisting);
+
+            PresetItemListView.Visibility = Visibility.Visible;
+            PresetDetailStatus.Text =
+                $"「{preset.PresetName}」：ON {ChannelPointPresetItemFormList.Count(x => x.IsEnabled)}件 / "
+                + $"OFF {ChannelPointPresetItemFormList.Count(x => !x.IsEnabled)}件"
+                + (missingCount > 0 ? $"　※{missingCount}件は報酬が見つからないため適用時にスキップされます" : "")
+                + $"　最終適用: {preset.LastUsedDate}";
+        }
+
+
+        /// <summary>
+        /// 適用ボタン押下
+        /// </summary>
+        private async void ApplyPresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            {
+                MessageBox.Show("適用するプリセットを選択してください。");
+                return;
+            }
+
+            ApplyPresetButton.IsEnabled = false;
+
+            // 画面の一覧をそのまま渡すことで、更新結果が即座に画面へ反映される
+            var result = await ChannelPointService.ApplyPresetAsync(
+                preset.PresetId,
+                ChannelPointRewardFormList.ToList());
+
+            ApplyPresetButton.IsEnabled = true;
+
+            // 適用日時と件数を反映する
+            ReloadPreset(preset.PresetId);
+
+            if (result.IsSuccess)
+            {
+                ChannelPointGetStatus.Text = result.SummaryText;
+            }
+            else
+            {
+                MessageBox.Show($"{result.SummaryText}\n\n{result.ErrorMessage}");
+            }
+        }
+
+
+        /// <summary>
+        /// 新規保存ボタン押下：今の一覧の有効/無効を新しいプリセットとして保存する
+        /// </summary>
+        private void SavePresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            var presetName = PresetNameTextBox.Text.Trim();
+
+            if (string.IsNullOrEmpty(presetName))
+            {
+                MessageBox.Show("プリセット名を入力してください。");
+                return;
+            }
+
+            var savedPresetId = SavePreset(presetName, null);
+            if (savedPresetId == null) return;
+
+            ReloadPreset(savedPresetId);
+
+            MessageBox.Show($"プリセット「{presetName}」を保存しました。");
+        }
+
+
+        /// <summary>
+        /// 上書き保存ボタン押下：選択中のプリセットを今の一覧の状態で置き換える
+        /// </summary>
+        private void OverwritePresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            {
+                MessageBox.Show("上書きするプリセットを選択してください。");
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"プリセット「{preset.PresetName}」を、今の一覧の有効/無効で上書きします。よろしいですか？",
+                "プリセットの上書き保存", MessageBoxButton.OKCancel);
+
+            if (confirm != MessageBoxResult.OK) return;
+
+            var savedPresetId = SavePreset(preset.PresetName, preset.PresetId);
+            if (savedPresetId == null) return;
+
+            ReloadPreset(savedPresetId);
+
+            MessageBox.Show($"プリセット「{preset.PresetName}」を上書きしました。");
+        }
+
+
+        /// <summary>
+        /// 現在の一覧をプリセットとして保存する共通処理
+        /// </summary>
+        /// <param name="presetName">プリセット名</param>
+        /// <param name="presetId">上書き対象。nullなら新規</param>
+        /// <returns>保存したプリセットID。保存できなかった場合はnull</returns>
+        private long? SavePreset(string presetName, long? presetId)
+        {
+            var savedPresetId = ChannelPointService.SavePreset(
+                presetName,
+                ChannelPointRewardFormList.ToList(),
+                presetId);
+
+            if (savedPresetId == null)
+            {
+                MessageBox.Show("保存できる報酬がありません。\n\nプリセットに保存できるのは「操作可能（✔）」の報酬だけです。");
+
+                mainWindow.AppLogPanel.Error(GetType().Name, $"プリセット保存失敗 「 {presetName} 」：対象の報酬が0件");
+                return null;
+            }
+
+            mainWindow.AppLogPanel.Success(GetType().Name, $"プリセット保存 「 {presetName} 」");
+
+            return savedPresetId;
+        }
+
+
+        /// <summary>
+        /// 名前変更ボタン押下
+        /// </summary>
+        private void RenamePresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            {
+                MessageBox.Show("名前を変更するプリセットを選択してください。");
+                return;
+            }
+
+            var presetName = PresetNameTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(presetName))
+            {
+                MessageBox.Show("新しいプリセット名を入力してください。");
+                return;
+            }
+
+            var isSuccess = DAO_ChannelPointPreset.UpdateName(preset.PresetId, presetName);
+
+            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+                $"プリセット名変更 「 {preset.PresetName} 」→「 {presetName} 」",
+                $"プリセット名変更失敗 「 {preset.PresetName} 」"
+            );
+
+            ReloadPreset(preset.PresetId);
+        }
+
+
+        /// <summary>
+        /// 削除ボタン押下
+        /// </summary>
+        private void DeletePresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            {
+                MessageBox.Show("削除するプリセットを選択してください。");
+                return;
+            }
+
+            var confirm = MessageBox.Show(
+                $"プリセット「{preset.PresetName}」を削除します。よろしいですか？",
+                "プリセットの削除", MessageBoxButton.OKCancel);
+
+            if (confirm != MessageBoxResult.OK) return;
+
+            var isSuccess = DAO_ChannelPointPreset.Delete(preset.PresetId);
+
+            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+                $"プリセット削除 「 {preset.PresetName} 」",
+                $"プリセット削除失敗 「 {preset.PresetName} 」"
+            );
+
+            PresetNameTextBox.Text = "";
+            ReloadPreset();
+        }
+
+        #endregion
 
 
         #region ==================== コピー ====================
