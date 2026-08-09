@@ -78,7 +78,8 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <GridViewColumn Header="報酬名" Width="260" DisplayMemberBinding="{Binding RewardTitle}"/>
-                            <GridViewColumn Header="状態" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
+                            <!-- Twitch の Web 画面や他アプリで消された報酬にだけ付く。次回表示時には行ごと消える -->
+                            <GridViewColumn Header="" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
                         </GridView>
                     </ListView.View>
                 </ListView>

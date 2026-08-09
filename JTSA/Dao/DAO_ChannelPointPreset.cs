@@ -186,6 +186,54 @@ namespace JTSA.Dao
         #region ==================== DELETE ====================
 
         /// <summary>
+        /// 指定の報酬を全プリセットから取り除く。
+        /// アプリから報酬を削除したときに、プリセット側へ残骸を残さないために使う。
+        /// </summary>
+        /// <param name="rewardId">報酬ID</param>
+        /// <returns>削除した件数</returns>
+        public static int DeleteItemsByRewardId(string rewardId)
+        {
+            using var db = new AppDbContext();
+
+            var targets = db.T_ChannelPointPresetItem.Where(x => x.RewardId == rewardId).ToList();
+            if (targets.Count == 0) return 0;
+
+            db.T_ChannelPointPresetItem.RemoveRange(targets);
+
+            // コミット処理
+            db.SaveChanges();
+
+            return targets.Count;
+        }
+
+
+        /// <summary>
+        /// 現存しない報酬をプリセットから取り除く。
+        /// Twitch の Web 画面や他アプリで報酬が削除された場合、アプリ側は削除の瞬間を知れないため、
+        /// 報酬一覧を取得できたタイミングで突き合わせて掃除する。
+        /// </summary>
+        /// <param name="existingRewardIds">現存する報酬IDの一覧（取得に成功したもの）</param>
+        /// <returns>削除した件数</returns>
+        public static int DeleteItemsNotInRewardIds(List<string> existingRewardIds)
+        {
+            using var db = new AppDbContext();
+
+            var targets = db.T_ChannelPointPresetItem
+                            .Where(x => !existingRewardIds.Contains(x.RewardId))
+                            .ToList();
+
+            if (targets.Count == 0) return 0;
+
+            db.T_ChannelPointPresetItem.RemoveRange(targets);
+
+            // コミット処理
+            db.SaveChanges();
+
+            return targets.Count;
+        }
+
+
+        /// <summary>
         /// プリセットの削除（アイテムと、カテゴリからの紐づけも同時に削除）
         /// </summary>
         /// <param name="presetId">プリセットID</param>

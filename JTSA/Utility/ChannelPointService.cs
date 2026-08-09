@@ -251,7 +251,20 @@ namespace JTSA.Utility
                     "Twitch の Web 画面から作成された報酬のため削除できません。Twitch の Web 画面から削除してください。");
             }
 
-            return await TwitchHelper.DeleteCustomRewardAsync(reward.RewardId);
+            var result = await TwitchHelper.DeleteCustomRewardAsync(reward.RewardId);
+            if (!result.IsSuccess) return result;
+
+            // アプリから消したことが確実なので、プリセット側にも残骸を残さない
+            var removedCount = DAO_ChannelPointPreset.DeleteItemsByRewardId(reward.RewardId);
+
+            if (removedCount > 0)
+            {
+                MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+                mainWindow.AppLogPanel.Success(nameof(ChannelPointService),
+                    $"プリセットから報酬を除去 「 {reward.Title} 」（{removedCount}件）");
+            }
+
+            return result;
         }
 
         #endregion
