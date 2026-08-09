@@ -308,22 +308,12 @@
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <TextBlock HorizontalAlignment="Center" x:Name="LoadPanelTextBlock" Foreground="White" FontSize="56">Loading Now...</TextBlock>
                                 <StackPanel Name="LoadSubPanel" Visibility="Visible">
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="Twithcユーザー名："
-                                            HorizontalAlignment="Center" 
-                                            Foreground="White" FontSize="20" />
-                                        <TextBox x:Name="LoadPanelUserNameTextBox" 
-                                             Width="200" Height="Auto"
-                                             Foreground="White" FontSize="20" TextAlignment="Center" 
-                                             Background="#FF4A4747" 
-                                             BorderBrush="White">
-                                        </TextBox>
-                                    </StackPanel>
-                                    <TextBlock Text="Twitchユーザー名を入力してOAuth認証ボタンをクリック" 
-                                               HorizontalAlignment="Center" 
+                                    <!-- ユーザー名はアクセストークンから特定するため入力不要 -->
+                                    <TextBlock Text="OAuth認証ボタンをクリックするとブラウザで認証画面が開きます"
+                                               HorizontalAlignment="Center"
                                                Foreground="White" FontSize="20"/>
-                                    <TextBlock Text="その後下のテキストボックスに表示される認証コードを認証画面に入力" 
-                                               HorizontalAlignment="Center" 
+                                    <TextBlock Text="その後下のテキストボックスに表示される認証コードを認証画面に入力"
+                                               HorizontalAlignment="Center"
                                                Foreground="White" FontSize="20"/>
                                     <Button DockPanel.Dock="Right" x:Name="OAuthButton" Content="OAuth認証"
                                             Width="112" Height="36" 

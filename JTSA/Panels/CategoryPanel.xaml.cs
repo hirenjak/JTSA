@@ -24,6 +24,12 @@ namespace JTSA.Panels
         /// <summary>  </summary>
         public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
 
+        /// <summary> カテゴリに紐づけられるチャンネルポイントプリセットの選択肢 </summary>
+        public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = new();
+
+        /// <summary> 「紐づけなし」を表すプリセットID（ComboBoxはnullを扱いにくいため0を使う） </summary>
+        private const long PRESET_ID_NONE = 0;
+
         /// <summary>
         /// コンストラクタ
         /// </summary>
@@ -85,6 +91,9 @@ namespace JTSA.Panels
             using var db = new AppDbContext();
             CategoryFormList.Clear();
 
+            // プリセットの選択肢を先に用意する（カテゴリ行のComboBoxが参照するため）
+            ReloadChannelPointPreset();
+
             // データの取得
             var records = DAO_Category.SelectAllOrderbyLastUser();
 
@@ -97,12 +106,73 @@ namespace JTSA.Panels
                     DisplayName = item.DisplayName,
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = item.SteamUrl ?? "",
+                    ChannelPointPresetId = item.ChannelPointPresetId ?? PRESET_ID_NONE,
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
 
             mainWindow.StatusTextBlock.Text = "カテゴリリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+
+
+        /// <summary>
+        /// カテゴリに紐づけるプリセットの選択肢を読み込み直す。
+        /// CPタブでプリセットを増減した後にも呼ばれる。
+        /// </summary>
+        public void ReloadChannelPointPreset()
+        {
+            ChannelPointPresetFormList.Clear();
+
+            // 「紐づけなし」を先頭に置く。これを選ぶとカテゴリ変更時に何も適用しない
+            ChannelPointPresetFormList.Add(new ChannelPointPresetForm
+            {
+                PresetId = PRESET_ID_NONE,
+                PresetName = "（自動適用しない）"
+            });
+
+            foreach (var header in DAO_ChannelPointPreset.SelectAllHeader())
+            {
+                ChannelPointPresetFormList.Add(new ChannelPointPresetForm
+                {
+                    PresetId = header.PresetId,
+                    PresetName = header.PresetName
+                });
+            }
+        }
+
+
+        /// <summary>
+        /// カテゴリ行のプリセット選択が変わったとき：紐づけを保存する
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void CategoryPresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if ((sender as ComboBox)?.DataContext is not CategoryForm item) return;
+
+            var updateCategory = DAO_Category.SelectOneById(item.CategoryId);
+            if (updateCategory == null) return;
+
+            var selectedPresetId = item.ChannelPointPresetId == PRESET_ID_NONE
+                ? (long?)null
+                : item.ChannelPointPresetId;
+
+            // 一覧の再読込による初期バインドでもこのイベントは発火するため、
+            // 実際に値が変わったときだけ書き込む
+            if (updateCategory.ChannelPointPresetId == selectedPresetId) return;
+
+            updateCategory.ChannelPointPresetId = selectedPresetId;
+
+            var isSuccess = DAO_Category.Update(updateCategory);
+
+            var presetName = ChannelPointPresetFormList
+                .FirstOrDefault(x => x.PresetId == item.ChannelPointPresetId)?.PresetName ?? "";
+
+            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
+                $"CPプリセット紐づけ 「 {item.DisplayName} 」→「 {presetName} 」",
+                $"CPプリセット紐づけ失敗 「 {item.DisplayName} 」"
+            );
         }
 
 
