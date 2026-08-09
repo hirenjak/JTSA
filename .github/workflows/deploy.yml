@@ -36,6 +36,9 @@ jobs:
       - name: Run tests
         run: dotnet test JTSA.sln --configuration Release --no-restore
 
+      - name: Restore publish dependencies
+        run: dotnet restore JTSA/JTSA.csproj --runtime win-x64
+
       - name: Set release version
         id: version
         shell: pwsh
