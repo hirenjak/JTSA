@@ -278,7 +278,11 @@
 
                     <TabItem Header="OBS実行">
                         <Grid>
-                            <Label>未実装！！！</Label>
+                            <StackPanel>
+                                <Label Content="OBSのブラウザソースに以下のURLを設定してください。"/>
+                                <TextBox IsReadOnly="True" Text="http://localhost:8026/expansion"/>
+                                <Label Content="背景は透明です。画像はトリガー実行時に5秒間表示されます。"/>
+                            </StackPanel>
                         </Grid>
                     </TabItem>
                 </TabControl>

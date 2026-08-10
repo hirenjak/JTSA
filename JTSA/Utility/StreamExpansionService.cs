@@ -109,8 +109,7 @@ internal sealed class StreamExpansionService
                 break;
 
             case "Image":
-                if (File.Exists(item.Content)) return;
-
+                StreamExpansionOverlayService.ShowImage(item.Content);
                 break;
 
             default:
