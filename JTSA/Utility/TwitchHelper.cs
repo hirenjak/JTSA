@@ -23,6 +23,8 @@ namespace JTSA.Utility
     {
         public static readonly TwitchAPI api;
 
+        private static MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+
 
         /// <summary>
         /// コンストラクタ
@@ -123,7 +125,6 @@ namespace JTSA.Utility
         /// <returns></returns>
         public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync()
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "フォロー中配信中チャンネル取得");
 
             List<TwitchStreamIF> results = [];
@@ -225,7 +226,6 @@ namespace JTSA.Utility
 
         public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
 
             try
@@ -477,7 +477,6 @@ namespace JTSA.Utility
         /// <returns>TwitchLibのCustomReward型のリスト。失敗した場合はnull。</returns>
         public static async Task<List<CustomReward>?> GetCustomRewardsAsync(bool onlyManageableRewards = false)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -519,7 +518,6 @@ namespace JTSA.Utility
             string CustomRewardId,
             UpdateCustomRewardRequest updateCustomRewardRequest)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -568,7 +566,6 @@ namespace JTSA.Utility
         /// <returns>成否と失敗理由</returns>
         public static async Task<TwitchApiResult<bool>> DeleteCustomRewardAsync(string customRewardId)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬削除");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -607,7 +604,6 @@ namespace JTSA.Utility
         /// <returns>作成後のカスタム報酬リスト（作成したものだけ）。失敗理由付き。</returns>
         public static async Task<TwitchApiResult<List<CustomReward>>> CreateCustomRewardAsync(CreateCustomRewardsRequest createCustomRewardRequest)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -650,8 +646,7 @@ namespace JTSA.Utility
 
         public static async Task<string?> SendChat(string chatContent)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "チャット送信");
+            ProcessLog processLog = new ProcessLog(mainWindow.AppLogPanel, nameof(TwitchHelper), "チャット送信処理");
 
             try
             {
@@ -663,12 +658,12 @@ namespace JTSA.Utility
                 };
                 var apiResponse = await api.Helix.Chat.SendChatMessage(sendChatMessageRequest);
 
-                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                processLog.SuccessLogWrite();
                 return apiResponse.Data.FirstOrDefault().MessageId;
             }
             catch (Exception ex)
             {
-                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
+                processLog.ErrorLogWrite(ex.Message);
             }
 
             return null;
@@ -702,7 +697,6 @@ namespace JTSA.Utility
 
         public static async Task<bool?> PinedDeleteChat()
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
 
@@ -725,7 +719,6 @@ namespace JTSA.Utility
 
         public static async Task<TwitchChatForm?> GetPinedChat()
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
             using var client = new HttpClient();

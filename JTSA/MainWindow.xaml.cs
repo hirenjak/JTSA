@@ -139,6 +139,7 @@ namespace JTSA
 
             using (var db = new AppDbContext())
             {
+                ClearAbandonedMigrationLock(db);
                 db.Database.Migrate();
             }
 
@@ -173,6 +174,26 @@ namespace JTSA
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
             #endregion
+        }
+
+
+        /// <summary>
+        /// 異常終了時に残ったEF CoreのSQLiteマイグレーションロックを解除する。
+        /// 別のJTSAが動作中の場合は、有効なマイグレーションを妨げないため解除しない。
+        /// </summary>
+        private static void ClearAbandonedMigrationLock(AppDbContext db)
+        {
+            using var currentProcess = Process.GetCurrentProcess();
+            var hasOtherInstance = Process
+                .GetProcessesByName(currentProcess.ProcessName)
+                .Any(process => process.Id != currentProcess.Id);
+
+            if (hasOtherInstance)
+            {
+                return;
+            }
+
+            db.Database.ExecuteSqlRaw("DROP TABLE IF EXISTS \"__EFMigrationsLock\";");
         }
 
 
@@ -611,100 +632,6 @@ namespace JTSA
         #endregion
 
 
-        #region ===============認証関連処理===============
-
-        /// <summary>
-        /// アクセストークン取得後の初期化処理。
-        /// 起動時（リフレッシュトークン経由）とOAuth認証直後の両方から呼ばれる共通処理。
-        ///
-        /// 以前はこの処理が起動時シーケンスにしか無く、OAuth認証直後は
-        /// BroadcasterIdもIgdbServiceも未設定のままStreamerDataSet()を呼んで落ちていた。
-        /// </summary>
-        private async Task InitializeAfterAuthAsync()
-        {
-            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン取得後初期化処理");
-
-            // 配信者情報の取得（アクセストークンの持ち主＝配信者本人）
-            var streamerInfo = await TwitchHelper.GetAuthenticatedUserAsync();
-            if (streamerInfo is null)
-            {
-                processLog.CriticalErrorLogWrite("配信者情報未取得");
-
-                BroadcasterId_TextBlock.Text = "NG";
-                LoadSubPanel.Visibility = Visibility.Visible;
-                return;
-            }
-
-            // メモリに登録
-            TwitchHelper.BroadcasterId = streamerInfo.UserId;
-            BroadcasterId_TextBlock.Text = "OK!";
-
-            JTSAHelper.LoginName = streamerInfo.Login;
-            UserName_TextBox.Text = JTSAHelper.LoginName;
-
-            // 表示・Twitchダッシュボードのリンク用に保存しておく
-            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
-
-            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
-
-            // アクセストークンの確認を持って起動時設定を完了
-            await StreamerDataSet();
-
-            // 各パネルの初期化処理
-            ChatPanel.Initialize();
-            CategoryPanel.Initialize();
-            await ChannelPointPanel.Initialize();
-
-            PlayingGamePanel.ReloadPlaylistHeader();
-            PlayingGamePanel.ReloadGamePlaylistItem();
-
-            // ロード画面を非表示
-            LoadScreen.Visibility = Visibility.Collapsed;
-            LoadSubPanel.Visibility = Visibility.Collapsed;
-
-            processLog.SuccessLogWrite("処理完了");
-        }
-
-
-        /// <summary>
-        /// アクセストークンの再取得
-        /// </summary>
-        private async Task<string> ResetAccessTokenAsync()
-        {
-            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン再取得処理");
-
-            // リフレッシュトークンの取得（設定に無ければ失敗として戻す）
-            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken);
-            if (settingRefreshToken == null)
-            {
-                processLog.ErrorLogWrite("リフレッシュトークン未設定");
-                return null;
-            }
-
-            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingRefreshToken.Value);
-            if (accessTokenResponse == null)
-            {
-                processLog.ErrorLogWrite("アクセストークン未取得");
-                return null;
-            }
-
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.RefreshToken,
-                accessTokenResponse.refreshToken
-            );
-
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.ExpiresIn,
-                accessTokenResponse.expiresIn.ToString()
-            );
-
-            processLog.SuccessLogWrite();
-            return accessTokenResponse.accessToken;
-        }
-
-        #endregion
-
-
         #region ===============publicメソッド===============
 
         /// <summary>
@@ -1020,6 +947,100 @@ namespace JTSA
 
             titleText = titleText.Replace("${friend}", friendText);
             return titleText;
+        }
+
+        #endregion
+
+
+        #region ===============認証関連処理===============
+
+        /// <summary>
+        /// アクセストークン取得後の初期化処理。
+        /// 起動時（リフレッシュトークン経由）とOAuth認証直後の両方から呼ばれる共通処理。
+        ///
+        /// 以前はこの処理が起動時シーケンスにしか無く、OAuth認証直後は
+        /// BroadcasterIdもIgdbServiceも未設定のままStreamerDataSet()を呼んで落ちていた。
+        /// </summary>
+        private async Task InitializeAfterAuthAsync()
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン取得後初期化処理");
+
+            // 配信者情報の取得（アクセストークンの持ち主＝配信者本人）
+            var streamerInfo = await TwitchHelper.GetAuthenticatedUserAsync();
+            if (streamerInfo is null)
+            {
+                processLog.CriticalErrorLogWrite("配信者情報未取得");
+
+                BroadcasterId_TextBlock.Text = "NG";
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // メモリに登録
+            TwitchHelper.BroadcasterId = streamerInfo.UserId;
+            BroadcasterId_TextBlock.Text = "OK!";
+
+            JTSAHelper.LoginName = streamerInfo.Login;
+            UserName_TextBox.Text = JTSAHelper.LoginName;
+
+            // 表示・Twitchダッシュボードのリンク用に保存しておく
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
+
+            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+
+            // アクセストークンの確認を持って起動時設定を完了
+            await StreamerDataSet();
+
+            // 各パネルの初期化処理
+            ChatPanel.Initialize();
+            CategoryPanel.Initialize();
+            await ChannelPointPanel.Initialize();
+
+            PlayingGamePanel.ReloadPlaylistHeader();
+            PlayingGamePanel.ReloadGamePlaylistItem();
+
+            // ロード画面を非表示
+            LoadScreen.Visibility = Visibility.Collapsed;
+            LoadSubPanel.Visibility = Visibility.Collapsed;
+
+            processLog.SuccessLogWrite("処理完了");
+        }
+
+
+        /// <summary>
+        /// アクセストークンの再取得
+        /// </summary>
+        private async Task<string> ResetAccessTokenAsync()
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン再取得処理");
+
+            // リフレッシュトークンの取得（設定に無ければ失敗として戻す）
+            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken);
+            if (settingRefreshToken == null)
+            {
+                processLog.ErrorLogWrite("リフレッシュトークン未設定");
+                return null;
+            }
+
+            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingRefreshToken.Value);
+            if (accessTokenResponse == null)
+            {
+                processLog.ErrorLogWrite("アクセストークン未取得");
+                return null;
+            }
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.RefreshToken,
+                accessTokenResponse.refreshToken
+            );
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ExpiresIn,
+                accessTokenResponse.expiresIn.ToString()
+            );
+
+            processLog.SuccessLogWrite();
+            return accessTokenResponse.accessToken;
         }
 
         #endregion

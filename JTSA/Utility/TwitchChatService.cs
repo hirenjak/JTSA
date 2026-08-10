@@ -11,6 +11,8 @@ public sealed class TwitchChatService
     private readonly string channelName;
 
     public event Action<ChatMessage>? MessageReceived;
+    public event Action? SubscriptionReceived;
+    public event Action? RaidReceived;
 
     public TwitchChatService(string channelName)
     {
@@ -102,18 +104,21 @@ public sealed class TwitchChatService
     private Task Client_OnNewSubscriber(object? sender, OnNewSubscriberArgs e)
     {
         JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.Subscriber, "DisplayName", "Login"));
+        SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }
 
     private Task Client_OnReSubscriber(object? sender, OnReSubscriberArgs e)
     {
         JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.ReSubscriber, "DisplayName", "Login"));
+        SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }
 
     private Task Client_OnGiftedSubscription(object? sender, OnGiftedSubscriptionArgs e)
     {
         JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.GiftedSubscription, "DisplayName", "Login"));
+        SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }
 
@@ -123,6 +128,7 @@ public sealed class TwitchChatService
         JTSA.Utility.StreamSupportTracker.AddRaid(
             GetString(raid, "DisplayName", "Login"),
             GetInt(raid, "MsgParamViewerCount", "ViewerCount"));
+        RaidReceived?.Invoke();
         return Task.CompletedTask;
     }
 
