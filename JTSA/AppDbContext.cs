@@ -21,6 +21,8 @@ namespace JTSA.Models
         public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
         public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
         public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
+        internal DbSet<T_StreamExpansionHeader> T_StreamExpansionHeader { get; set; }
+        internal DbSet<T_StreamExpansionItem> T_StreamExpansionItem { get; set; }
 
 
         /// <summary>
@@ -34,6 +36,9 @@ namespace JTSA.Models
 
             modelBuilder.Entity<T_ChannelPointPresetItem>()
                 .HasKey(c => new { c.PresetId, c.RewardId });
+
+            modelBuilder.Entity<T_StreamExpansionItem>()
+                .HasIndex(c => new { c.Id, c.HeaderId });
         }
 
         /// <summary>

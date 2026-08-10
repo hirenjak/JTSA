@@ -215,6 +215,48 @@ namespace JTSA.Panels
         #endregion
 
 
+        #region ==================== サムネイル ====================
+
+
+        /// <summary>
+        /// プレイリストに表示するサムネイルURLを決める。
+        /// 見栄えの良いSteamのヘッダー画像を優先し、Steamに無いカテゴリ（Art等）は
+        /// Twitchに登録されているボックスアートにフォールバックする。
+        /// </summary>
+        /// <param name="steamHeaderArtUrl">Steamのヘッダー画像URL（未取得ならnull）</param>
+        /// <param name="boxArtUrl">Twitchのボックスアート URL</param>
+        /// <returns>サムネイルURL。どちらも無ければ空文字</returns>
+        private static string ResolveThumbnailUrl(string? steamHeaderArtUrl, string? boxArtUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(steamHeaderArtUrl)) return steamHeaderArtUrl;
+
+            // ボックスアートは縦長なのでタイル内では小さく表示される。解像度を確保するため大きめに要求する
+            return TwitchHelper.ResizeBoxArtUrl(boxArtUrl, 285, 380);
+        }
+
+
+        /// <summary>
+        /// カテゴリIDからサムネイルURLを解決する。DBに無ければTwitchから取り直す。
+        /// </summary>
+        /// <param name="categoryId">カテゴリID</param>
+        /// <returns>サムネイルURL。解決できなければ空文字</returns>
+        private static async Task<string> ResolveThumbnailUrlByCategoryIdAsync(string categoryId)
+        {
+            var categoryData = DAO_Category.SelectOneById(categoryId);
+
+            if (categoryData != null)
+            {
+                return ResolveThumbnailUrl(categoryData.SteamHeaderArtUrl, categoryData.BoxArtUrl);
+            }
+
+            var twitchCategoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
+
+            return ResolveThumbnailUrl(null, twitchCategoryData?.BoxArtUrl);
+        }
+
+        #endregion
+
+
         #region ==================== DB関連メソッド ====================
 
 
@@ -258,7 +300,7 @@ namespace JTSA.Panels
             {
                 GamePlayListId = playlistId,
                 GamePlayListName = playlistTitleText,
-                ThumbnailCategoryUrl = playlistItemFormList.Count == 0 ? "" : playlistItemFormList[0].CategoryId,
+                ThumbnailCategoryUrl = playlistItemFormList.Count == 0 ? "" : playlistItemFormList[0].ImageUrl,
                 SelectedCount = 0,
                 SortNumber = 9999,
                 LastUsedDateTime = DateTime.Now,
@@ -309,11 +351,21 @@ namespace JTSA.Panels
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
+                // 保存済みのThumbnailCategoryUrlには過去にカテゴリIDが入っている場合があるため、
+                // 先頭アイテムから毎回解決し直す
+                var firstItem = DAO_GamePlaylist
+                    .SelectGamePlaylistById(gamePlayListHeader.GamePlayListId)
+                    .FirstOrDefault();
+
+                var thumbnailUrl = firstItem == null
+                    ? ""
+                    : await ResolveThumbnailUrlByCategoryIdAsync(firstItem.CategoryId);
+
                 playlistHeaderFormList.Add(new PlaylistHeaderForm()
                 {
                     GamePlayListId = gamePlayListHeader.GamePlayListId,
                     GamePlayListName = gamePlayListHeader.GamePlayListName,
-                    ImageUrl = gamePlayListHeader.ThumbnailCategoryUrl,
+                    ImageUrl = thumbnailUrl,
                     LastUsedDate = gamePlayListHeader.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
                     IsLoaded = false
                 });
@@ -335,7 +387,7 @@ namespace JTSA.Panels
                 gamePlaylist = DAO_GamePlaylist.SelectHeaderById(CurrentGamePlaylistId);
             }
 
-            CurrentGamePlaylistName = gamePlaylist.GamePlayListName;
+            CurrentGamePlaylistName = gamePlaylist?.GamePlayListName ?? "";
 
         }
 
@@ -351,25 +403,13 @@ namespace JTSA.Panels
             // 画面に設定されているプレイリストIDに紐づくプレイリストアイテムを取得
             var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
 
-            // 
+            //
             foreach (var game in gamePlayListItems)
             {
-                string imageUrl = "";
-                var categoryData = DAO_Category.SelectOneById(game.CategoryId);
-                if (categoryData == null)
-                {
-                    var twitchCategoryData = await TwitchHelper.GetCategoryByGameId(game.CategoryId);
-                    imageUrl = twitchCategoryData.BoxArtUrl;
-                }
-                else
-                {
-                    imageUrl = categoryData.SteamHeaderArtUrl != "" ? categoryData.SteamHeaderArtUrl : categoryData.BoxArtUrl;
-                }
-
                 playlistItemFormList.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
-                    ImageUrl = imageUrl,
+                    ImageUrl = await ResolveThumbnailUrlByCategoryIdAsync(game.CategoryId),
                     Status = (GameStatus)game.Status
                 });
             }
@@ -377,25 +417,12 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// 
+        /// カテゴリを現在のプレイリストに追加する。
+        /// サムネイルは再読み込み時にカテゴリから解決するため、ここでは受け取らない。
         /// </summary>
-        /// <param name="urlText"></param>
-        /// <returns></returns>
-        public async Task AddSteamImageAsync(string categoryId, string urlText)
+        /// <param name="categoryId">追加するカテゴリID</param>
+        public void AddPlaylistItem(string categoryId)
         {
-            string url = "";
-            if (!string.IsNullOrEmpty(urlText)) { 
-                url = urlText.Trim();
-            }
-
-            var categoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
-
-            playlistItemFormList.Add(new PlaylistItemForm
-            {
-                CategoryId = categoryId,
-                ImageUrl = string.IsNullOrEmpty(url) ? url : categoryData.BoxArtUrl,
-            });
-
             AddGamePlaylistItem(categoryId);
 
             ReloadGamePlaylistItem();

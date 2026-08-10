@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using TwitchLib.Api;
 using TwitchLib.Api.Helix.Models.ChannelPoints;
@@ -21,6 +22,8 @@ namespace JTSA.Utility
     static class TwitchHelper
     {
         public static readonly TwitchAPI api;
+
+        private static MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
 
         /// <summary>
@@ -122,7 +125,6 @@ namespace JTSA.Utility
         /// <returns></returns>
         public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync()
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "フォロー中配信中チャンネル取得");
 
             List<TwitchStreamIF> results = [];
@@ -224,7 +226,6 @@ namespace JTSA.Utility
 
         public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
 
             try
@@ -376,6 +377,27 @@ namespace JTSA.Utility
         #region ==================== カテゴリ取得関連 ====================
 
         /// <summary>
+        /// TwitchのボックスアートURLを指定サイズに整える。
+        /// Twitchは「...-{width}x{height}.jpg」というテンプレート形式で返すが、
+        /// DBには展開済み（-128x192.jpg）で保存されているものもあるため両方を受け付ける。
+        /// </summary>
+        /// <param name="boxArtUrl">ボックスアートURL</param>
+        /// <param name="width">横幅</param>
+        /// <param name="height">高さ</param>
+        /// <returns>サイズを差し替えたURL。URLが無ければ空文字</returns>
+        public static string ResizeBoxArtUrl(string? boxArtUrl, int width = 128, int height = 192)
+        {
+            if (string.IsNullOrWhiteSpace(boxArtUrl)) return "";
+
+            var url = boxArtUrl
+                .Replace("{width}", width.ToString())
+                .Replace("{height}", height.ToString());
+
+            return Regex.Replace(url, @"-\d+x\d+(\.\w+)$", $"-{width}x{height}$1");
+        }
+
+
+        /// <summary>
         /// カテゴリ検索
         /// </summary>
         /// <param name="categoryName"></param>
@@ -393,7 +415,8 @@ namespace JTSA.Utility
                     {
                         Id = responseItem.Id ?? "",
                         Name = responseItem.Name ?? "",
-                        BoxArtUrl = responseItem.BoxArtUrl ?? ""
+                        // 検索APIは{width}/{height}のテンプレートのまま返すので展開する
+                        BoxArtUrl = ResizeBoxArtUrl(responseItem.BoxArtUrl)
                     });
                 }
             }
@@ -417,18 +440,16 @@ namespace JTSA.Utility
             {
                 var apiResponse = await api.Helix.Games.GetGamesAsync(gameIds: [gameId]);
 
-                if (apiResponse?.Data != null)
-                {
-                    var responseData = apiResponse.Data.FirstOrDefault();
+                var responseData = apiResponse?.Data?.FirstOrDefault();
 
+                if (responseData != null)
+                {
                     result = new TwitchCategoryIF()
                     {
                         Id = responseData.Id,
                         Name = responseData.Name,
-                        BoxArtUrl = responseData.BoxArtUrl
+                        BoxArtUrl = ResizeBoxArtUrl(responseData.BoxArtUrl)
                     };
-
-                    result.BoxArtUrl = result.BoxArtUrl.Replace("{width}", "128").Replace("{height}", "192");
                 }
             }
             catch (Exception ex)
@@ -456,7 +477,6 @@ namespace JTSA.Utility
         /// <returns>TwitchLibのCustomReward型のリスト。失敗した場合はnull。</returns>
         public static async Task<List<CustomReward>?> GetCustomRewardsAsync(bool onlyManageableRewards = false)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイントリスト取得");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -498,7 +518,6 @@ namespace JTSA.Utility
             string CustomRewardId,
             UpdateCustomRewardRequest updateCustomRewardRequest)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬更新");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -547,7 +566,6 @@ namespace JTSA.Utility
         /// <returns>成否と失敗理由</returns>
         public static async Task<TwitchApiResult<bool>> DeleteCustomRewardAsync(string customRewardId)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬削除");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -586,7 +604,6 @@ namespace JTSA.Utility
         /// <returns>作成後のカスタム報酬リスト（作成したものだけ）。失敗理由付き。</returns>
         public static async Task<TwitchApiResult<List<CustomReward>>> CreateCustomRewardAsync(CreateCustomRewardsRequest createCustomRewardRequest)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "TwitchLibでチャンネルポイント報酬作成");
 
             if (string.IsNullOrEmpty(TwitchHelper.BroadcasterId))
@@ -629,8 +646,7 @@ namespace JTSA.Utility
 
         public static async Task<string?> SendChat(string chatContent)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "チャット送信");
+            ProcessLog processLog = new ProcessLog(mainWindow.AppLogPanel, nameof(TwitchHelper), "チャット送信処理");
 
             try
             {
@@ -642,12 +658,12 @@ namespace JTSA.Utility
                 };
                 var apiResponse = await api.Helix.Chat.SendChatMessage(sendChatMessageRequest);
 
-                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                processLog.SuccessLogWrite();
                 return apiResponse.Data.FirstOrDefault().MessageId;
             }
             catch (Exception ex)
             {
-                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：" + ex.Message);
+                processLog.ErrorLogWrite(ex.Message);
             }
 
             return null;
@@ -681,7 +697,6 @@ namespace JTSA.Utility
 
         public static async Task<bool?> PinedDeleteChat()
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
 
@@ -704,7 +719,6 @@ namespace JTSA.Utility
 
         public static async Task<TwitchChatForm?> GetPinedChat()
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
             using var client = new HttpClient();

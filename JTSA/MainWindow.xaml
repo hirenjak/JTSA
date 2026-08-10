@@ -359,21 +359,19 @@
                 </TabItem>
 
                 <TabItem Header="CP">
-                    <StackPanel>
-                        <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
-                    </StackPanel>
+                    <panels:ChannelPointPanel x:Name="ChannelPointPanel"/>
+                </TabItem>
+
+                <TabItem Header="配信拡張">
+                    <panels:StereamExpansionPanel x:Name="StereamExpansionPanel"/>
                 </TabItem>
 
                 <TabItem Header="Setting">
-                    <StackPanel>
-                        <panels:SettingPanel x:Name="SettingPanel"/>
-                    </StackPanel>
+                    <panels:SettingPanel x:Name="SettingPanel"/>
                 </TabItem>
 
                 <TabItem Header="AppLog">
-                    <StackPanel>
-                        <panels:AppLogPanel x:Name="AppLogPanel"/>
-                    </StackPanel>
+                    <panels:AppLogPanel x:Name="AppLogPanel"/>
                 </TabItem>
             </TabControl>
         </Grid>

@@ -23,6 +23,9 @@ namespace JTSA.Panels
 
         /// <summary> 登録アプリリスト </summary>
         public ObservableCollection<RaidUserForm> RaidUserList { get; set; } = new();
+        public ObservableCollection<BitsUserForm> BitsUserList { get; } = new();
+        public ObservableCollection<SubscribeUserForm> SubscribeUserList { get; } = new();
+        public ObservableCollection<RaidedUserForm> RaidedUserList { get; } = new();
 
         /// <summary>
         /// コンストラクタ
@@ -32,9 +35,16 @@ namespace JTSA.Panels
             InitializeComponent();
             DataContext = this;
 
+
+            #region イベントハンドラ
+
             Loaded += RaidPanel_Loaded;
+            Unloaded += RaidPanel_Unloaded;
 
             RaidUserListBox.MouseDoubleClick += RaidUserListBox_MouseDoubleClick;
+            StreamSupportTracker.Changed += StreamSupportTracker_Changed;
+
+            #endregion
         }
 
 
@@ -45,6 +55,9 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void RaidPanel_Loaded(object sender, RoutedEventArgs e)
         {
+            StreamSupportTracker.Changed -= StreamSupportTracker_Changed;
+            StreamSupportTracker.Changed += StreamSupportTracker_Changed;
+            RefreshSupportLists();
             RaidUserList.Clear();
             var apiResluts = await TwitchHelper.GetStreamingFollowUserAsync();
 
@@ -77,6 +90,29 @@ namespace JTSA.Panels
                     ThumbnailUrl = ThumbnailUrl
                 });
             }
+        }
+
+        private void StreamSupportTracker_Changed()
+        {
+            Dispatcher.InvokeAsync(RefreshSupportLists);
+        }
+
+        private void RefreshSupportLists()
+        {
+            ReplaceItems(BitsUserList, StreamSupportTracker.BitsUsers);
+            ReplaceItems(SubscribeUserList, StreamSupportTracker.SubscribeUsers);
+            ReplaceItems(RaidedUserList, StreamSupportTracker.RaidedUsers);
+        }
+
+        private static void ReplaceItems<T>(ObservableCollection<T> target, IEnumerable<T> source)
+        {
+            target.Clear();
+            foreach (var item in source) target.Add(item);
+        }
+
+        private void RaidPanel_Unloaded(object sender, RoutedEventArgs e)
+        {
+            StreamSupportTracker.Changed -= StreamSupportTracker_Changed;
         }
 
         #region ==================== レイド関連イベントハンドラ ====================

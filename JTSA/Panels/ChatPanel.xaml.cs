@@ -28,6 +28,8 @@ namespace JTSA.Panels
 
         private TwitchEventSubService? twitchEventSubService;
 
+        private readonly StreamExpansionService streamExpansionService = new();
+
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
@@ -122,7 +124,9 @@ namespace JTSA.Panels
             JoinChatVolumeSlider.Value =
                double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
 
+            // 前回配信時のチャットユーザーをクリア
             DAO_ChatUser.AllDelete();
+            StreamSupportTracker.Reset();
 
             if(twitchChatService == null)
             {
@@ -133,6 +137,7 @@ namespace JTSA.Panels
                 {
                     Dispatcher.InvokeAsync(() =>
                     {
+                        // チャット欄に亜チャット追加
                         ChatAddAsync(new TwitchChatForm
                         {
                             Channel = message.Channel,
@@ -148,7 +153,22 @@ namespace JTSA.Panels
                             MessageParts = TwitchHelper.CreateParts(message)
                         }, false);
                     });
+
+                    // チャットの発火条件確認
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Chat, message.Message);
+
+                    // ビッツの発火条件確認
+                    if (message.Bits > 0)
+                    {
+                        _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Bits, message.Bits.ToString());
+                    }
                 };
+
+                twitchChatService.SubscriptionReceived += () =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+
+                twitchChatService.RaidReceived += () =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, string.Empty);
 
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
@@ -164,6 +184,8 @@ namespace JTSA.Panels
                             MessageParts = TwitchHelper.CreateParts(channelPoint.RewardTitle + " by." + channelPoint.UserName)
                         }, true);
                     });
+
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.ChannelPoint, channelPoint.RewardId);
                 };
 
                 await twitchChatService.ConnectAsync();
@@ -171,6 +193,8 @@ namespace JTSA.Panels
             }
 
 
+            #region ==========チャットオーバーレイ==========
+            
             var settingIsChatOverlay = DAO_Setting.SelectOneById(DAO_Setting.SettingName.IsChatOverlay);
             if (settingIsChatOverlay != null && settingIsChatOverlay.Value == "1")
             {
@@ -183,6 +207,8 @@ namespace JTSA.Panels
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.IsChatOverlay, "0");
                 IsStartShowChatOverlayDisp.IsChecked = false;
             }
+
+            #endregion
         }
 
 

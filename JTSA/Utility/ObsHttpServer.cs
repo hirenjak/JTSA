@@ -34,6 +34,12 @@ public class ObsHttpServer
     {
         string path = ctx.Request.Url!.AbsolutePath;
 
+        if (path == "/expansion-image")
+        {
+            WriteExpansionImage(ctx);
+            return;
+        }
+
         string text;
         string contentType;
 
@@ -49,6 +55,16 @@ public class ObsHttpServer
                 contentType = "application/json";
                 break;
 
+            case "/expansion":
+                text = JTSA.Utility.StreamExpansionOverlayService.CreateHtml();
+                contentType = "text/html";
+                break;
+
+            case "/expansion-data":
+                text = JTSA.Utility.StreamExpansionOverlayService.CreateJson();
+                contentType = "application/json";
+                break;
+
             default:
                 ctx.Response.StatusCode = 404;
                 ctx.Response.Close();
@@ -61,6 +77,23 @@ public class ObsHttpServer
         ctx.Response.ContentLength64 = bytes.Length;
 
         ctx.Response.OutputStream.Write(bytes);
+        ctx.Response.Close();
+    }
+
+    private static void WriteExpansionImage(HttpListenerContext ctx)
+    {
+        var image = JTSA.Utility.StreamExpansionOverlayService.GetImage();
+        if (image is null)
+        {
+            ctx.Response.StatusCode = 404;
+            ctx.Response.Close();
+            return;
+        }
+
+        ctx.Response.ContentType = image.Value.ContentType;
+        ctx.Response.ContentLength64 = image.Value.Data.Length;
+        ctx.Response.AddHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        ctx.Response.OutputStream.Write(image.Value.Data);
         ctx.Response.Close();
     }
 }

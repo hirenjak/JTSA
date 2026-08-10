@@ -1,5 +1,6 @@
 using JTSA.Dao;
 using JTSA.Forms;
+using JTSA.Models;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -32,6 +33,16 @@ namespace JTSA.Panels
         /// <summary> 最後にソートした列と方向 </summary>
         private GridViewColumnHeader? _lastHeaderClicked = null;
         private ListSortDirection _lastDirection = ListSortDirection.Ascending;
+
+        /// <summary>
+        /// 報酬一覧の取得に成功しているか。
+        /// 取得できていないのに「報酬が存在しない」と判断してしまうと
+        /// プリセットの中身を誤って削除してしまうため、掃除処理の実行条件に使う。
+        /// </summary>
+        private bool _isRewardListLoaded = false;
+
+        /// <summary> 起動時に自動選択するプリセット名（大文字小文字は区別しない） </summary>
+        private static readonly string[] DEFAULT_PRESET_NAMES = ["default", "デフォルト"];
 
 
         public ChannelPointPanel()
@@ -154,7 +165,13 @@ namespace JTSA.Panels
                 mainWindow.AppLogPanel.Error(GetType().Name, "チャンネルポイントリスト取得失敗");
             }
 
+            // 取得に失敗した状態で「報酬が存在しない」と判断するとプリセットを壊すため、成否を覚えておく
+            _isRewardListLoaded = fetchResult != null;
+
             ReloadButton.IsEnabled = true;
+
+            // 一覧が変わったので、選択中プリセットの内訳も作り直す
+            RefreshSelectedPresetDetail();
 
             mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }
@@ -319,10 +336,11 @@ namespace JTSA.Panels
         public void ReloadPreset(long? selectPresetId = null)
         {
             var itemCounts = DAO_ChannelPointPreset.SelectItemCounts();
+            var headers = DAO_ChannelPointPreset.SelectAllHeader();
 
             ChannelPointPresetFormList.Clear();
 
-            foreach (var header in DAO_ChannelPointPreset.SelectAllHeader())
+            foreach (var header in headers)
             {
                 ChannelPointPresetFormList.Add(new ChannelPointPresetForm
                 {
@@ -332,6 +350,9 @@ namespace JTSA.Panels
                     LastUsedDate = header.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm")
                 });
             }
+
+            // 選択の指定が無い場合（起動時・削除後など）は既定のプリセットを選んでおく
+            selectPresetId ??= FindDefaultPresetId(headers);
 
             if (selectPresetId != null)
             {
@@ -347,9 +368,67 @@ namespace JTSA.Panels
 
 
         /// <summary>
+        /// 現在選択中のプリセットID。未選択ならnull
+        /// </summary>
+        private long? GetSelectedPresetId()
+        {
+            return (PresetComboBox.SelectedItem as ChannelPointPresetForm)?.PresetId;
+        }
+
+
+        /// <summary>
+        /// 初期表示で選ぶプリセットを決める。
+        /// 「default」「デフォルト」という名前のものを優先し、
+        /// 無ければ一番古く作られたものを選ぶ。
+        /// </summary>
+        /// <param name="headers">プリセットヘッダの一覧</param>
+        /// <returns>選択するプリセットID。プリセットが1件も無い場合はnull</returns>
+        private static long? FindDefaultPresetId(List<T_ChannelPointPresetHeader> headers)
+        {
+            if (headers.Count == 0) return null;
+
+            // 同名が複数ある場合も含め、常に古い方を優先する
+            var ordered = headers.OrderBy(x => x.CreatedDateTime).ToList();
+
+            var defaultNamed = ordered.FirstOrDefault(x => IsDefaultPresetName(x.PresetName));
+
+            return (defaultNamed ?? ordered.First()).PresetId;
+        }
+
+
+        /// <summary>
+        /// 既定として扱うプリセット名かどうか
+        /// </summary>
+        /// <param name="presetName">プリセット名</param>
+        /// <returns>true：既定として扱う</returns>
+        private static bool IsDefaultPresetName(string presetName)
+        {
+            var trimmedName = presetName.Trim();
+
+            return DEFAULT_PRESET_NAMES.Any(x => trimmedName.Equals(x, StringComparison.OrdinalIgnoreCase));
+        }
+
+
+        /// <summary>
         /// プリセット選択時：内訳を表示する
         /// </summary>
         private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshSelectedPresetDetail();
+
+            // 名前変更しやすいよう、選択したプリセット名を入力欄へ入れておく
+            if (PresetComboBox.SelectedItem is ChannelPointPresetForm selectedPreset)
+            {
+                PresetNameTextBox.Text = selectedPreset.PresetName;
+            }
+        }
+
+
+        /// <summary>
+        /// 選択中プリセットの内訳を組み立て直す。
+        /// 報酬を削除した後など、「削除済み」判定が変わったときにも呼ぶ。
+        /// </summary>
+        private void RefreshSelectedPresetDetail()
         {
             ChannelPointPresetItemFormList.Clear();
 
@@ -360,21 +439,21 @@ namespace JTSA.Panels
                 return;
             }
 
-            // 名前変更しやすいよう、選択したプリセット名を入力欄へ入れておく
-            PresetNameTextBox.Text = preset.PresetName;
-
             var items = DAO_ChannelPointPreset.SelectItemsByPresetId(preset.PresetId);
 
             foreach (var item in items.OrderByDescending(x => x.IsEnabled).ThenBy(x => x.RewardTitle))
             {
-                var reward = ChannelPointRewardFormList.FirstOrDefault(x => x.RewardId == item.RewardId);
+                // 報酬一覧に存在するかどうかだけを見る（操作可否は適用時に判定する）。
+                // 一覧を取得できていないときは存在の判断がつかないので「ある」扱いにして誤表示を防ぐ
+                var isExisting = !_isRewardListLoaded
+                              || ChannelPointRewardFormList.Any(x => x.RewardId == item.RewardId);
 
                 ChannelPointPresetItemFormList.Add(new ChannelPointPresetItemForm
                 {
                     RewardId = item.RewardId,
                     RewardTitle = item.RewardTitle,
                     IsEnabled = item.IsEnabled,
-                    IsExisting = reward != null && reward.IsManageable
+                    IsExisting = isExisting
                 });
             }
 
@@ -384,8 +463,33 @@ namespace JTSA.Panels
             PresetDetailStatus.Text =
                 $"「{preset.PresetName}」：ON {ChannelPointPresetItemFormList.Count(x => x.IsEnabled)}件 / "
                 + $"OFF {ChannelPointPresetItemFormList.Count(x => !x.IsEnabled)}件"
-                + (missingCount > 0 ? $"　※{missingCount}件は報酬が見つからないため適用時にスキップされます" : "")
+                + (missingCount > 0 ? $"　※（削除済み）の{missingCount}件はプリセットから取り除きました" : "")
                 + $"　最終適用: {preset.LastUsedDate}";
+
+            // Twitch の Web 画面や他アプリで削除された報酬をプリセットから掃除する。
+            // 今表示している内容は（削除済み）付きで残し、次回以降は出てこなくなる。
+            PurgeMissingPresetItems();
+        }
+
+
+        /// <summary>
+        /// 現存しない報酬をプリセットから取り除く。
+        ///
+        /// アプリから削除した報酬は削除時にプリセットからも消えるため、
+        /// ここで消えるのは Twitch の Web 画面や他アプリで削除された報酬になる。
+        /// </summary>
+        private void PurgeMissingPresetItems()
+        {
+            // 一覧を取得できていない状態で実行すると全件を「存在しない」と誤判定してしまう
+            if (!_isRewardListLoaded) return;
+
+            var existingRewardIds = ChannelPointRewardFormList.Select(x => x.RewardId).ToList();
+
+            var removedCount = DAO_ChannelPointPreset.DeleteItemsNotInRewardIds(existingRewardIds);
+            if (removedCount == 0) return;
+
+            mainWindow.AppLogPanel.Success(GetType().Name,
+                $"存在しない報酬をプリセットから除去（{removedCount}件）");
         }
 
 
@@ -553,6 +657,82 @@ namespace JTSA.Panels
 
             PresetNameTextBox.Text = "";
             ReloadPreset();
+        }
+
+        #endregion
+
+
+        #region ==================== 削除 ====================
+
+        /// <summary>
+        /// 行内の削除ボタン押下。取り返しがつかないので必ず確認してから実行する。
+        /// </summary>
+        private async void DeleteRewardButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not ChannelPointRewardForm reward) return;
+
+            if (!ConfirmDeleteReward(reward)) return;
+
+            var result = await ChannelPointService.DeleteRewardAsync(reward);
+
+            mainWindow.AppLogPanel.AddSwitchLog(result.IsSuccess, GetType().Name,
+                $"報酬削除 「 {reward.Title} 」",
+                $"報酬削除失敗 「 {reward.Title} 」：{result.ErrorMessage}"
+            );
+
+            if (!result.IsSuccess)
+            {
+                MessageBox.Show($"削除に失敗しました。\n\n{result.ErrorMessage}");
+                return;
+            }
+
+            // 一覧・キャッシュ・プリセット内訳をまとめて更新する
+            // （プリセットからの除去は削除処理側で済んでいるので「削除済み」表示にはならない）
+            await ReloadChannnelPoint();
+            ReloadPreset(GetSelectedPresetId());
+
+            MessageBox.Show($"報酬「{reward.Title}」を削除しました。");
+        }
+
+
+        /// <summary>
+        /// 削除前の確認ダイアログ。
+        /// プリセットで使われている場合は、どのプリセットに影響するかも示す。
+        /// </summary>
+        /// <param name="reward">削除対象</param>
+        /// <returns>true：削除してよい</returns>
+        private static bool ConfirmDeleteReward(ChannelPointRewardForm reward)
+        {
+            var message = new System.Text.StringBuilder();
+
+            message.AppendLine($"報酬「{reward.Title}」（{reward.Cost} ポイント）を Twitch から削除します。");
+            message.AppendLine();
+            message.AppendLine("この操作は取り消せません。視聴者の交換履歴からも参照できなくなります。");
+
+            var usedPresetNames = DAO_ChannelPointPreset.SelectPresetNamesByRewardId(reward.RewardId);
+            if (usedPresetNames.Count > 0)
+            {
+                message.AppendLine();
+                message.AppendLine($"※ この報酬は次のプリセットで使われています（{usedPresetNames.Count}件）。");
+                message.AppendLine("　 削除後は該当項目が「削除済み」となり、適用時にスキップされます。");
+
+                foreach (var presetName in usedPresetNames.Distinct())
+                {
+                    message.AppendLine($"　・{presetName}");
+                }
+            }
+
+            message.AppendLine();
+            message.Append("削除してよろしいですか？");
+
+            var confirm = MessageBox.Show(
+                message.ToString(),
+                "チャンネルポイント報酬の削除",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Cancel);
+
+            return confirm == MessageBoxResult.OK;
         }
 
         #endregion
