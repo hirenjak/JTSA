@@ -5,6 +5,8 @@ using JTSA.Models;
 using JTSA.Panels;
 using JTSA.Utility;
 using Microsoft.EntityFrameworkCore;
+using NAudio;
+using NAudio.Utils;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
@@ -23,20 +25,19 @@ using System.Windows.Threading;
 
 namespace JTSA
 {
+	/// <summary>
+	/// メインウィンドウ
+	/// </summary>
 	public partial class MainWindow : Window
 	{
-		/// <summary>  </summary>
+		/// <summary> タイトルログ用のリスト  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
-		//public EditTitleTextForm editTitleTextForm = new();
-
+		/// <summary> アクセストークンの再取得用タイマ </summary>
 		private DispatcherTimer accessTokenRefreshTimer;
 
-
-		/// <summary>
-		/// 現在の設定タイトル
-		/// </summary>
-		public string CurrentTitleText 
+        /// <summary> ヘッダ部分：現在の設定タイトル </summary>
+        public string CurrentTitleText 
 		{ 
 			get
 			{ 
@@ -50,11 +51,8 @@ namespace JTSA
 			} 
 		}
 
-
-		/// <summary>
-		/// 現在のスチームURL
-		/// </summary>
-		public string CurrentCategorySteamUrl
+        /// <summary> ヘッダ部分：現在のスチームURL </summary>
+        public string CurrentCategorySteamUrl
 		{
 			get
 			{
@@ -68,28 +66,7 @@ namespace JTSA
 			}
 		}
 
-
-		/// <summary>
-		/// 
-		/// </summary>
-		public string CurrentTtitleTextPreview
-		{
-			get
-			{
-				return CurrentTitleTextBlock.Text;
-			}
-
-			set
-			{
-				CurrentTitleTextBlock.Text = value;
-
-            }
-		}
-
-
-		/// <summary>
-		/// 
-		/// </summary>
+		/// <summary> ヘッダ部分：現在のカテゴリID </summary>
 		public string CurrentCategoryId
 		{
 			get
@@ -101,16 +78,13 @@ namespace JTSA
 			{
 				SelectCategoryIdTextBlock.Text = value;
 
+				// カテゴリ設定をしたら同時にSteamURLを取得して設定
                 SteamUrlTextSet(value);
-
             }
 		}
 
-
-		/// <summary>
-		/// 
-		/// </summary>
-		public string CurrentCategoryName
+        /// <summary> ヘッダ部分：カテゴリ名 </summary>
+        public string CurrentCategoryName
 		{
 			get
 			{
@@ -123,16 +97,13 @@ namespace JTSA
             }
 		}
 
-
-		/// <summary>
-		/// 
-		/// </summary>
-		public string CurrentCategoryBoxArtUrl
+        /// <summary> ヘッダ部分：カテゴリBoxArt </summary>
+        public string CurrentCategoryBoxArtUrl
 		{
 			set
-			{
-				// URLが無いカテゴリもあるため、空ならクリアするだけにする
-				if (string.IsNullOrWhiteSpace(value))
+            {
+                // URLが無いカテゴリもあるため、空ならクリアするだけ
+                if (string.IsNullOrWhiteSpace(value))
 				{
 					SelectCategoryBoxArt.Source = null;
 					return;
@@ -156,18 +127,26 @@ namespace JTSA
         /// </summary>
         public MainWindow()
         {
-            InitializeComponent();
+            // WPF上の初期化処理
+			InitializeComponent();
+            DataContext = this;
+
+            // タイトルのバージョン設定
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             Title = $"JakTwtchStreamerAssistant v{version?.ToString(3)}";
-            DataContext = this;
+
+            #region ==========DBマイグレーション設定==========
 
             using (var db = new AppDbContext())
             {
                 db.Database.Migrate();
             }
-			AppLogPanel.Success(GetType().Name, "DBマイグレーション確認");
 
-            // アクセストークンの自動リフレッシュタイマー設定
+            #endregion
+
+
+            #region ==========アクセストークンの自動リフレッシュタイマー設定==========
+
             accessTokenRefreshTimer = new DispatcherTimer();
             accessTokenRefreshTimer.Interval = TimeSpan.FromHours(3);
             accessTokenRefreshTimer.Tick += async (s, e) =>
@@ -176,7 +155,6 @@ namespace JTSA
                 string accessToken = await ResetAccessTokenAsync();
                 if (string.IsNullOrEmpty(accessToken))
                 {
-                    AppLogPanel.Error(GetType().Name, "アクセストークン未取得");
                     LoadSubPanel.Visibility = Visibility.Visible;
                     return;
                 }
@@ -186,234 +164,586 @@ namespace JTSA
             };
             accessTokenRefreshTimer.Start();
 
-            AppLogPanel.Success(GetType().Name, "アクセストークン自動リフレッシュタイマー登録");
+            #endregion
 
-            // イベント登録
+
+            #region ==========イベントハンドラ設定==========
+
             Loaded += MainWindow_LoadedAsync;
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
+
+            #endregion
         }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-        private void SteamUrlTextBlock_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            var isProcessSuccess = JTSAHelper.CopyClipBoad(SteamUrlTextBlock.Text);
-            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
-                "クリップボードコピー成功 「 SteamUrl 」",
-                "クリップボードコピー失敗 「 SteamUrl 」"
-            );
-        }
 
-		/// <summary>
-		/// カテゴリIDからSteamのストアURLを引いて画面に反映する。
-		/// Art や Software and Game Development のような非ゲームカテゴリはSteamに存在しないため、
-		/// 取得できないことは異常ではない（その場合は空欄にする）。
-		/// </summary>
-		/// <param name="categoryId">カテゴリID</param>
-		private async void SteamUrlTextSet(string categoryId)
-		{
-			CurrentCategorySteamUrl = "";
-
-			if (string.IsNullOrWhiteSpace(categoryId)) return;
-
-			try
-			{
-				var result = await IgdbService.GetSteamUrlsAsync(categoryId);
-				CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
-			}
-			catch (Exception)
-			{
-				// async voidのため、ここで握らないと未処理例外でアプリが落ちる
-				AppLogPanel.Error(GetType().Name, $"SteamURL取得失敗 「 {categoryId} 」");
-			}
-        }
-
+        #region ===============イベントハンドラ===============
 
         /// <summary>
-        /// コンストラクタ終了時の処理
+        /// 【イベント】コンストラクタ終了時の処理
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
         {
-           　var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アプリ起動処理");
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "メインウィンドウ（読込）");
+            processLog.EventStartLogWrite();
 
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
-			LoadSubPanel.Visibility = Visibility.Collapsed;
+            LoadSubPanel.Visibility = Visibility.Collapsed;
 
-			// クライアントID存在チェック
-			if (string.IsNullOrEmpty(TwitchHelper.ClientID))
+            // クライアントID存在チェック
+            if (string.IsNullOrEmpty(TwitchHelper.ClientID))
             {
-                AppLogPanel.CriticalError(GetType().Name, appLogProcessName + "：ClientID未設定");
-				return;
+                processLog.CriticalErrorLogWrite("ClientID未設定");
+                return;
             }
 
-			// リフレッシュトークン取得確認
-			// ユーザー名はアクセストークンから特定できるため、保存済みトークンの有無だけを見る
-			M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken) ?? null;
-			if (settingRefreshToken == null || string.IsNullOrEmpty(settingRefreshToken.Value))
+            // リフレッシュトークン取得確認
+            // ユーザー名はアクセストークンから特定できるため、保存済みトークンの有無だけを見る
+            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken) ?? null;
+            if (settingRefreshToken == null || string.IsNullOrEmpty(settingRefreshToken.Value))
             {
-                AccessToken_TextBlock.Text = "NG";
-                AppLogPanel.Error(GetType().Name, appLogProcessName + "：未認証（OAuth認証が必要）");
-                LoadSubPanel.Visibility = Visibility.Visible;
-				return;
-			}
+                processLog.CriticalErrorLogWrite("未認証（OAuth認証が必要）");
 
-			// リフレッシュトークンからアクセストークンを再取得
-			string accessToken = await ResetAccessTokenAsync();
-            if (string.IsNullOrEmpty(accessToken))
-            {
                 AccessToken_TextBlock.Text = "NG";
-                AppLogPanel.Error(GetType().Name, "アクセストークン未取得");
                 LoadSubPanel.Visibility = Visibility.Visible;
                 return;
             }
 
-			// メモリに登録
+            // リフレッシュトークンからアクセストークンを再取得
+            string accessToken = await ResetAccessTokenAsync();
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                processLog.CriticalErrorLogWrite("アクセストークン未取得");
+
+                AccessToken_TextBlock.Text = "NG";
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // メモリに登録
             TwitchHelper.AccessToken = accessToken;
             AccessToken_TextBlock.Text = "OK!";
 
-            AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+            // 認証後の初期化（OAuth認証直後と共通）
+            await InitializeAfterAuthAsync();
 
-			// 認証後の初期化（OAuth認証直後と共通）
-			await InitializeAfterAuthAsync();
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
         }
 
 
-		/// <summary>
-		/// アクセストークン取得後の初期化処理。
-		/// 起動時（リフレッシュトークン経由）とOAuth認証直後の両方から呼ばれる共通処理。
-		///
-		/// 以前はこの処理が起動時シーケンスにしか無く、OAuth認証直後は
-		/// BroadcasterIdもIgdbServiceも未設定のままStreamerDataSet()を呼んで落ちていた。
-		/// </summary>
-		private async Task InitializeAfterAuthAsync()
-		{
-			var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アプリ初期化処理");
+        /// <summary>
+        /// ヘッダ部:SteamURLテキストブロック（クリック）
+        /// </summary>
+        private void SteamUrlTextBlock_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:SteamURLテキストブロック（クリック）");
+            processLog.EventStartLogWrite();
 
-			// 配信者情報の取得（アクセストークンの持ち主＝配信者本人）
-			var streamerInfo = await TwitchHelper.GetAuthenticatedUserAsync();
-			if (streamerInfo == null)
-			{
-				BroadcasterId_TextBlock.Text = "NG";
-				AppLogPanel.Error(GetType().Name, "配信者情報未取得");
-				LoadSubPanel.Visibility = Visibility.Visible;
-				return;
-			}
+            if (!JTSAHelper.CopyClipBoad(SteamUrlTextBlock.Text))
+            {
+                processLog.ErrorLogWrite("SteamURLクリップボードコピー失敗");
+            }
 
-			// メモリに登録
-			TwitchHelper.BroadcasterId = streamerInfo.UserId;
-			BroadcasterId_TextBlock.Text = "OK!";
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
 
-			JTSAHelper.LoginName = streamerInfo.Login;
-			UserName_TextBox.Text = JTSAHelper.LoginName;
 
-			// 表示・Twitchダッシュボードのリンク用に保存しておく
-			DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
+        /// <summary>
+        /// OAuth認証画面:認証ボタン（クリック）
+        /// </summary>
+        private async void OAuthButton_Click(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "OAuth認証画面:認証ボタン（クリック）");
+            processLog.EventStartLogWrite();
 
-			IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+            // Loading画面表示
+            LoadScreen.Visibility = Visibility.Visible;
+            LoadSubPanel.Visibility = Visibility.Visible;
 
-			// アクセストークンの確認を持って起動時設定を完了
-			await StreamerDataSet();
 
-			// 各パネルの初期化処理
-			ChatPanel.Initialize();
-			CategoryPanel.Initialize();
-			await ChannelPointPanel.Initialize();
+            #region ===============認証処理===============
 
-			PlayingGamePanel.ReloadPlaylistHeader();
-			PlayingGamePanel.ReloadGamePlaylistItem();
+            var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
+            if (deviceCodeResponse == null)
+            {
+                processLog.ErrorLogWrite("デバイスコードの取得に失敗");
+                AccessToken_TextBlock.Text = "NG";
+                return;
+            }
 
-			// ロード画面を非表示
-			LoadScreen.Visibility = Visibility.Collapsed;
-			LoadSubPanel.Visibility = Visibility.Collapsed;
+            // 認証URLとユーザーコードをユーザーに表示
+            LoadPanelSubTextBox.Text = deviceCodeResponse.user_code;
 
-			AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
-		}
+            // 認証ページを自動で開く
+            var verificationUrl = string.IsNullOrEmpty(deviceCodeResponse.verification_uri_complete)    // verification_uri_complete はユーザーコードを埋め込み済みのURL
+                ? deviceCodeResponse.verification_uri
+                : deviceCodeResponse.verification_uri_complete;
+            Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
+
+            // アクセストークン取得
+            var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
+            if (accessTokenResponse == null)
+            {
+                processLog.ErrorLogWrite("アクセストークンの取得に失敗");
+                AccessToken_TextBlock.Text = "NG";
+                return;
+            }
+
+            TwitchHelper.AccessToken = accessTokenResponse.accessToken;
+            AccessToken_TextBlock.Text = "OK!";
+
+            #endregion
+
+
+            // ユーザー名はこの後 InitializeAfterAuthAsync がアクセストークンから特定して保存する
+            #region ===============設定情報保存処理===============
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.RefreshToken,
+                accessTokenResponse.refreshToken
+            );
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ExpiresIn,
+                accessTokenResponse.expiresIn.ToString()
+            );
+
+            #endregion
+
+
+            // 認証後の初期化（起動時と共通）
+            await InitializeAfterAuthAsync();
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// ヘッダ部:送信ボタン（クリック）
+        /// 配信タイトルをTwitchに送信する
+        /// </summary>
+        private async void SendTitleButton_Click(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:送信ボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            var title = CurrentTitleText;
+            var categoryId = SelectCategoryIdTextBlock.Text;
+            var categoryName = SelectCategoryNameTextBlock.Text;
+            var categoryBoxArtUrl = SelectCategoryBoxArt.Source?.ToString() ?? "";  // ボックスアートが無いカテゴリではSourceがnullになる
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
+
+            var content = new StringContent(JsonSerializer.Serialize(new { title = title }), Encoding.UTF8, "application/json");
+
+            // TwitchAPIで配信タイトルを更新
+            var response = await client.PatchAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}", content);
+            if (response.IsSuccessStatusCode)
+            {
+                // 履歴追加処理
+                AddTitleText(TitleEditTextBox.Text, categoryId, categoryName, categoryBoxArtUrl);
+            }
+            else
+            {
+                processLog.ErrorLogWrite($"配信概要送信:{(int)response.StatusCode}:{response.StatusCode}");
+            }
+
+            // カテゴリ設定処理
+            string gameId = SelectCategoryIdTextBlock.Text.Trim();
+            if(!await TwitchHelper.SetCategoryAsync(gameId.ToString()))
+            {
+                processLog.ErrorLogWrite("カテゴリ設定処理失敗");
+            }
+
+            // タイトル取得処理
+            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            if (streamInfo is null)
+            {
+                processLog.ErrorLogWrite("タイトル取得処理失敗");
+                return;
+            }
+            var getTitleText = streamInfo.title;
+
+            // カテゴリ取得処理
+            var getCategory = await TwitchHelper.GetCategoryByGameId(gameId);
+            if (getCategory is null)
+            {
+                processLog.ErrorLogWrite("カテゴリ取得処理失敗");
+                return;
+            }
+
+            CurrentTitleText = getTitleText;
+            CurrentCategoryId = getCategory.Id;
+            CurrentCategoryName = getCategory.Name;
+            CurrentCategoryBoxArtUrl = getCategory.BoxArtUrl;
+
+            DAO_Category.UpdateLastUsed(getCategory.Id);
+
+            CategoryPanel.ReloadCategory();
+
+            // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
+            await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// ヘッダ部:タイトルテキストボックス（クリック）
+        /// </summary>
+        private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:タイトルテキストボックス（クリック）");
+            processLog.EventStartLogWrite();
+
+            // クリップボードにコピー
+            if (!JTSAHelper.CopyClipBoad(CurrentTitleText))
+            {
+                processLog.ErrorLogWrite("「タイトル」クリップボードコピー処理失敗");
+            }
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// ヘッダ部:取得ボタン（クリック）
+        /// </summary>
+        private async void GetTitleButton_Click(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:取得ボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            // 配信概要取得処理
+            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            if (streamInfo == null) { processLog.ErrorLogWrite("配信概要未取得"); return; }
+
+            // カテゴリ取得処理
+            var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
+            if (category == null) { processLog.ErrorLogWrite("カテゴリー未取得"); return; }
+
+            // ヘッダ部分の表示更新
+            CurrentTitleText = streamInfo.title;
+            CurrentCategoryId = category.Id;
+            CurrentCategoryName = category.Name;
+            CurrentCategoryBoxArtUrl = category.BoxArtUrl;
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// タイトル編集パネル:履歴アイテム（クリック）
+        /// </summary>
+        private void TitleTextLogListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトル編集パネル:履歴アイテム（クリック）");
+            processLog.EventStartLogWrite();
+
+
+            if (TitleTextLogListBox.SelectedItem is TitleTextForm selectedItem)
+            {
+                TitleEditTextBox.Text = selectedItem.Content;
+
+                SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
+                SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
+                if (!string.IsNullOrEmpty(selectedItem.CategoryBoxArtUrl))
+                {
+                    try
+                    {
+                        SelectCategoryBoxArt.Source = new BitmapImage(new Uri(selectedItem.CategoryBoxArtUrl));
+                    }
+                    catch
+                    {
+                        SelectCategoryBoxArt.Source = null;
+                    }
+                }
+            }
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// タイトル編集パネル:削除ボタン（クリック）
+        /// </summary>
+        private void TitleTextLogDeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトル編集パネル:削除ボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            // ボタンのDataContextから削除対象を取得
+            if ((sender as Button)?.DataContext is TitleTextForm item)
+            {
+                DAO_TitleText.Delete(item.Id);
+            }
+
+            ReloadTitleText();
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// ヘッダ部:X投稿ボタン（クリック）
+        /// </summary>
+        private void TweetButton_Click(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:X投稿ボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            // 必要データの取得
+            var stremTitleText = TitleTextFriendTagToXReplace(TitleEditTextBox.Text);
+            var categoryNameText = CurrentCategoryName;
+
+            // 認証URL生成
+            var oauthUrl = $"https://x.com/intent/post?text=";
+            var categoryText = "配信カテゴリ：" + categoryNameText;
+            var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.LoginName;
+
+            stremTitleText = stremTitleText.Replace("#", "＃");
+
+            // URIエンコード
+            var encodedText = WebUtility.UrlEncode(stremTitleText) + "%0A" + WebUtility.UrlEncode(categoryText) + "%0A" + WebUtility.UrlEncode(streamUrlText);
+
+            // ブラウザで認証ページを開く
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = oauthUrl + encodedText,
+                UseShellExecute = true
+            });
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// タイトル編集パネル:タイトル編集テキストボックス（テキスト変更）
+        /// </summary>
+        private void TitleEditTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトル編集パネル:タイトル編集テキストボックス（テキスト変更）");
+            processLog.EventStartLogWrite();
+
+            CurrentTitleText = TitleEditTextBox.Text;
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// 認証画面:トークンコピーボタン（クリック）
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TokenCodeCopyButton_Click(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "認証画面:トークンコピーボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            JTSAHelper.CopyClipBoad(LoadPanelSubTextBox.Text);
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+
+        /// <summary>
+        /// ヘッダ部:DBフォルダオープンボタン（クリック）
+        /// </summary>
+        private void DBFolderOpen(object sender, RoutedEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:DBフォルダオープンボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            OpenDbFolder();
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            //【プロセス開始ログ】
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:DBフォルダオープンボタン（クリック）");
+            processLog.EventStartLogWrite();
+
+            AppLogPanel.AddSwitchLog(JTSAHelper.CopyClipBoad(SelectCategoryNameTextBlock.Text), GetType().Name,
+                "クリップボードコピー成功 「 カテゴリ 」",
+                "クリップボードコピー失敗 「 カテゴリ 」"
+            );
+
+            //【プロセス終了ログ】
+            processLog.EventEndLogWrite();
+        }
+
+        #endregion
+
+
+        #region ===============認証関連処理===============
+
+        /// <summary>
+        /// アクセストークン取得後の初期化処理。
+        /// 起動時（リフレッシュトークン経由）とOAuth認証直後の両方から呼ばれる共通処理。
+        ///
+        /// 以前はこの処理が起動時シーケンスにしか無く、OAuth認証直後は
+        /// BroadcasterIdもIgdbServiceも未設定のままStreamerDataSet()を呼んで落ちていた。
+        /// </summary>
+        private async Task InitializeAfterAuthAsync()
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン取得後初期化処理");
+
+            // 配信者情報の取得（アクセストークンの持ち主＝配信者本人）
+            var streamerInfo = await TwitchHelper.GetAuthenticatedUserAsync();
+            if (streamerInfo is null)
+            {
+                processLog.CriticalErrorLogWrite("配信者情報未取得");
+
+                BroadcasterId_TextBlock.Text = "NG";
+                LoadSubPanel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // メモリに登録
+            TwitchHelper.BroadcasterId = streamerInfo.UserId;
+            BroadcasterId_TextBlock.Text = "OK!";
+
+            JTSAHelper.LoginName = streamerInfo.Login;
+            UserName_TextBox.Text = JTSAHelper.LoginName;
+
+            // 表示・Twitchダッシュボードのリンク用に保存しておく
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
+
+            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+
+            // アクセストークンの確認を持って起動時設定を完了
+            await StreamerDataSet();
+
+            // 各パネルの初期化処理
+            ChatPanel.Initialize();
+            CategoryPanel.Initialize();
+            await ChannelPointPanel.Initialize();
+
+            PlayingGamePanel.ReloadPlaylistHeader();
+            PlayingGamePanel.ReloadGamePlaylistItem();
+
+            // ロード画面を非表示
+            LoadScreen.Visibility = Visibility.Collapsed;
+            LoadSubPanel.Visibility = Visibility.Collapsed;
+
+            processLog.SuccessLogWrite("処理完了");
+        }
 
 
         /// <summary>
         /// アクセストークンの再取得
         /// </summary>
-        /// <returns></returns>
         private async Task<string> ResetAccessTokenAsync()
         {
-            var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "アクセストークン再取得");
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン再取得処理");
 
-			// リフレッシュトークンの取得（設定に無ければ失敗として戻す）
+            // リフレッシュトークンの取得（設定に無ければ失敗として戻す）
             M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken);
-			if (settingRefreshToken == null)
-			{
-				AppLogPanel.Error(GetType().Name, "リフレッシュトークン未設定");
+            if (settingRefreshToken == null)
+            {
+                processLog.ErrorLogWrite("リフレッシュトークン未設定");
                 return null;
-			}
+            }
 
             var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingRefreshToken.Value);
-			if (accessTokenResponse == null)
-			{
-				AppLogPanel.Error(GetType().Name, "アクセストークン未取得");
-				return null;
-			}
+            if (accessTokenResponse == null)
+            {
+                processLog.ErrorLogWrite("アクセストークン未取得");
+                return null;
+            }
 
             DAO_Setting.InsertUpdate(
-				DAO_Setting.SettingName.RefreshToken,
+                DAO_Setting.SettingName.RefreshToken,
                 accessTokenResponse.refreshToken
-			);
+            );
 
             DAO_Setting.InsertUpdate(
-				DAO_Setting.SettingName.ExpiresIn,
+                DAO_Setting.SettingName.ExpiresIn,
                 accessTokenResponse.expiresIn.ToString()
-			);
+            );
 
-            AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
-			return accessTokenResponse.accessToken;
+            processLog.SuccessLogWrite();
+            return accessTokenResponse.accessToken;
         }
 
+        #endregion
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="userName"></param>
-		public async Task StreamerDataSet()
+
+        #region ===============publicメソッド===============
+
+        /// <summary>
+        /// 配信者情報設定処理
+        /// </summary>
+        /// <param name="userName"></param>
+        public async Task StreamerDataSet()
         {
-            var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "配信者情報設定");
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "配信者情報設定処理");
 
             // タイトル取得処理
             var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
             if (streamInfo == null)
             {
-                AppLogPanel.Error(GetType().Name, "配信情報の取得に失敗しました");
+                processLog.ErrorLogWrite("配信情報の取得に失敗");
                 return;
             }
 
             CurrentTitleText = streamInfo.title;
-
             TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
-			var dbCategoryData = DAO_Category.SelectOneById(streamInfo.gameId);
-
-			if(dbCategoryData == null)
-			{
+            var dbCategoryData = DAO_Category.SelectOneById(streamInfo.gameId);
+            if (dbCategoryData == null)
+            {
                 // DBに未登録のカテゴリなので、Twitch/IGDBから取得して組み立てる
                 var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
                 if (category == null)
                 {
                     // カテゴリ未設定で配信している場合などはここに来る。タイトルだけ反映して終了する
-                    AppLogPanel.Error(GetType().Name, "カテゴリ情報の取得に失敗しました");
+                    processLog.ErrorLogWrite("カテゴリ情報の取得に失敗");
 
                     CurrentTitleText = TitleEditTextBox.Text;
                     ReloadTitleText();
                     TitleTagSidePanel.ReloadTitleTag();
 
-                    AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
                     return;
                 }
 
-				var steamUrl = await IgdbService.GetSteamUrlsAsync(category.Id);
+                var steamUrl = await IgdbService.GetSteamUrlsAsync(category.Id);
 
                 dbCategoryData = new M_Category
                 {
@@ -429,138 +759,187 @@ namespace JTSA
 
             CurrentTitleText = TitleEditTextBox.Text;
 
-			CurrentCategoryId = dbCategoryData.CategoryId;
-			CurrentCategoryName = dbCategoryData.DisplayName;
+            CurrentCategoryId = dbCategoryData.CategoryId;
+            CurrentCategoryName = dbCategoryData.DisplayName;
             CurrentCategoryBoxArtUrl = dbCategoryData.BoxArtUrl;
-			CurrentCategorySteamUrl = dbCategoryData.SteamUrl;
+            CurrentCategorySteamUrl = dbCategoryData.SteamUrl;
 
 
             // リスト読み込み処理
             ReloadTitleText();
             TitleTagSidePanel.ReloadTitleTag();
 
-            AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+            processLog.SuccessLogWrite();
         }
 
 
-		#region =============== Tiwthc：OAuth認証 ===============
+        /// <summary>
+        /// タイトルログ再読み込み処理
+        /// </summary>
+        public void ReloadTitleText()
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルログ再読み込み処理");
 
-		/// <summary>
-		/// OAuth認証ボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private async void OAuthButton_Click(object sender, RoutedEventArgs e)
-		{
-			var appLogProcessName = AppLogPanel.ProcessStart(GetType().Name, "OAuth認証");
-
-			// Loading画面表示
-			LoadScreen.Visibility = Visibility.Visible;
-			LoadSubPanel.Visibility = Visibility.Visible;
-
-			var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
-			if (deviceCodeResponse == null)
-			{
-				AccessToken_TextBlock.Text = "NG";
-				AppLogPanel.Error(GetType().Name, "デバイスコードの取得に失敗しました");
-				return;
-			}
-
-			// 認証URLとユーザーコードをユーザーに表示
-			LoadPanelSubTextBox.Text = deviceCodeResponse.user_code;
-
-			// 認証ページを自動で開く
-			// verification_uri_complete はユーザーコードを埋め込み済みのURL
-			var verificationUrl = string.IsNullOrEmpty(deviceCodeResponse.verification_uri_complete)
-				? deviceCodeResponse.verification_uri
-				: deviceCodeResponse.verification_uri_complete;
-
-			Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
-
-			// アクセストークン取得
-			var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
-
-			if (accessTokenResponse == null)
-			{
-				AccessToken_TextBlock.Text = "NG";
-				AppLogPanel.Error(GetType().Name, "アクセストークンの取得に失敗しました");
-				return;
-			}
-
-			TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-			AccessToken_TextBlock.Text = "OK!";
-
-			// --- 設定情報保存処理 ---
-			// ユーザー名はこの後 InitializeAfterAuthAsync がアクセストークンから特定して保存する
-			DAO_Setting.InsertUpdate(
-				DAO_Setting.SettingName.RefreshToken,
-				accessTokenResponse.refreshToken
-			);
-
-			DAO_Setting.InsertUpdate(
-				DAO_Setting.SettingName.ExpiresIn,
-				accessTokenResponse.expiresIn.ToString()
-			);
-
-			AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
-
-			// 認証後の初期化（起動時と共通）
-			await InitializeAfterAuthAsync();
-		}
-
-		#endregion
-
-
-		#region =============== リストデータ更新処理 ===============
-
-		/// <summary>
-		/// 読み込み処理：タイトルテキスト
-		/// </summary>
-		public void ReloadTitleText()
-		{
-			var processLogName = AppLogPanel.ProcessStart(GetType().Name, "タイトルログ一覧読込");
             // DB接続と初期化処理
             using var db = new AppDbContext();
-			TitleTextFormList.Clear();
+            TitleTextFormList.Clear();
 
-			// データの取得
-			var records = DAO_TitleText.SelectAllOrderbyLastUser(db);
+            // データの取得
+            var records = DAO_TitleText.SelectAllOrderbyLastUser(db);
 
-			// 画面データ入れ換え処理
-			foreach (var item in records)
-			{
-				TitleTextFormList.Add(new()
-				{
-					Id = item.Id,
-					Content = item.Content,
-					CategoryId = item.CategoryId,
-					CategoryName = item.CategoryName,
-					CategoryBoxArtUrl = item.CategoryBoxArtUrl,
+            // 画面データ入れ換え処理
+            foreach (var item in records)
+            {
+                TitleTextFormList.Add(new()
+                {
+                    Id = item.Id,
+                    Content = item.Content,
+                    CategoryId = item.CategoryId,
+                    CategoryName = item.CategoryName,
+                    CategoryBoxArtUrl = item.CategoryBoxArtUrl,
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
-				});
-			}
+                });
+            }
 
-			AppLogPanel.ProcessEnd(GetType().Name, processLogName);
+            processLog.SuccessLogWrite();
         }
 
-		#endregion
+
+        /// <summary>
+        /// カテゴリ連動処理
+        /// 
+        /// カテゴリに紐づいたチャンネルポイントプリセットを適用する。
+        /// カテゴリにプリセットが紐づいていない場合は何もしない。
+        ///
+        /// カテゴリを切り替える経路（タイトル送信・プレイリストの「プレイ中」）から呼ばれる。
+        /// </summary>
+        /// <param name="categoryId">切り替え後のカテゴリID</param>
+        public async Task ApplyChannelPointPresetForCategoryAsync(string categoryId)
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "カテゴリ連動処理");
+
+            var result = await ChannelPointService.ApplyPresetForCategoryAsync(categoryId);
+
+            // 紐づけが無い場合はnullが返る。この場合は正常なので何も表示しない
+            if (result == null) 
+            {
+                processLog.ErrorLogWrite("カテゴリ連動失敗：APIの戻り値がnull");
+                return;
+            }
+
+            if (!result.IsSuccess)
+            {
+                processLog.ErrorLogWrite("カテゴリ連動失敗：" + result.SummaryText + "：" + result.ErrorMessage);
+            }
+
+            // 適用によって有効/無効が変わっているのでCPタブの一覧を作り直す
+            await ChannelPointPanel.ReloadChannnelPoint();
+
+            processLog.SuccessLogWrite();
+        }
 
 
-		#region =============== リストデータ追加処理 ===============
+        /// <summary>
+        /// タイトルテキスト編集カーソル位置挿入処理
+        /// </summary>
+        /// <param name="insertText"></param>
+        public void InsertTextAtCaret(string insertText)
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルテキスト編集カーソル位置挿入処理");
+
+            // TitleEditTextBoxがnullでないことを確認
+            if (TitleEditTextBox == null)
+            {
+                processLog.ErrorLogWrite("タイトルテキストボックスが存在しない");
+                return;
+            }
+
+            int currentIndex = TitleEditTextBox.SelectionStart;
+            string original = TitleEditTextBox.Text ?? "";
+
+            // 挿入処理
+            TitleEditTextBox.Text =
+                original.Substring(0, currentIndex) +
+                insertText +
+                original.Substring(currentIndex);
+
+            // 挿入後のカーソル位置を調整
+            TitleEditTextBox.SelectionStart = currentIndex + insertText.Length;
+            TitleEditTextBox.Focus();
+
+            processLog.SuccessLogWrite();
+        }
+
+
+        /// <summary>
+        /// タイトルテキストプレビューの更新処理
+        /// </summary>
+        public void CurrentTitleTextUpdate()
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルテキストプレビューの更新処理");
+
+            CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(TitleEditTextBox.Text);
+            TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
+
+            processLog.SuccessLogWrite();
+        }
+
+        #endregion
+
+
+        #region ===============privateメソッド===============
+
+        /// <summary>
+        /// SteamURLテキスト登録処理
+        /// 
+        /// カテゴリIDからSteamのストアURLを引いて画面に反映する。
+        /// Art や Software and Game Development のような非ゲームカテゴリはSteamに存在しないため、
+        /// 取得できないことは異常ではない（その場合は空欄にする）。
+        /// </summary>
+        private async void SteamUrlTextSet(string categoryId)
+        {
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "SteamURLテキスト登録処理");
+
+            CurrentCategorySteamUrl = "";
+
+            if (string.IsNullOrWhiteSpace(categoryId))
+            {
+                processLog.ErrorLogWrite($"categoryIdが未設定");
+                return;
+            }
+
+			try
+			{
+				var result = await IgdbService.GetSteamUrlsAsync(categoryId);
+				CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
+			}
+			catch (Exception)
+			{
+                // async voidのため、ここで握らないと未処理例外でアプリが落ちる
+                processLog.ErrorLogWrite($"SteamURL取得失敗 「 {categoryId} 」");
+			}
+
+            processLog.SuccessLogWrite();
+        }
+
 
 		/// <summary>
-		/// タイトルテキスト：追加処理
+		/// タイトルログ追加処理
 		/// </summary>
 		/// <param name="title"></param>
 		private void AddTitleText(string content, string categoryId, string categoryName, string categoryBoxArtUrl)
         {
-            var processLogName = AppLogPanel.ProcessStart(GetType().Name, "タイトルログ一覧読込");
+            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルログ追加処理");
 
             // DB接続処理
             using var db = new AppDbContext();
 
-			// データチェック
-			if (string.IsNullOrWhiteSpace(content)) return;
+            // データチェック
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                processLog.ErrorLogWrite("追加用テキストが未設定");
+                return;
+            }
 
 			// データ作成
 			var isnertData = new T_TitleText
@@ -577,313 +956,20 @@ namespace JTSA
 			};
 
             // 挿入処理
-            var isProcessSuccess = DAO_TitleText.Insert(isnertData);
-            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
-                "データ追加成功 「 タイトルログ 」",
-				"データ追加失敗 「 タイトルログ 」"
-			);
+            if (!DAO_TitleText.Insert(isnertData))
+            {
+                processLog.ErrorLogWrite("タイトルログ追加処理失敗");
+            }
 
 			// 再読み込み処理
 			ReloadTitleText();
 
-            AppLogPanel.ProcessEnd(GetType().Name, processLogName);
-        }
-
-		#endregion
-
-
-		#region =============== メインパネル：編集部分 ===============
-
-		/// <summary>
-		/// 送信ボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private async void SendTitleButton_Click(object sender, RoutedEventArgs e)
-        {
-            var processLogName = AppLogPanel.ProcessStart(GetType().Name, "配信タイトル送信");
-
-            var title = CurrentTitleText;
-			var categoryId = SelectCategoryIdTextBlock.Text;
-			var categoryName = SelectCategoryNameTextBlock.Text;
-			// ボックスアートが無いカテゴリではSourceがnullになる
-			var categoryBoxArtUrl = SelectCategoryBoxArt.Source?.ToString() ?? "";
-
-
-            using var client = new HttpClient();
-			client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
-			client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
-
-			var content = new StringContent(
-				JsonSerializer.Serialize(new { title = title }),
-				Encoding.UTF8, "application/json");
-
-			// TwitchAPIで配信タイトルを更新
-			var response = await client.PatchAsync(
-				$"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}",
-				content);
-
-			var isProcessSuccess = response.IsSuccessStatusCode;
-            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
-                "送信成功 「 配信概要 」",
-                "送信失敗 「 配信概要 」：" + (int)response.StatusCode + "：" + response.StatusCode
-            );
-
-            // レスポンスの処理
-            if (isProcessSuccess)
-			{
-				// --- 履歴追加処理 ---
-				AddTitleText(TitleEditTextBox.Text, categoryId, categoryName, categoryBoxArtUrl);
-			}
-
-			String gameId = SelectCategoryIdTextBlock.Text.Trim();
-            isProcessSuccess = await TwitchHelper.SetCategoryAsync(gameId.ToString());
-            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
-                "送信成功 「 カテゴリ 」",
-				"送信失敗 「 カテゴリ 」"
-            );
-
-            // タイトル取得処理
-			var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
-            var getTitleText = streamInfo.title;
-            var getCategory = await TwitchHelper.GetCategoryByGameId(gameId);
-
-            CurrentTitleText = getTitleText;
-            
-			CurrentCategoryId = getCategory.Id;
-			CurrentCategoryName = getCategory.Name;
-			CurrentCategoryBoxArtUrl = getCategory.BoxArtUrl;
-
-            DAO_Category.UpdateLastUsed(getCategory.Id);
-            CategoryPanel.ReloadCategory();
-
-            // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
-            await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
-
-            AppLogPanel.ProcessEnd(GetType().Name, processLogName);
-        }
-
-
-		/// <summary>
-		/// カテゴリに紐づいたチャンネルポイントプリセットを適用する。
-		/// カテゴリにプリセットが紐づいていない場合は何もしない。
-		///
-		/// カテゴリを切り替える経路（タイトル送信・プレイリストの「プレイ中」）から呼ばれる。
-		/// </summary>
-		/// <param name="categoryId">切り替え後のカテゴリID</param>
-		public async Task ApplyChannelPointPresetForCategoryAsync(string categoryId)
-		{
-			var result = await ChannelPointService.ApplyPresetForCategoryAsync(categoryId);
-
-			// 紐づけが無い場合はnullが返る。この場合は正常なので何も表示しない
-			if (result == null) return;
-
-			// 適用によって有効/無効が変わっているのでCPタブの一覧を作り直す
-			await ChannelPointPanel.ReloadChannnelPoint();
-
-			AppLogPanel.AddSwitchLog(result.IsSuccess, GetType().Name,
-				"カテゴリ連動：" + result.SummaryText,
-				"カテゴリ連動：" + result.SummaryText + "：" + result.ErrorMessage
-			);
-		}
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void CurrentTitleTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-		{
-            var isProcessSuccess = JTSAHelper.CopyClipBoad(CurrentTitleText);
-            AppLogPanel.AddSwitchLog(isProcessSuccess, GetType().Name,
-                "クリップボードコピー成功 「 タイトル 」",
-                "クリップボードコピー失敗 「 タイトル 」"
-            );
-        }
-
-
-		/// <summary>
-		/// 取得ボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private async void GetTitleButton_Click(object sender, RoutedEventArgs e)
-        {
-            var processLogName = AppLogPanel.ProcessStart(GetType().Name, "配信タイトル取得");
-
-            // 配信概要取得処理
-            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
-			if (streamInfo == null) { AppLogPanel.Error(GetType().Name, "配信概要未取得"); return; }
-
-            // カテゴリ取得処理
-            var category = await TwitchHelper.GetCategoryByGameId(streamInfo.gameId);
-            if (category == null) { AppLogPanel.Error(GetType().Name, "カテゴリー未取得"); return; }
-
-            CurrentTitleText = streamInfo.title;
-
-			CurrentCategoryId = category.Id;
-			CurrentCategoryName= category.Name;
-			CurrentCategoryBoxArtUrl = category.BoxArtUrl;
-
-            AppLogPanel.ProcessEnd(GetType().Name, processLogName);
-        }
-
-
-		/// <summary>
-		/// テキスト編集のカーソル位置にテキストを挿入
-		/// </summary>
-		/// <param name="insertText"></param>
-		public void InsertTextAtCaret(string insertText)
-		{
-			// TitleEditTextBoxがnullでないことを確認
-			if (TitleEditTextBox == null) return;
-
-			int caretIndex = TitleEditTextBox.SelectionStart;
-			string original = TitleEditTextBox.Text ?? "";
-
-			// 挿入処理
-			TitleEditTextBox.Text =
-				original.Substring(0, caretIndex) +
-				insertText +
-				original.Substring(caretIndex);
-
-			// 挿入後のカーソル位置を調整
-			TitleEditTextBox.SelectionStart = caretIndex + insertText.Length;
-			TitleEditTextBox.Focus();
-		}
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void SelectCategpryNameTextBlock_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-		{
-            AppLogPanel.AddSwitchLog(JTSAHelper.CopyClipBoad(SelectCategoryNameTextBlock.Text), GetType().Name,
-                "クリップボードコピー成功 「 カテゴリ 」",
-                "クリップボードコピー失敗 「 カテゴリ 」"
-            );
-		}
-
-		#endregion
-
-
-		#region =============== メインパネル：タイトルテキストログ ===============
-
-		/// <summary>
-		/// 履歴アイテムクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void TitleTextLogListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			if (TitleTextLogListBox.SelectedItem is TitleTextForm selectedItem)
-			{
-				TitleEditTextBox.Text = selectedItem.Content;
-
-				SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
-				SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
-                if (!string.IsNullOrEmpty(selectedItem.CategoryBoxArtUrl))
-                {
-					try
-                    {
-                        SelectCategoryBoxArt.Source = new BitmapImage(new Uri(selectedItem.CategoryBoxArtUrl));
-                    }
-					catch
-					{
-						SelectCategoryBoxArt.Source = null;
-					}
-                }
-            }
-		}
-
-
-		/// <summary>
-		/// 削除ボタンクリック時
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void TitleTextLogDeleteButton_Click(object sender, RoutedEventArgs e)
-		{
-			// ボタンのDataContextから削除対象を取得
-			if ((sender as Button)?.DataContext is TitleTextForm item)
-			{
-				DAO_TitleText.Delete(item.Id);
-			}
-
-			ReloadTitleText();
-		}
-
-		#endregion
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void TweetButton_Click(object sender, RoutedEventArgs e)
-		{
-			// 必要データの取得
-			var stremTitleText = TitleTextFriendTagToXReplace(TitleEditTextBox.Text);
-			var categoryNameText = CurrentCategoryName;
-
-            // 認証URL生成
-            var oauthUrl = $"https://x.com/intent/post?text=";
-			var categoryText = "配信カテゴリ：" + categoryNameText;
-			var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.LoginName;
-
-            stremTitleText = stremTitleText.Replace("#", "＃");
-
-			// URIエンコード
-			var encodedText = WebUtility.UrlEncode(stremTitleText) + "%0A" + WebUtility.UrlEncode(categoryText) + "%0A" + WebUtility.UrlEncode(streamUrlText);
-
-            // ブラウザで認証ページを開く
-            Process.Start(new ProcessStartInfo
-			{
-				FileName = oauthUrl + encodedText,
-				UseShellExecute = true
-			});
-		}
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void TitleEditTextBox_TextChanged(object sender, TextChangedEventArgs e)
-		{
-            CurrentTitleText = TitleEditTextBox.Text;
-        }
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-		private void TokenCodeCopyButton_Click(object sender, RoutedEventArgs e)
-		{
-            JTSAHelper.CopyClipBoad(LoadPanelSubTextBox.Text);
-		}
-
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="sender"></param>
-		/// <param name="e"></param>
-        private void DBFolderOpen(object sender, RoutedEventArgs e)
-        {
-			OpenDbFolder();
+            processLog.SuccessLogWrite();
         }
 
 
         /// <summary>
-        /// dbDirectoryをエクスプローラーで開くメソッド
+        /// dbDirectoryをエクスプローラーで開く処理
         /// </summary>
         private void OpenDbFolder()
         {
@@ -911,6 +997,7 @@ namespace JTSA
 			}
 
             titleText = titleText.Replace("${friend}", friendText + " ");
+
 			return titleText;
 		}
 
@@ -935,15 +1022,6 @@ namespace JTSA
             return titleText;
         }
 
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public void CurrentTitleTextUpdate()
-		{
-            CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(TitleEditTextBox.Text);
-
-            TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
-        }
+        #endregion
     }
 }

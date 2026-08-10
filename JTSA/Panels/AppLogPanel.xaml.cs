@@ -9,6 +9,63 @@ using System.Windows.Media;
 
 namespace JTSA.Panels
 {
+    public class ProcessLog
+    {
+        AppLogPanel appLogPanel;
+
+        private SolidColorBrush NORMAL_COLOR = Brushes.White;
+        private SolidColorBrush SUCCSESS_COLOR = Brushes.LightGreen;
+        private SolidColorBrush ERROR_COLOR = Brushes.OrangeRed;
+        private SolidColorBrush CRITICAL_ERROR_COLOR = Brushes.Red;
+
+        public string TargetClassName { get; set; }
+        public string ProcessName { get; set; }
+
+        public ProcessLog(AppLogPanel appLogPanel, string targetClassName , string processName)
+        {
+            this.appLogPanel = appLogPanel;
+            ProcessName = processName;
+            TargetClassName = targetClassName;
+
+        }
+
+        public void EventStartLogWrite()
+        {
+            string logText = $"処理Start [ {TargetClassName} ： {ProcessName} ]";
+            appLogPanel.AddLog(logText, NORMAL_COLOR);
+        }
+
+        public void EventEndLogWrite()
+        {
+            string logText = $"処理End [ {TargetClassName} ： {ProcessName} ]";
+            appLogPanel.AddLog(logText, NORMAL_COLOR);
+        }
+
+        public void SuccessLogWrite()
+        {
+            string logText = $"[ {TargetClassName} ： {ProcessName} ] 処理完了";
+            appLogPanel.AddLog(logText, SUCCSESS_COLOR);
+        }
+
+        public void SuccessLogWrite(string sucLogStr)
+        {
+            string logText = $"[ {TargetClassName} ： {ProcessName} ]";
+            appLogPanel.AddLog(logText, SUCCSESS_COLOR);
+        }
+
+        public void ErrorLogWrite(string errLogStr)
+        {
+            string logText = $"ERROR [ {TargetClassName} ： {ProcessName} ] : {errLogStr}";
+            appLogPanel.AddLog(logText, ERROR_COLOR);
+        }
+
+        public void CriticalErrorLogWrite(string errLogStr)
+        {
+            string logText = $"ERROR [ {TargetClassName} ： {ProcessName} ] : {errLogStr}";
+            appLogPanel.AddLog(logText, CRITICAL_ERROR_COLOR);
+        }
+    }
+
     /// <summary>
     /// AppLogPanel.xaml の相互作用ロジック
     /// </summary>
@@ -16,7 +73,6 @@ namespace JTSA.Panels
     {
         /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-
 
         /// <summary>  </summary>
         public ObservableCollection<AppLogForm> AppLogFormList { get; } = [];
@@ -55,6 +111,17 @@ namespace JTSA.Panels
                 Content = "【 " + traceClassName + "】 " + log,  
                 Color = color
             });
+        }
+
+        public void AddLog(string logText, SolidColorBrush color)
+        {
+            AppLogFormList.Add(
+                new AppLogForm()
+                {
+                    LogDateTime = DateTime.Now,
+                    Content = logText,
+                    Color = color
+                });
         }
 
         /// <summary>

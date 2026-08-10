@@ -130,7 +130,7 @@
             </StackPanel>
 
             <StackPanel Grid.Row="2" Margin="0, 8, 0, 0">
-                <TextBlock Text="・サブスク更新ユーザー" Foreground="White" FontSize="14"></TextBlock>
+                <TextBlock Text="・サブスクユーザー" Foreground="White" FontSize="14"></TextBlock>
                 <ListBox Grid.Row="1" ItemsSource="{Binding SubscribeUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                      x:Name="SubscribeUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -157,7 +157,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                            <TextBlock Text="ビッツ金額:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="サブスク回数:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
                                             <TextBlock Text="{Binding SubscribeAmount}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
                                         </StackPanel>
                                     </Grid>
@@ -199,13 +199,8 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                            <TextBlock Text="配信時間:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
-                                            <TextBlock Text="{Binding StreamTime}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                            <TextBlock Text="カテゴリ:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
-                                            <TextBlock Text="{Binding Category}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="視聴者数:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="{Binding ViewerCount}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
                                         </StackPanel>
                                     </Grid>
 

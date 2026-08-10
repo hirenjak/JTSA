@@ -123,6 +123,7 @@ namespace JTSA.Panels
                double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
 
             DAO_ChatUser.AllDelete();
+            StreamSupportTracker.Reset();
 
             if(twitchChatService == null)
             {
