@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using TwitchLib.Api;
@@ -695,7 +696,7 @@ namespace JTSA.Utility
         }
 
 
-        public static async Task<bool?> PinedDeleteChat()
+        public static async Task<bool?> PinedDeleteChat(string messageId)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
@@ -706,7 +707,8 @@ namespace JTSA.Utility
 
             var response = await client.DeleteAsync($"https://api.twitch.tv/helix/chat/pins" +
                                                 $"?broadcaster_id={BroadcasterId}" +
-                                                $"&moderator_id={BroadcasterId}");
+                                                $"&moderator_id={BroadcasterId}" +
+                                                $"&message_id={messageId}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -735,9 +737,55 @@ namespace JTSA.Utility
                 return null;
             }
 
-            var result = await response.Content.ReadFromJsonAsync<TwitchChatForm>();
+            var result = await response.Content.ReadFromJsonAsync<PinnedChatResponse>();
+            var pinnedChat = result?.Data.FirstOrDefault();
 
-            return result;
+            if (pinnedChat == null) return null;
+
+            return new TwitchChatForm
+            {
+                UserId = pinnedChat.SenderUserId,
+                UserName = pinnedChat.SenderUserLogin,
+                DisplayName = pinnedChat.SenderUserName,
+                Message = pinnedChat.Message.Text,
+                MessageId = pinnedChat.MessageId,
+                HexColor = "#FFFFFF",
+                MessageParts = CreateParts(pinnedChat.Message.Text),
+                CreatedDateTime = pinnedChat.StartsAt
+            };
+        }
+
+        private sealed class PinnedChatResponse
+        {
+            [JsonPropertyName("data")]
+            public List<PinnedChatData> Data { get; set; } = new();
+        }
+
+        private sealed class PinnedChatData
+        {
+            [JsonPropertyName("message_id")]
+            public string MessageId { get; set; } = "";
+
+            [JsonPropertyName("sender_user_id")]
+            public string SenderUserId { get; set; } = "";
+
+            [JsonPropertyName("sender_user_login")]
+            public string SenderUserLogin { get; set; } = "";
+
+            [JsonPropertyName("sender_user_name")]
+            public string SenderUserName { get; set; } = "";
+
+            [JsonPropertyName("starts_at")]
+            public DateTime StartsAt { get; set; }
+
+            [JsonPropertyName("message")]
+            public PinnedChatMessage Message { get; set; } = new();
+        }
+
+        private sealed class PinnedChatMessage
+        {
+            [JsonPropertyName("text")]
+            public string Text { get; set; } = "";
         }
 
         #endregion

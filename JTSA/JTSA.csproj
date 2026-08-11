@@ -10,7 +10,8 @@
     <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
     <BaseOutputPath>bin\</BaseOutputPath>
 	<GenerateApplicationDefinition>false</GenerateApplicationDefinition>
-	<StartupObject>JTSA.App</StartupObject>
+    <StartupObject>JTSA.App</StartupObject>
+    <ApplicationIcon>Resources\jtsa.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -46,6 +47,10 @@
     <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.9.0-preview.91.e7a2a33" />
     <PackageReference Include="Velopack" Version="0.0.1298" />
     <PackageReference Include="XamlAnimatedGif" Version="2.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\jtsa.ico" />
   </ItemGroup>
 
   <ItemGroup>

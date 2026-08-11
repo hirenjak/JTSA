@@ -93,9 +93,16 @@ namespace JTSA.Panels
         private async void PinedChatButton_Click(object sender, RoutedEventArgs e)
         {
             var chatId = await TwitchHelper.SendChat(sendChatTextBox.Text);
+
+            if (string.IsNullOrWhiteSpace(chatId)) return;
+
             var result = await TwitchHelper.PinedChat(chatId);
 
-            sendChatTextBox.Text = string.Empty;
+            if (result == true)
+            {
+                await PinedChatLoad();
+                sendChatTextBox.Text = string.Empty;
+            }
         }
 
 
@@ -209,6 +216,8 @@ namespace JTSA.Panels
             }
 
             #endregion
+
+            await PinedChatLoad();
         }
 
 
@@ -294,7 +303,12 @@ namespace JTSA.Panels
 
             var message = await TwitchHelper.GetPinedChat();
 
-            PinedTwitchChatFormList.Add(message);
+            if (message != null)
+            {
+                var user = DAO_User.SelectOneByUserId(message.UserId);
+                message.ProfielImageUrl = user?.ProfielImageUrl.Replace("-300x300.png", "-70x70.png") ?? "";
+                PinedTwitchChatFormList.Add(message);
+            }
         }
 
 
@@ -362,7 +376,15 @@ namespace JTSA.Panels
 
         private async void PinedChatPurgeButton_Click(object sender, RoutedEventArgs e)
         {
-            await TwitchHelper.PinedDeleteChat();
+            if (sender is not Button button || button.Tag is not string messageId ||
+                string.IsNullOrWhiteSpace(messageId)) return;
+
+            var result = await TwitchHelper.PinedDeleteChat(messageId);
+
+            if (result == true)
+            {
+                PinedTwitchChatFormList.Clear();
+            }
         }
     }
 }
