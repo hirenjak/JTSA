@@ -592,23 +592,6 @@ namespace JTSA
         }
 
 
-
-        /// <summary>
-        /// ヘッダ部:DBフォルダオープンボタン（クリック）
-        /// </summary>
-        private void DBFolderOpen(object sender, RoutedEventArgs e)
-        {
-            //【プロセス開始ログ】
-            ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:DBフォルダオープンボタン（クリック）");
-            processLog.EventStartLogWrite();
-
-            OpenDbFolder();
-
-            //【プロセス終了ログ】
-            processLog.EventEndLogWrite();
-        }
-
-
         /// <summary>
         /// 
         /// </summary>
@@ -892,23 +875,6 @@ namespace JTSA
 			ReloadTitleText();
 
             processLog.SuccessLogWrite();
-        }
-
-
-        /// <summary>
-        /// dbDirectoryをエクスプローラーで開く処理
-        /// </summary>
-        private void OpenDbFolder()
-        {
-            string folder = AppDbContext.dbDirectory;
-            if (Directory.Exists(folder))
-            {
-                Process.Start("explorer.exe", folder);
-            }
-            else
-            {
-                MessageBox.Show("フォルダが存在しません: " + folder);
-            }
         }
 
 

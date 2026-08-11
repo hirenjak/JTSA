@@ -215,17 +215,17 @@
 
                                             <!-- 削除ボタン -->
                                             <Button Grid.Column="1" Grid.Row="0" 
-                                        FontSize="16"
-                                        Width="20" Height="20" 
-                                        Margin="0, 0, 0, 0" 
-                                        Background="IndianRed"
-                                        Click="GamePlaylistDeleteButton_Click">
+                                                FontSize="16"
+                                                Width="20" Height="20" 
+                                                Margin="0, 0, 0, 0" 
+                                                Background="IndianRed"
+                                                Click="GamePlaylistDeleteButton_Click">
                                                 <TextBlock Text="×"
-                                               Padding="0, 0, 0, 3"
-                                               TextAlignment="Center"
-                                               Foreground="White"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center">
+                                                    Padding="0, 0, 0, 3"
+                                                    TextAlignment="Center"
+                                                    Foreground="White"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
                                                 </TextBlock>
                                             </Button>
 

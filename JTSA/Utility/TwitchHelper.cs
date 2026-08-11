@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using TwitchLib.Api;
@@ -259,7 +260,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages")
+                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -644,6 +645,27 @@ namespace JTSA.Utility
 
         #region ==================== チャット関連 ====================
 
+        public static async Task<bool> SendShoutout(string toBroadcasterId)
+        {
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "Shoutout処理");
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+            var response = await client.PostAsync(
+                $"https://api.twitch.tv/helix/chat/shoutouts" +
+                $"?from_broadcaster_id={BroadcasterId}" +
+                $"&to_broadcaster_id={toBroadcasterId}" +
+                $"&moderator_id={BroadcasterId}", null);
+
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "Shoutout", "moderator:manage:shoutouts");
+
+            mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+            return response.IsSuccessStatusCode;
+        }
+
         public static async Task<string?> SendChat(string chatContent)
         {
             ProcessLog processLog = new ProcessLog(mainWindow.AppLogPanel, nameof(TwitchHelper), "チャット送信処理");
@@ -684,6 +706,9 @@ namespace JTSA.Utility
                                                 $"?broadcaster_id={BroadcasterId}" +
                                                 $"&moderator_id={BroadcasterId}" +
                                                 $"&message_id={chatId}", null);
+
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "チャットのピン留め", "moderator:manage:chat_messages");
             
             if (!response.IsSuccessStatusCode)
             {
@@ -695,7 +720,7 @@ namespace JTSA.Utility
         }
 
 
-        public static async Task<bool?> PinedDeleteChat()
+        public static async Task<bool?> PinedDeleteChat(string messageId)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
@@ -706,7 +731,11 @@ namespace JTSA.Utility
 
             var response = await client.DeleteAsync($"https://api.twitch.tv/helix/chat/pins" +
                                                 $"?broadcaster_id={BroadcasterId}" +
-                                                $"&moderator_id={BroadcasterId}");
+                                                $"&moderator_id={BroadcasterId}" +
+                                                $"&message_id={messageId}");
+
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "ピン留めチャットの解除", "moderator:manage:chat_messages");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -729,15 +758,65 @@ namespace JTSA.Utility
                                                 $"?broadcaster_id={BroadcasterId}" +
                                                 $"&moderator_id={BroadcasterId}");
 
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "ピン留めチャットの取得",
+                "moderator:read:chat_messages または moderator:manage:chat_messages");
+
             if (!response.IsSuccessStatusCode)
             {
                 mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                 return null;
             }
 
-            var result = await response.Content.ReadFromJsonAsync<TwitchChatForm>();
+            var result = await response.Content.ReadFromJsonAsync<PinnedChatResponse>();
+            var pinnedChat = result?.Data.FirstOrDefault();
 
-            return result;
+            if (pinnedChat == null) return null;
+
+            return new TwitchChatForm
+            {
+                UserId = pinnedChat.SenderUserId,
+                UserName = pinnedChat.SenderUserLogin,
+                DisplayName = pinnedChat.SenderUserName,
+                Message = pinnedChat.Message.Text,
+                MessageId = pinnedChat.MessageId,
+                HexColor = "#FFFFFF",
+                MessageParts = CreateParts(pinnedChat.Message.Text),
+                CreatedDateTime = pinnedChat.StartsAt
+            };
+        }
+
+        private sealed class PinnedChatResponse
+        {
+            [JsonPropertyName("data")]
+            public List<PinnedChatData> Data { get; set; } = new();
+        }
+
+        private sealed class PinnedChatData
+        {
+            [JsonPropertyName("message_id")]
+            public string MessageId { get; set; } = "";
+
+            [JsonPropertyName("sender_user_id")]
+            public string SenderUserId { get; set; } = "";
+
+            [JsonPropertyName("sender_user_login")]
+            public string SenderUserLogin { get; set; } = "";
+
+            [JsonPropertyName("sender_user_name")]
+            public string SenderUserName { get; set; } = "";
+
+            [JsonPropertyName("starts_at")]
+            public DateTime StartsAt { get; set; }
+
+            [JsonPropertyName("message")]
+            public PinnedChatMessage Message { get; set; } = new();
+        }
+
+        private sealed class PinnedChatMessage
+        {
+            [JsonPropertyName("text")]
+            public string Text { get; set; } = "";
         }
 
         #endregion

@@ -1,8 +1,10 @@
 ﻿using JTSA.Dao;
+using JTSA.Models;
 using JTSA.Utility;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -79,6 +81,23 @@ namespace JTSA.Panels
             );
 
             await mainWindow.StreamerDataSet();
+        }
+
+
+        /// <summary>
+        /// ヘッダ部:DBフォルダオープンボタン（クリック）
+        /// </summary>
+        private void DBFolderOpen(object sender, RoutedEventArgs e)
+        {
+            string folder = AppDbContext.dbDirectory;
+            if (Directory.Exists(folder))
+            {
+                Process.Start("explorer.exe", folder);
+            }
+            else
+            {
+                MessageBox.Show("フォルダが存在しません: " + folder);
+            }
         }
     }
 }

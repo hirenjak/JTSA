@@ -18,6 +18,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsRaid { get; set; }
     public bool IsSubscribe { get; set; }
     public bool IsBits { get; set; }
+    public bool DoShoutout { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
     public string TriggerChannelPointId { get; set; } = string.Empty;
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -134,6 +135,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsRaid = x.IsRaid,
                 IsSubscribe = x.IsSubscribe,
                 IsBits = x.IsBits,
+                DoShoutout = x.DoShoutout,
                 TriggerComment = x.TriggerComment,
                 TriggerChannelPointId = x.TriggerChannelPointId
             });
@@ -302,7 +304,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     {
         if (SelectedHeader is null || string.IsNullOrWhiteSpace(SelectedHeader.HeaderName)) 
         { 
-            StatusText.Text = "実装名を入力してね"; 
+            //StatusText.Text = "実装名を入力してね"; 
             return; 
         }
 
@@ -323,6 +325,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsRaid = SelectedHeader.IsRaid, 
             IsSubscribe = SelectedHeader.IsSubscribe, 
             IsBits = SelectedHeader.IsBits,
+            DoShoutout = SelectedHeader.DoShoutout,
             TriggerComment = SelectedHeader.TriggerComment?.Trim() ?? "", 
             TriggerChannelPointId = SelectedHeader.TriggerChannelPointId?.Trim() ?? "",
             UpdatedDateTime = DateTime.Now, 
@@ -330,7 +333,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }, saveItems);
         
         Reload(id); 
-        StatusText.Text = "保存した";
+        //StatusText.Text = "保存した";
     }
 
     private static void AddSaveItem(
@@ -375,6 +378,6 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }
         
         Reload(); 
-        StatusText.Text = "削除した";
+        //StatusText.Text = "削除した";
     }
 }

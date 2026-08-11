@@ -204,6 +204,9 @@ namespace JTSA.Migrations
                     b.Property<bool>("IsBits")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("DoShoutout")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsRaid")
                         .HasColumnType("INTEGER");
 

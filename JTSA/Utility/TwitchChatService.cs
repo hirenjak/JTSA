@@ -12,7 +12,7 @@ public sealed class TwitchChatService
 
     public event Action<ChatMessage>? MessageReceived;
     public event Action? SubscriptionReceived;
-    public event Action? RaidReceived;
+    public event Action<string>? RaidReceived;
 
     public TwitchChatService(string channelName)
     {
@@ -125,10 +125,11 @@ public sealed class TwitchChatService
     private Task Client_OnRaidNotification(object? sender, OnRaidNotificationArgs e)
     {
         var raid = e.RaidNotification;
+        var userName = GetString(raid, "DisplayName", "Login");
         JTSA.Utility.StreamSupportTracker.AddRaid(
-            GetString(raid, "DisplayName", "Login"),
+            userName,
             GetInt(raid, "MsgParamViewerCount", "ViewerCount"));
-        RaidReceived?.Invoke();
+        RaidReceived?.Invoke(userName);
         return Task.CompletedTask;
     }
 

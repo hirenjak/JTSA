@@ -35,6 +35,7 @@ internal static class DAO_StreamExpansion
             entity.IsRaid = header.IsRaid;
             entity.IsSubscribe = header.IsSubscribe;
             entity.IsBits = header.IsBits;
+            entity.DoShoutout = header.DoShoutout;
             entity.TriggerComment = header.TriggerComment;
             entity.TriggerChannelPointId = header.TriggerChannelPointId;
             entity.UpdatedDateTime = DateTime.Now;

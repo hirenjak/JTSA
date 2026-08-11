@@ -248,6 +248,7 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="48"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="80"/>
                                         </Grid.ColumnDefinitions>
                                         <Ellipse Grid.Column="0" Width="42" Height="42">
                                             <Ellipse.Fill>
@@ -320,9 +321,11 @@
                                         </Grid>
                 
                 <Button 
-                    Grid.Column="1" x:Name="PinedChatPurgeButton" Content="解除" 
+                    Grid.Column="2" x:Name="PinedChatPurgeButton" Content="解除"
+                    Tag="{Binding MessageId}"
                     HorizontalAlignment="Stretch"
-                    Margin="4, 0, 0, 0"
+                    VerticalAlignment="Center"
+                    Margin="8, 0, 0, 0"
                     Click="PinedChatPurgeButton_Click"/>
                                     </Grid>
                                 </StackPanel>
