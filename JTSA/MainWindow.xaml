@@ -125,10 +125,6 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Button Grid.Row="0" Content="DBフォルダ" 
-                        Width="72" Height="20" Margin="8, 0, 0, 0" 
-                        VerticalAlignment="Center" HorizontalAlignment="Right" 
-                        Click="DBFolderOpen"/>
                     <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
@@ -173,13 +169,16 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Label Content="AccToken"
-                           Foreground="White" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="BroadcasterId_TextBlock" 
-                               Width="Auto" 
-                               VerticalAlignment="Center" 
-                               Foreground="Black" FontSize="12" 
-                               Background="DarkGray" Height="18" >
+                                <Label 
+                                    Content="BrocasID"
+                                    Foreground="White" VerticalAlignment="Center" />
+                                <TextBlock 
+                                    Grid.Column="1" Grid.Row="1" 
+                                    x:Name="BroadcasterId_TextBlock" 
+                                    Width="Auto" 
+                                    VerticalAlignment="Center" 
+                                    Foreground="Black" FontSize="12" 
+                                    Background="DarkGray" Height="18" >
                                 </TextBlock>
                             </Grid>
                         </Grid>
@@ -299,6 +298,7 @@
                                         </ListBox>
                                     </Grid>
                                 </DockPanel>
+                                
                                 <!-- サイドパネル（タイトルテキストタグ） -->
                                 <panels:TitleTagSidePanel Grid.Column="1" Margin="8"  x:Name="TitleTagSidePanel" Visibility="Visible"/>
 
