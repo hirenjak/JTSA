@@ -26,10 +26,20 @@ internal sealed class StreamExpansionService
                 .Select(group => group.ToList())
                 .ToList();
 
-            if (groups.Count == 0) continue;
+            if (groups.Count > 0)
+            {
+                var selectedGroup = ChooseByWeight(groups);
+                await Task.WhenAll(selectedGroup.Select(ExecuteAsync));
+            }
 
-            var selectedGroup = ChooseByWeight(groups);
-            await Task.WhenAll(selectedGroup.Select(ExecuteAsync));
+            if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
+            {
+                var raider = await TwitchHelper.GetBroadcasterIdAsync(value);
+                if (!string.IsNullOrWhiteSpace(raider?.UserId))
+                {
+                    await TwitchHelper.SendShoutout(raider.UserId);
+                }
+            }
         }
     }
 

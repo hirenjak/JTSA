@@ -174,8 +174,8 @@ namespace JTSA.Panels
                 twitchChatService.SubscriptionReceived += () =>
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
 
-                twitchChatService.RaidReceived += () =>
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, string.Empty);
+                twitchChatService.RaidReceived += userName =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, userName);
 
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {

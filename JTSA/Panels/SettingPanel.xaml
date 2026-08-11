@@ -27,12 +27,11 @@
                 <TextBox 
                     x:Name="SettingOAuthCodeBox"
                     Margin="8, 0, 0, 0"
-                    Foreground="White" FontSize="20" 
+                    Width="200" Height="Auto"
+                    Foreground="White" FontSize="16" 
                     Background="#FF4A4747" BorderBrush="White" 
                     TextAlignment="Center" 
-                    IsReadOnly="True" 
-                    Width="200" 
-                    Height="Auto"/>
+                    IsReadOnly="True"/>
 
                 <Button 
                     x:Name="SettingOAuthCodeCopyButton"
@@ -67,7 +66,42 @@
                 Margin="0, 4, 0, 0"
                 Width="Auto" Height="2" 
                 Background="White"/>
-            
+
+            <StackPanel>
+
+                <Label 
+                    Content="OBS側ソース連携設定"
+                    FontSize="20"
+                    Foreground="White"/>
+                
+                <Label 
+                    Content="配信拡張画像出力ブラウザソース"
+                    Margin="4, -8, 0, -4"
+                    FontSize="14"
+                    Foreground="White"/>
+
+                <Label 
+                    Content="OBSのブラウザソースに以下のURLを設定してください。"
+                    Foreground="White"/>
+                <TextBox 
+                    Text="http://localhost:8026/expansion"
+                    Width="Auto" 
+                    Margin="8, 0, 0, 0"
+                    Foreground="White" FontSize="16" 
+                    Background="#FF4A4747" BorderBrush="White" 
+                    TextAlignment="Center" 
+                    IsReadOnly="True" 
+                    Height="Auto"/>
+                <Label 
+                    Content="背景は透明です。画像はトリガー実行時に5秒間表示されます。"
+                    Foreground="White"/>
+            </StackPanel>
+
+
+            <Border 
+                Margin="0, 4, 0, 0"
+                Width="Auto" Height="2" 
+                Background="White"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

@@ -22,6 +22,8 @@ namespace JTSA.Models
 
         public bool IsBits { get; set; }
 
+        public bool DoShoutout { get; set; }
+
         public string TriggerComment { get; set; } = string.Empty;
 
         public string TriggerChannelPointId { get; set; } = string.Empty;

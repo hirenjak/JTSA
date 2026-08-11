@@ -260,7 +260,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages")
+                new KeyValuePair<string, string>("scope", "user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -645,6 +645,27 @@ namespace JTSA.Utility
 
         #region ==================== チャット関連 ====================
 
+        public static async Task<bool> SendShoutout(string toBroadcasterId)
+        {
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "Shoutout処理");
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+            var response = await client.PostAsync(
+                $"https://api.twitch.tv/helix/chat/shoutouts" +
+                $"?from_broadcaster_id={BroadcasterId}" +
+                $"&to_broadcaster_id={toBroadcasterId}" +
+                $"&moderator_id={BroadcasterId}", null);
+
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "Shoutout", "moderator:manage:shoutouts");
+
+            mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+            return response.IsSuccessStatusCode;
+        }
+
         public static async Task<string?> SendChat(string chatContent)
         {
             ProcessLog processLog = new ProcessLog(mainWindow.AppLogPanel, nameof(TwitchHelper), "チャット送信処理");
@@ -685,6 +706,9 @@ namespace JTSA.Utility
                                                 $"?broadcaster_id={BroadcasterId}" +
                                                 $"&moderator_id={BroadcasterId}" +
                                                 $"&message_id={chatId}", null);
+
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "チャットのピン留め", "moderator:manage:chat_messages");
             
             if (!response.IsSuccessStatusCode)
             {
@@ -710,6 +734,9 @@ namespace JTSA.Utility
                                                 $"&moderator_id={BroadcasterId}" +
                                                 $"&message_id={messageId}");
 
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "ピン留めチャットの解除", "moderator:manage:chat_messages");
+
             if (!response.IsSuccessStatusCode)
             {
                 mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
@@ -730,6 +757,10 @@ namespace JTSA.Utility
             var response = await client.GetAsync($"https://api.twitch.tv/helix/chat/pins" +
                                                 $"?broadcaster_id={BroadcasterId}" +
                                                 $"&moderator_id={BroadcasterId}");
+
+            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                response, "ピン留めチャットの取得",
+                "moderator:read:chat_messages または moderator:manage:chat_messages");
 
             if (!response.IsSuccessStatusCode)
             {
