@@ -748,6 +748,9 @@ namespace JTSA.Utility
 
         public static async Task<TwitchChatForm?> GetPinedChat()
         {
+            // 権限エラーで再認証画面へ遷移した後は、チャットイベントごとの再試行を止める。
+            if (string.IsNullOrWhiteSpace(AccessToken)) return null;
+
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
             using var client = new HttpClient();

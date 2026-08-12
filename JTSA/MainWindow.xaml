@@ -222,7 +222,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <TabControl Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2" >
+            <TabControl x:Name="MainTabControl" Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2" >
                 <TabItem Header="配信概要">
                     <Grid >
                         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">

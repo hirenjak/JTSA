@@ -253,6 +253,30 @@ namespace JTSA
             processLog.EventEndLogWrite();
         }
 
+        /// <summary>
+        /// Twitch API が401/403を返した場合、モーダルダイアログを出さずに
+        /// OAuth再認証画面へ強制的に切り替える。
+        /// </summary>
+        public void RequireOAuthReauthentication(string reason, string responseDetail = "")
+        {
+            // 認証エラー後もチャットイベントからAPI呼び出しが連打されないようにする。
+            TwitchHelper.AccessToken = string.Empty;
+            AccessToken_TextBlock.Text = "NG";
+            LoadPanelTextBlock.Text = "OAuth再認証が必要です";
+            LoadPanelSubTextBox.Text = string.Empty;
+            LoadSubPanel.Visibility = Visibility.Visible;
+            LoadScreen.Visibility = Visibility.Visible;
+
+            // LoadScreenは先頭タブ内にあるため、別タブを表示中でも必ず見えるようにする。
+            MainTabControl.SelectedIndex = 0;
+
+            AppLogPanel.Error(
+                GetType().Name,
+                string.IsNullOrWhiteSpace(responseDetail)
+                    ? reason
+                    : $"{reason} Twitch応答: {responseDetail}");
+        }
+
 
         /// <summary>
         /// ヘッダ部:SteamURLテキストブロック（クリック）
@@ -966,6 +990,7 @@ namespace JTSA
             PlayingGamePanel.ReloadGamePlaylistItem();
 
             // ロード画面を非表示
+            LoadPanelTextBlock.Text = "Loading Now...";
             LoadScreen.Visibility = Visibility.Collapsed;
             LoadSubPanel.Visibility = Visibility.Collapsed;
 
