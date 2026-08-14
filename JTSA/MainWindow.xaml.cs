@@ -738,6 +738,21 @@ namespace JTSA
             processLog.SuccessLogWrite();
         }
 
+        /// <summary>
+        /// 配信概要パネルのカテゴリ一覧から現在のカテゴリを選択する。
+        /// </summary>
+        private void OverviewCategoryListBox_MouseDoubleClick(object sender, EventArgs e)
+        {
+            if (OverviewCategoryListBox.SelectedItem is not CategoryForm selectedItem) return;
+
+            CurrentCategoryId = selectedItem.CategoryId;
+            CurrentCategoryName = selectedItem.DisplayName;
+            CurrentCategoryBoxArtUrl = selectedItem.BoxArtUrl;
+            CurrentCategorySteamUrl = selectedItem.SteamUrl;
+
+            OverviewCategoryListBox.SelectedIndex = -1;
+        }
+
 
         /// <summary>
         /// カテゴリ連動処理

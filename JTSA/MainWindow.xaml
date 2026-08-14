@@ -255,13 +255,17 @@
                                     </StackPanel>
 
                                     <Grid Margin="8" Height="Auto" >
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="280"/>
+                                        </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="24"/>
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
-                                        <Label Grid.Row="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
-                                        <ListBox Grid.Row="1" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
+                                        <Label Grid.Row="0" Grid.Column="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
+                                        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel>
@@ -292,6 +296,36 @@
                                                             </StackPanel>
                                                         </Grid>
                                                         <Border Width="Auto" Height="2" Background="White"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                        <Label Grid.Row="0" Grid.Column="1" Margin="8,0,0,0" Foreground="White" Content="カテゴリ一覧 ※ダブルクリックで選択"/>
+                                        <ListBox Grid.Row="1" Grid.Column="1"
+                                                 Margin="8,0,0,0"
+                                                 ItemsSource="{Binding CategoryFormList, ElementName=CategoryPanel}"
+                                                 x:Name="OverviewCategoryListBox"
+                                                 Background="#FF404040"
+                                                 HorizontalContentAlignment="Stretch"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 MouseDoubleClick="OverviewCategoryListBox_MouseDoubleClick">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <Grid Margin="4">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="36"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Image Grid.Column="0" Source="{Binding BoxArtUrl}" Width="36" Height="48"/>
+                                                            <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                        <Border Height="1" Background="White"/>
                                                     </StackPanel>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>

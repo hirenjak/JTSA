@@ -86,17 +86,6 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// 検索欄の文字入力時
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void TitleTagSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            // TODO：検索処理追加
-        }
-
-
-        /// <summary>
         /// 追加ボタンクリック時
         /// </summary>
         /// <param name="sender"></param>

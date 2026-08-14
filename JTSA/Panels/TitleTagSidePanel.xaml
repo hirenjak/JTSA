@@ -23,11 +23,6 @@
                 </Grid>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0, 8, 0, 0">
-                <Label Content="検索欄（※未実装）" Foreground="White"/>
-                <TextBox Name="TotleTextTagSearchTextBox" TextChanged="TitleTagSearchTextBox_TextChanged" ></TextBox>
-            </StackPanel>
-
             <Grid Height="Auto" Grid.Row="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="24"/>
