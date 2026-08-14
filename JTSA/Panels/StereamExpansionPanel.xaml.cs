@@ -18,6 +18,8 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsRaid { get; set; }
     public bool IsSubscribe { get; set; }
     public bool IsBits { get; set; }
+    public bool IsFirstChat { get; set; }
+    public bool IsFollow { get; set; }
     public bool DoShoutout { get; set; }
     public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
@@ -136,6 +138,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsRaid = x.IsRaid,
                 IsSubscribe = x.IsSubscribe,
                 IsBits = x.IsBits,
+                IsFirstChat = x.IsFirstChat,
+                IsFollow = x.IsFollow,
                 DoShoutout = x.DoShoutout,
                 DelaySeconds = x.DelaySeconds,
                 TriggerComment = x.TriggerComment,
@@ -327,6 +331,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsRaid = SelectedHeader.IsRaid, 
             IsSubscribe = SelectedHeader.IsSubscribe, 
             IsBits = SelectedHeader.IsBits,
+            IsFirstChat = SelectedHeader.IsFirstChat,
+            IsFollow = SelectedHeader.IsFollow,
             DoShoutout = SelectedHeader.DoShoutout,
             DelaySeconds = Math.Clamp(SelectedHeader.DelaySeconds, 0, 3600),
             TriggerComment = SelectedHeader.TriggerComment?.Trim() ?? "", 

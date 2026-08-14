@@ -207,6 +207,12 @@ namespace JTSA.Migrations
                     b.Property<bool>("IsBits")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsFirstChat")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsFollow")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("DoShoutout")
                         .HasColumnType("INTEGER");
 
@@ -288,6 +294,45 @@ namespace JTSA.Migrations
                     b.HasIndex("Id", "HeaderId");
 
                     b.ToTable("T_StreamExpansionItem");
+                });
+
+            modelBuilder.Entity("JTSA.Models.T_StreamWindow", b =>
+                {
+                    b.Property<string>("ProcessName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AppExePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastUsedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WindowTitle")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("X")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Y")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ProcessName");
+
+                    b.ToTable("T_StreamWindow");
                 });
 
             modelBuilder.Entity("M_Category", b =>

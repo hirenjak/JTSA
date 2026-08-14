@@ -1,0 +1,226 @@
+using JTSA.Dao;
+using JTSA.Forms;
+using JTSA.Models;
+using Microsoft.Win32;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Threading;
+
+namespace JTSA.Panels;
+
+public partial class AppArrangePanel : UserControl
+{
+    public ObservableCollection<AppInfoForm> RegisteredApps { get; } = [];
+    public ObservableCollection<AppInfoForm> RunningApps { get; } = [];
+
+    private readonly DispatcherTimer statusTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+
+    public AppArrangePanel()
+    {
+        InitializeComponent();
+        DataContext = this;
+        Loaded += (_, _) =>
+        {
+            ReloadRegisteredApps();
+            ReloadRunningApps();
+            statusTimer.Start();
+        };
+        Unloaded += (_, _) => statusTimer.Stop();
+        statusTimer.Tick += (_, _) => UpdateStatuses();
+    }
+
+    private MainWindow? MainWindow => Application.Current.MainWindow as MainWindow;
+
+    private void ReloadRegisteredApps()
+    {
+        RegisteredApps.Clear();
+        foreach (var item in DAO_StreamWindow.SelectAll())
+        {
+            RegisteredApps.Add(ToForm(item));
+        }
+        UpdateStatuses();
+    }
+
+    private void ReloadRunningApps()
+    {
+        RunningApps.Clear();
+        foreach (var process in Process.GetProcesses().OrderBy(x => x.ProcessName))
+        {
+            try
+            {
+                if (process.MainWindowHandle == IntPtr.Zero || string.IsNullOrWhiteSpace(process.MainWindowTitle)) continue;
+                RunningApps.Add(new AppInfoForm { ProcessName = process.ProcessName, WindowTitle = process.MainWindowTitle });
+            }
+            catch
+            {
+                // 権限の異なるプロセスなど、情報を取得できないものは一覧から除外する。
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+    }
+
+    private void UpdateStatuses()
+    {
+        foreach (var app in RegisteredApps)
+        {
+            using var process = FindProcess(app);
+            app.Status = process is null ? "停止" : "起動中";
+        }
+    }
+
+    private static AppInfoForm ToForm(T_StreamWindow item) => new()
+    {
+        ProcessName = item.ProcessName,
+        WindowTitle = item.WindowTitle,
+        AppExePath = item.AppExePath,
+        X = item.X,
+        Y = item.Y,
+        Width = item.Width,
+        Height = item.Height
+    };
+
+    private static Process? FindProcess(AppInfoForm app)
+    {
+        var processes = Process.GetProcessesByName(app.ProcessName);
+        var result = processes.FirstOrDefault(x => x.MainWindowHandle != IntPtr.Zero && x.MainWindowTitle == app.WindowTitle)
+                     ?? processes.FirstOrDefault(x => x.MainWindowHandle != IntPtr.Zero);
+        foreach (var process in processes.Where(x => !ReferenceEquals(x, result))) process.Dispose();
+        return result;
+    }
+
+    private static bool TryGetWindowInfo(AppInfoForm app, out AppInfoForm captured)
+    {
+        captured = app;
+        using var process = FindProcess(app);
+        if (process is null || !Win32Helper.GetWindowRect(process.MainWindowHandle, out var rect)) return false;
+        captured.WindowTitle = process.MainWindowTitle;
+        captured.X = rect.Left;
+        captured.Y = rect.Top;
+        captured.Width = rect.Right - rect.Left;
+        captured.Height = rect.Bottom - rect.Top;
+        try { captured.AppExePath = process.MainModule?.FileName ?? captured.AppExePath; } catch { }
+        return true;
+    }
+
+    private static void Save(AppInfoForm app) => DAO_StreamWindow.Save(new T_StreamWindow
+    {
+        ProcessName = app.ProcessName,
+        WindowTitle = app.WindowTitle,
+        AppExePath = app.AppExePath,
+        X = app.X ?? 0,
+        Y = app.Y ?? 0,
+        Width = app.Width ?? 0,
+        Height = app.Height ?? 0,
+        CreatedDateTime = DateTime.Now,
+        UpdatedDateTime = DateTime.Now,
+        LastUsedDateTime = DateTime.Now
+    });
+
+    private bool Start(AppInfoForm app)
+    {
+        if (string.IsNullOrWhiteSpace(app.AppExePath) || !File.Exists(app.AppExePath))
+        {
+            ShowStatus($"起動ファイルが見つかりません: {app.ProcessName}", false);
+            return false;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = app.AppExePath,
+                WorkingDirectory = Path.GetDirectoryName(app.AppExePath) ?? string.Empty,
+                UseShellExecute = true
+            });
+            ShowStatus($"アプリを起動しました: {app.ProcessName}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"起動失敗: {ex.Message}", false);
+            return false;
+        }
+    }
+
+    private void Move(AppInfoForm app)
+    {
+        var moved = Win32Helper.SetAppWindowRect(app);
+        ShowStatus(moved ? $"アプリを配置しました: {app.ProcessName}" : $"配置失敗: {app.ProcessName}", moved);
+    }
+
+    private void Stop(AppInfoForm app)
+    {
+        using var process = FindProcess(app);
+        if (process is null) return;
+        try
+        {
+            if (!process.CloseMainWindow()) process.Kill();
+            ShowStatus($"アプリを停止しました: {app.ProcessName}");
+        }
+        catch (Exception ex) { ShowStatus($"停止失敗: {ex.Message}", false); }
+    }
+
+    private void ShowStatus(string message, bool success = true)
+    {
+        if (MainWindow is null) return;
+        MainWindow.StatusTextBlock.Text = message;
+        MainWindow.StatusTextBlock.Foreground = success ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.OrangeRed;
+    }
+
+    private void RegisterButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not AppInfoForm app || !TryGetWindowInfo(app, out var captured)) return;
+        Save(captured);
+        ReloadRegisteredApps();
+        ShowStatus($"アプリを登録しました: {app.ProcessName}");
+    }
+
+    private void StartOrMoveButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not AppInfoForm app) return;
+        using var process = FindProcess(app);
+        if (process is null) Start(app); else Move(app);
+    }
+
+    private void SavePositionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not AppInfoForm app || !TryGetWindowInfo(app, out var captured))
+        {
+            ShowStatus("起動中の対象ウィンドウが見つかりません。", false);
+            return;
+        }
+        Save(captured);
+        ReloadRegisteredApps();
+        ShowStatus($"位置を保存しました: {app.ProcessName}");
+    }
+
+    private void SetPathButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not AppInfoForm app) return;
+        var dialog = new OpenFileDialog { Filter = "実行ファイル (*.exe)|*.exe", Title = "起動するアプリを選択" };
+        if (File.Exists(app.AppExePath)) dialog.FileName = app.AppExePath;
+        if (dialog.ShowDialog() != true) return;
+        app.AppExePath = dialog.FileName;
+        Save(app);
+        ShowStatus($"起動ファイルを設定しました: {app.ProcessName}");
+    }
+
+    private void StopButton_Click(object sender, RoutedEventArgs e) { if ((sender as Button)?.DataContext is AppInfoForm app) Stop(app); }
+    private void DeleteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not AppInfoForm app) return;
+        DAO_StreamWindow.Delete(app.ProcessName);
+        ReloadRegisteredApps();
+        ShowStatus($"登録を削除しました: {app.ProcessName}");
+    }
+
+    private void ReloadRunningButton_Click(object sender, RoutedEventArgs e) => ReloadRunningApps();
+    private void StartAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "停止")) Start(app); }
+    private void MoveAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Win32Helper.SetAppWindowRect(app); ShowStatus("登録済みアプリを一括配置しました。"); }
+    private void StopAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Stop(app); }
+}

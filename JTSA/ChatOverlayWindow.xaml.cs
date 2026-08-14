@@ -4,12 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -24,8 +27,42 @@ namespace JTSA
     /// <summary>
     /// ChatOverlayWindow.xaml の相互作用ロジック
     /// </summary>
-    public partial class ChatOverlayWindow : Window
+    public partial class ChatOverlayWindow : Window, INotifyPropertyChanged
     {
+        private const double DefaultWidth = 300;
+        private const double DefaultHeight = 320;
+        private const double DefaultFontSize = 16;
+        private bool showUserIcons = true;
+        private double overlayFontSize = DefaultFontSize;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public bool ShowUserIcons
+        {
+            get => showUserIcons;
+            private set
+            {
+                if (showUserIcons == value) return;
+                showUserIcons = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowUserIcons)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IconColumnWidth)));
+            }
+        }
+
+        public GridLength IconColumnWidth => ShowUserIcons
+            ? new GridLength(28)
+            : new GridLength(0);
+
+        public double OverlayFontSize
+        {
+            get => overlayFontSize;
+            private set
+            {
+                if (Math.Abs(overlayFontSize - value) < 0.01) return;
+                overlayFontSize = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(OverlayFontSize)));
+            }
+        }
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
         public ObservableCollection<TwitchChatForm> OverlayTwitchChatFormList { get; } = new();
         
@@ -50,6 +87,11 @@ namespace JTSA
 
             DataContext = this;
 
+            Width = ReadDoubleSetting(DAO_Setting.SettingName.ChatOverlayWidth, DefaultWidth, MinWidth);
+            Height = ReadDoubleSetting(DAO_Setting.SettingName.ChatOverlayHeight, DefaultHeight, MinHeight);
+            OverlayFontSize = ReadDoubleSetting(DAO_Setting.SettingName.ChatOverlayFontSize, DefaultFontSize, 10, 36);
+            ShowUserIcons = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
+
 
             SourceInitialized += ChatOverlayWindow_SourceInitialized;
 
@@ -59,6 +101,7 @@ namespace JTSA
 
             Closed += (_, _) =>
             {
+                SaveBounds();
                 TwitchChatFormList.CollectionChanged -=
                     TwitchChatFormList_CollectionChanged;
             };
@@ -76,13 +119,33 @@ namespace JTSA
         /// <param name="e"></param>
         private void ChatOverlayWindow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            // 最大化・最小化中は通常状態の位置を使う
-            Rect position = WindowState == WindowState.Normal
-                ? new Rect(Left, Top, Width, Height)
+            SaveBounds();
+        }
+
+        private void SaveBounds()
+        {
+            Rect bounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, ActualWidth, ActualHeight)
                 : RestoreBounds;
 
-            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayPosX, ((int)position.X).ToString());
-            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayPosY, ((int)position.Y).ToString());
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayPosX, ((int)bounds.X).ToString(CultureInfo.InvariantCulture));
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayPosY, ((int)bounds.Y).ToString(CultureInfo.InvariantCulture));
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayWidth, ((int)bounds.Width).ToString(CultureInfo.InvariantCulture));
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatOverlayHeight, ((int)bounds.Height).ToString(CultureInfo.InvariantCulture));
+        }
+
+        private static double ReadDoubleSetting(DAO_Setting.SettingName name, double defaultValue, double minimum, double maximum = double.MaxValue)
+        {
+            var value = DAO_Setting.SelectOneById(name)?.Value;
+            return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                ? Math.Clamp(parsed, minimum, maximum)
+                : defaultValue;
+        }
+
+        public void ApplyAppearance(bool displayUserIcons, double fontSize)
+        {
+            ShowUserIcons = displayUserIcons;
+            OverlayFontSize = Math.Clamp(fontSize, 10, 36);
         }
 
 
@@ -95,6 +158,7 @@ namespace JTSA
         {
             IsSettingEnabled = true;
             SetClickThrough(IsSettingEnabled);
+            ResizeMode = ResizeMode.NoResize;
 
             var settingChatOverlayPosX = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosX);
             var settingChatOverlayPosY = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosY);
@@ -247,10 +311,12 @@ namespace JTSA
                 if (value)
                 {
                     WindowBackgroundBorder.Background = new SolidColorBrush(Color.FromArgb(0x44, 0x00, 0x00, 0x00));
+                    ResizeGrip.Visibility = Visibility.Collapsed;
                 }
                 else
                 {
                     WindowBackgroundBorder.Background = new SolidColorBrush(Color.FromArgb(0x44, 0x11, 0x11, 0x44));
+                    ResizeGrip.Visibility = Visibility.Visible;
                 }
             } 
         }
@@ -261,11 +327,13 @@ namespace JTSA
             {
                 SetClickThrough(false);
                 IsSettingEnabled = false;
+                ResizeMode = ResizeMode.CanResize;
             }
             else
             {
                 SetClickThrough(true);
                 IsSettingEnabled = true;
+                ResizeMode = ResizeMode.NoResize;
             }
         }
 
@@ -291,6 +359,12 @@ namespace JTSA
         }
 
         #endregion
+
+        private void ResizeGrip_DragDelta(object sender, DragDeltaEventArgs e)
+        {
+            Width = Math.Max(MinWidth, ActualWidth + e.HorizontalChange);
+            Height = Math.Max(MinHeight, ActualHeight + e.VerticalChange);
+        }
 
         /// <summary>
         /// 

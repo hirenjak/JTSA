@@ -21,6 +21,10 @@ namespace JTSA.Dao
             ChannelPointCopySuffix = 10,
             /// <summary>X告知で使用する投稿文テンプレート</summary>
             XPostTemplate = 11,
+            ChatOverlayWidth = 12,
+            ChatOverlayHeight = 13,
+            ChatOverlayShowUserIcon = 14,
+            ChatOverlayFontSize = 15,
         }
 
 

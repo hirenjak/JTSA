@@ -22,6 +22,7 @@ namespace JTSA.Utility
         private bool isDisposed;
 
         public event Action<ChannelPointForm>? ChannelPointRedeemed;
+        public event Action<string>? FollowReceived;
 
 
         /// <summary>
@@ -61,6 +62,7 @@ namespace JTSA.Utility
 
             eventSubClient.ChannelPointsCustomRewardRedemptionAdd +=
                 OnChannelPointsCustomRewardRedemptionAdd;
+            eventSubClient.ChannelFollow += OnChannelFollow;
         }
 
         public async Task ConnectAsync()
@@ -100,7 +102,7 @@ namespace JTSA.Utility
 
             isSubscribed = false;
 
-            await SubscribeChannelPointsAsync();
+            await SubscribeEventsAsync();
         }
 
 
@@ -108,7 +110,7 @@ namespace JTSA.Utility
         /// 
         /// </summary>
         /// <returns></returns>
-        private async Task SubscribeChannelPointsAsync()
+        private async Task SubscribeEventsAsync()
         {
             if (isSubscribed)
                 return;
@@ -149,7 +151,7 @@ namespace JTSA.Utility
                     $"BroadcasterId={broadcasterUserId}, " +
                     $"SessionId={eventSubClient.SessionId}");
 
-                var result =
+                var channelPointResult =
                     await twitchApi.Helix.EventSub
                         .CreateEventSubSubscriptionAsync(
                             type:
@@ -162,7 +164,21 @@ namespace JTSA.Utility
                             accessToken:
                                 twitchApi.Settings.AccessToken);
 
-                foreach (var subscription in result.Subscriptions)
+                var followCondition = new Dictionary<string, string>
+                {
+                    ["broadcaster_user_id"] = broadcasterUserId,
+                    ["moderator_user_id"] = broadcasterUserId
+                };
+
+                var followResult = await twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    type: "channel.follow",
+                    version: "2",
+                    condition: followCondition,
+                    method: EventSubTransportMethod.Websocket,
+                    websocketSessionId: eventSubClient.SessionId,
+                    accessToken: twitchApi.Settings.AccessToken);
+
+                foreach (var subscription in channelPointResult.Subscriptions.Concat(followResult.Subscriptions))
                 {
                     Debug.WriteLine(
                         $"EventSub購読結果: " +
@@ -172,7 +188,7 @@ namespace JTSA.Utility
                 }
 
                 isSubscribed =
-                    result.Subscriptions.Count() > 0;
+                    channelPointResult.Subscriptions.Any() && followResult.Subscriptions.Any();
             }
             catch (Exception ex)
             {
@@ -215,6 +231,12 @@ namespace JTSA.Utility
 
             ChannelPointRedeemed?.Invoke(form);
 
+            return Task.CompletedTask;
+        }
+
+        private Task OnChannelFollow(object? sender, ChannelFollowArgs e)
+        {
+            FollowReceived?.Invoke(e.Payload.Event.UserName);
             return Task.CompletedTask;
         }
 
@@ -300,6 +322,7 @@ namespace JTSA.Utility
             eventSubClient
                     .ChannelPointsCustomRewardRedemptionAdd -=
                 OnChannelPointsCustomRewardRedemptionAdd;
+            eventSubClient.ChannelFollow -= OnChannelFollow;
 
             try
             {

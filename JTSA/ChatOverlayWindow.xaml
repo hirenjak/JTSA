@@ -6,13 +6,18 @@
         xmlns:controls="clr-namespace:JTSA.Controls"
         mc:Ignorable="d"
         Title="ChatOverlayWindow"
-        Width="300"  Height="320"
+        Width="300" Height="320"
+        MinWidth="220" MinHeight="160"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
 
     <Grid Background="Transparent">
 
@@ -45,10 +50,11 @@
                             <StackPanel Margin="8, 4, 8, 0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="{Binding DataContext.IconColumnWidth, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Ellipse Grid.Column="0" Width="26" Height="28">
+                                    <Ellipse Grid.Column="0" Width="26" Height="28"
+                                             Visibility="{Binding DataContext.ShowUserIcons, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Ellipse.Fill>
                                             <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
                                         </Ellipse.Fill>
@@ -97,7 +103,7 @@
                                             Grid.Row="1" Grid.Column="0" 
                                             MessageParts="{Binding MessageParts}"
                                             Foreground="{Binding MessageColor}" 
-                                            FontSize="16"
+                                            FontSize="{Binding DataContext.OverlayFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                             IsReadOnly="True"
                                             Background="Transparent"
                                             BorderThickness="0"
@@ -128,5 +134,27 @@
             </ListBox>
 
         </Border>
+
+        <!-- AllowsTransparency=True のウィンドウは標準枠でリサイズできないため、
+             位置調整モード中だけ専用グリップを表示する。 -->
+        <Thumb x:Name="ResizeGrip"
+               Width="22" Height="22"
+               HorizontalAlignment="Right"
+               VerticalAlignment="Bottom"
+               Margin="0,0,4,4"
+               Cursor="SizeNWSE"
+               Visibility="Collapsed"
+               DragDelta="ResizeGrip_DragDelta">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Background="Transparent">
+                        <Path Data="M 4,18 L 18,4 M 10,18 L 18,10 M 16,18 L 18,16"
+                              Stroke="White"
+                              StrokeThickness="2"
+                              Opacity="0.9"/>
+                    </Grid>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
     </Grid>
 </Window>

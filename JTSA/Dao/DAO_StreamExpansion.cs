@@ -36,6 +36,8 @@ internal static class DAO_StreamExpansion
             entity.IsRaid = header.IsRaid;
             entity.IsSubscribe = header.IsSubscribe;
             entity.IsBits = header.IsBits;
+            entity.IsFirstChat = header.IsFirstChat;
+            entity.IsFollow = header.IsFollow;
             entity.DoShoutout = header.DoShoutout;
             entity.DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600);
             entity.TriggerComment = header.TriggerComment;

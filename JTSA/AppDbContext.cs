@@ -23,6 +23,7 @@ namespace JTSA.Models
         public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
         internal DbSet<T_StreamExpansionHeader> T_StreamExpansionHeader { get; set; }
         internal DbSet<T_StreamExpansionItem> T_StreamExpansionItem { get; set; }
+        internal DbSet<T_StreamWindow> T_StreamWindow { get; set; }
 
 
         /// <summary>

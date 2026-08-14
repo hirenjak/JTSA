@@ -125,11 +125,15 @@ public sealed class TwitchChatService
     private Task Client_OnRaidNotification(object? sender, OnRaidNotificationArgs e)
     {
         var raid = e.RaidNotification;
-        var userName = GetString(raid, "DisplayName", "Login");
+        // RaidNotification uses the msg-param-* fields for the raiding channel.
+        // Prefer the login for API lookups because a display name can contain
+        // localized characters that are not valid as a Helix `login` value.
+        var login = GetString(raid, "MsgParamLogin", "Login");
+        var displayName = GetString(raid, "MsgParamDisplayName", "DisplayName", "MsgParamLogin", "Login");
         JTSA.Utility.StreamSupportTracker.AddRaid(
-            userName,
+            displayName,
             GetInt(raid, "MsgParamViewerCount", "ViewerCount"));
-        RaidReceived?.Invoke(userName);
+        RaidReceived?.Invoke(login);
         return Task.CompletedTask;
     }
 

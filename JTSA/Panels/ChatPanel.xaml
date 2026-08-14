@@ -26,8 +26,8 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="240"/>
-                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="140"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -103,6 +103,21 @@
                         Height="28"
                         Margin="0, 4, 0, 0"
                         Click="TransparentWindowOpenSetting_Click"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="12,0,150,0">
+                    <StackPanel>
+                        <TextBlock Text="文字サイズ" Foreground="White" FontSize="12"/>
+                        <Slider x:Name="ChatOverlayFontSizeSlider" Width="130"
+                                Minimum="10" Maximum="36" TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                ValueChanged="ChatOverlayFontSizeSlider_ValueChanged"/>
+                    </StackPanel>
+                    <CheckBox x:Name="ChatOverlayShowIconCheckBox"
+                              Content="アイコン表示" Foreground="White"
+                              Margin="12,0,0,0" VerticalAlignment="Center"
+                              Checked="ChatOverlayShowIconCheckBox_Changed"
+                              Unchecked="ChatOverlayShowIconCheckBox_Changed"/>
                 </StackPanel>
 
                 <Button Grid.Column="2"

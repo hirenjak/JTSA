@@ -32,4 +32,23 @@ public class StreamExpansionPlaceholderReplacerTests
 
         Assert.Equal("Raider: Title [Category]", result);
     }
+
+    [Fact]
+    public void ReplaceExpandsChatUserPlaceholders()
+    {
+        var result = StreamExpansionPlaceholderReplacer.Replace(
+            "{chat_user} ({CHAT_LOGIN})",
+            null,
+            new ChatPlaceholderValues("表示名", "login_name"));
+
+        Assert.Equal("表示名 (login_name)", result);
+    }
+
+    [Fact]
+    public void ReplaceLeavesChatPlaceholdersUnchangedOutsideChatTrigger()
+    {
+        const string content = "{chat_user} ({chat_login})";
+
+        Assert.Equal(content, StreamExpansionPlaceholderReplacer.Replace(content, null));
+    }
 }

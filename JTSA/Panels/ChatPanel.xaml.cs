@@ -5,9 +5,11 @@ using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using NAudio.Wave;
+using System.Collections.Concurrent;
 
 namespace JTSA.Panels
 {
@@ -30,6 +32,8 @@ namespace JTSA.Panels
         private TwitchEventSubService? twitchEventSubService;
 
         private readonly StreamExpansionService streamExpansionService = new();
+
+        private readonly ConcurrentDictionary<string, byte> chattedUserIds = new();
 
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
@@ -330,9 +334,14 @@ namespace JTSA.Panels
             JoinChatVolumeSlider.Value =
                double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
 
+            ChatOverlayFontSizeSlider.Value = ReadOverlayFontSize();
+            ChatOverlayShowIconCheckBox.IsChecked =
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
+
             // 前回配信時のチャットユーザーをクリア
             DAO_ChatUser.AllDelete();
             ChatUserFormList.Clear();
+            chattedUserIds.Clear();
             StreamSupportTracker.Reset();
 
             if(twitchChatService == null)
@@ -362,7 +371,19 @@ namespace JTSA.Panels
                     });
 
                     // チャットの発火条件確認
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Chat, message.Message);
+                    var chatPlaceholders = new ChatPlaceholderValues(message.DisplayName, message.Username);
+                    _ = streamExpansionService.HandleAsync(
+                        StreamExpansionTriggerType.Chat,
+                        message.Message,
+                        chatPlaceholders);
+
+                    if (!string.IsNullOrWhiteSpace(message.UserId) && chattedUserIds.TryAdd(message.UserId, 0))
+                    {
+                        _ = streamExpansionService.HandleAsync(
+                            StreamExpansionTriggerType.FirstChat,
+                            message.Username,
+                            chatPlaceholders);
+                    }
 
                     // ビッツの発火条件確認
                     if (message.Bits > 0)
@@ -394,6 +415,9 @@ namespace JTSA.Panels
 
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.ChannelPoint, channelPoint.RewardId);
                 };
+
+                twitchEventSubService.FollowReceived += userName =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Follow, userName);
 
                 await twitchChatService.ConnectAsync();
                 await twitchEventSubService.ConnectAsync();
@@ -594,7 +618,38 @@ namespace JTSA.Panels
         }
 
         /// <summary>  </summary>
-        ChatOverlayWindow transparentWindow;
+        ChatOverlayWindow? transparentWindow;
+
+        private double ReadOverlayFontSize()
+        {
+            var value = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayFontSize)?.Value;
+            return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                ? Math.Clamp(parsed, 10, 36)
+                : 16;
+        }
+
+        private void ApplyOverlayAppearance()
+        {
+            transparentWindow?.ApplyAppearance(
+                ChatOverlayShowIconCheckBox.IsChecked == true,
+                ChatOverlayFontSizeSlider.Value);
+        }
+
+        private void ChatOverlayFontSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ChatOverlayFontSize,
+                e.NewValue.ToString(CultureInfo.InvariantCulture));
+            ApplyOverlayAppearance();
+        }
+
+        private void ChatOverlayShowIconCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ChatOverlayShowUserIcon,
+                ChatOverlayShowIconCheckBox.IsChecked == true ? "1" : "0");
+            ApplyOverlayAppearance();
+        }
 
 
         /// <summary>
@@ -612,6 +667,7 @@ namespace JTSA.Panels
             else
             {
                 transparentWindow = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
+                ApplyOverlayAppearance();
                 transparentWindow.Show();
             }
         }

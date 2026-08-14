@@ -6,14 +6,17 @@ using System.Windows;
 
 namespace JTSA.Utility;
 
-internal enum StreamExpansionTriggerType { Chat, ChannelPoint, Raid, Subscribe, Bits }
+internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits }
 
 internal sealed class StreamExpansionService
 {
     private readonly SemaphoreSlim executionLock = new(1, 1);
     private readonly Random random = new();
 
-    public async Task HandleAsync(StreamExpansionTriggerType type, string value)
+    public async Task HandleAsync(
+        StreamExpansionTriggerType type,
+        string value,
+        ChatPlaceholderValues? chatPlaceholders = null)
     {
         // 発火条件に一致するものだけ取得
         var rules = DAO_StreamExpansion.SelectAllHeaders().Where(rule => Matches(rule, type, value)).ToList();
@@ -23,14 +26,16 @@ internal sealed class StreamExpansionService
             : null;
 
         // Run each matching rule independently so every delay starts at the trigger time.
-        await Task.WhenAll(rules.Select(rule => ExecuteRuleAsync(rule, type, value, raidPlaceholders)));
+        await Task.WhenAll(rules.Select(rule =>
+            ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders)));
     }
 
     private async Task ExecuteRuleAsync(
         T_StreamExpansionHeader rule,
         StreamExpansionTriggerType type,
         string value,
-        RaidPlaceholderValues? raidPlaceholders)
+        RaidPlaceholderValues? raidPlaceholders,
+        ChatPlaceholderValues? chatPlaceholders)
     {
         if (rule.DelaySeconds > 0)
         {
@@ -45,7 +50,8 @@ internal sealed class StreamExpansionService
         if (groups.Count > 0)
         {
             var selectedGroup = ChooseByWeight(groups);
-            await Task.WhenAll(selectedGroup.Select(item => ExecuteAsync(item, raidPlaceholders)));
+            await Task.WhenAll(selectedGroup.Select(item =>
+                ExecuteAsync(item, raidPlaceholders, chatPlaceholders)));
         }
 
         if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
@@ -107,6 +113,12 @@ internal sealed class StreamExpansionService
             case StreamExpansionTriggerType.Raid:
                 return rule.IsRaid;
 
+            case StreamExpansionTriggerType.FirstChat:
+                return rule.IsFirstChat;
+
+            case StreamExpansionTriggerType.Follow:
+                return rule.IsFollow;
+
             case StreamExpansionTriggerType.Subscribe:
                 return rule.IsSubscribe;
 
@@ -139,13 +151,19 @@ internal sealed class StreamExpansionService
     /// </summary>
     /// <param name="item"></param>
     /// <returns></returns>
-    private async Task ExecuteAsync(T_StreamExpansionItem item, RaidPlaceholderValues? raidPlaceholders)
+    private async Task ExecuteAsync(
+        T_StreamExpansionItem item,
+        RaidPlaceholderValues? raidPlaceholders,
+        ChatPlaceholderValues? chatPlaceholders)
     {
         if (string.IsNullOrWhiteSpace(item.Content)) return;
         switch (item.ActionType)
         {
             case "Chat":
-                await TwitchHelper.SendChat(StreamExpansionPlaceholderReplacer.Replace(item.Content, raidPlaceholders));
+                await TwitchHelper.SendChat(StreamExpansionPlaceholderReplacer.Replace(
+                    item.Content,
+                    raidPlaceholders,
+                    chatPlaceholders));
                 break;
 
             case "Image":
