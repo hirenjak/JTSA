@@ -174,10 +174,12 @@ namespace JTSA.Panels
 
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
-                item.Status =
-                    item.Status == GameStatus.Playing
-                        ? GameStatus.None
-                        : GameStatus.Playing;
+                item.Status = item.Status switch
+                {
+                    GameStatus.Playing => GameStatus.Interrupted,
+                    GameStatus.Interrupted => GameStatus.None,
+                    _ => GameStatus.Playing
+                };
 
                 DAO_GamePlaylist.UpdatePlaylistItemStatus(CurrentGamePlaylistId, item.CategoryId, item.Status);
 
@@ -614,6 +616,29 @@ namespace JTSA.Panels
                 .imageItem.playing .playingText {
                     display: block;
                 }
+
+                .interruptedText {
+                    position: absolute;
+                    left: 4px;
+                    bottom: 8px;
+
+                    display: none;
+
+                    padding: 2px 10px;
+                    border-radius: 5px;
+
+                    color: white;
+                    background: #f59e0b;
+
+                    font-size: 11px;
+                    font-weight: bold;
+
+                    white-space: nowrap;
+                }
+
+                .imageItem.interrupted .interruptedText {
+                    display: block;
+                }
             </style>
         </head>
 
@@ -659,6 +684,9 @@ namespace JTSA.Panels
                             else if (item.status === "Playing") {
                                 div.classList.add("playing");
                             }
+                            else if (item.status === "Interrupted") {
+                                div.classList.add("interrupted");
+                            }
 
                             const img = document.createElement("img");
                             img.src = item.imageUrl;
@@ -676,9 +704,16 @@ namespace JTSA.Panels
                             playingText.className = "playingText";
                             playingText.textContent = "プレイ中";
 
+                            const interruptedText =
+                                document.createElement("div");
+
+                            interruptedText.className = "interruptedText";
+                            interruptedText.textContent = "プレイ中断中";
+
                             div.appendChild(img);
                             div.appendChild(completeText);
                             div.appendChild(playingText);
+                            div.appendChild(interruptedText);
 
                             list.appendChild(div);
                         }

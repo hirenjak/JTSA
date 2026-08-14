@@ -31,6 +31,7 @@ namespace JTSA.Forms
                 OnPropertyChanged(nameof(Status));
                 OnPropertyChanged(nameof(CompletedVisibility));
                 OnPropertyChanged(nameof(PlayingVisibility));
+                OnPropertyChanged(nameof(InterruptedVisibility));
                 OnPropertyChanged(nameof(StatusClass));
             }
         }
@@ -46,9 +47,13 @@ namespace JTSA.Forms
         public Visibility PlayingVisibility =>
             Status == GameStatus.Playing ? Visibility.Visible : Visibility.Collapsed;
 
+        public Visibility InterruptedVisibility =>
+            Status == GameStatus.Interrupted ? Visibility.Visible : Visibility.Collapsed;
+
         public string StatusClass =>
             Status == GameStatus.Completed ? " completed" :
             Status == GameStatus.Playing ? " playing" :
+            Status == GameStatus.Interrupted ? " interrupted" :
             "";
 
 

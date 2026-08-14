@@ -106,7 +106,8 @@ namespace JTSA.Dao
         {
             None = 0,
             Playing = 1,
-            Completed = 2
+            Completed = 2,
+            Interrupted = 3
         }
 
         public static bool UpdatePlaylistItemStatus(long playlistId, string categoryId, GameStatus status)

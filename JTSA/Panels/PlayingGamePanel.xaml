@@ -63,7 +63,7 @@
                         </TextBlock>
                     </Button>
                 </Grid>
-                <TextBlock Text="左クリック：完了と取り消しを交互に設定、右クリック：プレイ中（選択カテゴリに自動で設定、送信ボタンでTwitchに反映）"
+                <TextBlock Text="左クリック：完了切替、右クリック：プレイ中 → プレイ中断中 → 解除（プレイ中は選択カテゴリにも設定）"
                                    FontSize="12"
                                    Padding="0, 0, 0, 3"
                                    TextAlignment="Left"
@@ -123,6 +123,18 @@
                                         <TextBlock Text="プレイ中"
                                                Foreground="White"
                                                FontWeight="Bold"/>
+                                    </Border>
+
+                                    <Border Background="#FFF59E0B"
+                                            CornerRadius="4"
+                                            Padding="8,2"
+                                            Margin="8"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Bottom"
+                                            Visibility="{Binding InterruptedVisibility}">
+                                        <TextBlock Text="プレイ中断中"
+                                                   Foreground="White"
+                                                   FontWeight="Bold"/>
                                     </Border>
 
                                     <Button Content="×"
