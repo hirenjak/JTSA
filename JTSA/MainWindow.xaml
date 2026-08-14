@@ -229,32 +229,43 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
+                            
                             <Grid Grid.Row="0" VerticalAlignment="Stretch">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="260" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- メインUI（今までのDockPanelやStackPanelなど） -->
-                                <DockPanel Grid.Column="0" Name="MainDockPanel" 
-                                           MinWidth="560" Width="Auto">
+                                <!--メインUI-->
+                                <DockPanel 
+                                    Grid.Column="0" 
+                                    Name="MainDockPanel"
+                                    Margin="8, 0, 0, 0"
+                                    MinWidth="560" Width="Auto">
 
                                     <StackPanel DockPanel.Dock="Top" 
                                                 HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
-                                        <Label Margin="0, 8, 0, 0" Foreground="White" Content="タイトル編集"/>
+                                        <Label 
+                                            Margin="0, 0, 0, 0" Padding="0, 0, 0, 0"
+                                            Foreground="White" Content="タイトル編集"/>
 
-                                        <Label Margin="0, 0, 0, 0" Foreground="White" Content="${friend}をタイトル編集に入れるとフレンドで選択したユーザーがタイトルに追加される"/>
+                                        <Label 
+                                            Margin="0, 0, 0, 0" Padding="0, 0, 0, 0" 
+                                            Foreground="White" Content="${friend}をタイトル編集に入れるとフレンドで選択したユーザーがタイトルに追加される"/>
 
                                         <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
                                                  Height="48" Width="Auto" 
                                                  HorizontalAlignment="Stretch" 
                                                  VerticalAlignment="Top" Text="" 
-                                                 Margin="8, 0, 0, 0" TextWrapping="Wrap" 
+                                                 Margin="0, 0, 0, 0" TextWrapping="Wrap" 
                                                  TextChanged="TitleEditTextBox_TextChanged"/>
                                     </StackPanel>
 
-                                    <Grid Margin="8" Height="Auto" >
+                                    <Grid 
+                                        Margin="0, 4, 0, 0" 
+                                        Height="Auto" >
+                                        
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="280"/>
@@ -264,8 +275,25 @@
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
-                                        <Label Grid.Row="0" Grid.Column="0" Foreground="White" Content="タイトルログ ※クリックでタイトル編集にコピー"/>
-                                        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding TitleTextFormList}" x:Name="TitleTextLogListBox" Background="LightGray" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" SelectionChanged="TitleTextLogListBox_SelectionChanged">
+                                        <Label 
+                                            Grid.Row="0" Grid.Column="0" 
+                                            Content="タイトルログ ※クリックでタイトル編集にコピー"
+                                            Margin="0, 0, 0, 0" Padding="0, 0, 0, 0"
+                                            Foreground="White"
+                                            VerticalContentAlignment="Bottom"/>
+                                        
+                                        <ListBox 
+                                            Grid.Row="1" Grid.Column="0" 
+                                            x:Name="TitleTextLogListBox" 
+                                            ItemsSource="{Binding TitleTextFormList}" 
+                                            Background="LightGray"
+                                            Width="Auto" 
+                                            HorizontalAlignment="Stretch" 
+                                            HorizontalContentAlignment="Stretch" 
+                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto" 
+                                            SelectionChanged="TitleTextLogListBox_SelectionChanged">
+                                            
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel>
@@ -301,9 +329,15 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
 
-                                        <Label Grid.Row="0" Grid.Column="1" Margin="8,0,0,0" Foreground="White" Content="カテゴリ一覧 ※ダブルクリックで選択"/>
+                                        <Label 
+                                            Grid.Row="0" Grid.Column="1" 
+                                            Margin="4, 0, 0, 0" 
+                                            Foreground="White" 
+                                            Content="カテゴリ一覧 ※ダブルクリックで選択"
+                                            VerticalAlignment="Bottom"/>
+                                        
                                         <ListBox Grid.Row="1" Grid.Column="1"
-                                                 Margin="8,0,0,0"
+                                                 Margin="4, 0, 0, 0"
                                                  ItemsSource="{Binding CategoryFormList, ElementName=CategoryPanel}"
                                                  x:Name="OverviewCategoryListBox"
                                                  Background="#FF404040"
