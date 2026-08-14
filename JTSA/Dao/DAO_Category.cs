@@ -58,7 +58,11 @@ namespace JTSA.Dao
 
             List<M_Category> results = new();
 
-            foreach (var record in db.M_Category.OrderByDescending(x => x.LastUsedDateTime))
+            // 最終使用日時が新しいカテゴリを先頭にする。
+            // 同時刻の場合も表示順が揺れないよう、カテゴリ名を第2キーにする。
+            foreach (var record in db.M_Category
+                .OrderByDescending(x => x.LastUsedDateTime)
+                .ThenBy(x => x.DisplayName))
             {
                 results.Add(new()
                 {

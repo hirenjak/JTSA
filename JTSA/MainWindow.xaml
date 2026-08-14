@@ -367,8 +367,18 @@
                                     </Grid>
                                 </DockPanel>
                                 
-                                <!-- サイドパネル（タイトルテキストタグ） -->
-                                <panels:TitleTagSidePanel Grid.Column="1" Margin="8"  x:Name="TitleTagSidePanel" Visibility="Visible"/>
+                                <!-- サイドパネル（タイトルテキストタグ／カテゴリ検索） -->
+                                <Grid Grid.Column="1" Margin="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <panels:TitleTagSidePanel Grid.Row="0" x:Name="TitleTagSidePanel" Visibility="Visible"/>
+                                    <panels:CategorySearchPanel Grid.Row="1"
+                                                                x:Name="OverviewCategorySearchPanel"
+                                                                AddToPlaylistOnSelect="False"/>
+                                </Grid>
 
                             </Grid>
                         </Grid>

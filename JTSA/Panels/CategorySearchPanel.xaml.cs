@@ -28,6 +28,12 @@ namespace JTSA.Panels
         /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
+        /// <summary>
+        /// 検索結果で選択したカテゴリを現在のプレイリストにも追加するか。
+        /// カテゴリ画面では追加し、配信概要画面では追加しない。
+        /// </summary>
+        public bool AddToPlaylistOnSelect { get; set; } = true;
+
         private string lastCategorySearchText = "";
         private System.Windows.Threading.DispatcherTimer categorySearchDebounceTimer;
 
@@ -77,18 +83,34 @@ namespace JTSA.Panels
         {
             if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
             {
-                // Steamに存在しないカテゴリ（Art等）ではURLが取れないため、空文字として扱う
-                List<string> steamUrls =  await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
+                var existingCategory = DAO_Category.SelectOneById(selectedItem.CategoryId);
 
-                string steamUrl = steamUrls.FirstOrDefault() ?? "";
+                if (existingCategory == null)
+                {
+                    // Steamに存在しないカテゴリ（Art等）ではURLが取れないため、空文字として扱う
+                    List<string> steamUrls = await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
+                    string steamUrl = steamUrls.FirstOrDefault() ?? "";
 
-                // データ登録
-                var isnertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl);
-                if (isnertData == null) return;
+                    // 未登録カテゴリを新規登録
+                    var insertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl);
+                    if (insertData == null) return;
 
-                DAO_Category.Insert(isnertData);
+                    DAO_Category.Insert(insertData);
+                }
+                else
+                {
+                    // 登録済みカテゴリは最終使用日時を更新し、一覧の先頭へ移動させる
+                    DAO_Category.UpdateLastUsed(selectedItem.CategoryId);
+                }
 
-                mainWindow.PlayingGamePanel.AddPlaylistItem(selectedItem.CategoryId);
+                if (AddToPlaylistOnSelect)
+                {
+                    mainWindow.PlayingGamePanel.AddPlaylistItem(selectedItem.CategoryId);
+                }
+
+                // カテゴリタブと配信概要パネルの一覧は同じコレクションを参照しているため、
+                // 登録直後に読み直して両方へ反映する。
+                mainWindow.CategoryPanel.ReloadCategory();
 
                 CategorySearchTitleSerchTextBox.Text = "";
             }

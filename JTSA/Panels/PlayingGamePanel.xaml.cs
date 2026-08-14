@@ -84,6 +84,25 @@ namespace JTSA.Panels
             ReloadGamePlaylistItem();
         }
 
+        /// <summary>
+        /// 登録済みカテゴリを現在のプレイリストへ追加する。
+        /// </summary>
+        private void ExistingCategoryListBox_DoubleClick(object sender, EventArgs e)
+        {
+            if (ExistingCategoryListBox.SelectedItem is not CategoryForm selectedItem) return;
+
+            AddPlaylistItem(selectedItem.CategoryId);
+            ExistingCategoryListBox.SelectedIndex = -1;
+        }
+
+        /// <summary>
+        /// カテゴリ画面と同じ登録済みカテゴリ一覧を表示する。
+        /// </summary>
+        public void BindExistingCategoryList(ObservableCollection<CategoryForm> categoryFormList)
+        {
+            ExistingCategoryListBox.ItemsSource = categoryFormList;
+        }
+
 
         /// <summary>
         /// ゲームプレイリスト新規保存ボタン押下時
@@ -254,6 +273,23 @@ namespace JTSA.Panels
             return ResolveThumbnailUrl(null, twitchCategoryData?.BoxArtUrl);
         }
 
+        /// <summary>
+        /// プレイリストヘッダー用にTwitchカテゴリのボックスアートURLを解決する。
+        /// Steamヘッダー画像は使用しない。
+        /// </summary>
+        private static async Task<string> ResolveBoxArtUrlByCategoryIdAsync(string categoryId)
+        {
+            var categoryData = DAO_Category.SelectOneById(categoryId);
+
+            if (!string.IsNullOrWhiteSpace(categoryData?.BoxArtUrl))
+            {
+                return TwitchHelper.ResizeBoxArtUrl(categoryData.BoxArtUrl, 285, 380);
+            }
+
+            var twitchCategoryData = await TwitchHelper.GetCategoryByGameId(categoryId);
+            return TwitchHelper.ResizeBoxArtUrl(twitchCategoryData?.BoxArtUrl, 285, 380);
+        }
+
         #endregion
 
 
@@ -351,15 +387,15 @@ namespace JTSA.Panels
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
-                // 保存済みのThumbnailCategoryUrlには過去にカテゴリIDが入っている場合があるため、
-                // 先頭アイテムから毎回解決し直す
+                // プレイリストヘッダーには、先頭カテゴリのTwitchボックスアートを使用する。
+                // 保存済みURLやSteamヘッダー画像には依存せず、カテゴリIDから毎回解決し直す。
                 var firstItem = DAO_GamePlaylist
                     .SelectGamePlaylistById(gamePlayListHeader.GamePlayListId)
                     .FirstOrDefault();
 
                 var thumbnailUrl = firstItem == null
                     ? ""
-                    : await ResolveThumbnailUrlByCategoryIdAsync(firstItem.CategoryId);
+                    : await ResolveBoxArtUrlByCategoryIdAsync(firstItem.CategoryId);
 
                 playlistHeaderFormList.Add(new PlaylistHeaderForm()
                 {

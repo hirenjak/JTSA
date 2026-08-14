@@ -107,7 +107,7 @@ namespace JTSA.Panels
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = item.SteamUrl ?? "",
                     ChannelPointPresetId = item.ChannelPointPresetId ?? PRESET_ID_NONE,
-                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
+                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm")
                 });
             }
 

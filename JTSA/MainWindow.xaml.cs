@@ -999,6 +999,7 @@ namespace JTSA
             // 各パネルの初期化処理
             ChatPanel.Initialize();
             CategoryPanel.Initialize();
+            PlayingGamePanel.BindExistingCategoryList(CategoryPanel.CategoryFormList);
             await ChannelPointPanel.Initialize();
 
             PlayingGamePanel.ReloadPlaylistHeader();

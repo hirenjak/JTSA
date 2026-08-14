@@ -268,12 +268,46 @@
 
             </Grid>
 
-            <!-- 下半分 -->
-            <panels:CategorySearchPanel
-                    x:Name="CategorySearchPanel"
-                    Grid.Row="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"/>
+            <!-- 下半分：登録済みカテゴリ -->
+            <Grid Grid.Row="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="24"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Text="既存カテゴリ一覧 ※ダブルクリックで追加"
+                           FontSize="12"
+                           Foreground="White"
+                           VerticalAlignment="Center"/>
+
+                <ListBox Grid.Row="1"
+                         x:Name="ExistingCategoryListBox"
+                         Background="#FF404040"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         MouseDoubleClick="ExistingCategoryListBox_DoubleClick">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <Grid Margin="8,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="36"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Image Grid.Column="0" Source="{Binding BoxArtUrl}" Width="36" Height="48"/>
+                                    <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Height="1" Background="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>
