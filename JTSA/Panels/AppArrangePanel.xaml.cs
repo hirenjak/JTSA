@@ -17,6 +17,8 @@ public partial class AppArrangePanel : UserControl
     public ObservableCollection<AppInfoForm> RunningApps { get; } = [];
 
     private readonly DispatcherTimer statusTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private bool isLoadingAutoStartSetting;
+    private bool hasAttemptedAutoStart;
 
     public AppArrangePanel()
     {
@@ -26,6 +28,7 @@ public partial class AppArrangePanel : UserControl
         {
             ReloadRegisteredApps();
             ReloadRunningApps();
+            LoadAutoStartSetting();
             statusTimer.Start();
         };
         Unloaded += (_, _) => statusTimer.Stop();
@@ -33,6 +36,20 @@ public partial class AppArrangePanel : UserControl
     }
 
     private MainWindow? MainWindow => Application.Current.MainWindow as MainWindow;
+
+    private void LoadAutoStartSetting()
+    {
+        isLoadingAutoStartSetting = true;
+        var setting = DAO_Setting.SelectOneById(DAO_Setting.SettingName.AutoStartRegisteredApps);
+        AutoStartCheckBox.IsChecked = bool.TryParse(setting?.Value, out var enabled) && enabled;
+        isLoadingAutoStartSetting = false;
+
+        if (AutoStartCheckBox.IsChecked == true && !hasAttemptedAutoStart)
+        {
+            hasAttemptedAutoStart = true;
+            StartRegisteredApps();
+        }
+    }
 
     private void ReloadRegisteredApps()
     {
@@ -220,7 +237,27 @@ public partial class AppArrangePanel : UserControl
     }
 
     private void ReloadRunningButton_Click(object sender, RoutedEventArgs e) => ReloadRunningApps();
-    private void StartAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "停止")) Start(app); }
+    private void StartAllButton_Click(object sender, RoutedEventArgs e) => StartRegisteredApps();
     private void MoveAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Win32Helper.SetAppWindowRect(app); ShowStatus("登録済みアプリを一括配置しました。"); }
     private void StopAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Stop(app); }
+
+    private void StartRegisteredApps()
+    {
+        foreach (var app in RegisteredApps)
+        {
+            using var process = FindProcess(app);
+            if (process is null) Start(app);
+        }
+    }
+
+    private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (isLoadingAutoStartSetting) return;
+        DAO_Setting.InsertUpdate(
+            DAO_Setting.SettingName.AutoStartRegisteredApps,
+            (AutoStartCheckBox.IsChecked == true).ToString());
+        ShowStatus(AutoStartCheckBox.IsChecked == true
+            ? "登録済みアプリの自動起動を有効にしました。"
+            : "登録済みアプリの自動起動を無効にしました。");
+    }
 }

@@ -12,6 +12,13 @@
             <Button Content="一括起動" Width="88" Margin="0,0,6,0" Click="StartAllButton_Click"/>
             <Button Content="一括配置" Width="88" Margin="0,0,6,0" Click="MoveAllButton_Click"/>
             <Button Content="一括停止" Width="88" Margin="0,0,12,0" Click="StopAllButton_Click"/>
+            <CheckBox x:Name="AutoStartCheckBox"
+                      Content="JTSA起動時に登録済みアプリを自動起動"
+                      Foreground="White"
+                      VerticalAlignment="Center"
+                      Margin="0,0,16,0"
+                      Checked="AutoStartCheckBox_Changed"
+                      Unchecked="AutoStartCheckBox_Changed"/>
             <TextBlock Text="起動中のウィンドウを右側から登録できます" Foreground="LightGray" VerticalAlignment="Center"/>
         </StackPanel>
 
@@ -29,7 +36,9 @@
                 </Grid.RowDefinitions>
                 <TextBlock Text="登録済みアプリ" Foreground="White" FontSize="15" Margin="0,0,0,6"/>
                 <ListBox Grid.Row="1" ItemsSource="{Binding RegisteredApps}" Background="#FF404040"
-                         BorderBrush="DimGray" HorizontalContentAlignment="Stretch">
+                         BorderBrush="DimGray" HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="6">
@@ -43,6 +52,11 @@
                                         <TextBlock Text="{Binding Status, StringFormat=  [{0}]}" Foreground="LightGreen" FontSize="12" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <TextBlock Text="{Binding WindowTitle}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding AppExePath, StringFormat=Path: {0}}"
+                                               Foreground="Silver"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding AppExePath}"/>
                                     <TextBlock Foreground="DarkGray" FontSize="11">
                                         <Run Text="位置: "/><Run Text="{Binding X}"/><Run Text=", "/><Run Text="{Binding Y}"/>
                                         <Run Text="  サイズ: "/><Run Text="{Binding Width}"/><Run Text=" × "/><Run Text="{Binding Height}"/>
@@ -71,7 +85,9 @@
                     <TextBlock Text="起動中アプリ" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
                 </DockPanel>
                 <ListBox Grid.Row="1" ItemsSource="{Binding RunningApps}" Background="#FF404040"
-                         BorderBrush="DimGray" HorizontalContentAlignment="Stretch">
+                         BorderBrush="DimGray" HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="6">

@@ -25,6 +25,7 @@ namespace JTSA.Dao
             ChatOverlayHeight = 13,
             ChatOverlayShowUserIcon = 14,
             ChatOverlayFontSize = 15,
+            AutoStartRegisteredApps = 16,
         }
 
 
