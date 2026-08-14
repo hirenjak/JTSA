@@ -557,18 +557,26 @@ namespace JTSA
             processLog.EventStartLogWrite();
 
             // 必要データの取得
-            var stremTitleText = TitleTextFriendTagToXReplace(TitleEditTextBox.Text);
+            var streamTitleText = TitleTextFriendTagToXReplace(TitleEditTextBox.Text);
             var categoryNameText = CurrentCategoryName;
 
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
-            var categoryText = "配信カテゴリ：" + categoryNameText;
             var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.LoginName;
 
-            stremTitleText = stremTitleText.Replace("#", "＃");
+            streamTitleText = streamTitleText.Replace("#", "＃");
+
+            var template = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.XPostTemplate)?.Value
+                ?? DAO_Setting.DefaultXPostTemplate;
+
+            var postText = template
+                .Replace("{title}", streamTitleText)
+                .Replace("{category}", categoryNameText)
+                .Replace("{url}", streamUrlText);
 
             // URIエンコード
-            var encodedText = WebUtility.UrlEncode(stremTitleText) + "%0A" + WebUtility.UrlEncode(categoryText) + "%0A" + WebUtility.UrlEncode(streamUrlText);
+            var encodedText = WebUtility.UrlEncode(postText);
 
             // ブラウザで認証ページを開く
             Process.Start(new ProcessStartInfo

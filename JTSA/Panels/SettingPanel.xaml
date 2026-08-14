@@ -46,6 +46,42 @@
                 Width="Auto" Height="2" 
                 Background="White"/>
 
+            <StackPanel Margin="0,8,0,0">
+                <Label Content="X投稿文"
+                       Padding="4,0"
+                       FontSize="20"
+                       Foreground="White"/>
+                <TextBlock Margin="4,4,0,8"
+                           Foreground="LightGray"
+                           TextWrapping="Wrap"
+                           Text="利用可能なプレースホルダー： {title} 配信タイトル / {category} 配信カテゴリ / {url} Twitch URL"/>
+                <TextBox x:Name="XPostTemplateTextBox"
+                         Margin="8,0,0,0"
+                         MinHeight="96"
+                         Padding="6"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         Foreground="White"
+                         Background="#FF4A4747"
+                         BorderBrush="White"/>
+                <StackPanel Orientation="Horizontal" Margin="8,8,0,0">
+                    <Button x:Name="SaveXPostTemplateButton"
+                            Content="保存"
+                            Width="64" Height="22"
+                            Click="SaveXPostTemplateButton_Click"/>
+                    <Button Content="初期値に戻す"
+                            Width="96" Height="22"
+                            Margin="8,0,0,0"
+                            Click="ResetXPostTemplateButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+
+            <Border
+                Margin="0, 12, 0, 0"
+                Width="Auto" Height="2"
+                Background="White"/>
+
             <StackPanel
                 Margin="0, 8, 0, 0">
 

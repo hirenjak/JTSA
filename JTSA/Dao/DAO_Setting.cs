@@ -4,6 +4,8 @@ namespace JTSA.Dao
 {
     class DAO_Setting
     {
+        public const string DefaultXPostTemplate = "{title}\n配信カテゴリ：{category}\n{url}";
+
         public enum SettingName : int
         {
             UserName = 1,
@@ -17,6 +19,8 @@ namespace JTSA.Dao
             ChatOverlayPosY = 9,
             /// <summary> チャンネルポイントのコピー時に元のタイトルへ付ける接尾辞 </summary>
             ChannelPointCopySuffix = 10,
+            /// <summary>X告知で使用する投稿文テンプレート</summary>
+            XPostTemplate = 11,
         }
 
 

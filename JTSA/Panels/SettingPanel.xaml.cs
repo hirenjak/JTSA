@@ -34,6 +34,30 @@ namespace JTSA.Panels
 
             ReOAuthButton.Click += ReOAuthButton_Click;
             SettingOAuthCodeCopyButton.Click += SettingOAuthCodeCopyButton_Click;
+
+            XPostTemplateTextBox.Text = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.XPostTemplate)?.Value
+                ?? DAO_Setting.DefaultXPostTemplate;
+        }
+
+        private void SaveXPostTemplateButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(XPostTemplateTextBox.Text))
+            {
+                MessageBox.Show("X投稿文を入力してください。", "X投稿文");
+                return;
+            }
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.XPostTemplate,
+                XPostTemplateTextBox.Text);
+
+            MessageBox.Show("X投稿文を保存しました。", "X投稿文");
+        }
+
+        private void ResetXPostTemplateButton_Click(object sender, RoutedEventArgs e)
+        {
+            XPostTemplateTextBox.Text = DAO_Setting.DefaultXPostTemplate;
         }
 
         private void SettingOAuthCodeCopyButton_Click(object sender, RoutedEventArgs e)
