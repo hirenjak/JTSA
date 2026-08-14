@@ -930,7 +930,7 @@ namespace JTSA
 
             titleText = titleText.Replace("${friend}", friendText + " ");
 
-			return titleText;
+			return TitleTextTagReplace(titleText);
 		}
 
 
@@ -951,6 +951,20 @@ namespace JTSA
             }
 
             titleText = titleText.Replace("${friend}", friendText);
+            return TitleTextTagReplace(titleText);
+        }
+
+
+        /// <summary>
+        /// ${ID} 形式のタイトルタグを登録済みの表示文字列へ置換する。
+        /// </summary>
+        private static string TitleTextTagReplace(string titleText)
+        {
+            foreach (var titleTag in DAO_TitleTag.SelectAllOrderbyLastUser())
+            {
+                titleText = titleText.Replace($"${{{titleTag.Id}}}", titleTag.DisplayName);
+            }
+
             return titleText;
         }
 

@@ -112,7 +112,7 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public static bool UpdateLastUse(int id)
+        public static bool UpdateLastUse(long id)
         {
             var targetRecord = SelectOneById(id);
 

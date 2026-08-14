@@ -39,7 +39,9 @@ namespace JTSA.Panels
         {
             if (TitleTagListBox.SelectedItem is TitleTagForm selectedItem)
             {
-                mainWindow.InsertTextAtCaret(selectedItem.DisplayName);
+                mainWindow.InsertTextAtCaret($"${{{selectedItem.Id}}}");
+                DAO_TitleTag.UpdateLastUse(selectedItem.Id);
+                ReloadTitleTag();
             }
 
             // 選択状態を解除
