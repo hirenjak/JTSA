@@ -6,17 +6,20 @@
             mc:Ignorable="d"
             Background="#FF404040">
 
-    <Grid>
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="8"/>
+            <ColumnDefinition Width="*" MinWidth="420"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/> <!-- プリセット -->
             <RowDefinition Height="Auto"/> <!-- ステータス -->
-            <RowDefinition Height="Auto"/> <!-- 入力フォーム用 -->
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- 1行目: ツールバー -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
+        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,0,0,8">
             <Button x:Name="ReloadButton" Content="更新" Width="70" Margin="0,0,8,0"
                     Click="ReloadButton_Click" />
             <Button x:Name="CreateRewardButton" Content="新規作成" Width="90" Margin="0,0,8,0"
@@ -30,14 +33,16 @@
         </StackPanel>
 
         <!-- 2行目: プリセット -->
-        <Border Grid.Row="1" Margin="5,0,5,5" Background="#333" CornerRadius="4" Padding="8">
+        <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Background="#333" BorderBrush="#666"
+                BorderThickness="1" CornerRadius="4" Padding="12">
             <StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="プリセット:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="PresetComboBox" Width="220" Margin="0,0,8,0"
+                <TextBlock Text="プリセット管理" Foreground="White" FontSize="14"
+                           FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <ComboBox x:Name="PresetComboBox" Height="24"
                               ItemsSource="{Binding ChannelPointPresetFormList}"
                               DisplayMemberPath="DisplayText"
                               SelectionChanged="PresetComboBox_SelectionChanged"/>
+                <WrapPanel Margin="0,8,0,0">
                     <Button x:Name="ApplyPresetButton" Content="適用" Width="70" Margin="0,0,8,0"
                             Click="ApplyPresetButton_Click"
                             ToolTip="選択したプリセットの状態に、報酬の有効/無効をまとめて切り替えます。"/>
@@ -46,25 +51,29 @@
                             ToolTip="今の一覧の有効/無効で、選択中のプリセットを上書きします。"/>
                     <Button x:Name="DeletePresetButton" Content="削除" Width="60"
                             Click="DeletePresetButton_Click"/>
-                </StackPanel>
+                </WrapPanel>
 
-                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                    <TextBlock Text="名前:" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox x:Name="PresetNameTextBox" Width="220" Margin="0,0,8,0"
+                <TextBlock Text="新しいプリセット" Foreground="White" FontWeight="SemiBold"
+                           Margin="0,16,0,4"/>
+                <TextBox x:Name="PresetNameTextBox" Height="24" Margin="0,0,0,8"
                              ToolTip="新規保存する名前、または選択中プリセットの新しい名前を入力します。"/>
+                <WrapPanel>
                     <Button x:Name="SavePresetButton" Content="この名前で新規保存" Width="150" Margin="0,0,8,0"
                             Click="SavePresetButton_Click"
                             ToolTip="今の一覧の有効/無効を、新しいプリセットとして保存します。"/>
                     <Button x:Name="RenamePresetButton" Content="名前変更" Width="80"
                             Click="RenamePresetButton_Click"
                             ToolTip="選択中のプリセットの名前を、入力した名前へ変更します。"/>
-                </StackPanel>
+                </WrapPanel>
 
                 <!-- 選択中プリセットの内訳 -->
-                <TextBlock x:Name="PresetDetailStatus" Foreground="#FFBBBBBB" Margin="0,6,0,0"
+                <TextBlock Text="プリセットの内容" Foreground="White" FontWeight="SemiBold"
+                           Margin="0,16,0,4"/>
+                <TextBlock x:Name="PresetDetailStatus" Foreground="#FFBBBBBB" Margin="0,0,0,0"
                            TextWrapping="Wrap"
                            Text="プリセットを選択すると内容が表示されます。"/>
-                <ListView x:Name="PresetItemListView" Height="110" Margin="0,4,0,0"
+                <ListView x:Name="PresetItemListView" Height="180" Margin="0,4,0,0"
+                          Background="#FF404040" Foreground="White"
                           ItemsSource="{Binding ChannelPointPresetItemFormList}"
                           Visibility="Collapsed">
                     <ListView.View>
@@ -77,9 +86,9 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn Header="報酬名" Width="260" DisplayMemberBinding="{Binding RewardTitle}"/>
+                            <GridViewColumn Header="報酬名" Width="150" DisplayMemberBinding="{Binding RewardTitle}"/>
                             <!-- Twitch の Web 画面や他アプリで消された報酬にだけ付く。次回表示時には行ごと消える -->
-                            <GridViewColumn Header="" Width="90" DisplayMemberBinding="{Binding StatusText}"/>
+                            <GridViewColumn Header="" Width="70" DisplayMemberBinding="{Binding StatusText}"/>
                         </GridView>
                     </ListView.View>
                 </ListView>
@@ -87,11 +96,13 @@
         </Border>
 
         <!-- 3行目: ステータス表示 -->
-        <TextBlock Grid.Row="2" x:Name="ChannelPointGetStatus" Foreground="White"
-                   Margin="5,0,5,5" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="1" Grid.Column="2" x:Name="ChannelPointGetStatus" Foreground="White"
+                   Margin="0,0,0,8" TextWrapping="Wrap" />
 
         <!-- 4行目: 入力フォーム（初期は非表示） -->
-        <Border Grid.Row="3" Margin="5" Background="#222" CornerRadius="4" Padding="8"
+        <Border Grid.Row="2" Grid.Column="2" Margin="0,0,0,8" Background="#222"
+                BorderBrush="#666" BorderThickness="1" CornerRadius="4" Padding="8"
+                VerticalAlignment="Top" Panel.ZIndex="1"
                 x:Name="RewardFormPanel" Visibility="Collapsed">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -112,7 +123,15 @@
         </Border>
 
         <!-- 5行目: リスト -->
-        <ListView x:Name="ChannelPointListView" Grid.Row="4" Margin="5"
+        <Grid Grid.Row="2" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="報酬一覧" Foreground="White" FontSize="14"
+                       FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <ListView x:Name="ChannelPointListView" Grid.Row="1"
+                  Background="#FF404040" Foreground="White"
                   ItemsSource="{Binding ChannelPointRewardFormList}">
             <ListView.Resources>
                 <Style TargetType="{x:Type GridViewColumnHeader}">
@@ -203,6 +222,7 @@
                 </GridView>
             </ListView.View>
         </ListView>
+        </Grid>
 
     </Grid>
 </UserControl>
