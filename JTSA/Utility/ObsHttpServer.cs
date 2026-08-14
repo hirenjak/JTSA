@@ -7,13 +7,19 @@ public class ObsHttpServer
 
     private readonly Func<string> htmlProvider;
     private readonly Func<string> jsonProvider;
+    private readonly Func<string> chatHtmlProvider;
+    private readonly Func<string> chatJsonProvider;
 
     public ObsHttpServer(
         Func<string> htmlProvider,
-        Func<string> jsonProvider)
+        Func<string> jsonProvider,
+        Func<string> chatHtmlProvider,
+        Func<string> chatJsonProvider)
     {
         this.htmlProvider = htmlProvider;
         this.jsonProvider = jsonProvider;
+        this.chatHtmlProvider = chatHtmlProvider;
+        this.chatJsonProvider = chatJsonProvider;
 
         listener.Prefixes.Add("http://localhost:8026/");
     }
@@ -45,6 +51,17 @@ public class ObsHttpServer
 
         switch (path)
         {
+            case "/":
+            case "/chat":
+                text = chatHtmlProvider();
+                contentType = "text/html";
+                break;
+
+            case "/chat-data":
+                text = chatJsonProvider();
+                contentType = "application/json";
+                break;
+
             case "/obs":
                 text = htmlProvider();
                 contentType = "text/html";

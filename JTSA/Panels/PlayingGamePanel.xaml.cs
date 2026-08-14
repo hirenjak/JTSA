@@ -57,7 +57,9 @@ namespace JTSA.Panels
 
             server = new ObsHttpServer(
                 CreateObsHtml,
-                CreateObsJson);
+                CreateObsJson,
+                () => mainWindow.ChatPanel.CreateObsChatHtml(),
+                () => mainWindow.ChatPanel.CreateObsChatJson());
 
             _ = server.StartAsync();
         }

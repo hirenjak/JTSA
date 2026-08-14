@@ -19,6 +19,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsSubscribe { get; set; }
     public bool IsBits { get; set; }
     public bool DoShoutout { get; set; }
+    public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
     public string TriggerChannelPointId { get; set; } = string.Empty;
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -136,6 +137,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsSubscribe = x.IsSubscribe,
                 IsBits = x.IsBits,
                 DoShoutout = x.DoShoutout,
+                DelaySeconds = x.DelaySeconds,
                 TriggerComment = x.TriggerComment,
                 TriggerChannelPointId = x.TriggerChannelPointId
             });
@@ -326,6 +328,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsSubscribe = SelectedHeader.IsSubscribe, 
             IsBits = SelectedHeader.IsBits,
             DoShoutout = SelectedHeader.DoShoutout,
+            DelaySeconds = Math.Clamp(SelectedHeader.DelaySeconds, 0, 3600),
             TriggerComment = SelectedHeader.TriggerComment?.Trim() ?? "", 
             TriggerChannelPointId = SelectedHeader.TriggerChannelPointId?.Trim() ?? "",
             UpdatedDateTime = DateTime.Now, 

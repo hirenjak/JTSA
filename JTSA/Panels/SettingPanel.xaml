@@ -111,14 +111,46 @@
                     Foreground="White"/>
                 
                 <Label 
-                    Content="配信拡張画像出力ブラウザソース"
+                    Content="OBSのブラウザソースに以下のURLを設定してください。"
+                    Foreground="White"/>
+                <Label 
+                    Content="チャット表示"
                     Margin="4, -8, 0, -4"
                     FontSize="14"
                     Foreground="White"/>
 
+                <TextBox 
+                    Text="http://localhost:8026/chat"
+                    Width="Auto" 
+                    Margin="8, 0, 0, 0"
+                    Foreground="White" FontSize="16" 
+                    Background="#FF4A4747" BorderBrush="White" 
+                    TextAlignment="Center" 
+                    IsReadOnly="True" 
+                    Height="Auto"/>
+
                 <Label 
-                    Content="OBSのブラウザソースに以下のURLを設定してください。"
+                    Content="ゲームプレイリスト表示"
+                    Margin="4, 0, 0, -4"
+                    FontSize="14"
                     Foreground="White"/>
+
+                <TextBox 
+                    Text="http://localhost:8026/obs"
+                    Width="Auto" 
+                    Margin="8, 0, 0, 0"
+                    Foreground="White" FontSize="16" 
+                    Background="#FF4A4747" BorderBrush="White" 
+                    TextAlignment="Center" 
+                    IsReadOnly="True" 
+                    Height="Auto"/>
+
+                <Label 
+                    Content="配信拡張画像出力"
+                    Margin="4, 0, 0, -4"
+                    FontSize="14"
+                    Foreground="White"/>
+
                 <TextBox 
                     Text="http://localhost:8026/expansion"
                     Width="Auto" 

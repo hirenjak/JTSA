@@ -198,6 +198,9 @@ namespace JTSA.Migrations
                     b.Property<DateTime>("CreatedDateTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("DelaySeconds")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 

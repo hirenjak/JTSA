@@ -18,29 +18,59 @@ internal sealed class StreamExpansionService
         // 発火条件に一致するものだけ取得
         var rules = DAO_StreamExpansion.SelectAllHeaders().Where(rule => Matches(rule, type, value)).ToList();
 
-        // 発火条件一致のしたものの内容を実行
-        foreach (var rule in rules)
+        var raidPlaceholders = type == StreamExpansionTriggerType.Raid && rules.Count > 0
+            ? await GetRaidPlaceholderValuesAsync(value)
+            : null;
+
+        // Run each matching rule independently so every delay starts at the trigger time.
+        await Task.WhenAll(rules.Select(rule => ExecuteRuleAsync(rule, type, value, raidPlaceholders)));
+    }
+
+    private async Task ExecuteRuleAsync(
+        T_StreamExpansionHeader rule,
+        StreamExpansionTriggerType type,
+        string value,
+        RaidPlaceholderValues? raidPlaceholders)
+    {
+        if (rule.DelaySeconds > 0)
         {
-            var groups = DAO_StreamExpansion.SelectItems(rule.Id)
-                .GroupBy(item => item.SortNumber)
-                .Select(group => group.ToList())
-                .ToList();
+            await Task.Delay(TimeSpan.FromSeconds(Math.Clamp(rule.DelaySeconds, 0, 3600)));
+        }
 
-            if (groups.Count > 0)
-            {
-                var selectedGroup = ChooseByWeight(groups);
-                await Task.WhenAll(selectedGroup.Select(ExecuteAsync));
-            }
+        var groups = DAO_StreamExpansion.SelectItems(rule.Id)
+            .GroupBy(item => item.SortNumber)
+            .Select(group => group.ToList())
+            .ToList();
 
-            if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
+        if (groups.Count > 0)
+        {
+            var selectedGroup = ChooseByWeight(groups);
+            await Task.WhenAll(selectedGroup.Select(item => ExecuteAsync(item, raidPlaceholders)));
+        }
+
+        if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
+        {
+            var raider = await TwitchHelper.GetBroadcasterIdAsync(value);
+            if (!string.IsNullOrWhiteSpace(raider?.UserId))
             {
-                var raider = await TwitchHelper.GetBroadcasterIdAsync(value);
-                if (!string.IsNullOrWhiteSpace(raider?.UserId))
-                {
-                    await TwitchHelper.SendShoutout(raider.UserId);
-                }
+                await TwitchHelper.SendShoutout(raider.UserId);
             }
         }
+    }
+
+    private static async Task<RaidPlaceholderValues> GetRaidPlaceholderValuesAsync(string userName)
+    {
+        var raider = await TwitchHelper.GetBroadcasterIdAsync(userName);
+        if (string.IsNullOrWhiteSpace(raider?.UserId))
+        {
+            return new RaidPlaceholderValues(userName, string.Empty, string.Empty);
+        }
+
+        var channel = await TwitchHelper.GetTwitchStreamInfo(raider.UserId);
+        return new RaidPlaceholderValues(
+            string.IsNullOrWhiteSpace(raider.DisplayName) ? userName : raider.DisplayName,
+            channel?.title ?? string.Empty,
+            channel?.gameName ?? string.Empty);
     }
 
 
@@ -109,13 +139,13 @@ internal sealed class StreamExpansionService
     /// </summary>
     /// <param name="item"></param>
     /// <returns></returns>
-    private async Task ExecuteAsync(T_StreamExpansionItem item)
+    private async Task ExecuteAsync(T_StreamExpansionItem item, RaidPlaceholderValues? raidPlaceholders)
     {
         if (string.IsNullOrWhiteSpace(item.Content)) return;
         switch (item.ActionType)
         {
             case "Chat":
-                await TwitchHelper.SendChat(item.Content);
+                await TwitchHelper.SendChat(StreamExpansionPlaceholderReplacer.Replace(item.Content, raidPlaceholders));
                 break;
 
             case "Image":

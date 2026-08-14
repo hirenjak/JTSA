@@ -212,6 +212,7 @@ namespace JTSA.Utility
                     {
                         title = responseData.Title,
                         gameId = responseData.GameId,
+                        gameName = responseData.GameName,
                         broadcasterLanguage = responseData.BroadcasterLanguage,
                         delay = responseData.Delay
                     };

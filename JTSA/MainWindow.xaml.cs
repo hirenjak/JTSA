@@ -968,6 +968,8 @@ namespace JTSA
         /// </summary>
         private static string TitleTextTagReplace(string titleText)
         {
+            titleText = TitlePlaceholderReplacer.ReplaceDate(titleText, DateTime.Now);
+
             foreach (var titleTag in DAO_TitleTag.SelectAllOrderbyLastUser())
             {
                 titleText = titleText.Replace($"${{{titleTag.Id}}}", titleTag.DisplayName);

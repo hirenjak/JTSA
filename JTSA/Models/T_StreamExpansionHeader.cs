@@ -24,6 +24,8 @@ namespace JTSA.Models
 
         public bool DoShoutout { get; set; }
 
+        public int DelaySeconds { get; set; }
+
         public string TriggerComment { get; set; } = string.Empty;
 
         public string TriggerChannelPointId { get; set; } = string.Empty;

@@ -4,6 +4,7 @@ using JTSA.Models;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using NAudio.Wave;
@@ -35,6 +36,200 @@ namespace JTSA.Panels
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
 
         public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
+
+        /// <summary>OBSブラウザソース用のチャットデータを返す。</summary>
+        public string CreateObsChatJson()
+        {
+            object[] items = Array.Empty<object>();
+
+            Dispatcher.Invoke(() =>
+            {
+                items = TwitchChatFormList
+                    .Reverse()
+                    .Select(chat => (object)new
+                    {
+                        displayName = chat.DisplayName,
+                        userName = chat.UserName,
+                        hexColor = chat.HexColor,
+                        messageColor = chat.MessageColor,
+                        profileImageUrl = chat.ProfielImageUrl,
+                        messageParts = chat.MessageParts.Select(part => new
+                        {
+                            text = part.Text,
+                            imageUrl = part.ImageUrl,
+                            isEmote = part.IsEmote
+                        }).ToList()
+                    })
+                    .ToArray();
+            });
+
+            return JsonSerializer.Serialize(new { items });
+        }
+
+        /// <summary>WPF版チャットオーバーレイと同じ見た目のOBS用HTMLを返す。</summary>
+        public string CreateObsChatHtml() => """
+            <!DOCTYPE html>
+            <html lang="ja">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>JTSA Chat Overlay</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    html, body {
+                        width: 100%;
+                        height: 100%;
+                        margin: 0;
+                        overflow: hidden;
+                        background: transparent;
+                        font-family: "Yu Gothic UI", "Meiryo UI", sans-serif;
+                    }
+                    #overlay {
+                        position: absolute;
+                        inset: 10px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: flex-end;
+                        overflow: hidden;
+                        padding: 12px;
+                        border-radius: 12px;
+                        background: rgba(0, 0, 0, 0.267);
+                    }
+                    #chatList {
+                        display: flex;
+                        min-height: 0;
+                        flex-direction: column;
+                        justify-content: flex-end;
+                    }
+                    .chatItem { flex: 0 0 auto; }
+                    .chatContent {
+                        display: grid;
+                        grid-template-columns: 38px minmax(0, 1fr);
+                        column-gap: 10px;
+                        margin: 6px 8px 0;
+                    }
+                    .avatar {
+                        width: 36px;
+                        height: 38px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                    }
+                    .messageArea { min-width: 0; }
+                    .userLine {
+                        display: flex;
+                        align-items: baseline;
+                        min-width: 0;
+                        font-size: 13px;
+                        line-height: 17px;
+                        white-space: nowrap;
+                    }
+                    .displayName, .userName {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .userName {
+                        margin-left: 4px;
+                        color: white;
+                    }
+                    .message {
+                        color: white;
+                        font-size: 20px;
+                        line-height: 25px;
+                        overflow-wrap: anywhere;
+                        white-space: pre-wrap;
+                    }
+                    .emote {
+                        width: auto;
+                        height: 34px;
+                        vertical-align: middle;
+                    }
+                    .divider {
+                        height: 2px;
+                        margin-top: 6px;
+                        background: white;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="overlay"><div id="chatList"></div></div>
+                <script>
+                    const list = document.getElementById("chatList");
+
+                    function createMessagePart(part) {
+                        if (part.isEmote && part.imageUrl) {
+                            const image = document.createElement("img");
+                            image.className = "emote";
+                            image.src = part.imageUrl;
+                            image.alt = part.text ?? "";
+                            return image;
+                        }
+
+                        return document.createTextNode(part.text ?? "");
+                    }
+
+                    function render(items) {
+                        const fragment = document.createDocumentFragment();
+
+                        for (const item of items ?? []) {
+                            const row = document.createElement("div");
+                            row.className = "chatItem";
+
+                            const content = document.createElement("div");
+                            content.className = "chatContent";
+
+                            const avatar = document.createElement("img");
+                            avatar.className = "avatar";
+                            avatar.src = item.profileImageUrl ?? "";
+                            avatar.alt = "";
+
+                            const messageArea = document.createElement("div");
+                            messageArea.className = "messageArea";
+
+                            const userLine = document.createElement("div");
+                            userLine.className = "userLine";
+
+                            const displayName = document.createElement("span");
+                            displayName.className = "displayName";
+                            displayName.style.color = item.hexColor || "white";
+                            displayName.textContent = item.displayName ?? "";
+
+                            const userName = document.createElement("span");
+                            userName.className = "userName";
+                            userName.textContent = `(${item.userName ?? ""})`;
+
+                            const message = document.createElement("div");
+                            message.className = "message";
+                            message.style.color = item.messageColor || "white";
+                            for (const part of item.messageParts ?? []) {
+                                message.appendChild(createMessagePart(part));
+                            }
+
+                            userLine.append(displayName, userName);
+                            messageArea.append(userLine, message);
+                            content.append(avatar, messageArea);
+
+                            const divider = document.createElement("div");
+                            divider.className = "divider";
+                            row.append(content, divider);
+                            fragment.appendChild(row);
+                        }
+
+                        list.replaceChildren(fragment);
+                    }
+
+                    async function load() {
+                        try {
+                            const response = await fetch("/chat-data?t=" + Date.now(), { cache: "no-store" });
+                            if (response.ok) render((await response.json()).items);
+                        } catch { }
+                    }
+
+                    load();
+                    setInterval(load, 500);
+                </script>
+            </body>
+            </html>
+            """;
 
         private bool isChatUserListVisible = true;
 

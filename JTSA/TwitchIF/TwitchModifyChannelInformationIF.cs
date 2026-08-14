@@ -9,6 +9,7 @@ namespace JTSA.Forms.TwitchIF
     class TwitchModifyChannelInformationIF
     {
         public required string gameId { get; set; }
+        public required string gameName { get; set; }
         public required string broadcasterLanguage { get; set; }
         public required string title { get; set; }
         public required int delay { get; set; }

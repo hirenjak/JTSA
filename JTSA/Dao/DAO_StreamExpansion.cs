@@ -20,6 +20,7 @@ internal static class DAO_StreamExpansion
     public static long Save(T_StreamExpansionHeader header, IEnumerable<T_StreamExpansionItem> items)
     {
         using var db = new AppDbContext();
+        header.DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600);
         var entity = header.Id == 0 ? null : db.T_StreamExpansionHeader.SingleOrDefault(x => x.Id == header.Id);
         if (entity is null)
         {
@@ -36,6 +37,7 @@ internal static class DAO_StreamExpansion
             entity.IsSubscribe = header.IsSubscribe;
             entity.IsBits = header.IsBits;
             entity.DoShoutout = header.DoShoutout;
+            entity.DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600);
             entity.TriggerComment = header.TriggerComment;
             entity.TriggerChannelPointId = header.TriggerChannelPointId;
             entity.UpdatedDateTime = DateTime.Now;

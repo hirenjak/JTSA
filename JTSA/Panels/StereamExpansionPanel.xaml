@@ -82,7 +82,7 @@
         <!-- 実装内容 -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="120"/>
+                <RowDefinition Height="144"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -137,6 +137,20 @@
                             <CheckBox IsChecked="{Binding IsBits}" VerticalAlignment="Center"/>
                             <Label Content="ビッツ起動" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Height="24">
+                        <Label
+                            Content="実行遅延（秒）："
+                            Width="150"
+                            Foreground="White"
+                            VerticalAlignment="Center"/>
+
+                        <TextBox
+                            Width="80" Height="20"
+                            FontSize="12"
+                            ToolTip="トリガー発生後、音声・画像・チャット・Shoutoutを実行するまでの待機時間（0～3600秒）"
+                            Text="{Binding DelaySeconds, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Height="24">
@@ -344,6 +358,7 @@
                                                     Height="20"
                                                     FontSize="12"
                                                     IsEnabled="{Binding IsChat}"
+                                                    ToolTip="レイド用プレースホルダー: {raid_user} レイド元の名前 / {raid_title} 直近の配信タイトル / {raid_category} 直近の配信カテゴリ"
                                                     Text="{Binding ChatContent, UpdateSourceTrigger=PropertyChanged}"/>
                                             </Grid>
 
@@ -397,6 +412,52 @@
 
                             </StackPanel>
                         </Grid>
+                    </TabItem>
+                    <TabItem Header="ヘルプ">
+                        <ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="16">
+                                <TextBlock FontSize="20" FontWeight="Bold" Foreground="White"
+                                           Text="チャット用プレースホルダー"/>
+                                <TextBlock Margin="0,8,0,16" Foreground="LightGray" TextWrapping="Wrap"
+                                           Text="チャットの本文に以下を入力すると、レイド受信時の情報へ自動的に置き換わります。"/>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox FontFamily="Consolas" Foreground="LightSkyBlue"
+                                             Background="Transparent" BorderThickness="0" Padding="0"
+                                             IsReadOnly="True" Cursor="IBeam" Text="{}{raid_user}"/>
+                                    <TextBlock Grid.Column="1" Foreground="White" Text="レイド元ユーザーの表示名"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox FontFamily="Consolas" Foreground="LightSkyBlue"
+                                             Background="Transparent" BorderThickness="0" Padding="0"
+                                             IsReadOnly="True" Cursor="IBeam" Text="{}{raid_title}"/>
+                                    <TextBlock Grid.Column="1" Foreground="White" Text="レイド元の直近の配信タイトル"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox FontFamily="Consolas" Foreground="LightSkyBlue"
+                                             Background="Transparent" BorderThickness="0" Padding="0"
+                                             IsReadOnly="True" Cursor="IBeam" Text="{}{raid_category}"/>
+                                    <TextBlock Grid.Column="1" Foreground="White" Text="レイド元の直近の配信カテゴリ"/>
+                                </Grid>
+
+                                <TextBlock Foreground="LightGray" TextWrapping="Wrap"
+                                           Text="※ レイド以外のトリガーでは置換されません。Twitchからタイトルやカテゴリを取得できなかった場合、その部分は空文字になります。"/>
+                            </StackPanel>
+                        </ScrollViewer>
                     </TabItem>
                 </TabControl>
             </Grid>
