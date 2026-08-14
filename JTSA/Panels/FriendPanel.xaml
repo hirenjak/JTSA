@@ -129,7 +129,7 @@
 
                 <Label Grid.Row="0" Content="※クリックすると左の選択ユーザーに追加される" Foreground="White"/>
 
-                <ListBox Grid.Row="1" x:Name="FriendListBox" 
+                <ListBox Grid.Row="1" x:Name="FriendListBox"
                          d:ItemsSource="{d:SampleData ItemCount=3}"
                          ItemsSource="{Binding FriendFormList}" 
                          Background="#FF404040" 

@@ -131,13 +131,18 @@ namespace JTSA.Panels
                 LoginId = streamerInfo.Login,
                 DisplayName = streamerInfo.DisplayName,
                 ProfielImageUrl = JTSAHelper.BitmapToBase64(profielImage),
+                IsFriend = true,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
                 UpdatedDateTime = DateTime.Now
             };
 
             // 挿入処理
-            DAO_User.Insert(isnertData);
+            if (!DAO_User.Insert(isnertData))
+            {
+                // チャットのプロフィールキャッシュとして登録済みの場合はフレンド化する。
+                DAO_User.MarkAsFriend(streamerInfo.UserId);
+            }
 
             // 再読み込み処理
             ReloadFriend();
@@ -153,7 +158,7 @@ namespace JTSA.Panels
             using var db = new AppDbContext();
             FriendFormList.Clear();
 
-            // データの取得
+            // プロフィールキャッシュを除き、明示的に登録されたフレンドのみ取得
             var records = DAO_User.SelectAllOrderbyLastUser();
 
             // 画面データ入れ換え処理

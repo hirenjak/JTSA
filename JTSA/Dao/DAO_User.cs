@@ -25,6 +25,8 @@ namespace JTSA.Dao
                     UserId = record.UserId,
                     LoginId = record.LoginId,
                     DisplayName = record.DisplayName,
+                    ProfielImageUrl = record.ProfielImageUrl,
+                    IsFriend = record.IsFriend,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
@@ -46,13 +48,17 @@ namespace JTSA.Dao
 
             List<M_User> results = new();
 
-            foreach (var record in db.M_User.OrderByDescending(x => x.LastUsedDateTime))
+            foreach (var record in db.M_User
+                .Where(x => x.IsFriend)
+                .OrderByDescending(x => x.LastUsedDateTime))
             {
                 results.Add(new()
                 {
                     UserId = record.UserId,
                     LoginId = record.LoginId,
                     DisplayName = record.DisplayName,
+                    ProfielImageUrl = record.ProfielImageUrl,
+                    IsFriend = record.IsFriend,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
                     UpdatedDateTime = record.UpdatedDateTime
@@ -126,6 +132,19 @@ namespace JTSA.Dao
             var targetRecord = SelectOneByUserId(broadcastId);
 
             targetRecord.LastUsedDateTime = DateTime.Now;
+
+            return Update(targetRecord);
+        }
+
+        /// <summary>プロフィールキャッシュに存在するユーザーをフレンドとして登録する。</summary>
+        public static bool MarkAsFriend(string userId)
+        {
+            var targetRecord = SelectOneByUserId(userId);
+            if (targetRecord == null) return false;
+
+            targetRecord.IsFriend = true;
+            targetRecord.LastUsedDateTime = DateTime.Now;
+            targetRecord.UpdatedDateTime = DateTime.Now;
 
             return Update(targetRecord);
         }

@@ -431,6 +431,9 @@ namespace JTSA.Migrations
                     b.Property<string>("ProfielImageUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsFriend")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedDateTime")
                         .HasColumnType("TEXT");
 

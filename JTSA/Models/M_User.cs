@@ -11,4 +11,7 @@ public class M_User : DBBase
     public required string DisplayName { get; set; }
 
     public string? ProfielImageUrl { get; set; }
+
+    /// <summary>フレンド一覧へ明示的に登録されているか。</summary>
+    public bool IsFriend { get; set; } = false;
 }

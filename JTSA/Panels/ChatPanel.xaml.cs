@@ -34,6 +34,10 @@ namespace JTSA.Panels
 
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
 
+        public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
+
+        private bool isChatUserListVisible = true;
+
         private WaveFileReader? ChatNotificationReader = new(Properties.Resources.CommentNotification);
         private WaveOutEvent? ChatNotificationPlayer = new();
 
@@ -133,6 +137,7 @@ namespace JTSA.Panels
 
             // 前回配信時のチャットユーザーをクリア
             DAO_ChatUser.AllDelete();
+            ChatUserFormList.Clear();
             StreamSupportTracker.Reset();
 
             if(twitchChatService == null)
@@ -246,6 +251,7 @@ namespace JTSA.Panels
                     LoginId = streamerInfo.Login,
                     DisplayName = streamerInfo.DisplayName,
                     ProfielImageUrl = streamerInfo.ProfileImageUrl,
+                    IsFriend = false,
                     LastUsedDateTime = DateTime.Now,
                     CreatedDateTime = DateTime.Now,
                     UpdatedDateTime = DateTime.Now
@@ -256,7 +262,9 @@ namespace JTSA.Panels
                 userData = insertData;
             }
 
-            form.ProfielImageUrl = userData?.ProfielImageUrl.Replace("-300x300.png", "-70x70.png");
+            if (userData == null) return;
+
+            form.ProfielImageUrl = userData.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png");
             form.CreatedDateTime = DateTime.Now;
 
             if (isChannelPoint)
@@ -292,9 +300,60 @@ namespace JTSA.Panels
                 ChatNotificationPlayer.Play();
             }
 
+            UpdateChatUserList(form, userData);
+
             TwitchChatFormList.Insert(0, form);
 
             await PinedChatLoad();
+        }
+
+        /// <summary>発言ユーザーを重複なしで一覧へ追加し、最新発言者を先頭へ移動する。</summary>
+        private void UpdateChatUserList(TwitchChatForm chat, M_User user)
+        {
+            var existingUser = ChatUserFormList.FirstOrDefault(x => x.UserId == chat.UserId);
+            var messageCount = (existingUser?.MessageCount ?? 0) + 1;
+
+            if (existingUser != null)
+            {
+                ChatUserFormList.Remove(existingUser);
+            }
+
+            ChatUserFormList.Insert(0, new ChatUserForm
+            {
+                UserId = chat.UserId,
+                UserName = user.LoginId,
+                DisplayName = user.DisplayName,
+                ProfileImageUrl = user.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png") ?? "",
+                LastChatDateTime = DateTime.Now,
+                MessageCount = messageCount
+            });
+        }
+
+        /// <summary>チャットユーザー一覧の表示・非表示を切り替える。</summary>
+        private void ChatUserListToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            isChatUserListVisible = !isChatUserListVisible;
+
+            ChatUserListPanel.Visibility = isChatUserListVisible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ChatUserListColumn.Width = isChatUserListVisible
+                ? new GridLength(260)
+                : new GridLength(0);
+            ChatUserListToggleButton.Content = isChatUserListVisible
+                ? "ユーザー一覧を隠す"
+                : "ユーザー一覧を表示";
+        }
+
+        /// <summary>チャットユーザー一覧の右クリックメニューからフレンドへ追加する。</summary>
+        private void AddChatUserToFriendMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem { DataContext: ChatUserForm user }) return;
+
+            if (DAO_User.MarkAsFriend(user.UserId))
+            {
+                ((MainWindow)Application.Current.MainWindow).FriendPanel.ReloadFriend();
+            }
         }
 
         private async Task PinedChatLoad()

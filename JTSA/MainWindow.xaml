@@ -446,6 +446,10 @@
                     <panels:StereamExpansionPanel x:Name="StereamExpansionPanel"/>
                 </TabItem>
 
+                <TabItem Header="パッチノート">
+                    <panels:PatchNotePanel x:Name="PatchNotePanel"/>
+                </TabItem>
+
                 <TabItem Header="Setting">
                     <panels:SettingPanel x:Name="SettingPanel"/>
                 </TabItem>

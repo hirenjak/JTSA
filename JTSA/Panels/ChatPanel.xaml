@@ -9,7 +9,11 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid
         Margin="8, 4, 8, 0">
-        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition x:Name="ChatUserListColumn" Width="260"/>
+        </Grid.ColumnDefinitions>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -17,7 +21,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel 
-            Grid.Row="0">
+            Grid.Row="0"
+            Grid.ColumnSpan="2">
 
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -100,6 +105,15 @@
                         Click="TransparentWindowOpenSetting_Click"/>
                 </StackPanel>
 
+                <Button Grid.Column="2"
+                        x:Name="ChatUserListToggleButton"
+                        Content="ユーザー一覧を隠す"
+                        Width="136"
+                        Height="28"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Click="ChatUserListToggleButton_Click"/>
+
             </Grid>
             
             <!-- チャット送信部 -->
@@ -132,7 +146,7 @@
             
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" x:Name="ChatListBox" 
+        <ScrollViewer Grid.Row="1" Grid.Column="0" x:Name="ChatListBox"
                       HorizontalScrollBarVisibility="Disabled" 
                       VerticalScrollBarVisibility="Auto"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -229,7 +243,8 @@
 
 
         <StackPanel
-            Grid.Row="2">
+            Grid.Row="2"
+            Grid.Column="0">
             <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
 
             <ScrollViewer Grid.Row="1" x:Name="PinedChatListBox" 
@@ -337,5 +352,92 @@
             </ScrollViewer>
 
         </StackPanel>
+
+        <!-- この配信中に発言したユーザー。最新発言者を先頭に表示する。 -->
+        <Border Grid.Row="1"
+                Grid.RowSpan="2"
+                Grid.Column="1"
+                x:Name="ChatUserListPanel"
+                Margin="8,0,0,0"
+                Background="#FF303030"
+                BorderBrush="#FF606060"
+                BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="36"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Text="{Binding ChatUserFormList.Count, StringFormat=チャットユーザー ({0})}"
+                           Foreground="White"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="10,0"
+                           VerticalAlignment="Center"/>
+
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding ChatUserFormList}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="ContextMenu">
+                                <Setter.Value>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="フレンドに追加"
+                                                  Click="AddChatUserToFriendMenuItem_Click"/>
+                                    </ContextMenu>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <Grid Margin="8,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Ellipse Grid.Column="0" Width="36" Height="36">
+                                        <Ellipse.Fill>
+                                            <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+
+                                    <StackPanel Grid.Column="1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   Foreground="White"
+                                                   FontSize="13"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding UserName, StringFormat=@{0}}"
+                                                   Foreground="LightGray"
+                                                   FontSize="10"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding MessageCount, StringFormat={}{0}件}"
+                                                   Foreground="LightSeaGreen"
+                                                   FontSize="11"
+                                                   HorizontalAlignment="Right"/>
+                                        <TextBlock Text="{Binding LastChatDateTime, StringFormat={}{0:HH:mm}}"
+                                                   Foreground="LightGray"
+                                                   FontSize="10"
+                                                   HorizontalAlignment="Right"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Height="1" Background="#FF505050"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
