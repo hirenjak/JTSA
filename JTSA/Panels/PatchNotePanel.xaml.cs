@@ -16,6 +16,20 @@ namespace JTSA.Panels
         {
             CurrentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString(2) ?? "-";
 
+            PatchNotes.Add(new PatchNoteForm
+            {
+                Version = "v1.1.8",
+                ReleaseDate = "2026/08/15",
+                Summary = "既存機能の改善",
+                Changes =
+                [
+                    "チャットパネル：",
+                    "・棒読みちゃん連携に対応",
+                    "設定パネル：",
+                    "・",
+
+                ]
+            });
 
             PatchNotes.Add(new PatchNoteForm
             {

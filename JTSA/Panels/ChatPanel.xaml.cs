@@ -33,6 +33,11 @@ namespace JTSA.Panels
 
         private readonly StreamExpansionService streamExpansionService = new();
 
+        private readonly BouyomiChanClient bouyomiChanClient = new();
+
+        private bool bouyomiEnabled;
+        private string bouyomiEndpoint = BouyomiChanClient.DefaultEndpoint;
+
         private readonly ConcurrentDictionary<string, byte> chattedUserIds = new();
 
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
@@ -328,6 +333,8 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         public async void Initialize()
         {
+            ReloadBouyomiSettings();
+
             ChatNotificationVolumeSlider.Value =
                double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatNotificationVolume)?.Value ?? "50");
 
@@ -351,6 +358,8 @@ namespace JTSA.Panels
 
                 twitchChatService.MessageReceived += message =>
                 {
+                    SpeakChatMessage(message.Message);
+
                     Dispatcher.InvokeAsync(() =>
                     {
                         // チャット欄に亜チャット追加
@@ -442,6 +451,31 @@ namespace JTSA.Panels
             #endregion
 
             await PinedChatLoad();
+        }
+
+        /// <summary>DBから棒読みちゃん連携の設定を再読み込みする。</summary>
+        public void ReloadBouyomiSettings()
+        {
+            bouyomiEnabled = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.BouyomiEnabled)?.Value == "1";
+            bouyomiEndpoint = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.BouyomiEndpoint)?.Value
+                ?? BouyomiChanClient.DefaultEndpoint;
+        }
+
+        private async void SpeakChatMessage(string message)
+        {
+            if (!bouyomiEnabled || string.IsNullOrWhiteSpace(message)) return;
+
+            try
+            {
+                await bouyomiChanClient.SpeakAsync(bouyomiEndpoint, message);
+            }
+            catch (Exception ex)
+            {
+                // 読み上げ失敗でTwitchチャットの受信処理を止めない。
+                Console.WriteLine($"棒読みちゃん読み上げエラー: {ex.Message}");
+            }
         }
 
 
