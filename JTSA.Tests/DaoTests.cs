@@ -72,6 +72,32 @@ public sealed class DaoTests : IDisposable
         Assert.Equal(1, db.M_Setting.Count(x => x.Name == (int)DAO_Setting.SettingName.UserName));
     }
 
+    [Fact]
+    public void UserDao_MarkAsFriend_MakesCachedUserVisibleInFriendQuery()
+    {
+        var now = new DateTime(2026, 8, 16, 12, 0, 0, DateTimeKind.Local);
+        var user = new M_User
+        {
+            UserId = "123456",
+            LoginId = "test_user",
+            DisplayName = "Test User",
+            ProfielImageUrl = "https://example.test/profile.png",
+            IsFriend = false,
+            LastUsedDateTime = now,
+            CreatedDateTime = now,
+            UpdatedDateTime = now
+        };
+
+        Assert.True(DAO_User.Insert(user));
+        Assert.Empty(DAO_User.SelectAllOrderbyLastUser());
+
+        Assert.True(DAO_User.MarkAsFriend(user.UserId));
+
+        var friend = Assert.Single(DAO_User.SelectAllOrderbyLastUser());
+        Assert.Equal(user.UserId, friend.UserId);
+        Assert.True(friend.IsFriend);
+    }
+
     public void Dispose()
     {
         AppDbContext.DatabasePathOverride = null;

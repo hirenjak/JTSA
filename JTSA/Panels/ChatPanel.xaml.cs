@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using NAudio.Wave;
 using System.Collections.Concurrent;
 
@@ -27,6 +28,9 @@ namespace JTSA.Panels
     /// </summary>
     public partial class ChatPanel : UserControl
     {
+        public static readonly RoutedUICommand AddFriendCommand = new(
+            "フレンドに追加", nameof(AddFriendCommand), typeof(ChatPanel));
+
         private TwitchChatService? twitchChatService;
 
         private TwitchEventSubService? twitchEventSubService;
@@ -39,6 +43,9 @@ namespace JTSA.Panels
         private string bouyomiEndpoint = BouyomiChanClient.DefaultEndpoint;
 
         private readonly ConcurrentDictionary<string, byte> chattedUserIds = new();
+
+        // XAML construction can raise ValueChanged/Checked before persisted values are loaded.
+        private bool overlayAppearanceInitialized;
 
         public ObservableCollection<TwitchChatForm> TwitchChatFormList { get; } = new();
 
@@ -344,6 +351,7 @@ namespace JTSA.Panels
             ChatOverlayFontSizeSlider.Value = ReadOverlayFontSize();
             ChatOverlayShowIconCheckBox.IsChecked =
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
+            overlayAppearanceInitialized = true;
 
             // 前回配信時のチャットユーザーをクリア
             DAO_ChatUser.AllDelete();
@@ -599,14 +607,32 @@ namespace JTSA.Panels
         }
 
         /// <summary>チャットユーザー一覧の右クリックメニューからフレンドへ追加する。</summary>
-        private void AddChatUserToFriendMenuItem_Click(object sender, RoutedEventArgs e)
+        private void ChatUserContextMenu_Opened(object sender, RoutedEventArgs e)
         {
-            if (sender is not MenuItem { DataContext: ChatUserForm user }) return;
+            if (sender is not ContextMenu contextMenu) return;
+
+            var user = (contextMenu.PlacementTarget as FrameworkElement)?.DataContext as ChatUserForm;
+            foreach (var menuItem in contextMenu.Items.OfType<MenuItem>())
+            {
+                menuItem.CommandTarget = contextMenu.PlacementTarget;
+                menuItem.CommandParameter = user;
+            }
+        }
+
+        private void AddChatUserToFriendCommand_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            var user = e.Parameter as ChatUserForm
+                ?? (e.OriginalSource as FrameworkElement)?.DataContext as ChatUserForm
+                ?? (e.Source as FrameworkElement)?.DataContext as ChatUserForm;
+
+            if (user == null) return;
 
             if (DAO_User.MarkAsFriend(user.UserId))
             {
                 ((MainWindow)Application.Current.MainWindow).FriendPanel.ReloadFriend();
             }
+
+            e.Handled = true;
         }
 
         private async Task PinedChatLoad()
@@ -671,6 +697,8 @@ namespace JTSA.Panels
 
         private void ChatOverlayFontSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
+            if (!overlayAppearanceInitialized) return;
+
             DAO_Setting.InsertUpdate(
                 DAO_Setting.SettingName.ChatOverlayFontSize,
                 e.NewValue.ToString(CultureInfo.InvariantCulture));
@@ -679,6 +707,8 @@ namespace JTSA.Panels
 
         private void ChatOverlayShowIconCheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            if (!overlayAppearanceInitialized) return;
+
             DAO_Setting.InsertUpdate(
                 DAO_Setting.SettingName.ChatOverlayShowUserIcon,
                 ChatOverlayShowIconCheckBox.IsChecked == true ? "1" : "0");
