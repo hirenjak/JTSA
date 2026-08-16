@@ -64,8 +64,8 @@ namespace JTSA.Utility
             var bitmap = new BitmapImage();
 
             bitmap.BeginInit();
-            bitmap.UriSource = new Uri(url, UriKind.Absolute);
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = stream;
             bitmap.EndInit();
             bitmap.Freeze(); // 別スレッドでも使える
 

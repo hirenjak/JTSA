@@ -7,6 +7,10 @@
              xmlns:local="clr-namespace:JTSA.Panels"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.CommandBindings>
+        <CommandBinding Command="{x:Static local:ChatPanel.AddFriendCommand}"
+                        Executed="AddChatUserToFriendCommand_Executed"/>
+    </UserControl.CommandBindings>
     <Grid
         Margin="8, 4, 8, 0">
         <Grid.ColumnDefinitions>
@@ -399,19 +403,18 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
-                            <Setter Property="ContextMenu">
-                                <Setter.Value>
-                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                        <MenuItem Header="フレンドに追加"
-                                                  Click="AddChatUserToFriendMenuItem_Click"/>
-                                    </ContextMenu>
-                                </Setter.Value>
-                            </Setter>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         </Style>
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
+                                <StackPanel.ContextMenu>
+                                    <ContextMenu Opened="ChatUserContextMenu_Opened">
+                                        <MenuItem Header="フレンドに追加"
+                                                  Command="{x:Static local:ChatPanel.AddFriendCommand}"/>
+                                    </ContextMenu>
+                                </StackPanel.ContextMenu>
                                 <Grid Margin="8,5">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="40"/>

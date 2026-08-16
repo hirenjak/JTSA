@@ -26,6 +26,8 @@ namespace JTSA.Dao
             ChatOverlayShowUserIcon = 14,
             ChatOverlayFontSize = 15,
             AutoStartRegisteredApps = 16,
+            BouyomiEnabled = 17,
+            BouyomiEndpoint = 18,
         }
 
 

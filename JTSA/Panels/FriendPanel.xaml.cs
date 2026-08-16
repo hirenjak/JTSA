@@ -5,6 +5,8 @@ using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace JTSA.Panels
 {
@@ -80,10 +82,10 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void FriendAddButton_Click(object sender, RoutedEventArgs e)
+        private async void FriendAddButton_Click(object sender, RoutedEventArgs e)
         {
             string userId = FriendAddTextBox.Text;
-            AddFriendAsync(userId);
+            await AddFriendAsync(userId);
         }
 
 
@@ -113,7 +115,7 @@ namespace JTSA.Panels
         /// フレンドDB追加処理
         /// </summary>
         /// <param name="title"></param>
-        public async void AddFriendAsync(String userId)
+        public async Task AddFriendAsync(string userId)
         {
             // 配信者情報取得
             var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(userId);
@@ -122,7 +124,7 @@ namespace JTSA.Panels
             if (streamerInfo == null) return;
             if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return;
 
-            var profielImage = JTSAHelper.LoadBitmapAsync(streamerInfo.ProfileImageUrl).Result;
+            var profielImage = await JTSAHelper.LoadBitmapAsync(streamerInfo.ProfileImageUrl);
 
             // データ作成
             var isnertData = new M_User
@@ -169,12 +171,33 @@ namespace JTSA.Panels
                     BroadcastId = item.UserId,
                     UserId = item.LoginId,
                     DisplayName = item.DisplayName,
-                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
+                    LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
+                    ProfileImage = CreateProfileImage(item.ProfielImageUrl)
                 });
             }
 
             mainWindow.StatusTextBlock.Text = "フレンドリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+
+        private static ImageSource? CreateProfileImage(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                return new BitmapImage(uri);
+            }
+
+            try
+            {
+                return JTSAHelper.Base64ToBitmap(value);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
         }
 
         /// <summary>

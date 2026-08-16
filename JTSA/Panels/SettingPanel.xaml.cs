@@ -38,6 +38,52 @@ namespace JTSA.Panels
             XPostTemplateTextBox.Text = DAO_Setting.SelectOneById(
                 DAO_Setting.SettingName.XPostTemplate)?.Value
                 ?? DAO_Setting.DefaultXPostTemplate;
+
+            BouyomiEnabledCheckBox.IsChecked = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.BouyomiEnabled)?.Value == "1";
+            BouyomiEndpointTextBox.Text = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.BouyomiEndpoint)?.Value
+                ?? BouyomiChanClient.DefaultEndpoint;
+        }
+
+        private void SaveBouyomiButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                _ = BouyomiChanClient.CreateTalkUri(BouyomiEndpointTextBox.Text, "test");
+            }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "棒読みちゃん連携");
+                return;
+            }
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.BouyomiEnabled,
+                BouyomiEnabledCheckBox.IsChecked == true ? "1" : "0");
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.BouyomiEndpoint,
+                BouyomiEndpointTextBox.Text.Trim());
+
+            mainWindow.ChatPanel.ReloadBouyomiSettings();
+            MessageBox.Show("読み上げ設定を保存しました。", "棒読みちゃん連携");
+        }
+
+        private async void TestBouyomiButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var client = new BouyomiChanClient();
+                await client.SpeakAsync(
+                    BouyomiEndpointTextBox.Text,
+                    "JTSAの読み上げテストです。");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"読み上げに失敗しました。\n{ex.Message}",
+                    "棒読みちゃん連携");
+            }
         }
 
         private void SaveXPostTemplateButton_Click(object sender, RoutedEventArgs e)
