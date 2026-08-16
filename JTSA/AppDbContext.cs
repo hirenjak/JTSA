@@ -18,6 +18,7 @@ namespace JTSA.Models
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
         public DbSet<T_ChatUser> T_ChatUser { get; set; }
+        public DbSet<T_DailyChatUserCount> T_DailyChatUserCount { get; set; }
         public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
         public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
         public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
@@ -37,6 +38,9 @@ namespace JTSA.Models
 
             modelBuilder.Entity<T_ChannelPointPresetItem>()
                 .HasKey(c => new { c.PresetId, c.RewardId });
+
+            modelBuilder.Entity<T_DailyChatUserCount>()
+                .HasKey(c => new { c.ChatDate, c.UserId });
 
             modelBuilder.Entity<T_StreamExpansionItem>()
                 .HasIndex(c => new { c.Id, c.HeaderId });

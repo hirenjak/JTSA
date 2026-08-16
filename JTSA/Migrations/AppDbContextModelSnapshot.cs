@@ -124,6 +124,36 @@ namespace JTSA.Migrations
                     b.ToTable("T_ChatUser");
                 });
 
+            modelBuilder.Entity("JTSA.Models.T_DailyChatUserCount", b =>
+                {
+                    b.Property<DateTime>("ChatDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ChatCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LoginId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ChatDate", "UserId");
+
+                    b.ToTable("T_DailyChatUserCount");
+                });
+
             modelBuilder.Entity("JTSA.Models.T_GamePlaylistHeader", b =>
                 {
                     b.Property<long>("GamePlayListId")

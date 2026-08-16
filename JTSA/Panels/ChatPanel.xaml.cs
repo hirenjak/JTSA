@@ -494,6 +494,9 @@ namespace JTSA.Panels
         /// <param name="isChannelPoint"></param>
         private async void ChatAddAsync(TwitchChatForm form, bool isChannelPoint)
         {
+            DAO_DailyChatUserCount.Increment(
+                DateTime.Now, form.UserId, form.UserName, form.DisplayName);
+
             var userData = DAO_User.SelectOneByUserId(form.UserId);
 
             if (userData == null)

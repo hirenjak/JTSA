@@ -98,6 +98,27 @@ public sealed class DaoTests : IDisposable
         Assert.True(friend.IsFriend);
     }
 
+    [Fact]
+    public void DailyChatUserCount_Increment_AggregatesByDateAndUser()
+    {
+        var firstDay = new DateTime(2026, 8, 16, 23, 59, 0);
+        var nextDay = firstDay.AddDays(1);
+
+        DAO_DailyChatUserCount.Increment(firstDay, "user-1", "login", "Display");
+        DAO_DailyChatUserCount.Increment(firstDay, "user-1", "login", "Display Updated");
+        DAO_DailyChatUserCount.Increment(firstDay, "user-2", "other", "Other");
+        DAO_DailyChatUserCount.Increment(nextDay, "user-1", "login", "Display Updated");
+
+        var firstDayCounts = DAO_DailyChatUserCount.SelectByDate(firstDay);
+        Assert.Equal(2, firstDayCounts.Count);
+        Assert.Equal("user-1", firstDayCounts[0].UserId);
+        Assert.Equal(2, firstDayCounts[0].ChatCount);
+        Assert.Equal("Display Updated", firstDayCounts[0].DisplayName);
+
+        var nextDayCount = Assert.Single(DAO_DailyChatUserCount.SelectByDate(nextDay));
+        Assert.Equal(1, nextDayCount.ChatCount);
+    }
+
     public void Dispose()
     {
         AppDbContext.DatabasePathOverride = null;
