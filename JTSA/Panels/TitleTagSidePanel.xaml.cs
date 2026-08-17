@@ -39,9 +39,12 @@ namespace JTSA.Panels
         {
             if (TitleTagListBox.SelectedItem is TitleTagForm selectedItem)
             {
-                mainWindow.InsertTextAtCaret($"${{{selectedItem.Id}}}");
-                DAO_TitleTag.UpdateLastUse(selectedItem.Id);
-                ReloadTitleTag();
+                mainWindow.InsertTextAtCaret(selectedItem.Placeholder);
+                if (!selectedItem.IsSystem)
+                {
+                    DAO_TitleTag.UpdateLastUse(selectedItem.Id);
+                    ReloadTitleTag();
+                }
             }
 
             // 選択状態を解除
@@ -78,7 +81,7 @@ namespace JTSA.Panels
         private void TitleTagDeleteButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
-            if (sender is Button { DataContext: TitleTagForm item })
+            if (sender is Button { DataContext: TitleTagForm { IsSystem: false } item })
             {
                 DAO_TitleTag.Delete(item.Id);
             }
@@ -111,6 +114,28 @@ namespace JTSA.Panels
             using var db = new AppDbContext();
             TitleTagFormList.Clear();
 
+            TitleTagFormList.Add(new()
+            {
+                Placeholder = "${title}",
+                IsSystem = true,
+                DisplayName = "配信タイトル",
+                LastUsedDate = string.Empty
+            });
+            TitleTagFormList.Add(new()
+            {
+                Placeholder = "${date}",
+                IsSystem = true,
+                DisplayName = "今日の日付（yyyy/MM/dd）",
+                LastUsedDate = string.Empty
+            });
+            TitleTagFormList.Add(new()
+            {
+                Placeholder = "${friend}",
+                IsSystem = true,
+                DisplayName = "選択したフレンド",
+                LastUsedDate = string.Empty
+            });
+
             // データの取得
             var records = DAO_TitleTag.SelectAllOrderbyLastUser();
 
@@ -120,6 +145,8 @@ namespace JTSA.Panels
                 TitleTagFormList.Add(new()
                 {
                     Id = item.Id,
+                    Placeholder = $"${{{item.Id}}}",
+                    IsSystem = false,
                     DisplayName = item.DisplayName,
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });

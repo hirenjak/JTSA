@@ -649,22 +649,38 @@ namespace JTSA.Utility
         public static async Task<bool> SendShoutout(string toBroadcasterId)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "Shoutout処理");
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+                client.DefaultRequestHeaders.Add("Client-Id", ClientID);
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
-            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+                using var response = await client.PostAsync(
+                    $"https://api.twitch.tv/helix/chat/shoutouts" +
+                    $"?from_broadcaster_id={BroadcasterId}" +
+                    $"&to_broadcaster_id={toBroadcasterId}" +
+                    $"&moderator_id={BroadcasterId}", null);
 
-            var response = await client.PostAsync(
-                $"https://api.twitch.tv/helix/chat/shoutouts" +
-                $"?from_broadcaster_id={BroadcasterId}" +
-                $"&to_broadcaster_id={toBroadcasterId}" +
-                $"&moderator_id={BroadcasterId}", null);
+                await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                    response, "Shoutout", "moderator:manage:shoutouts");
 
-            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
-                response, "Shoutout", "moderator:manage:shoutouts");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseDetail = await response.Content.ReadAsStringAsync();
+                    mainWindow.AppLogPanel.Error(
+                        nameof(TwitchHelper),
+                        $"Shoutout失敗 ({(int)response.StatusCode} {response.StatusCode})：{responseDetail}");
+                    return false;
+                }
 
-            mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
-            return response.IsSuccessStatusCode;
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "Shoutout失敗：" + ex.Message);
+                return false;
+            }
         }
 
         public static async Task<string?> SendChat(string chatContent)

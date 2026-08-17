@@ -6,6 +6,24 @@ namespace JTSA.Tests;
 public class TitlePlaceholderReplacerTests
 {
     [Fact]
+    public void ReplaceTitle_ReplacesEveryTitlePlaceholder()
+    {
+        var result = TitlePlaceholderReplacer.ReplaceTitle(
+            "配信タイトル",
+            "${1} ${title} ${1} ${date}");
+
+        Assert.Equal("${1} 配信タイトル ${1} ${date}", result);
+    }
+
+    [Fact]
+    public void ReplaceTitle_ReturnsTitleWhenTemplateIsEmpty()
+    {
+        var result = TitlePlaceholderReplacer.ReplaceTitle("配信タイトル", "");
+
+        Assert.Equal("配信タイトル", result);
+    }
+
+    [Fact]
     public void ReplaceDateReplacesAllDatePlaceholders()
     {
         var dateTime = new DateTime(2026, 8, 14, 23, 59, 0);

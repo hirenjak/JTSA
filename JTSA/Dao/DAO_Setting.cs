@@ -28,6 +28,9 @@ namespace JTSA.Dao
             AutoStartRegisteredApps = 16,
             BouyomiEnabled = 17,
             BouyomiEndpoint = 18,
+            SpeechEngine = 19,
+            VoiceVoxEndpoint = 20,
+            VoiceVoxSpeakerId = 21,
         }
 
 

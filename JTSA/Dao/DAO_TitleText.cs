@@ -24,6 +24,7 @@ namespace JTSA.Dao
                 {
                     Id = record.Id,
                     Content = record.Content,
+                    TitlePlaceholder = record.TitlePlaceholder,
                     CategoryId = record.CategoryId,
                     CategoryName = record.CategoryName,
                     CategoryBoxArtUrl = record.CategoryBoxArtUrl,
@@ -54,6 +55,7 @@ namespace JTSA.Dao
                 {
                     Id = record.Id,
                     Content = record.Content,
+                    TitlePlaceholder = record.TitlePlaceholder,
                     CategoryId = record.CategoryId,
                     CategoryName = record.CategoryName,
                     CategoryBoxArtUrl = record.CategoryBoxArtUrl,
@@ -99,6 +101,7 @@ namespace JTSA.Dao
                 {
                     Id = record.Id,
                     Content = record.Content,
+                    TitlePlaceholder = record.TitlePlaceholder,
                     CategoryId = record.CategoryId,
                     CategoryName = record.CategoryName,
                     CategoryBoxArtUrl = record.CategoryBoxArtUrl,

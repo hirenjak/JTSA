@@ -13,6 +13,8 @@ namespace JTSA.Forms
     public class TitleTagForm
     {
         public long Id { get; set; }
+        public string Placeholder { get; set; } = string.Empty;
+        public bool IsSystem { get; set; }
         public required String DisplayName { get; set; }
         public required String LastUsedDate { get; set; }
     }
