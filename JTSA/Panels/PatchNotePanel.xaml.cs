@@ -20,7 +20,7 @@ namespace JTSA.Panels
             {
                 Version = "v1.1.10",
                 ReleaseDate = "2026/08/17",
-                Summary = "既存機能の改善",
+                Summary = "配信概要の機能拡張",
                 Changes =
                 [
                     "【配信概要パネル】",
