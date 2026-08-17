@@ -41,7 +41,7 @@
                         <DataTemplate>
                             <StackPanel>
                                 <StackPanel Margin="8, 0, 8, 0">
-                                    <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap">
+                                    <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="14" TextWrapping="Wrap">
                                     </TextBlock>
                                     <Grid Margin="0" Height="Auto">
                                         <Grid.ColumnDefinitions>
@@ -50,12 +50,33 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Text="{Binding Id}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                        <TextBlock Text="{Binding Placeholder}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
                                         <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0" >
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
                                             <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
                                             <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
                                         </StackPanel>
-                                        <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTagDeleteButton_Click" />
+                                        <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTagDeleteButton_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
                                     </Grid>
                                 </StackPanel>
 

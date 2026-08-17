@@ -509,7 +509,9 @@ namespace JTSA
             if (TitleTextLogListBox.SelectedItem is TitleTextForm selectedItem)
             {
                 TitleEditTextBox.Text = selectedItem.Content;
-                TitlePlaceholderTextBox.Text = selectedItem.TitlePlaceholder;
+                TitlePlaceholderTextBox.Text = string.IsNullOrEmpty(selectedItem.TitlePlaceholder)
+                    ? TitlePlaceholderReplacer.TitlePlaceholder
+                    : selectedItem.TitlePlaceholder;
 
                 SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
                 SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
@@ -619,6 +621,15 @@ namespace JTSA
         /// </summary>
         private void TitlePlaceholderTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (!IsInitialized) return;
+
+            if (string.IsNullOrEmpty(TitlePlaceholderTextBox.Text))
+            {
+                TitlePlaceholderTextBox.Text = TitlePlaceholderReplacer.TitlePlaceholder;
+                TitlePlaceholderTextBox.SelectionStart = TitlePlaceholderTextBox.Text.Length;
+                return;
+            }
+
             CurrentTitleTextUpdate();
         }
 
@@ -683,7 +694,6 @@ namespace JTSA
             }
 
             CurrentTitleText = streamInfo.title;
-            TitleEditTextBox.Text = CurrentTitleTextBlock.Text;
 
             var dbCategoryData = DAO_Category.SelectOneById(streamInfo.gameId);
             if (dbCategoryData == null)
@@ -695,8 +705,8 @@ namespace JTSA
                     // カテゴリ未設定で配信している場合などはここに来る。タイトルだけ反映して終了する
                     processLog.ErrorLogWrite("カテゴリ情報の取得に失敗");
 
-                    CurrentTitleText = TitleEditTextBox.Text;
                     ReloadTitleText();
+                    LoadFirstTitleLogIntoEditor(streamInfo.title);
                     TitleTagSidePanel.ReloadTitleTag();
 
                     return;
@@ -716,8 +726,6 @@ namespace JTSA
                 };
             }
 
-            CurrentTitleText = TitleEditTextBox.Text;
-
             CurrentCategoryId = dbCategoryData.CategoryId;
             CurrentCategoryName = dbCategoryData.DisplayName;
             CurrentCategoryBoxArtUrl = dbCategoryData.BoxArtUrl;
@@ -726,6 +734,7 @@ namespace JTSA
 
             // リスト読み込み処理
             ReloadTitleText();
+            LoadFirstTitleLogIntoEditor(streamInfo.title);
             TitleTagSidePanel.ReloadTitleTag();
 
             processLog.SuccessLogWrite();
@@ -762,6 +771,20 @@ namespace JTSA
             }
 
             processLog.SuccessLogWrite();
+        }
+
+        /// <summary>
+        /// タイトルログの先頭を編集欄へ読み込む。
+        /// ログが無い場合はTwitchから取得したタイトルを本文として使用する。
+        /// </summary>
+        private void LoadFirstTitleLogIntoEditor(string twitchTitle)
+        {
+            var firstTitleLog = TitleTextFormList.FirstOrDefault();
+
+            TitleEditTextBox.Text = firstTitleLog?.Content ?? twitchTitle;
+            TitlePlaceholderTextBox.Text = string.IsNullOrEmpty(firstTitleLog?.TitlePlaceholder)
+                ? TitlePlaceholderReplacer.TitlePlaceholder
+                : firstTitleLog.TitlePlaceholder;
         }
 
         /// <summary>
@@ -958,6 +981,13 @@ namespace JTSA
 		/// </summary>
 		private string TitleTextFriendTagReplace(string titleText)
 		{
+			// XAML初期化中はTitlePlaceholderTextBoxのTextChangedが
+			// FriendPanel生成前に発火するため、システムタグだけを置換する。
+			if (FriendPanel == null)
+			{
+				return TitleTextTagReplace(titleText);
+			}
+
 			var friendText = FriendPanel.FriendPrefixWordTextBox.Text;
 			foreach(var friendItem in FriendPanel.SelectedFriendFormList)
 			{
