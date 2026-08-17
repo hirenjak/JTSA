@@ -105,8 +105,11 @@ public partial class AppArrangePanel : UserControl
     private static Process? FindProcess(AppInfoForm app)
     {
         var processes = Process.GetProcessesByName(app.ProcessName);
-        var result = processes.FirstOrDefault(x => x.MainWindowHandle != IntPtr.Zero && x.MainWindowTitle == app.WindowTitle)
-                     ?? processes.FirstOrDefault(x => x.MainWindowHandle != IntPtr.Zero);
+        var result = string.IsNullOrWhiteSpace(app.WindowTitle)
+            ? processes.FirstOrDefault(x => x.MainWindowHandle != IntPtr.Zero)
+            : processes.FirstOrDefault(x =>
+                x.MainWindowHandle != IntPtr.Zero &&
+                string.Equals(x.MainWindowTitle, app.WindowTitle, StringComparison.Ordinal));
         foreach (var process in processes.Where(x => !ReferenceEquals(x, result))) process.Dispose();
         return result;
     }
@@ -219,7 +222,11 @@ public partial class AppArrangePanel : UserControl
     private void SetPathButton_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.DataContext is not AppInfoForm app) return;
-        var dialog = new OpenFileDialog { Filter = "実行ファイル (*.exe)|*.exe", Title = "起動するアプリを選択" };
+        var dialog = new OpenFileDialog
+        {
+            Filter = "起動可能なファイル (*.exe;*.bat;*.cmd)|*.exe;*.bat;*.cmd|実行ファイル (*.exe)|*.exe|バッチファイル (*.bat;*.cmd)|*.bat;*.cmd",
+            Title = "起動するアプリまたはバッチファイルを選択"
+        };
         if (File.Exists(app.AppExePath)) dialog.FileName = app.AppExePath;
         if (dialog.ShowDialog() != true) return;
         app.AppExePath = dialog.FileName;

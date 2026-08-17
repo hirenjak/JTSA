@@ -47,20 +47,29 @@ internal sealed class StreamExpansionService
             .Select(group => group.ToList())
             .ToList();
 
+        var tasks = new List<Task>();
+
         if (groups.Count > 0)
         {
             var selectedGroup = ChooseByWeight(groups);
-            await Task.WhenAll(selectedGroup.Select(item =>
+            tasks.AddRange(selectedGroup.Select(item =>
                 ExecuteAsync(item, raidPlaceholders, chatPlaceholders)));
         }
 
         if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
         {
-            var raider = await TwitchHelper.GetBroadcasterIdAsync(value);
-            if (!string.IsNullOrWhiteSpace(raider?.UserId))
-            {
-                await TwitchHelper.SendShoutout(raider.UserId);
-            }
+            tasks.Add(SendRaidShoutoutAsync(value));
+        }
+
+        await Task.WhenAll(tasks);
+    }
+
+    private static async Task SendRaidShoutoutAsync(string userName)
+    {
+        var raider = await TwitchHelper.GetBroadcasterIdAsync(userName);
+        if (!string.IsNullOrWhiteSpace(raider?.UserId))
+        {
+            await TwitchHelper.SendShoutout(raider.UserId);
         }
     }
 

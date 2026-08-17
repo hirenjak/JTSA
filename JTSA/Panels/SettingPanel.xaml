@@ -85,12 +85,20 @@
                 Background="White"/>
 
             <StackPanel Margin="0,8,0,0">
-                <Label Content="棒読みちゃん連携"
+                <Label Content="チャット読み上げ連携"
                        Padding="4,0"
                        FontSize="20"
                        Foreground="White"/>
-                <CheckBox x:Name="BouyomiEnabledCheckBox"
-                          Content="Twitchチャットを読み上げる"
+                <RadioButton x:Name="SpeechDisabledRadioButton"
+                          Content="読み上げない"
+                          Margin="8,4,0,0"
+                          Foreground="White"/>
+                <RadioButton x:Name="BouyomiEnabledRadioButton"
+                          Content="棒読みちゃん"
+                          Margin="8,4,0,0"
+                          Foreground="White"/>
+                <RadioButton x:Name="VoiceVoxEnabledRadioButton"
+                          Content="VOICEVOX"
                           Margin="8,4,0,0"
                           Foreground="White"/>
                 <TextBlock Text="棒読みちゃん HTTP URL"
@@ -103,14 +111,37 @@
                          Foreground="White"
                          Background="#FF4A4747"
                          BorderBrush="White"/>
+                <TextBlock Text="VOICEVOX Engine URL"
+                           Margin="8,8,0,2"
+                           Foreground="LightGray"/>
+                <TextBox x:Name="VoiceVoxEndpointTextBox"
+                         Margin="8,0,0,0"
+                         Padding="4"
+                         Text="http://localhost:50021/"
+                         Foreground="White"
+                         Background="#FF4A4747"
+                         BorderBrush="White"/>
+                <TextBlock Text="VOICEVOX 話者"
+                           Margin="8,8,0,2"
+                           Foreground="LightGray"/>
+                <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                    <ComboBox x:Name="VoiceVoxSpeakerComboBox"
+                              Width="240"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Id"/>
+                    <Button Content="一覧を更新"
+                            Width="80" Height="22"
+                            Margin="8,0,0,0"
+                            Click="RefreshVoiceVoxSpeakersButton_Click"/>
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="8,8,0,0">
                     <Button Content="保存"
                             Width="64" Height="22"
-                            Click="SaveBouyomiButton_Click"/>
+                            Click="SaveSpeechButton_Click"/>
                     <Button Content="テスト"
                             Width="64" Height="22"
                             Margin="8,0,0,0"
-                            Click="TestBouyomiButton_Click"/>
+                            Click="TestSpeechButton_Click"/>
                 </StackPanel>
             </StackPanel>
 

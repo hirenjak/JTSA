@@ -38,9 +38,13 @@ namespace JTSA.Panels
         private readonly StreamExpansionService streamExpansionService = new();
 
         private readonly BouyomiChanClient bouyomiChanClient = new();
+        private readonly VoiceVoxClient voiceVoxClient = new();
 
         private bool bouyomiEnabled;
         private string bouyomiEndpoint = BouyomiChanClient.DefaultEndpoint;
+        private string speechEngine = "None";
+        private string voiceVoxEndpoint = VoiceVoxClient.DefaultEndpoint;
+        private int voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
 
         private readonly ConcurrentDictionary<string, byte> chattedUserIds = new();
 
@@ -340,7 +344,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         public async void Initialize()
         {
-            ReloadBouyomiSettings();
+            ReloadSpeechSettings();
 
             ChatNotificationVolumeSlider.Value =
                double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatNotificationVolume)?.Value ?? "50");
@@ -461,28 +465,38 @@ namespace JTSA.Panels
             await PinedChatLoad();
         }
 
-        /// <summary>DBから棒読みちゃん連携の設定を再読み込みする。</summary>
-        public void ReloadBouyomiSettings()
+        /// <summary>DBからチャット読み上げ連携の設定を再読み込みする。</summary>
+        public void ReloadSpeechSettings()
         {
             bouyomiEnabled = DAO_Setting.SelectOneById(
                 DAO_Setting.SettingName.BouyomiEnabled)?.Value == "1";
             bouyomiEndpoint = DAO_Setting.SelectOneById(
                 DAO_Setting.SettingName.BouyomiEndpoint)?.Value
                 ?? BouyomiChanClient.DefaultEndpoint;
+            speechEngine = DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechEngine)?.Value
+                ?? (bouyomiEnabled ? "Bouyomi" : "None");
+            voiceVoxEndpoint = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VoiceVoxEndpoint)?.Value
+                ?? VoiceVoxClient.DefaultEndpoint;
+            if (!int.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.VoiceVoxSpeakerId)?.Value,
+                out voiceVoxSpeakerId) || voiceVoxSpeakerId < 0)
+                voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
         }
 
         private async void SpeakChatMessage(string message)
         {
-            if (!bouyomiEnabled || string.IsNullOrWhiteSpace(message)) return;
+            if (speechEngine == "None" || string.IsNullOrWhiteSpace(message)) return;
 
             try
             {
-                await bouyomiChanClient.SpeakAsync(bouyomiEndpoint, message);
+                if (speechEngine == "VoiceVox")
+                    await voiceVoxClient.SpeakAsync(voiceVoxEndpoint, voiceVoxSpeakerId, message);
+                else if (speechEngine == "Bouyomi")
+                    await bouyomiChanClient.SpeakAsync(bouyomiEndpoint, message);
             }
             catch (Exception ex)
             {
                 // 読み上げ失敗でTwitchチャットの受信処理を止めない。
-                Console.WriteLine($"棒読みちゃん読み上げエラー: {ex.Message}");
+                Console.WriteLine($"チャット読み上げエラー: {ex.Message}");
             }
         }
 
