@@ -127,6 +127,14 @@ namespace JTSA
         /// </summary>
         public MainWindow()
         {
+            // XAML 内の子コントロールは InitializeComponent 中に生成され、
+            // そのコンストラクタから設定テーブルを参照するため、先に DB を初期化する。
+            using (var db = new AppDbContext())
+            {
+                ClearAbandonedMigrationLock(db);
+                db.Database.Migrate();
+            }
+
             // WPF上の初期化処理
 			InitializeComponent();
             DataContext = this;
@@ -134,17 +142,6 @@ namespace JTSA
             // タイトルのバージョン設定
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             Title = $"JakTwtchStreamerAssistant v{version?.ToString(3)}";
-
-            #region ==========DBマイグレーション設定==========
-
-            using (var db = new AppDbContext())
-            {
-                ClearAbandonedMigrationLock(db);
-                db.Database.Migrate();
-            }
-
-            #endregion
-
 
             #region ==========アクセストークンの自動リフレッシュタイマー設定==========
 
