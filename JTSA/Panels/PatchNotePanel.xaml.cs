@@ -18,8 +18,8 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
-                Version = "v1.1.9",
-                ReleaseDate = "2026/08/16",
+                Version = "v1.1.10",
+                ReleaseDate = "2026/08/17",
                 Summary = "既存機能の改善",
                 Changes =
                 [

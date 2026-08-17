@@ -70,11 +70,8 @@ namespace JTSA.Panels
             var savedId = ReadVoiceVoxSpeakerId();
             try
             {
-                VoiceVoxSpeakerComboBox.ItemsSource = await new VoiceVoxClient()
-                    .GetSpeakerStylesAsync(VoiceVoxEndpointTextBox.Text);
-                VoiceVoxSpeakerComboBox.SelectedValue = savedId;
-                if (VoiceVoxSpeakerComboBox.SelectedIndex < 0 && VoiceVoxSpeakerComboBox.Items.Count > 0)
-                    VoiceVoxSpeakerComboBox.SelectedIndex = 0;
+                var styles = await new VoiceVoxClient().GetSpeakerStylesAsync(VoiceVoxEndpointTextBox.Text);
+                SetVoiceVoxSpeakerItems(styles, savedId);
             }
             catch (Exception ex)
             {
@@ -86,6 +83,16 @@ namespace JTSA.Panels
                 if (showError)
                     MessageBox.Show($"話者一覧を取得できませんでした。\n{ex.Message}", "VOICEVOX連携");
             }
+        }
+
+        private void SetVoiceVoxSpeakerItems(
+            IReadOnlyList<VoiceVoxSpeakerStyle> styles,
+            int selectedId)
+        {
+            VoiceVoxSpeakerComboBox.ItemsSource = styles;
+            VoiceVoxSpeakerComboBox.SelectedValue = selectedId;
+            if (VoiceVoxSpeakerComboBox.SelectedIndex < 0 && VoiceVoxSpeakerComboBox.Items.Count > 0)
+                VoiceVoxSpeakerComboBox.SelectedIndex = 0;
         }
 
         private static int ReadVoiceVoxSpeakerId()
