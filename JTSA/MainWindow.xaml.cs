@@ -132,6 +132,7 @@ namespace JTSA
             using (var db = new AppDbContext())
             {
                 ClearAbandonedMigrationLock(db);
+                db.RepairLegacyMigrationHistory();
                 db.Database.Migrate();
             }
 

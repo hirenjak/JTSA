@@ -1,5 +1,6 @@
 using JTSA.Dao;
 using JTSA.Models;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -117,6 +118,50 @@ public sealed class DaoTests : IDisposable
 
         var nextDayCount = Assert.Single(DAO_DailyChatUserCount.SelectByDate(nextDay));
         Assert.Equal(1, nextDayCount.ChatCount);
+    }
+
+    [Fact]
+    public void RepairLegacyMigrationHistory_AddsInitialHistoryAndCreatesBackup()
+    {
+        var originalPath = Path.Combine(testDirectory, "JTSA.db");
+        var legacyPath = Path.Combine(testDirectory, "legacy.db");
+        AppDbContext.DatabasePathOverride = legacyPath;
+
+        try
+        {
+            using (var connection = new SqliteConnection($"Data Source={legacyPath};Pooling=False"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = """
+                    CREATE TABLE M_CategoryList (Id INTEGER);
+                    CREATE TABLE M_FriendList (Id INTEGER);
+                    CREATE TABLE M_SettingList (Id INTEGER);
+                    CREATE TABLE M_TitleTagList (Id INTEGER);
+                    CREATE TABLE T_GamePlaylistHeader (Id INTEGER);
+                    CREATE TABLE T_GamePlaylistItem (Id INTEGER);
+                    CREATE TABLE T_TitleTextList (Id INTEGER);
+                    """;
+                command.ExecuteNonQuery();
+            }
+
+            using var db = new AppDbContext();
+            db.RepairLegacyMigrationHistory();
+
+            using var verification = new SqliteConnection($"Data Source={legacyPath};Pooling=False");
+            verification.Open();
+            using var verifyCommand = verification.CreateCommand();
+            verifyCommand.CommandText = """
+                SELECT COUNT(*) FROM "__EFMigrationsHistory"
+                WHERE "MigrationId" = '20260801233859_Initial';
+                """;
+            Assert.Equal(1L, Convert.ToInt64(verifyCommand.ExecuteScalar()));
+            Assert.Single(Directory.GetFiles(testDirectory, "legacy.db.backup-*"));
+        }
+        finally
+        {
+            AppDbContext.DatabasePathOverride = originalPath;
+        }
     }
 
     public void Dispose()

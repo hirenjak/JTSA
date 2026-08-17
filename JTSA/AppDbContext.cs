@@ -1,10 +1,24 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using System.Data;
 using System.IO;
 
 namespace JTSA.Models
 {
     public class AppDbContext : DbContext
     {
+        private const string InitialMigrationId = "20260801233859_Initial";
+        private static readonly string[] LegacyInitialTables =
+        {
+            "M_CategoryList",
+            "M_FriendList",
+            "M_SettingList",
+            "M_TitleTagList",
+            "T_GamePlaylistHeader",
+            "T_GamePlaylistItem",
+            "T_TitleTextList"
+        };
+
         public static string dbDirectory = string.Empty;
 
         // DAO tests can redirect the database without touching the user's AppData DB.
@@ -25,6 +39,94 @@ namespace JTSA.Models
         internal DbSet<T_StreamExpansionHeader> T_StreamExpansionHeader { get; set; }
         internal DbSet<T_StreamExpansionItem> T_StreamExpansionItem { get; set; }
         internal DbSet<T_StreamWindow> T_StreamWindow { get; set; }
+
+        /// <summary>
+        /// EF Core導入前に作成された旧DBへ初期マイグレーション履歴を補完する。
+        /// 旧テーブルが一式そろっている場合に限り、DBをバックアップしてから補正する。
+        /// </summary>
+        internal void RepairLegacyMigrationHistory()
+        {
+            var connection = (SqliteConnection)Database.GetDbConnection();
+            var shouldClose = connection.State == ConnectionState.Closed;
+
+            try
+            {
+                if (shouldClose)
+                {
+                    connection.Open();
+                }
+
+                var existingLegacyTables = LegacyInitialTables.Count(table => TableExists(connection, table));
+                if (existingLegacyTables == 0 || MigrationExists(connection, InitialMigrationId))
+                {
+                    return;
+                }
+
+                if (existingLegacyTables != LegacyInitialTables.Length)
+                {
+                    throw new InvalidOperationException(
+                        "旧形式のデータベースが不完全なため、自動更新できませんでした。" +
+                        "JTSA.dbをバックアップしてからサポートへ連絡してください。");
+                }
+
+                BackupDatabase(connection.DataSource);
+
+                using var transaction = connection.BeginTransaction();
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = """
+                    CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                        "MigrationId" TEXT NOT NULL CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY,
+                        "ProductVersion" TEXT NOT NULL
+                    );
+                    INSERT OR IGNORE INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                    VALUES ('20260801233859_Initial', '9.0.9');
+                    """;
+                command.ExecuteNonQuery();
+                transaction.Commit();
+            }
+            finally
+            {
+                if (shouldClose)
+                {
+                    connection.Close();
+                }
+            }
+        }
+
+        private static bool TableExists(SqliteConnection connection, string tableName)
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $name;";
+            command.Parameters.AddWithValue("$name", tableName);
+            return Convert.ToInt64(command.ExecuteScalar()) > 0;
+        }
+
+        private static bool MigrationExists(SqliteConnection connection, string migrationId)
+        {
+            if (!TableExists(connection, "__EFMigrationsHistory"))
+            {
+                return false;
+            }
+
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT COUNT(*) FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = $id;";
+            command.Parameters.AddWithValue("$id", migrationId);
+            return Convert.ToInt64(command.ExecuteScalar()) > 0;
+        }
+
+        private static void BackupDatabase(string databasePath)
+        {
+            if (string.IsNullOrWhiteSpace(databasePath) || !File.Exists(databasePath))
+            {
+                return;
+            }
+
+            var backupPath = $"{databasePath}.backup-{DateTime.Now:yyyyMMddHHmmss}";
+            File.Copy(databasePath, backupPath, overwrite: false);
+        }
 
 
         /// <summary>
