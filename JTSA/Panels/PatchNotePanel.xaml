@@ -81,7 +81,7 @@
                             <ItemsControl ItemsSource="{Binding Changes}" Margin="4,12,0,0">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding StringFormat=・{0}}"
+                                        <TextBlock Text="{Binding StringFormat={}{0}}"
                                                    Foreground="#FFE8E8E8"
                                                    FontSize="13"
                                                    Margin="0,3,0,3"
