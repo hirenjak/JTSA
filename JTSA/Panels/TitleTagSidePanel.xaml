@@ -29,7 +29,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Label Grid.Row="0" Content="※クリックすると ${ID} 形式でタイトル編集のカーソル位置に挿入" Foreground="White"/>
+                <Label Grid.Row="0" Content="※クリックすると ${ID} 形式でプレースホルダー欄のカーソル位置に挿入" Foreground="White"/>
                 <ListBox ItemsSource="{Binding TitleTagFormList}" Grid.Row="1" Background="#FF404040"
                     x:Name="TitleTagListBox"
                     Height="Auto" Width="Auto"

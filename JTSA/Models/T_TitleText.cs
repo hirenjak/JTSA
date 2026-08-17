@@ -9,6 +9,8 @@ public class T_TitleText : DBBaseTransaction
 
     public required string Content { get; set; }
 
+    public string TitlePlaceholder { get; set; } = string.Empty;
+
     public required string CategoryId { get; set; }
 
     public required string CategoryName { get; set; }

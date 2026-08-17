@@ -267,24 +267,37 @@
                                     Margin="8, 0, 0, 0"
                                     MinWidth="560" Width="Auto">
 
-                                    <StackPanel DockPanel.Dock="Top" 
-                                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Grid DockPanel.Dock="Top"
+                                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                        <Label 
-                                            Margin="0, 0, 0, 0" Padding="0, 0, 0, 0"
-                                            Foreground="White" Content="タイトル編集"/>
+                                        <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                                            <Label Margin="0" Padding="0"
+                                                   Foreground="White" Content="タイトル編集"/>
+                                            <Label Margin="0" Padding="0"
+                                                   Foreground="White" Content="配信タイトルの本文"/>
+                                            <TextBox x:Name="TitleEditTextBox"
+                                                     Height="48" HorizontalAlignment="Stretch"
+                                                     VerticalAlignment="Top" Text=""
+                                                     TextWrapping="Wrap"
+                                                     TextChanged="TitleEditTextBox_TextChanged"/>
+                                        </StackPanel>
 
-                                        <Label 
-                                            Margin="0, 0, 0, 0" Padding="0, 0, 0, 0" 
-                                            Foreground="White" Content="${friend}：選択したフレンド / ${date}：今日の日付（yyyy/MM/dd）"/>
-
-                                        <TextBox Grid.Row="0" Grid.Column="0" x:Name="TitleEditTextBox" 
-                                                 Height="48" Width="Auto" 
-                                                 HorizontalAlignment="Stretch" 
-                                                 VerticalAlignment="Top" Text="" 
-                                                 Margin="0, 0, 0, 0" TextWrapping="Wrap" 
-                                                 TextChanged="TitleEditTextBox_TextChanged"/>
-                                    </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                                            <Label Margin="0" Padding="0"
+                                                   Foreground="White" Content="タイトルプレースホルダーの組み合わせ"/>
+                                            <Label Margin="0" Padding="0"
+                                                   Foreground="White" Content="${title}：左のタイトル / ${friend}：フレンド / ${date}：今日の日付"/>
+                                            <TextBox x:Name="TitlePlaceholderTextBox"
+                                                     Height="48" HorizontalAlignment="Stretch"
+                                                     VerticalAlignment="Top" Text=""
+                                                     TextWrapping="Wrap"
+                                                     TextChanged="TitlePlaceholderTextBox_TextChanged"/>
+                                        </StackPanel>
+                                    </Grid>
 
                                     <Grid 
                                         Margin="0, 4, 0, 0" 
@@ -330,6 +343,8 @@
 
                                                             <StackPanel Grid.Column="1" Margin="8, 0, 8, 0">
                                                                 <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="Black" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                                                                <TextBlock Text="{Binding TitlePlaceholder, StringFormat=テンプレート：{0}}"
+                                                                           Foreground="DimGray" FontSize="11" TextWrapping="Wrap"/>
 
                                                                 <Grid Margin="0" Height="Auto">
                                                                     <Grid.ColumnDefinitions>

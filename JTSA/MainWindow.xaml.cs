@@ -395,7 +395,12 @@ namespace JTSA
             if (response.IsSuccessStatusCode)
             {
                 // 履歴追加処理
-                AddTitleText(TitleEditTextBox.Text, categoryId, categoryName, categoryBoxArtUrl);
+                AddTitleText(
+                    TitleEditTextBox.Text,
+                    TitlePlaceholderTextBox.Text,
+                    categoryId,
+                    categoryName,
+                    categoryBoxArtUrl);
             }
             else
             {
@@ -504,6 +509,7 @@ namespace JTSA
             if (TitleTextLogListBox.SelectedItem is TitleTextForm selectedItem)
             {
                 TitleEditTextBox.Text = selectedItem.Content;
+                TitlePlaceholderTextBox.Text = selectedItem.TitlePlaceholder;
 
                 SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
                 SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
@@ -557,7 +563,10 @@ namespace JTSA
             processLog.EventStartLogWrite();
 
             // 必要データの取得
-            var streamTitleText = TitleTextFriendTagToXReplace(TitleEditTextBox.Text);
+            var combinedTitleText = TitlePlaceholderReplacer.ReplaceTitle(
+                TitleEditTextBox.Text,
+                TitlePlaceholderTextBox.Text);
+            var streamTitleText = TitleTextFriendTagToXReplace(combinedTitleText);
             var categoryNameText = CurrentCategoryName;
 
             // 認証URL生成
@@ -599,10 +608,18 @@ namespace JTSA
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトル編集パネル:タイトル編集テキストボックス（テキスト変更）");
             processLog.EventStartLogWrite();
 
-            CurrentTitleText = TitleEditTextBox.Text;
+            CurrentTitleTextUpdate();
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
+        }
+
+        /// <summary>
+        /// タイトル編集パネル:プレースホルダーテキストボックス（テキスト変更）
+        /// </summary>
+        private void TitlePlaceholderTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            CurrentTitleTextUpdate();
         }
 
 
@@ -736,6 +753,7 @@ namespace JTSA
                 {
                     Id = item.Id,
                     Content = item.Content,
+                    TitlePlaceholder = item.TitlePlaceholder,
                     CategoryId = item.CategoryId,
                     CategoryName = item.CategoryName,
                     CategoryBoxArtUrl = item.CategoryBoxArtUrl,
@@ -797,32 +815,31 @@ namespace JTSA
 
 
         /// <summary>
-        /// タイトルテキスト編集カーソル位置挿入処理
+        /// タイトルプレースホルダー編集カーソル位置挿入処理
         /// </summary>
         /// <param name="insertText"></param>
         public void InsertTextAtCaret(string insertText)
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルテキスト編集カーソル位置挿入処理");
 
-            // TitleEditTextBoxがnullでないことを確認
-            if (TitleEditTextBox == null)
+            if (TitlePlaceholderTextBox == null)
             {
-                processLog.ErrorLogWrite("タイトルテキストボックスが存在しない");
+                processLog.ErrorLogWrite("タイトルプレースホルダーテキストボックスが存在しない");
                 return;
             }
 
-            int currentIndex = TitleEditTextBox.SelectionStart;
-            string original = TitleEditTextBox.Text ?? "";
+            int currentIndex = TitlePlaceholderTextBox.SelectionStart;
+            string original = TitlePlaceholderTextBox.Text ?? "";
 
             // 挿入処理
-            TitleEditTextBox.Text =
+            TitlePlaceholderTextBox.Text =
                 original.Substring(0, currentIndex) +
                 insertText +
                 original.Substring(currentIndex);
 
             // 挿入後のカーソル位置を調整
-            TitleEditTextBox.SelectionStart = currentIndex + insertText.Length;
-            TitleEditTextBox.Focus();
+            TitlePlaceholderTextBox.SelectionStart = currentIndex + insertText.Length;
+            TitlePlaceholderTextBox.Focus();
 
             processLog.SuccessLogWrite();
         }
@@ -835,7 +852,12 @@ namespace JTSA
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルテキストプレビューの更新処理");
 
-            CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(TitleEditTextBox.Text);
+            if (TitleEditTextBox == null || TitlePlaceholderTextBox == null) return;
+
+            var combinedTitleText = TitlePlaceholderReplacer.ReplaceTitle(
+                TitleEditTextBox.Text,
+                TitlePlaceholderTextBox.Text);
+            CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(combinedTitleText);
             TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
 
             processLog.SuccessLogWrite();
@@ -884,7 +906,12 @@ namespace JTSA
 		/// タイトルログ追加処理
 		/// </summary>
 		/// <param name="title"></param>
-		private void AddTitleText(string content, string categoryId, string categoryName, string categoryBoxArtUrl)
+		private void AddTitleText(
+            string content,
+            string titlePlaceholder,
+            string categoryId,
+            string categoryName,
+            string categoryBoxArtUrl)
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルログ追加処理");
 
@@ -902,6 +929,7 @@ namespace JTSA
 			var isnertData = new T_TitleText
 			{
 				Content = content,
+				TitlePlaceholder = titlePlaceholder,
 				CategoryId = categoryId,
 				CategoryName = categoryName,
 				CategoryBoxArtUrl = categoryBoxArtUrl,
