@@ -1,5 +1,10 @@
-﻿using System.Threading.Tasks;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 using Velopack;
 using Velopack.Sources;
 
@@ -7,16 +12,100 @@ namespace JTSA
 {
     public partial class App : Application
     {
+        private static readonly object CrashLogLock = new();
+
         [STAThread]
         public static void Main(string[] args)
         {
-            // アプリケーションの最初の処理
-            VelopackApp.Build().Run();   
-            var app = new App();
+            AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+            {
+                var exception = eventArgs.ExceptionObject as Exception
+                    ?? new Exception(eventArgs.ExceptionObject?.ToString() ?? "不明な例外");
+                WriteCrashLog("AppDomain.UnhandledException", exception);
+            };
 
-            // StartupUri があればここで反映
-            app.InitializeComponent();
-            app.Run();
+            try
+            {
+                VelopackApp.Build().Run();
+                var app = new App();
+                app.DispatcherUnhandledException += App_DispatcherUnhandledException;
+                app.InitializeComponent();
+                app.Run();
+            }
+            catch (Exception ex)
+            {
+                ShowFatalError("アプリケーションの起動に失敗しました。", "App.Main", ex);
+            }
+        }
+
+        private static void App_DispatcherUnhandledException(
+            object sender,
+            DispatcherUnhandledExceptionEventArgs e)
+        {
+            e.Handled = true;
+            ShowFatalError(
+                "予期しないエラーが発生したため、アプリケーションを終了します。",
+                "DispatcherUnhandledException",
+                e.Exception);
+            Current?.Shutdown(-1);
+        }
+
+        private static void ShowFatalError(string message, string source, Exception exception)
+        {
+            var logPath = WriteCrashLog(source, exception);
+            var logInformation = string.IsNullOrEmpty(logPath)
+                ? "ログファイルの保存にも失敗しました。"
+                : $"エラーログ:\n{logPath}";
+
+            try
+            {
+                MessageBox.Show(
+                    $"{message}\n\n{exception.Message}\n\n{logInformation}",
+                    "JTSA 起動エラー",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            catch
+            {
+                // OSの終了処理中など、ダイアログを表示できない場合はログだけを残す。
+            }
+        }
+
+        private static string? WriteCrashLog(string source, Exception exception)
+        {
+            try
+            {
+                var logDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "JTSA", "logs");
+                Directory.CreateDirectory(logDirectory);
+
+                var logPath = Path.Combine(logDirectory, $"crash-{DateTime.Now:yyyyMMdd}.log");
+                var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+                    ?? "不明";
+                var contents = new StringBuilder()
+                    .AppendLine("============================================================")
+                    .AppendLine($"発生日時: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff zzz}")
+                    .AppendLine($"発生箇所: {source}")
+                    .AppendLine($"JTSA: {version}")
+                    .AppendLine($"OS: {RuntimeInformation.OSDescription}")
+                    .AppendLine($"Runtime: {RuntimeInformation.FrameworkDescription}")
+                    .AppendLine($"Process: {RuntimeInformation.ProcessArchitecture}")
+                    .AppendLine()
+                    .AppendLine(exception.ToString())
+                    .ToString();
+
+                lock (CrashLogLock)
+                {
+                    File.AppendAllText(logPath, contents, Encoding.UTF8);
+                }
+
+                return logPath;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -25,10 +114,6 @@ namespace JTSA
             base.OnStartup(e);
         }
 
-        /// <summary>
-        /// アップデートの確認を行う
-        /// </summary>
-        /// <returns></returns>
         private static async Task UpdateCheck()
         {
             try
@@ -40,11 +125,10 @@ namespace JTSA
                         AllowVersionDowngrade = false
                     });
 
-                // 開発実行などインストール外ならスキップ
-                if (!mgr.IsInstalled) return; 
+                if (!mgr.IsInstalled) return;
 
                 var info = await mgr.CheckForUpdatesAsync();
-                if (info == null || info.TargetFullRelease == null) return; // 更新なし
+                if (info == null || info.TargetFullRelease == null) return;
 
                 var latest = info.TargetFullRelease;
                 var result = MessageBox.Show(
@@ -56,7 +140,6 @@ namespace JTSA
                 if (result == MessageBoxResult.Yes)
                 {
                     await mgr.DownloadUpdatesAsync(info);
-                    // 暗黙変換により UpdateInfo をそのまま渡せる
                     mgr.ApplyUpdatesAndRestart(info);
                 }
             }
