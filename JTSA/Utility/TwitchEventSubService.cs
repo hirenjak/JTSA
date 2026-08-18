@@ -1,6 +1,7 @@
 ﻿using JTSA.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
+using System.Windows;
 using TwitchLib.Api;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.EventSub.Core.EventArgs.Channel;
@@ -23,6 +24,7 @@ namespace JTSA.Utility
 
         public event Action<ChannelPointForm>? ChannelPointRedeemed;
         public event Action<string>? FollowReceived;
+        public event Action<string>? RaidReceived;
 
 
         /// <summary>
@@ -63,6 +65,7 @@ namespace JTSA.Utility
             eventSubClient.ChannelPointsCustomRewardRedemptionAdd +=
                 OnChannelPointsCustomRewardRedemptionAdd;
             eventSubClient.ChannelFollow += OnChannelFollow;
+            eventSubClient.ChannelRaid += OnChannelRaid;
         }
 
         public async Task ConnectAsync()
@@ -178,7 +181,22 @@ namespace JTSA.Utility
                     websocketSessionId: eventSubClient.SessionId,
                     accessToken: twitchApi.Settings.AccessToken);
 
-                foreach (var subscription in channelPointResult.Subscriptions.Concat(followResult.Subscriptions))
+                var raidCondition = new Dictionary<string, string>
+                {
+                    ["to_broadcaster_user_id"] = broadcasterUserId
+                };
+
+                var raidResult = await twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    type: "channel.raid",
+                    version: "1",
+                    condition: raidCondition,
+                    method: EventSubTransportMethod.Websocket,
+                    websocketSessionId: eventSubClient.SessionId,
+                    accessToken: twitchApi.Settings.AccessToken);
+
+                foreach (var subscription in channelPointResult.Subscriptions
+                             .Concat(followResult.Subscriptions)
+                             .Concat(raidResult.Subscriptions))
                 {
                     Debug.WriteLine(
                         $"EventSub購読結果: " +
@@ -188,11 +206,24 @@ namespace JTSA.Utility
                 }
 
                 isSubscribed =
-                    channelPointResult.Subscriptions.Any() && followResult.Subscriptions.Any();
+                    channelPointResult.Subscriptions.Any() &&
+                    followResult.Subscriptions.Any() &&
+                    raidResult.Subscriptions.Any();
+
+                if (raidResult.Subscriptions.Any())
+                {
+                    LogSuccess("レイド受信のEventSub購読が完了しました");
+                }
+                else
+                {
+                    LogError("レイド受信のEventSub購読結果が空でした");
+                }
             }
             catch (Exception ex)
             {
                 isSubscribed = false;
+
+                LogError($"EventSub購読失敗：{ex.Message}");
 
                 Debug.WriteLine(
                     $"EventSub購読失敗: {ex}");
@@ -238,6 +269,55 @@ namespace JTSA.Utility
         {
             FollowReceived?.Invoke(e.Payload.Event.UserName);
             return Task.CompletedTask;
+        }
+
+        private Task OnChannelRaid(object? sender, ChannelRaidArgs e)
+        {
+            var raid = e.Payload.Event;
+            LogSuccess($"EventSubレイド受信：{raid.FromBroadcasterUserName}（{raid.Viewers}人）");
+            StreamSupportTracker.AddRaid(raid.FromBroadcasterUserName, raid.Viewers);
+            RaidReceived?.Invoke(raid.FromBroadcasterUserLogin);
+            return Task.CompletedTask;
+        }
+
+        private static void LogSuccess(string message)
+        {
+            var application = Application.Current;
+            if (application?.Dispatcher == null)
+            {
+                return;
+            }
+
+            if (!application.Dispatcher.CheckAccess())
+            {
+                application.Dispatcher.Invoke(() => LogSuccess(message));
+                return;
+            }
+
+            if (application.MainWindow is MainWindow mainWindow)
+            {
+                mainWindow.AppLogPanel.Success(nameof(TwitchEventSubService), message);
+            }
+        }
+
+        private static void LogError(string message)
+        {
+            var application = Application.Current;
+            if (application?.Dispatcher == null)
+            {
+                return;
+            }
+
+            if (!application.Dispatcher.CheckAccess())
+            {
+                application.Dispatcher.Invoke(() => LogError(message));
+                return;
+            }
+
+            if (application.MainWindow is MainWindow mainWindow)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchEventSubService), message);
+            }
         }
 
 
@@ -323,6 +403,7 @@ namespace JTSA.Utility
                     .ChannelPointsCustomRewardRedemptionAdd -=
                 OnChannelPointsCustomRewardRedemptionAdd;
             eventSubClient.ChannelFollow -= OnChannelFollow;
+            eventSubClient.ChannelRaid -= OnChannelRaid;
 
             try
             {

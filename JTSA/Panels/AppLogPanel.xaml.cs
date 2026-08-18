@@ -102,6 +102,12 @@ namespace JTSA.Panels
         /// <param name="log"></param>
         private void AddLog(string traceClassName, string log, SolidColorBrush color)
         {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(() => AddLog(traceClassName, log, color));
+                return;
+            }
+
             mainWindow.StatusTextBlock.Text = log;
             mainWindow.StatusTextBlock.Foreground = color;
 
@@ -115,6 +121,12 @@ namespace JTSA.Panels
 
         public void AddLog(string logText, SolidColorBrush color)
         {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.Invoke(() => AddLog(logText, color));
+                return;
+            }
+
             AppLogFormList.Add(
                 new AppLogForm()
                 {

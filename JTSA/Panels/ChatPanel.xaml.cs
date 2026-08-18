@@ -416,9 +416,6 @@ namespace JTSA.Panels
                 twitchChatService.SubscriptionReceived += () =>
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
 
-                twitchChatService.RaidReceived += userName =>
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, userName);
-
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
                     Dispatcher.InvokeAsync(() =>
@@ -439,6 +436,9 @@ namespace JTSA.Panels
 
                 twitchEventSubService.FollowReceived += userName =>
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Follow, userName);
+
+                twitchEventSubService.RaidReceived += userName =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, userName);
 
                 await twitchChatService.ConnectAsync();
                 await twitchEventSubService.ConnectAsync();

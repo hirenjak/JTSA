@@ -18,16 +18,28 @@ internal sealed class StreamExpansionService
         string value,
         ChatPlaceholderValues? chatPlaceholders = null)
     {
-        // 発火条件に一致するものだけ取得
-        var rules = DAO_StreamExpansion.SelectAllHeaders().Where(rule => Matches(rule, type, value)).ToList();
+        try
+        {
+            // 発火条件に一致するものだけ取得
+            var rules = DAO_StreamExpansion.SelectAllHeaders().Where(rule => Matches(rule, type, value)).ToList();
 
-        var raidPlaceholders = type == StreamExpansionTriggerType.Raid && rules.Count > 0
-            ? await GetRaidPlaceholderValuesAsync(value)
-            : null;
+            if (type == StreamExpansionTriggerType.Raid)
+            {
+                LogSuccess($"レイド通知受信：{value}（一致ルール {rules.Count}件）");
+            }
 
-        // Run each matching rule independently so every delay starts at the trigger time.
-        await Task.WhenAll(rules.Select(rule =>
-            ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders)));
+            var raidPlaceholders = type == StreamExpansionTriggerType.Raid && rules.Count > 0
+                ? await GetRaidPlaceholderValuesAsync(value)
+                : null;
+
+            // Run each matching rule independently so every delay starts at the trigger time.
+            await Task.WhenAll(rules.Select(rule =>
+                ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders)));
+        }
+        catch (Exception ex)
+        {
+            LogError($"配信拡張の実行失敗（{type}）：{ex.Message}");
+        }
     }
 
     private async Task ExecuteRuleAsync(
@@ -66,10 +78,59 @@ internal sealed class StreamExpansionService
 
     private static async Task SendRaidShoutoutAsync(string userName)
     {
+        LogSuccess($"自動Shoutout対象ユーザーを検索：{userName}");
         var raider = await TwitchHelper.GetBroadcasterIdAsync(userName);
-        if (!string.IsNullOrWhiteSpace(raider?.UserId))
+        if (string.IsNullOrWhiteSpace(raider?.UserId))
         {
-            await TwitchHelper.SendShoutout(raider.UserId);
+            LogError($"自動Shoutout中断：Twitchユーザーを特定できませんでした（{userName}）");
+            return;
+        }
+
+        LogSuccess($"自動Shoutout送信開始：{raider.DisplayName}（ID: {raider.UserId}）");
+        var succeeded = await TwitchHelper.SendShoutout(raider.UserId);
+        if (!succeeded)
+        {
+            LogError($"自動Shoutout送信失敗：{raider.DisplayName}。直前のShoutout失敗ログを確認してください");
+        }
+    }
+
+    private static void LogSuccess(string message)
+    {
+        var application = Application.Current;
+        if (application?.Dispatcher == null)
+        {
+            return;
+        }
+
+        if (!application.Dispatcher.CheckAccess())
+        {
+            application.Dispatcher.Invoke(() => LogSuccess(message));
+            return;
+        }
+
+        if (application.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.AppLogPanel.Success(nameof(StreamExpansionService), message);
+        }
+    }
+
+    private static void LogError(string message)
+    {
+        var application = Application.Current;
+        if (application?.Dispatcher == null)
+        {
+            return;
+        }
+
+        if (!application.Dispatcher.CheckAccess())
+        {
+            application.Dispatcher.Invoke(() => LogError(message));
+            return;
+        }
+
+        if (application.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.AppLogPanel.Error(nameof(StreamExpansionService), message);
         }
     }
 

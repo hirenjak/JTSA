@@ -12,7 +12,6 @@ public sealed class TwitchChatService
 
     public event Action<ChatMessage>? MessageReceived;
     public event Action? SubscriptionReceived;
-    public event Action<string>? RaidReceived;
 
     public TwitchChatService(string channelName)
     {
@@ -32,7 +31,6 @@ public sealed class TwitchChatService
         client.OnNewSubscriber += Client_OnNewSubscriber;
         client.OnReSubscriber += Client_OnReSubscriber;
         client.OnGiftedSubscription += Client_OnGiftedSubscription;
-        client.OnRaidNotification += Client_OnRaidNotification;
         client.OnDisconnected += Client_OnDisconnected;
         client.OnConnectionError += Client_OnConnectionError;
 
@@ -122,21 +120,6 @@ public sealed class TwitchChatService
         return Task.CompletedTask;
     }
 
-    private Task Client_OnRaidNotification(object? sender, OnRaidNotificationArgs e)
-    {
-        var raid = e.RaidNotification;
-        // RaidNotification uses the msg-param-* fields for the raiding channel.
-        // Prefer the login for API lookups because a display name can contain
-        // localized characters that are not valid as a Helix `login` value.
-        var login = GetString(raid, "MsgParamLogin", "Login");
-        var displayName = GetString(raid, "MsgParamDisplayName", "DisplayName", "MsgParamLogin", "Login");
-        JTSA.Utility.StreamSupportTracker.AddRaid(
-            displayName,
-            GetInt(raid, "MsgParamViewerCount", "ViewerCount"));
-        RaidReceived?.Invoke(login);
-        return Task.CompletedTask;
-    }
-
     private static string GetString(object source, params string[] propertyNames)
     {
         foreach (var propertyName in propertyNames)
@@ -145,16 +128,6 @@ public sealed class TwitchChatService
             if (!string.IsNullOrWhiteSpace(value)) return value;
         }
         return "不明なユーザー";
-    }
-
-    private static int GetInt(object source, params string[] propertyNames)
-    {
-        foreach (var propertyName in propertyNames)
-        {
-            var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
-            if (value != null && int.TryParse(value.ToString(), out var result)) return result;
-        }
-        return 0;
     }
 
     private Task Client_OnConnectionError(object? sender, OnConnectionErrorArgs e)
