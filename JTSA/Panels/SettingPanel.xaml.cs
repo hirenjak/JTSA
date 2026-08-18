@@ -54,6 +54,14 @@ namespace JTSA.Panels
             Loaded += SettingPanel_Loaded;
         }
 
+        public void SetAccessTokenStatus(bool isAuthenticated) =>
+            AccessTokenStatusTextBlock.Text = isAuthenticated ? "OK!" : "NG";
+
+        public void SetBroadcasterStatus(bool isAvailable, string broadcasterId = "") =>
+            BroadcasterIdStatusTextBlock.Text = isAvailable ? $"OK! ({broadcasterId})" : "NG";
+
+        public void SetTwitchUserName(string userName) => UserNameTextBlock.Text = userName;
+
         private async void SettingPanel_Loaded(object sender, RoutedEventArgs e)
         {
             Loaded -= SettingPanel_Loaded;
@@ -208,11 +216,11 @@ namespace JTSA.Panels
             if (accessTokenResponse != null)
             {
                 TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-                mainWindow.AccessToken_TextBlock.Text = "OK!";
+                SetAccessTokenStatus(true);
             }
             else
             {
-                mainWindow.AccessToken_TextBlock.Text = "NG";
+                SetAccessTokenStatus(false);
             }
 
             // --- 設定情報保存処理 ---

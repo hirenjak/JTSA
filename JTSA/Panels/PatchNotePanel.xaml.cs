@@ -18,6 +18,37 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.1.15",
+                ReleaseDate = "2026/08/19",
+                Summary = "",
+                Changes =
+                [
+                    "【ヘッダパネル】",
+                    "・配信情報の表示を追加",
+                    "・アクセストークンなどの情報設定欄に移動",
+                    "【初回起動】",
+                    "・エラー時ログを物理ファイルに出すように機能追加",
+                    "【バグ修正】",
+                    "・自動Shoutoutの不具合を修正",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
+                Version = "v1.1.14",
+                ReleaseDate = "2026/08/17",
+                Summary = "初回起動不具合修正",
+                Changes =
+                [
+                    "【初回起動】",
+                    "・エラー時ログを物理ファイルに出すように機能追加",
+                    "【バグ修正】",
+                    "・互換の無い古いDBやマイグレーション処理でエラーが起こった時にそのまま落ちる不具合を修正",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.1.10",
                 ReleaseDate = "2026/08/17",
                 Summary = "配信概要の機能拡張",

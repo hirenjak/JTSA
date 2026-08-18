@@ -14,6 +14,7 @@ namespace JTSA.TwitchIF
         public string UserLogin { get; set; } = string.Empty;
         public string GameId { get; set; } = string.Empty;
         public DateTime StartedAt { get; set; } = DateTime.MinValue;
+        public int ViewerCount { get; set; }
         public string ThumbnailUrl { get; set; } = string.Empty;
 
     }

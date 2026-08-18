@@ -20,6 +20,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -35,6 +36,10 @@ namespace JTSA
 
 		/// <summary> アクセストークンの再取得用タイマ </summary>
 		private DispatcherTimer accessTokenRefreshTimer;
+
+        /// <summary> 現在の配信状態を定期更新するタイマ </summary>
+        private readonly DispatcherTimer streamStatusTimer;
+        private bool isStreamStatusUpdating;
 
         /// <summary> ヘッダ部分：現在の設定タイトル </summary>
         public string CurrentTitleText 
@@ -159,9 +164,13 @@ namespace JTSA
                 }
 
                 TwitchHelper.AccessToken = accessToken;
-                AccessToken_TextBlock.Text = "OK!";
+                SettingPanel.SetAccessTokenStatus(true);
             };
             accessTokenRefreshTimer.Start();
+
+            streamStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+            streamStatusTimer.Tick += async (_, _) => await UpdateStreamStatusAsync();
+            streamStatusTimer.Start();
 
             #endregion
 
@@ -169,6 +178,7 @@ namespace JTSA
             #region ==========イベントハンドラ設定==========
 
             Loaded += MainWindow_LoadedAsync;
+            SizeChanged += MainWindow_SizeChanged;
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
             #endregion
@@ -197,6 +207,66 @@ namespace JTSA
 
         #region ===============イベントハンドラ===============
 
+        /// <summary>ウィンドウ幅に合わせてヘッダーをコンパクト表示へ切り替える。</summary>
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            var isCompact = e.NewSize.Width < 1000;
+
+            SelectCategoryIdTextBlock.Visibility = isCompact
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            CategoryHeaderColumn.Width = new GridLength(isCompact ? 120 : 160);
+            TitleHeaderColumn.Width = new GridLength(isCompact ? 240 : 480);
+
+            SelectCategoryNameTextBlock.FontSize = isCompact ? 8 : 9;
+            CurrentTitleTextBlock.FontSize = isCompact ? 9 : 12;
+            StreamStatusGrid.Margin = isCompact
+                ? new Thickness(4, 4, 0, 4)
+                : new Thickness(8, 4, 0, 4);
+
+            Grid.SetColumn(GetTitleButton, isCompact ? 0 : 1);
+            Grid.SetColumnSpan(GetTitleButton, isCompact ? 2 : 1);
+
+            StreamMetricsGrid.ColumnDefinitions.Clear();
+            StreamMetricsGrid.RowDefinitions.Clear();
+            if (isCompact)
+            {
+                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                StreamMetricsGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                StreamMetricsGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+
+                Grid.SetRow(StreamDurationLabel, 0);
+                Grid.SetColumn(StreamDurationLabel, 0);
+                Grid.SetRow(StreamDurationTextBlock, 0);
+                Grid.SetColumn(StreamDurationTextBlock, 1);
+                Grid.SetRow(ViewerCountLabel, 1);
+                Grid.SetColumn(ViewerCountLabel, 0);
+                Grid.SetRow(ViewerCountTextBlock, 1);
+                Grid.SetColumn(ViewerCountTextBlock, 1);
+                StreamDurationTextBlock.Margin = new Thickness(6, 0, 0, 0);
+                ViewerCountTextBlock.Margin = new Thickness(6, 0, 0, 0);
+            }
+            else
+            {
+                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                Grid.SetRow(StreamDurationLabel, 0);
+                Grid.SetColumn(StreamDurationLabel, 0);
+                Grid.SetRow(StreamDurationTextBlock, 0);
+                Grid.SetColumn(StreamDurationTextBlock, 1);
+                Grid.SetRow(ViewerCountLabel, 0);
+                Grid.SetColumn(ViewerCountLabel, 2);
+                Grid.SetRow(ViewerCountTextBlock, 0);
+                Grid.SetColumn(ViewerCountTextBlock, 3);
+                StreamDurationTextBlock.Margin = new Thickness(6, 0, 14, 0);
+                ViewerCountTextBlock.Margin = new Thickness(6, 0, 0, 0);
+            }
+        }
+
         /// <summary>
         /// 【イベント】コンストラクタ終了時の処理
         /// </summary>
@@ -224,7 +294,7 @@ namespace JTSA
             {
                 processLog.CriticalErrorLogWrite("未認証（OAuth認証が必要）");
 
-                AccessToken_TextBlock.Text = "NG";
+                SettingPanel.SetAccessTokenStatus(false);
                 LoadSubPanel.Visibility = Visibility.Visible;
                 return;
             }
@@ -235,14 +305,14 @@ namespace JTSA
             {
                 processLog.CriticalErrorLogWrite("アクセストークン未取得");
 
-                AccessToken_TextBlock.Text = "NG";
+                SettingPanel.SetAccessTokenStatus(false);
                 LoadSubPanel.Visibility = Visibility.Visible;
                 return;
             }
 
             // メモリに登録
             TwitchHelper.AccessToken = accessToken;
-            AccessToken_TextBlock.Text = "OK!";
+            SettingPanel.SetAccessTokenStatus(true);
 
             // 認証後の初期化（OAuth認証直後と共通）
             await InitializeAfterAuthAsync();
@@ -259,7 +329,7 @@ namespace JTSA
         {
             // 認証エラー後もチャットイベントからAPI呼び出しが連打されないようにする。
             TwitchHelper.AccessToken = string.Empty;
-            AccessToken_TextBlock.Text = "NG";
+            SettingPanel.SetAccessTokenStatus(false);
             LoadPanelTextBlock.Text = "OAuth再認証が必要です";
             LoadPanelSubTextBox.Text = string.Empty;
             LoadSubPanel.Visibility = Visibility.Visible;
@@ -315,7 +385,7 @@ namespace JTSA
             if (deviceCodeResponse == null)
             {
                 processLog.ErrorLogWrite("デバイスコードの取得に失敗");
-                AccessToken_TextBlock.Text = "NG";
+                SettingPanel.SetAccessTokenStatus(false);
                 return;
             }
 
@@ -333,12 +403,12 @@ namespace JTSA
             if (accessTokenResponse == null)
             {
                 processLog.ErrorLogWrite("アクセストークンの取得に失敗");
-                AccessToken_TextBlock.Text = "NG";
+                SettingPanel.SetAccessTokenStatus(false);
                 return;
             }
 
             TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-            AccessToken_TextBlock.Text = "OK!";
+            SettingPanel.SetAccessTokenStatus(true);
 
             #endregion
 
@@ -1037,6 +1107,45 @@ namespace JTSA
         #endregion
 
 
+        /// <summary>ヘッダーの配信状態、経過時間、視聴者数を更新する。</summary>
+        private async Task UpdateStreamStatusAsync()
+        {
+            if (isStreamStatusUpdating || string.IsNullOrWhiteSpace(TwitchHelper.AccessToken) ||
+                string.IsNullOrWhiteSpace(TwitchHelper.BroadcasterId))
+            {
+                return;
+            }
+
+            isStreamStatusUpdating = true;
+            try
+            {
+                var stream = await TwitchHelper.GetCurrentStreamAsync();
+                if (stream == null)
+                {
+                    StreamStatusIndicator.Fill = Brushes.Gray;
+                    StreamStatusTextBlock.Text = "オフライン";
+                    StreamDurationTextBlock.Text = "--:--:--";
+                    ViewerCountTextBlock.Text = "-- 人";
+                    return;
+                }
+
+                var duration = DateTime.UtcNow - stream.StartedAt.ToUniversalTime();
+                if (duration < TimeSpan.Zero) duration = TimeSpan.Zero;
+
+                StreamStatusIndicator.Fill = Brushes.LimeGreen;
+                StreamStatusTextBlock.Text = "配信中";
+                StreamDurationTextBlock.Text = duration.TotalDays >= 1
+                    ? $"{(int)duration.TotalDays}日 {duration:hh\\:mm\\:ss}"
+                    : duration.ToString(@"hh\:mm\:ss");
+                ViewerCountTextBlock.Text = $"{stream.ViewerCount:N0} 人";
+            }
+            finally
+            {
+                isStreamStatusUpdating = false;
+            }
+        }
+
+
         #region ===============認証関連処理===============
 
         /// <summary>
@@ -1056,17 +1165,17 @@ namespace JTSA
             {
                 processLog.CriticalErrorLogWrite("配信者情報未取得");
 
-                BroadcasterId_TextBlock.Text = "NG";
+                SettingPanel.SetBroadcasterStatus(false);
                 LoadSubPanel.Visibility = Visibility.Visible;
                 return;
             }
 
             // メモリに登録
             TwitchHelper.BroadcasterId = streamerInfo.UserId;
-            BroadcasterId_TextBlock.Text = "OK!";
+            SettingPanel.SetBroadcasterStatus(true, streamerInfo.UserId);
 
             JTSAHelper.LoginName = streamerInfo.Login;
-            UserName_TextBox.Text = JTSAHelper.LoginName;
+            SettingPanel.SetTwitchUserName(JTSAHelper.LoginName);
 
             // 表示・Twitchダッシュボードのリンク用に保存しておく
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
@@ -1075,6 +1184,7 @@ namespace JTSA
 
             // アクセストークンの確認を持って起動時設定を完了
             await StreamerDataSet();
+            await UpdateStreamStatusAsync();
 
             // 各パネルの初期化処理
             ChatPanel.Initialize();

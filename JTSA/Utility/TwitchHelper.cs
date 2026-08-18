@@ -163,6 +163,37 @@ namespace JTSA.Utility
             return results;
         }
 
+        /// <summary>認証中の配信者の現在の配信情報を取得する。オフライン時は null。</summary>
+        public static async Task<TwitchStreamIF?> GetCurrentStreamAsync()
+        {
+            if (string.IsNullOrWhiteSpace(BroadcasterId)) return null;
+
+            try
+            {
+                var apiResponse = await api.Helix.Streams.GetStreamsAsync(
+                    userIds: new List<string> { BroadcasterId });
+                var data = apiResponse?.Streams?.FirstOrDefault();
+                if (data == null) return null;
+
+                return new TwitchStreamIF
+                {
+                    UserId = data.UserId,
+                    Title = data.Title,
+                    UserName = data.UserName,
+                    UserLogin = data.UserLogin,
+                    GameId = data.GameId,
+                    StartedAt = data.StartedAt,
+                    ViewerCount = data.ViewerCount,
+                    ThumbnailUrl = data.ThumbnailUrl
+                };
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "配信状態の取得失敗：" + ex.Message);
+                return null;
+            }
+        }
+
 
         /// <summary>
         /// 配カテゴリの設定

@@ -39,8 +39,8 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="60"/>
                 <ColumnDefinition Width="60"/>
-                <ColumnDefinition Width="160"/>
-                <ColumnDefinition Width="480"/>
+                <ColumnDefinition x:Name="CategoryHeaderColumn" Width="160"/>
+                <ColumnDefinition x:Name="TitleHeaderColumn" Width="480"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -87,7 +87,7 @@
                        Padding="2, 2, 2, 2" 
                        Foreground="Black" FontSize="12" Background="DarkGray">
                     </TextBlock>
-                    <Button Grid.Column="1" Content="設定取得" 
+                    <Button Grid.Column="1" x:Name="GetTitleButton" Content="設定取得" 
                         Height="24" Margin="8, 0, 0, 0" 
                         VerticalAlignment="Center"
                         Click="GetTitleButton_Click"/>
@@ -118,71 +118,28 @@
                 </TextBlock>
             </Grid>
 
-            <!-- ヘッダー：設定周り -->
+            <!-- ヘッダー：現在の配信状態 -->
             <Grid Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                <Grid>
+                <Grid x:Name="StreamStatusGrid" Margin="8,4,0,4">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="24"/>
+                        <RowDefinition Height="*"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="1">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Label  Content="TwiName"
-                                Foreground="White" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Grid.Row="0" x:Name="UserName_TextBox"
-                                 Width="Auto"
-                                 VerticalAlignment="Center"
-                                 Foreground="Black" FontSize="12"
-                                 Background="DarkGray" Height="18">
-                            </TextBlock>
-                        </Grid>
-
-                        <Grid Grid.Row="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid Grid.Column="0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Label Content="AccToken"
-                           Foreground="White" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Grid.Row="1" x:Name="AccessToken_TextBlock" 
-                               Width="Auto" 
-                               VerticalAlignment="Center" 
-                               Foreground="Black" FontSize="12" 
-                               Background="DarkGray" Height="18" >
-                                </TextBlock>
-                            </Grid>
-                            <Grid Grid.Column="1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Label 
-                                    Content="BrocasID"
-                                    Foreground="White" VerticalAlignment="Center" />
-                                <TextBlock 
-                                    Grid.Column="1" Grid.Row="1" 
-                                    x:Name="BroadcasterId_TextBlock" 
-                                    Width="Auto" 
-                                    VerticalAlignment="Center" 
-                                    Foreground="Black" FontSize="12" 
-                                    Background="DarkGray" Height="18" >
-                                </TextBlock>
-                            </Grid>
-                        </Grid>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="StreamStatusIndicator" Width="10" Height="10" Fill="Gray" Margin="0,0,6,0"/>
+                        <TextBlock x:Name="StreamStatusTextBlock" Text="配信状態を確認中..." Foreground="White" FontWeight="Bold"/>
+                    </StackPanel>
+                    <Grid Grid.Row="1" x:Name="StreamMetricsGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="StreamDurationLabel" Text="配信時間" Foreground="LightGray" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" x:Name="StreamDurationTextBlock" Text="--:--:--" Foreground="White" Margin="6,0,14,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" x:Name="ViewerCountLabel" Text="視聴者数" Foreground="LightGray" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" x:Name="ViewerCountTextBlock" Text="-- 人" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center"/>
                     </Grid>
                 </Grid>
             </Grid>

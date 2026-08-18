@@ -17,6 +17,25 @@
                 Content="OAuth再認証"
                 FontSize="20"
                 Foreground="White"/>
+
+            <Grid Margin="8,0,0,8" MaxWidth="560" HorizontalAlignment="Left">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="26"/>
+                    <RowDefinition Height="26"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Twitch名" Foreground="LightGray" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" x:Name="UserNameTextBlock" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="アクセストークン" Foreground="LightGray" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" x:Name="AccessTokenStatusTextBlock" Text="NG" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="1" Text="ブロードキャスターID" Foreground="LightGray" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" x:Name="BroadcasterIdStatusTextBlock" Text="NG" Foreground="White" VerticalAlignment="Center"/>
+            </Grid>
             
             <StackPanel Orientation="Horizontal">
 
