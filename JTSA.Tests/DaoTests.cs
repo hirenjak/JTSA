@@ -121,6 +121,20 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void DailyChatUserCount_Increment_HandlesConcurrentUpdatesWithoutLosingCounts()
+    {
+        var chatDate = new DateTime(2026, 8, 20, 10, 57, 0);
+        const int incrementCount = 40;
+
+        Parallel.For(0, incrementCount, index =>
+            DAO_DailyChatUserCount.Increment(
+                chatDate, "concurrent-user", "login", $"Display {index}"));
+
+        var count = Assert.Single(DAO_DailyChatUserCount.SelectByDate(chatDate));
+        Assert.Equal(incrementCount, count.ChatCount);
+    }
+
+    [Fact]
     public void RepairLegacyMigrationHistory_AddsInitialHistoryAndCreatesBackup()
     {
         var originalPath = Path.Combine(testDirectory, "JTSA.db");

@@ -13,6 +13,7 @@ namespace JTSA
     public partial class App : Application
     {
         private static readonly object CrashLogLock = new();
+        private static int isFatalErrorDialogOpen;
 
         [STAThread]
         public static void Main(string[] args)
@@ -43,6 +44,15 @@ namespace JTSA
             DispatcherUnhandledExceptionEventArgs e)
         {
             e.Handled = true;
+
+            // MessageBox は独自のメッセージループを動かすため、表示中にもタイマー等から
+            // 別の未処理例外が到着し得る。ダイアログの再帰的な増殖を防止する。
+            if (Interlocked.Exchange(ref isFatalErrorDialogOpen, 1) != 0)
+            {
+                WriteCrashLog("DispatcherUnhandledException (reentrant)", e.Exception);
+                return;
+            }
+
             ShowFatalError(
                 "予期しないエラーが発生したため、アプリケーションを終了します。",
                 "DispatcherUnhandledException",

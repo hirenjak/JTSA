@@ -1,4 +1,6 @@
 using JTSA.Models;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 namespace JTSA.Dao
 {
@@ -11,32 +13,32 @@ namespace JTSA.Dao
 
             var date = chatDate.Date;
             var now = DateTime.Now;
-            using var db = new AppDbContext();
-            var record = db.T_DailyChatUserCount.SingleOrDefault(
-                x => x.ChatDate == date && x.UserId == userId);
+            const int maxAttempts = 4;
 
-            if (record == null)
+            for (var attempt = 1; ; attempt++)
             {
-                db.T_DailyChatUserCount.Add(new T_DailyChatUserCount
+                try
                 {
-                    ChatDate = date,
-                    UserId = userId,
-                    LoginId = loginId,
-                    DisplayName = displayName,
-                    ChatCount = 1,
-                    CreatedDateTime = now,
-                    UpdatedDateTime = now
-                });
+                    using var db = new AppDbContext();
+                    db.Database.ExecuteSqlInterpolated($"""
+                        INSERT INTO "T_DailyChatUserCount"
+                            ("ChatDate", "UserId", "LoginId", "DisplayName", "ChatCount", "CreatedDateTime", "UpdatedDateTime")
+                        VALUES
+                            ({date}, {userId}, {loginId}, {displayName}, 1, {now}, {now})
+                        ON CONFLICT ("ChatDate", "UserId") DO UPDATE SET
+                            "LoginId" = excluded."LoginId",
+                            "DisplayName" = excluded."DisplayName",
+                            "ChatCount" = "T_DailyChatUserCount"."ChatCount" + 1,
+                            "UpdatedDateTime" = excluded."UpdatedDateTime";
+                        """);
+                    return;
+                }
+                catch (SqliteException ex) when (ex.SqliteErrorCode is 5 or 6 && attempt < maxAttempts)
+                {
+                    // チャットクリアや拡張機能の保存と重なった場合だけ、短時間待って再試行する。
+                    Thread.Sleep(50 * attempt);
+                }
             }
-            else
-            {
-                record.LoginId = loginId;
-                record.DisplayName = displayName;
-                record.ChatCount++;
-                record.UpdatedDateTime = now;
-            }
-
-            db.SaveChanges();
         }
 
         /// <summary>指定日のユーザー別チャット数を多い順に取得する。</summary>

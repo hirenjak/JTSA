@@ -153,19 +153,7 @@ namespace JTSA
 
             accessTokenRefreshTimer = new DispatcherTimer();
             accessTokenRefreshTimer.Interval = TimeSpan.FromHours(3);
-            accessTokenRefreshTimer.Tick += async (s, e) =>
-            {
-                // リフレッシュトークンからアクセストークンを再取得
-                string accessToken = await ResetAccessTokenAsync();
-                if (string.IsNullOrEmpty(accessToken))
-                {
-                    LoadSubPanel.Visibility = Visibility.Visible;
-                    return;
-                }
-
-                TwitchHelper.AccessToken = accessToken;
-                SettingPanel.SetAccessTokenStatus(true);
-            };
+            accessTokenRefreshTimer.Tick += AccessTokenRefreshTimer_TickAsync;
             accessTokenRefreshTimer.Start();
 
             streamStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
@@ -182,6 +170,38 @@ namespace JTSA
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
             #endregion
+        }
+
+        /// <summary>
+        /// アクセストークンを定期更新する。DispatcherTimer の async void ハンドラから
+        /// 例外を外へ漏らすとアプリ全体の未処理例外になるため、ここで記録して処理する。
+        /// </summary>
+        private async void AccessTokenRefreshTimer_TickAsync(object? sender, EventArgs e)
+        {
+            accessTokenRefreshTimer.Stop();
+            try
+            {
+                var accessToken = await ResetAccessTokenAsync();
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    LoadSubPanel.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                TwitchHelper.AccessToken = accessToken;
+                SettingPanel.SetAccessTokenStatus(true);
+            }
+            catch (Exception ex)
+            {
+                // 一時的なDB競合や通信障害でアプリ全体を終了させない。
+                AppLogPanel.Error(
+                    GetType().Name,
+                    $"アクセストークンの自動更新に失敗しました。{ex.GetBaseException().Message}");
+            }
+            finally
+            {
+                accessTokenRefreshTimer.Start();
+            }
         }
 
 
