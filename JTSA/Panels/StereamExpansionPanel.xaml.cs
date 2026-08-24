@@ -12,9 +12,10 @@ namespace JTSA.Panels;
 public class StreamExpansionHeaderForm : INotifyPropertyChanged
 {
     private string headerName = string.Empty;
+    private bool isActive;
     public long HeaderId { get; set; }
     public string HeaderName { get => headerName; set { headerName = value; Changed(); } }
-    public bool IsActive { get; set; }
+    public bool IsActive { get => isActive; set { isActive = value; Changed(); } }
     public bool IsRaid { get; set; }
     public bool IsSubscribe { get; set; }
     public bool IsBits { get; set; }
@@ -164,6 +165,19 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         };
 
         HeaderFormList.Add(item); SelectedHeader = item; StreamExpansionListBox.SelectedItem = item; ClearItemForms();
+    }
+
+    /// <summary>
+    /// 左側一覧のチェック操作を、登録済み機能の有効状態へ即時反映する。
+    /// </summary>
+    private void ActiveCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as CheckBox)?.DataContext is not StreamExpansionHeaderForm header || header.HeaderId == 0)
+        {
+            return;
+        }
+
+        DAO_StreamExpansion.UpdateIsActive(header.HeaderId, header.IsActive);
     }
 
 

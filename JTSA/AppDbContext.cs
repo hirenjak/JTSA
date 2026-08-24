@@ -28,6 +28,7 @@ namespace JTSA.Models
         public DbSet<M_Category> M_Category { get; set; }
         public DbSet<M_User> M_User { get; set; }
         public DbSet<M_Setting> M_Setting { get; set; }
+        public DbSet<M_TwitchAccount> M_TwitchAccount { get; set; }
         public DbSet<M_TitleTag> M_TitleTag { get; set; }
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }

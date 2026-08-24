@@ -45,11 +45,22 @@ namespace JTSA.Utility
         /// </summary>
         /// <returns>認証中ユーザーの情報。失敗した場合はnull。</returns>
         public static async Task<TwitchUserIF?> GetAuthenticatedUserAsync()
+            => await GetAuthenticatedUserAsync(api);
+
+        public static async Task<TwitchUserIF?> GetAuthenticatedUserAsync(string accessToken)
+        {
+            var accountApi = new TwitchAPI();
+            accountApi.Settings.ClientId = ClientID;
+            accountApi.Settings.AccessToken = accessToken;
+            return await GetAuthenticatedUserAsync(accountApi);
+        }
+
+        private static async Task<TwitchUserIF?> GetAuthenticatedUserAsync(TwitchAPI twitchApi)
         {
             try
             {
                 // ids/logins を指定しない場合、アクセストークンの持ち主が返る
-                var apiResponse = await api.Helix.Users.GetUsersAsync();
+                var apiResponse = await twitchApi.Helix.Users.GetUsersAsync();
 
                 var responseData = apiResponse?.Users?.FirstOrDefault();
                 if (responseData == null) return null;
@@ -201,24 +212,31 @@ namespace JTSA.Utility
         /// <param name="gameId"></param>
         /// <returns></returns>
         public static async Task<bool> SetCategoryAsync(string _gameId)
+            => await SetCategoryAsync(_gameId, BroadcasterId, AccessToken);
+
+        public static async Task<bool> SetCategoryAsync(string gameId, string broadcasterId, string accessToken)
         {
 
             var channelUpdateInfo = new TwitchLib.Api.Helix.Models.Channels.ModifyChannelInformation.ModifyChannelInformationRequest()
             {
-                GameId = _gameId
+                GameId = gameId
             };
 
             try
             {
-                var apiResponse = await api.Helix.Channels.ModifyChannelInformationAsync(
-                                            broadcasterId: BroadcasterId,
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                await accountApi.Helix.Channels.ModifyChannelInformationAsync(
+                                            broadcasterId: broadcasterId,
                                             request: channelUpdateInfo);
+                return true;
             }
             catch (Exception ex)
             {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "カテゴリ設定失敗：" + ex.Message);
+                return false;
             }
-
-            return true;
         }
 
 
@@ -229,11 +247,17 @@ namespace JTSA.Utility
         /// <param name="sender"></param>
         /// <param name="e"></param>
         public static async Task<TwitchModifyChannelInformationIF> GetTwitchStreamInfo(string broadcasterId)
+            => await GetTwitchStreamInfo(broadcasterId, AccessToken);
+
+        public static async Task<TwitchModifyChannelInformationIF> GetTwitchStreamInfo(string broadcasterId, string accessToken)
         {
             TwitchModifyChannelInformationIF result = null;
             try
             {
-                var apiResponse = await api.Helix.Channels.GetChannelInformationAsync(broadcasterId);
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Channels.GetChannelInformationAsync(broadcasterId);
 
                 if (apiResponse?.Data != null)
                 {

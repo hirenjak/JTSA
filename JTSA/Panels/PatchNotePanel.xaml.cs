@@ -18,6 +18,37 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.1.17",
+                ReleaseDate = "2026/08/24",
+                Summary = "",
+                Changes =
+                [
+                    "【全体】",
+                    "・複数アカウントの登録に対応",
+                    "【OBS操作】",
+                    "・OBSをアプリ側から操作できるように機能追加",
+                    "【設定】",
+                    "・サブ垢追加に伴いアカウント設定部分の表示を調整",
+                    "【バグ修正】",
+                    "・ビッツ、サブスク、レイドの欄がスクロールせず画面外にはみ出ていたバグを修正",
+                    "・サブギフの時に送信者ではなく受取者が表示されていたのを送信者が表示されるように修正",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
+                Version = "v1.1.16",
+                ReleaseDate = "2026/08/20",
+                Summary = "",
+                Changes =
+                [
+                    "【バグ修正】",
+                    "・チャット取得時に複数回同時取得していた問題を修正",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.1.15",
                 ReleaseDate = "2026/08/19",
                 Summary = "",

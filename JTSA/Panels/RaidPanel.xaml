@@ -87,8 +87,12 @@
                 <RowDefinition Height="1*"/>
             </Grid.RowDefinitions>
             <TextBlock Grid.Row="0" Text="配信内容集計" Foreground="White" FontSize="14"></TextBlock>
-            <StackPanel Grid.Row="1" Margin="0, 8, 0, 0">
-                <TextBlock Text="・ビッツユーザー" Foreground="White" FontSize="14"></TextBlock>
+            <Grid Grid.Row="1" Margin="0, 8, 0, 0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="・ビッツユーザー" Foreground="White" FontSize="14"></TextBlock>
                 <ListBox Grid.Row="1" ItemsSource="{Binding BitsUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                         x:Name="BitsUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -127,10 +131,14 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-            </StackPanel>
+            </Grid>
 
-            <StackPanel Grid.Row="2" Margin="0, 8, 0, 0">
-                <TextBlock Text="・サブスクユーザー" Foreground="White" FontSize="14"></TextBlock>
+            <Grid Grid.Row="2" Margin="0, 8, 0, 0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="・サブスクユーザー" Foreground="White" FontSize="14"></TextBlock>
                 <ListBox Grid.Row="1" ItemsSource="{Binding SubscribeUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                      x:Name="SubscribeUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -169,10 +177,14 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-            </StackPanel>
+            </Grid>
 
-            <StackPanel Grid.Row="3" Margin="0, 8, 0, 0">
-                <TextBlock Text="・レイドユーザー" Foreground="White" FontSize="14"></TextBlock>
+            <Grid Grid.Row="3" Margin="0, 8, 0, 0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="・レイドユーザー" Foreground="White" FontSize="14"></TextBlock>
                 <ListBox Grid.Row="1" ItemsSource="{Binding RaidedUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                     x:Name="RaidedUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -227,7 +239,7 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-            </StackPanel>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

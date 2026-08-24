@@ -64,6 +64,20 @@ internal static class DAO_StreamExpansion
         return entity.Id;
     }
 
+    public static void UpdateIsActive(long headerId, bool isActive)
+    {
+        using var db = new AppDbContext();
+        var header = db.T_StreamExpansionHeader.SingleOrDefault(x => x.Id == headerId);
+        if (header is null)
+        {
+            return;
+        }
+
+        header.IsActive = isActive;
+        header.UpdatedDateTime = DateTime.Now;
+        db.SaveChanges();
+    }
+
     public static void Delete(long headerId)
     {
         using var db = new AppDbContext();

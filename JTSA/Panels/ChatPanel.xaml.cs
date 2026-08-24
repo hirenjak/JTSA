@@ -432,6 +432,15 @@ namespace JTSA.Panels
                     });
 
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.ChannelPoint, channelPoint.RewardId);
+
+                    if (!string.IsNullOrWhiteSpace(channelPoint.UserId) && chattedUserIds.TryAdd(channelPoint.UserId, 0))
+                    {
+                        var chatPlaceholders = new ChatPlaceholderValues(channelPoint.UserName, channelPoint.UserLogin);
+                        _ = streamExpansionService.HandleAsync(
+                            StreamExpansionTriggerType.FirstChat,
+                            channelPoint.UserLogin,
+                            chatPlaceholders);
+                    }
                 };
 
                 twitchEventSubService.FollowReceived += userName =>

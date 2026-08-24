@@ -32,7 +32,6 @@ namespace JTSA.Panels
         {
             InitializeComponent();
 
-            ReOAuthButton.Click += ReOAuthButton_Click;
             SettingOAuthCodeCopyButton.Click += SettingOAuthCodeCopyButton_Click;
 
             XPostTemplateTextBox.Text = DAO_Setting.SelectOneById(
@@ -51,16 +50,24 @@ namespace JTSA.Panels
             VoiceVoxEndpointTextBox.Text = DAO_Setting.SelectOneById(
                 DAO_Setting.SettingName.VoiceVoxEndpoint)?.Value
                 ?? VoiceVoxClient.DefaultEndpoint;
+            ReloadRegisteredAccounts();
             Loaded += SettingPanel_Loaded;
         }
 
-        public void SetAccessTokenStatus(bool isAuthenticated) =>
-            AccessTokenStatusTextBlock.Text = isAuthenticated ? "OK!" : "NG";
+        public void SetAccessTokenStatus(bool isAuthenticated) { }
 
-        public void SetBroadcasterStatus(bool isAvailable, string broadcasterId = "") =>
-            BroadcasterIdStatusTextBlock.Text = isAvailable ? $"OK! ({broadcasterId})" : "NG";
+        public void SetBroadcasterStatus(bool isAvailable, string broadcasterId = "") { }
 
-        public void SetTwitchUserName(string userName) => UserNameTextBlock.Text = userName;
+        public void SetTwitchUserName(string userName) { }
+
+        public void ReloadRegisteredAccounts()
+        {
+            var accounts = DAO_TwitchAccount.SelectAll();
+            RegisteredAccountItemsControl.ItemsSource = accounts;
+            NoRegisteredAccountTextBlock.Visibility = accounts.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
 
         private async void SettingPanel_Loaded(object sender, RoutedEventArgs e)
         {
@@ -200,46 +207,119 @@ namespace JTSA.Panels
             JTSAHelper.CopyClipBoad(SettingOAuthCodeBox.Text);
         }
 
-        private async void ReOAuthButton_Click(object sender, RoutedEventArgs e)
+        private async void AddSubAccountButton_Click(object sender, RoutedEventArgs e)
         {
-            var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
-
-            // 認証URLとユーザーコードをユーザーに表示
-            SettingOAuthCodeBox.Text = deviceCodeResponse.user_code;
-
-            // 認証ページを自動で開く
-            Process.Start(new ProcessStartInfo(deviceCodeResponse.verification_uri + $"user_code={JTSAHelper.LoginName}") { UseShellExecute = true });
-
-            // アクセストークン取得
-            var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
-
-            if (accessTokenResponse != null)
+            AddSubAccountButton.IsEnabled = false;
+            try
             {
-                TwitchHelper.AccessToken = accessTokenResponse.accessToken;
-                SetAccessTokenStatus(true);
+                var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
+                if (deviceCodeResponse is null)
+                    throw new InvalidOperationException("認証コードを取得できませんでした。");
+
+                SettingOAuthCodeBox.Text = deviceCodeResponse.user_code;
+                var verificationUrl = string.IsNullOrWhiteSpace(deviceCodeResponse.verification_uri_complete)
+                    ? deviceCodeResponse.verification_uri
+                    : deviceCodeResponse.verification_uri_complete;
+                Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
+
+                var token = await TwitchHelper.PollDeviceTokenAsync(
+                    deviceCodeResponse.device_code,
+                    deviceCodeResponse.interval,
+                    deviceCodeResponse.expires_in);
+                if (token is null)
+                    throw new InvalidOperationException("サブアカウントの認証が完了しませんでした。");
+
+                var user = await TwitchHelper.GetAuthenticatedUserAsync(token.accessToken);
+                if (user is null)
+                    throw new InvalidOperationException("認証したアカウント情報を取得できませんでした。");
+
+                var account = DAO_TwitchAccount.InsertUpdate(
+                    user.Login, user.UserId, token.refreshToken);
+                mainWindow.ReloadTargetAccounts(account.Id);
+                ReloadRegisteredAccounts();
+                MessageBox.Show($"{user.DisplayName} を送信先に追加しました。", "Twitchアカウント");
             }
-            else
+            catch (Exception ex)
             {
-                SetAccessTokenStatus(false);
+                MessageBox.Show(ex.Message, "Twitchアカウント");
+            }
+            finally
+            {
+                AddSubAccountButton.IsEnabled = true;
+            }
+        }
+
+        private async void ReauthenticateAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not long accountId)
+                return;
+
+            var account = DAO_TwitchAccount.SelectById(accountId);
+            if (account is null)
+            {
+                MessageBox.Show("対象のアカウントが見つかりませんでした。", "Twitchアカウント");
+                return;
             }
 
-            // --- 設定情報保存処理 ---
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.UserName,
-                JTSAHelper.LoginName
-            );
+            button.IsEnabled = false;
+            try
+            {
+                var deviceCodeResponse = await TwitchHelper.RequestDeviceCodeAsync();
+                if (deviceCodeResponse is null)
+                    throw new InvalidOperationException("認証コードを取得できませんでした。");
 
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.RefreshToken,
-                accessTokenResponse.refreshToken
-            );
+                SettingOAuthCodeBox.Text = deviceCodeResponse.user_code;
+                var verificationUrl = string.IsNullOrWhiteSpace(deviceCodeResponse.verification_uri_complete)
+                    ? deviceCodeResponse.verification_uri
+                    : deviceCodeResponse.verification_uri_complete;
+                Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
 
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.ExpiresIn,
-                accessTokenResponse.expiresIn.ToString()
-            );
+                var token = await TwitchHelper.PollDeviceTokenAsync(
+                    deviceCodeResponse.device_code,
+                    deviceCodeResponse.interval,
+                    deviceCodeResponse.expires_in);
+                if (token is null)
+                    throw new InvalidOperationException("再認証が完了しませんでした。");
 
-            await mainWindow.StreamerDataSet();
+                var authenticatedUser = await TwitchHelper.GetAuthenticatedUserAsync(token.accessToken);
+                if (authenticatedUser is null)
+                    throw new InvalidOperationException("認証したアカウント情報を取得できませんでした。");
+                if (authenticatedUser.UserId != account.BroadcasterId)
+                {
+                    throw new InvalidOperationException(
+                        $"{account.UserName} ではなく {authenticatedUser.DisplayName} で認証されています。\n" +
+                        "対象のTwitchアカウントへ切り替えて、もう一度再認証してください。");
+                }
+
+                DAO_TwitchAccount.InsertUpdate(
+                    authenticatedUser.Login,
+                    authenticatedUser.UserId,
+                    token.refreshToken,
+                    account.IsPrimary);
+
+                if (account.IsPrimary)
+                {
+                    DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, authenticatedUser.Login);
+                    DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RefreshToken, token.refreshToken);
+                    DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ExpiresIn, token.expiresIn.ToString());
+                    TwitchHelper.AccessToken = token.accessToken;
+                    SetAccessTokenStatus(true);
+                    SetBroadcasterStatus(true, authenticatedUser.UserId);
+                    SetTwitchUserName(authenticatedUser.Login);
+                }
+
+                mainWindow.ReloadTargetAccounts();
+                ReloadRegisteredAccounts();
+                MessageBox.Show($"{authenticatedUser.DisplayName} を再認証しました。", "Twitchアカウント");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Twitchアカウント");
+            }
+            finally
+            {
+                button.IsEnabled = true;
+            }
         }
 
 

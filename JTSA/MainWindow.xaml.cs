@@ -31,6 +31,12 @@ namespace JTSA
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		public const string DefaultObsWebSocketUrl = "ws://127.0.0.1:4455";
+
+		private readonly ObsController obsController = new();
+		private bool isObsOperationRunning;
+		private bool isObsStreaming;
+
 		/// <summary> タイトルログ用のリスト  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
 
@@ -39,7 +45,11 @@ namespace JTSA
 
         /// <summary> 現在の配信状態を定期更新するタイマ </summary>
         private readonly DispatcherTimer streamStatusTimer;
+        private readonly DispatcherTimer streamDurationTimer;
         private bool isStreamStatusUpdating;
+        private DateTime? currentStreamStartedAtUtc;
+        private int? currentViewerCount;
+        private bool isViewerCountHidden;
 
         /// <summary> ヘッダ部分：現在の設定タイトル </summary>
         public string CurrentTitleText 
@@ -160,6 +170,11 @@ namespace JTSA
             streamStatusTimer.Tick += async (_, _) => await UpdateStreamStatusAsync();
             streamStatusTimer.Start();
 
+            // APIの取得間隔中も、取得済みの配信開始時刻を基準に表示を進める。
+            streamDurationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            streamDurationTimer.Tick += (_, _) => UpdateDisplayedStreamDuration();
+            streamDurationTimer.Start();
+
             #endregion
 
 
@@ -167,6 +182,7 @@ namespace JTSA
 
             Loaded += MainWindow_LoadedAsync;
             SizeChanged += MainWindow_SizeChanged;
+            Closed += (_, _) => obsController.Dispose();
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
             #endregion
@@ -247,44 +263,6 @@ namespace JTSA
             Grid.SetColumn(GetTitleButton, isCompact ? 0 : 1);
             Grid.SetColumnSpan(GetTitleButton, isCompact ? 2 : 1);
 
-            StreamMetricsGrid.ColumnDefinitions.Clear();
-            StreamMetricsGrid.RowDefinitions.Clear();
-            if (isCompact)
-            {
-                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                StreamMetricsGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-                StreamMetricsGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-                Grid.SetRow(StreamDurationLabel, 0);
-                Grid.SetColumn(StreamDurationLabel, 0);
-                Grid.SetRow(StreamDurationTextBlock, 0);
-                Grid.SetColumn(StreamDurationTextBlock, 1);
-                Grid.SetRow(ViewerCountLabel, 1);
-                Grid.SetColumn(ViewerCountLabel, 0);
-                Grid.SetRow(ViewerCountTextBlock, 1);
-                Grid.SetColumn(ViewerCountTextBlock, 1);
-                StreamDurationTextBlock.Margin = new Thickness(6, 0, 0, 0);
-                ViewerCountTextBlock.Margin = new Thickness(6, 0, 0, 0);
-            }
-            else
-            {
-                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                StreamMetricsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-                Grid.SetRow(StreamDurationLabel, 0);
-                Grid.SetColumn(StreamDurationLabel, 0);
-                Grid.SetRow(StreamDurationTextBlock, 0);
-                Grid.SetColumn(StreamDurationTextBlock, 1);
-                Grid.SetRow(ViewerCountLabel, 0);
-                Grid.SetColumn(ViewerCountLabel, 2);
-                Grid.SetRow(ViewerCountTextBlock, 0);
-                Grid.SetColumn(ViewerCountTextBlock, 3);
-                StreamDurationTextBlock.Margin = new Thickness(6, 0, 14, 0);
-                ViewerCountTextBlock.Margin = new Thickness(6, 0, 0, 0);
-            }
         }
 
         /// <summary>
@@ -295,6 +273,9 @@ namespace JTSA
             //【プロセス開始ログ】
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "メインウィンドウ（読込）");
             processLog.EventStartLogWrite();
+
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1")
+                await ConnectObsAsync(forceReconnect: false, showError: false);
 
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
@@ -472,14 +453,21 @@ namespace JTSA
             var categoryName = SelectCategoryNameTextBlock.Text;
             var categoryBoxArtUrl = SelectCategoryBoxArt.Source?.ToString() ?? "";  // ボックスアートが無いカテゴリではSourceがnullになる
 
+            var target = await GetSelectedTargetAccountAsync();
+            if (target is null)
+            {
+                processLog.ErrorLogWrite("送信先アカウントの認証情報を取得できませんでした");
+                return;
+            }
+
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TwitchHelper.AccessToken);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", target.Value.AccessToken);
             client.DefaultRequestHeaders.Add("Client-Id", TwitchHelper.ClientID);
 
             var content = new StringContent(JsonSerializer.Serialize(new { title = title }), Encoding.UTF8, "application/json");
 
             // TwitchAPIで配信タイトルを更新
-            var response = await client.PatchAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={TwitchHelper.BroadcasterId}", content);
+            var response = await client.PatchAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={target.Value.Account.BroadcasterId}", content);
             if (response.IsSuccessStatusCode)
             {
                 // 履歴追加処理
@@ -497,13 +485,13 @@ namespace JTSA
 
             // カテゴリ設定処理
             string gameId = SelectCategoryIdTextBlock.Text.Trim();
-            if(!await TwitchHelper.SetCategoryAsync(gameId.ToString()))
+            if(!await TwitchHelper.SetCategoryAsync(gameId, target.Value.Account.BroadcasterId, target.Value.AccessToken))
             {
                 processLog.ErrorLogWrite("カテゴリ設定処理失敗");
             }
 
             // タイトル取得処理
-            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(target.Value.Account.BroadcasterId, target.Value.AccessToken);
             if (streamInfo is null)
             {
                 processLog.ErrorLogWrite("タイトル取得処理失敗");
@@ -529,7 +517,10 @@ namespace JTSA
             CategoryPanel.ReloadCategory();
 
             // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
-            await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
+            // チャンネルポイント機能は常駐中のメインアカウントへ接続しているため、
+            // サブアカウント送信時にメイン側の報酬を誤変更しない。
+            if (target.Value.Account.BroadcasterId == TwitchHelper.BroadcasterId)
+                await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -565,8 +556,11 @@ namespace JTSA
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "ヘッダ部:取得ボタン（クリック）");
             processLog.EventStartLogWrite();
 
+            var target = await GetSelectedTargetAccountAsync();
+            if (target is null) { processLog.ErrorLogWrite("送信先アカウントの認証情報を取得できませんでした"); return; }
+
             // 配信概要取得処理
-            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(target.Value.Account.BroadcasterId, target.Value.AccessToken);
             if (streamInfo == null) { processLog.ErrorLogWrite("配信概要未取得"); return; }
 
             // カテゴリ取得処理
@@ -581,6 +575,130 @@ namespace JTSA
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
+        }
+
+        /// <summary>保存済み設定でOBSへ接続し、ヘッダーの操作状態を更新する。</summary>
+        public async Task ConnectObsAsync(bool forceReconnect, bool showError)
+        {
+            if (isObsOperationRunning)
+                return;
+
+            isObsOperationRunning = true;
+            SetObsButtonState(enabled: false, isObsStreaming);
+            try
+            {
+                if (forceReconnect)
+                    await obsController.DisconnectAsync();
+
+                var url = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketUrl)?.Value
+                    ?? DefaultObsWebSocketUrl;
+                var password = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketPassword)?.Value ?? "";
+                await obsController.ConnectAsync(url, password);
+                await RefreshObsStreamStateAsync();
+                ObsSettingPanel.SetConnectionStatus(true);
+            }
+            catch (Exception ex)
+            {
+                SetObsButtonState(enabled: true, isStreaming: false);
+                ObsSettingPanel.SetConnectionStatus(false, "接続失敗");
+                AppLogPanel.Error(GetType().Name, $"OBS接続失敗 「 {ex.GetBaseException().Message} 」");
+                if (showError)
+                    MessageBox.Show($"OBSに接続できませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
+            }
+            finally
+            {
+                isObsOperationRunning = false;
+            }
+        }
+
+        private async Task EnsureObsConnectedAsync()
+        {
+            if (!obsController.IsConnected)
+                await ConnectObsAsync(forceReconnect: false, showError: true);
+        }
+
+        private async Task RefreshObsStreamStateAsync()
+        {
+            var isStreaming = await Task.Run(obsController.IsStreaming);
+            SetObsButtonState(enabled: true, isStreaming);
+        }
+
+        private void SetObsButtonState(bool enabled, bool isStreaming)
+        {
+            isObsStreaming = isStreaming;
+            ObsStreamButton.IsEnabled = enabled;
+            ObsStreamButton.Content = isStreaming ? "OBS 配信停止" : "OBS 配信開始";
+            ObsStreamButton.ToolTip = isStreaming ? "OBSの配信を停止" : "OBSの配信を開始";
+        }
+
+        private async void ObsStreamButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isObsOperationRunning)
+                return;
+
+            await EnsureObsConnectedAsync();
+            if (!obsController.IsConnected)
+                return;
+
+            if (isObsStreaming && MessageBox.Show("OBSの配信を停止しますか？", "OBS連携",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            isObsOperationRunning = true;
+            SetObsButtonState(enabled: false, isObsStreaming);
+            try
+            {
+                if (isObsStreaming)
+                    await Task.Run(obsController.StopStreaming);
+                else
+                    await Task.Run(obsController.StartStreaming);
+                await RefreshObsStreamStateAsync();
+            }
+            catch (Exception ex)
+            {
+                var operation = isObsStreaming ? "停止" : "開始";
+                SetObsButtonState(enabled: true, isObsStreaming);
+                MessageBox.Show($"OBSの配信を{operation}できませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
+            }
+            finally
+            {
+                isObsOperationRunning = false;
+            }
+        }
+
+        public void ReloadTargetAccounts(long? selectAccountId = null)
+        {
+            var accounts = DAO_TwitchAccount.SelectAll();
+            TargetAccountComboBox.ItemsSource = accounts;
+            var savedId = selectAccountId;
+            if (savedId is null && long.TryParse(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.SelectedTwitchAccountId)?.Value,
+                out var parsedId))
+                savedId = parsedId;
+            TargetAccountComboBox.SelectedValue = savedId ?? accounts.FirstOrDefault()?.Id;
+            if (TargetAccountComboBox.SelectedIndex < 0 && accounts.Count > 0)
+                TargetAccountComboBox.SelectedIndex = 0;
+        }
+
+        private void TargetAccountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (TargetAccountComboBox.SelectedValue is long id)
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
+        }
+
+        private async Task<(M_TwitchAccount Account, string AccessToken)?> GetSelectedTargetAccountAsync()
+        {
+            if (TargetAccountComboBox.SelectedValue is not long accountId)
+                return null;
+            var account = DAO_TwitchAccount.SelectById(accountId);
+            if (account is null) return null;
+            var token = await TwitchHelper.RefreshAccessTokenAsync(account.RefreshToken);
+            if (token is null) return null;
+            DAO_TwitchAccount.UpdateRefreshToken(account.Id, token.refreshToken);
+            if (account.IsPrimary)
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RefreshToken, token.refreshToken);
+            account.RefreshToken = token.refreshToken;
+            return (account, token.accessToken);
         }
 
 
@@ -1142,6 +1260,8 @@ namespace JTSA
                 var stream = await TwitchHelper.GetCurrentStreamAsync();
                 if (stream == null)
                 {
+                    currentStreamStartedAtUtc = null;
+                    currentViewerCount = null;
                     StreamStatusIndicator.Fill = Brushes.Gray;
                     StreamStatusTextBlock.Text = "オフライン";
                     StreamDurationTextBlock.Text = "--:--:--";
@@ -1149,20 +1269,48 @@ namespace JTSA
                     return;
                 }
 
-                var duration = DateTime.UtcNow - stream.StartedAt.ToUniversalTime();
-                if (duration < TimeSpan.Zero) duration = TimeSpan.Zero;
+                currentStreamStartedAtUtc = stream.StartedAt.ToUniversalTime();
 
                 StreamStatusIndicator.Fill = Brushes.LimeGreen;
                 StreamStatusTextBlock.Text = "配信中";
-                StreamDurationTextBlock.Text = duration.TotalDays >= 1
-                    ? $"{(int)duration.TotalDays}日 {duration:hh\\:mm\\:ss}"
-                    : duration.ToString(@"hh\:mm\:ss");
-                ViewerCountTextBlock.Text = $"{stream.ViewerCount:N0} 人";
+                UpdateDisplayedStreamDuration();
+                currentViewerCount = stream.ViewerCount;
+                UpdateDisplayedViewerCount();
             }
             finally
             {
                 isStreamStatusUpdating = false;
             }
+        }
+
+        /// <summary>最後に取得した配信開始時刻から、現在の配信時間をローカル計算して表示する。</summary>
+        private void UpdateDisplayedStreamDuration()
+        {
+            if (currentStreamStartedAtUtc is not DateTime startedAtUtc)
+                return;
+
+            var duration = DateTime.UtcNow - startedAtUtc;
+            if (duration < TimeSpan.Zero)
+                duration = TimeSpan.Zero;
+
+            StreamDurationTextBlock.Text = duration.TotalDays >= 1
+                ? $"{(int)duration.TotalDays}日 {duration:hh\\:mm\\:ss}"
+                : duration.ToString(@"hh\:mm\:ss");
+        }
+
+        private void ViewerCountTextBlock_MouseLeftButtonDown(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e)
+        {
+            isViewerCountHidden = !isViewerCountHidden;
+            UpdateDisplayedViewerCount();
+        }
+
+        private void UpdateDisplayedViewerCount()
+        {
+            ViewerCountTextBlock.Text = isViewerCountHidden || currentViewerCount is null
+                ? "-- 人"
+                : $"{currentViewerCount.Value:N0} 人";
         }
 
 
@@ -1199,6 +1347,15 @@ namespace JTSA
 
             // 表示・Twitchダッシュボードのリンク用に保存しておく
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, JTSAHelper.LoginName);
+
+            var primaryRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken)?.Value;
+            if (!string.IsNullOrWhiteSpace(primaryRefreshToken))
+            {
+                var primaryAccount = DAO_TwitchAccount.InsertUpdate(
+                    streamerInfo.Login, streamerInfo.UserId, primaryRefreshToken, isPrimary: true);
+                ReloadTargetAccounts();
+                SettingPanel.ReloadRegisteredAccounts();
+            }
 
             IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
 
