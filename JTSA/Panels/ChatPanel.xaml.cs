@@ -436,6 +436,10 @@ namespace JTSA.Panels
 
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
+                    // IRC側の交換メッセージは重複防止で除外しているため、
+                    // ユーザー入力はEventSub側から読み上げへ渡す。
+                    SpeakChatMessage(channelPoint.UserInput);
+
                     var isFirstEntrance = chatEntranceTracker.TryEnter(
                         TwitchHelper.CurrentStreamId,
                         channelPoint.UserId);
