@@ -16,11 +16,11 @@ public class StreamExpansionPlaceholderReplacerTests
     }
 
     [Fact]
-    public void ReplaceLeavesContentUnchangedOutsideRaid()
+    public void ReplaceClearsUnavailableRaidValues()
     {
         const string content = "{raid_user}さん、ありがとう！";
 
-        Assert.Equal(content, StreamExpansionPlaceholderReplacer.Replace(content, null));
+        Assert.Equal("さん、ありがとう！", StreamExpansionPlaceholderReplacer.Replace(content, null));
     }
 
     [Fact]
@@ -45,10 +45,22 @@ public class StreamExpansionPlaceholderReplacerTests
     }
 
     [Fact]
-    public void ReplaceLeavesChatPlaceholdersUnchangedOutsideChatTrigger()
+    public void ReplaceClearsUnavailableChatValues()
     {
         const string content = "{chat_user} ({chat_login})";
 
-        Assert.Equal(content, StreamExpansionPlaceholderReplacer.Replace(content, null));
+        Assert.Equal(" ()", StreamExpansionPlaceholderReplacer.Replace(content, null));
+    }
+
+    [Fact]
+    public void ReplaceExpandsTriggerAndStreamPlaceholders()
+    {
+        var result = StreamExpansionPlaceholderReplacer.Replace(
+            "{trigger_type}|{trigger_value}|{trigger_obs}|{stream_title}|{stream_category}|{unknown}",
+            null,
+            null,
+            new StreamExpansionTriggerValues("obs_stream_start", "main", "main", "Title", "Category"));
+
+        Assert.Equal("obs_stream_start|main|main|Title|Category|{unknown}", result);
     }
 }

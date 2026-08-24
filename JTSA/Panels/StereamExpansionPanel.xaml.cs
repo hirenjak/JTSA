@@ -21,6 +21,9 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsObsStreamStart { get; set; }
+    public bool IsObsStreamStartSub { get; set; }
+    public int ObsStreamStartSelectedIndex { get => IsObsStreamStartSub ? 1 : 0; set { IsObsStreamStartSub = value == 1; Changed(); } }
     public bool DoShoutout { get; set; }
     public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
@@ -47,7 +50,25 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     public int Weight { get => weight; set { weight = value; Changed(); } }
     public int AudioVolume { get => audioVolume; set { audioVolume = Math.Clamp(value, 0, 100); Changed(); } }
     public string ProbabilityText { get => probabilityText; set { probabilityText = value; Changed(); } }
+    public ObservableCollection<StreamExpansionObsTextForm> ObsTextForms { get; } = [];
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
+}
+
+
+public class StreamExpansionObsTextForm : INotifyPropertyChanged
+{
+    private bool isSubObs;
+    private string sceneName = string.Empty;
+    private string sourceName = string.Empty;
+    public bool IsSubObs { get => isSubObs; set { isSubObs = value; Changed(); } }
+    public int ObsSelectedIndex { get => IsSubObs ? 1 : 0; set { IsSubObs = value == 1; Changed(); } }
+    public string SceneName { get => sceneName; set { sceneName = value; Changed(); } }
+    public string SourceName { get => sourceName; set { sourceName = value; Changed(); } }
+    public string TextTemplate { get; set; } = string.Empty;
+    public ObservableCollection<string> SceneNames { get; } = [];
+    public ObservableCollection<string> SourceNames { get; } = [];
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
@@ -141,6 +162,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsBits = x.IsBits,
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
+                IsObsStreamStart = x.IsObsStreamStart,
+                IsObsStreamStartSub = x.IsObsStreamStartSub,
                 DoShoutout = x.DoShoutout,
                 DelaySeconds = x.DelaySeconds,
                 TriggerComment = x.TriggerComment,
@@ -207,6 +230,15 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                     case "Chat":
                         form.IsChat = true;
                         form.ChatContent = item.Content;
+                        break;
+                    case "ObsText":
+                        form.ObsTextForms.Add(new()
+                        {
+                            IsSubObs = item.IsSubObs,
+                            SceneName = item.ObsSceneName,
+                            SourceName = item.ObsSourceName,
+                            TextTemplate = item.Content
+                        });
                         break;
                     default:
                         form.IsAudio = true;
@@ -335,6 +367,22 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             AddSaveItem(saveItems, form.IsImage, "Image", form.ImageContent, form.Weight, 100, groupIndex);
             AddSaveItem(saveItems, form.IsAudio, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
             AddSaveItem(saveItems, form.IsChat, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
+            foreach (var obsText in form.ObsTextForms)
+            {
+                if (string.IsNullOrWhiteSpace(obsText.SourceName)) continue;
+                saveItems.Add(new T_StreamExpansionItem
+                {
+                    ActionType = "ObsText",
+                    Content = obsText.TextTemplate ?? string.Empty,
+                    Weight = form.Weight,
+                    Volume = 100,
+                    SortNumber = groupIndex,
+                    IsSubObs = obsText.IsSubObs,
+                    ObsSceneName = obsText.SceneName?.Trim() ?? string.Empty,
+                    ObsSourceName = obsText.SourceName.Trim(),
+                    UpdatedDateTime = DateTime.Now
+                });
+            }
         }
 
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader
@@ -347,6 +395,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsBits = SelectedHeader.IsBits,
             IsFirstChat = SelectedHeader.IsFirstChat,
             IsFollow = SelectedHeader.IsFollow,
+            IsObsStreamStart = SelectedHeader.IsObsStreamStart,
+            IsObsStreamStartSub = SelectedHeader.IsObsStreamStartSub,
             DoShoutout = SelectedHeader.DoShoutout,
             DelaySeconds = Math.Clamp(SelectedHeader.DelaySeconds, 0, 3600),
             TriggerComment = SelectedHeader.TriggerComment?.Trim() ?? "", 
@@ -357,6 +407,76 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         
         Reload(id); 
         //StatusText.Text = "保存した";
+    }
+
+
+    private void AddObsTextButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is StreamExpansionItemForm item)
+            item.ObsTextForms.Add(new());
+    }
+
+    private void DeleteObsTextButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is StreamExpansionItemForm item &&
+            (sender as Button)?.DataContext is StreamExpansionObsTextForm card)
+            item.ObsTextForms.Remove(card);
+    }
+
+    private async void ObsTargetSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.DataContext is not StreamExpansionObsTextForm card ||
+            Application.Current.MainWindow is not MainWindow mainWindow) return;
+
+        card.IsSubObs = (sender as ComboBox)?.SelectedIndex == 1;
+        var controller = await mainWindow.EnsureObsConnectedAsync(card.IsSubObs);
+        if (controller is null) return;
+        try
+        {
+            var selectedScene = card.SceneName;
+            card.SceneNames.Clear();
+            foreach (var name in await Task.Run(controller.GetSceneNames)) card.SceneNames.Add(name);
+            if (!string.IsNullOrWhiteSpace(selectedScene))
+            {
+                if (!card.SceneNames.Contains(selectedScene)) card.SceneNames.Add(selectedScene);
+                card.SceneName = selectedScene;
+            }
+            else
+            {
+                card.SceneName = card.SceneNames.FirstOrDefault() ?? string.Empty;
+            }
+            await ReloadSourceNamesAsync(card, controller);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"OBS候補を取得できませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
+        }
+    }
+
+    private async void ObsSceneSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.DataContext is not StreamExpansionObsTextForm card ||
+            string.IsNullOrWhiteSpace(card.SceneName) || Application.Current.MainWindow is not MainWindow mainWindow)
+            return;
+        var controller = await mainWindow.EnsureObsConnectedAsync(card.IsSubObs);
+        if (controller is not null) await ReloadSourceNamesAsync(card, controller);
+    }
+
+    private static async Task ReloadSourceNamesAsync(StreamExpansionObsTextForm card, Utility.ObsController controller)
+    {
+        if (string.IsNullOrWhiteSpace(card.SceneName))
+        {
+            card.SourceNames.Clear();
+            return;
+        }
+
+        var selectedSource = card.SourceName;
+        var names = await Task.Run(() => controller.GetTextSourceNames(card.SceneName));
+        card.SourceNames.Clear();
+        foreach (var name in names) card.SourceNames.Add(name);
+        if (!string.IsNullOrWhiteSpace(selectedSource) && !card.SourceNames.Contains(selectedSource))
+            card.SourceNames.Add(selectedSource);
+        card.SourceName = selectedSource;
     }
 
     private static void AddSaveItem(

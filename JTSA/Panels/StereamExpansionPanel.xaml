@@ -98,7 +98,7 @@
         <!-- 実装内容 -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="168"/>
+                <RowDefinition Height="198"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -144,6 +144,17 @@
                             <CheckBox IsChecked="{Binding IsBits}" VerticalAlignment="Center"/>
                             <Label Content="ビッツ起動" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Height="28" Margin="16,0,0,0">
+                        <CheckBox IsChecked="{Binding IsObsStreamStart}" VerticalAlignment="Center"/>
+                        <Label Content="配信開始時" Foreground="White" VerticalAlignment="Center"/>
+                        <ComboBox Width="110" Height="22" Margin="8,0,0,0"
+                                  IsEnabled="{Binding IsObsStreamStart}"
+                                  SelectedIndex="{Binding ObsStreamStartSelectedIndex}">
+                            <ComboBoxItem Content="メインOBS"/>
+                            <ComboBoxItem Content="サブOBS"/>
+                        </ComboBox>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Height="24">
@@ -420,16 +431,69 @@
                     </TabItem>
 
                     <TabItem Header="OBS実行">
-                        <Grid
-                            Background="#FF404040">
-
-                            <StackPanel>
-                                <Label 
-                                    Content="※未実装！！！"
-                                    FontSize="20"
-                                    Foreground="White"/>
-
-                            </StackPanel>
+                        <Grid Background="#FF404040">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding ItemFormList}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="#777" BorderThickness="1" CornerRadius="4" Margin="8" Padding="8">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <Button DockPanel.Dock="Right" Content="＋ ソース変更" Width="112" Height="24"
+                                                                Tag="{Binding}" Click="AddObsTextButton_Click"/>
+                                                        <TextBlock Foreground="White" FontWeight="Bold"
+                                                                   Text="{Binding ProbabilityText, StringFormat=抽選アイテム {0}}"/>
+                                                    </DockPanel>
+                                                    <ItemsControl ItemsSource="{Binding ObsTextForms}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Expander Header="ソース変更" IsExpanded="False" Foreground="White" Margin="0,6,0,0">
+                                                                    <Border Background="#FF505050" Padding="10" CornerRadius="3">
+                                                                        <StackPanel>
+                                                                            <Button Content="削除" Width="52" Height="22" HorizontalAlignment="Right"
+                                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                                    Click="DeleteObsTextButton_Click"/>
+                                                                            <Grid Margin="0,0,0,8">
+                                                                                <Grid.ColumnDefinitions>
+                                                                                    <ColumnDefinition Width="110"/><ColumnDefinition Width="8"/>
+                                                                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="8"/>
+                                                                                    <ColumnDefinition Width="*"/>
+                                                                                </Grid.ColumnDefinitions>
+                                                                                <StackPanel>
+                                                                                    <TextBlock Text="接続先OBS" Foreground="LightGray"/>
+                                                                                    <ComboBox Height="24" Margin="0,2,0,0"
+                                                                                              SelectedIndex="{Binding ObsSelectedIndex}"
+                                                                                              SelectionChanged="ObsTargetSelectionChanged">
+                                                                                        <ComboBoxItem Content="メインOBS"/><ComboBoxItem Content="サブOBS"/>
+                                                                                    </ComboBox>
+                                                                                </StackPanel>
+                                                                                <StackPanel Grid.Column="2">
+                                                                                    <TextBlock Text="シーン" Foreground="LightGray"/>
+                                                                                    <ComboBox Height="24" Margin="0,2,0,0" IsEditable="True" ItemsSource="{Binding SceneNames}"
+                                                                                              Text="{Binding SceneName, UpdateSourceTrigger=PropertyChanged}"
+                                                                                              SelectionChanged="ObsSceneSelectionChanged"/>
+                                                                                </StackPanel>
+                                                                                <StackPanel Grid.Column="4">
+                                                                                    <TextBlock Text="テキストソース" Foreground="LightGray"/>
+                                                                                    <ComboBox Height="24" Margin="0,2,0,0" IsEditable="True" ItemsSource="{Binding SourceNames}"
+                                                                                              Text="{Binding SourceName, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                                </StackPanel>
+                                                                            </Grid>
+                                                                            <TextBlock Text="設定するテキスト" Foreground="LightGray"/>
+                                                                            <TextBox MinHeight="54" AcceptsReturn="True" TextWrapping="Wrap"
+                                                                                     Text="{Binding TextTemplate, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </Expander>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </Grid>
                     </TabItem>
                     <TabItem Header="ヘルプ">
@@ -439,6 +503,11 @@
                                            Text="チャット用プレースホルダー"/>
                                 <TextBlock Margin="0,8,0,16" Foreground="LightGray" TextWrapping="Wrap"
                                            Text="チャットの本文に以下を入力すると、トリガー受信時の情報へ自動的に置き換わります。"/>
+
+                                <TextBlock FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,0,6"
+                                           Text="OBSテキストソース用プレースホルダー"/>
+                                <TextBlock Margin="0,0,0,16" Foreground="LightGray" TextWrapping="Wrap"
+                                           Text="{}{chat_user}  {chat_login}  {raid_user}  {raid_title}  {raid_category}&#x0a;{trigger_type}  {trigger_value}  {trigger_obs}  {stream_title}  {stream_category}"/>
 
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>

@@ -36,8 +36,11 @@ namespace JTSA
 
 		private readonly ObsController mainObsController = new();
 		private readonly ObsController subObsController = new();
+        private readonly StreamExpansionService streamExpansionService = new();
 		private bool isObsOperationRunning;
-		private bool isObsStreaming;
+        private bool isObsStreaming;
+        private bool? mainObsLastStreamingState;
+        private bool? subObsLastStreamingState;
 
 		/// <summary> タイトルログ用のリスト  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
@@ -163,9 +166,13 @@ namespace JTSA
             DataContext = this;
             RestoreWindowPosition();
             mainObsController.StreamingStateChanged += isStreaming =>
-                UpdateObsButtonFromEvent(mainObsController, isStreaming);
+            {
+                HandleObsStreamingStateEvent(mainObsController, isSub: false, isStreaming);
+            };
             subObsController.StreamingStateChanged += isStreaming =>
-                UpdateObsButtonFromEvent(subObsController, isStreaming);
+            {
+                HandleObsStreamingStateEvent(subObsController, isSub: true, isStreaming);
+            };
 
             // タイトルのバージョン設定
             var version = Assembly.GetExecutingAssembly().GetName().Version;
@@ -674,6 +681,9 @@ namespace JTSA
                     ?? (isSub ? "ws://127.0.0.1:4456" : DefaultObsWebSocketUrl);
                 var password = DAO_Setting.SelectOneById(passwordSetting)?.Value ?? "";
                 await controller.ConnectAsync(url, password);
+                var connectedStreamingState = await Task.Run(controller.IsStreaming);
+                if (isSub) subObsLastStreamingState = connectedStreamingState;
+                else mainObsLastStreamingState = connectedStreamingState;
                 ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
                 RefreshObsControlTarget();
             }
@@ -712,6 +722,65 @@ namespace JTSA
                 await ConnectObsAsync(forceReconnect: false, showError: true, isSub);
 
             return controller.IsConnected ? controller : null;
+        }
+
+        public async Task SetObsTextSourceAsync(bool isSub, string sourceName, string text)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                await Dispatcher.InvokeAsync(() => SetObsTextSourceAsync(isSub, sourceName, text)).Task.Unwrap();
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(sourceName))
+                throw new InvalidOperationException("OBSテキストソースが指定されていません。");
+            var controller = await EnsureObsConnectedAsync(isSub)
+                ?? throw new InvalidOperationException("OBSに接続できませんでした。");
+            controller.SetTextSourceText(sourceName, text);
+        }
+
+        private async Task HandleObsStreamStartedAsync(bool isSub)
+        {
+            var obsName = isSub ? "sub" : "main";
+            var settingName = isSub
+                ? DAO_Setting.SettingName.SubObsTwitchAccountId
+                : DAO_Setting.SettingName.MainObsTwitchAccountId;
+            var accountIdText = DAO_Setting.SelectOneById(settingName)?.Value;
+            var broadcasterId = string.Empty;
+            var accessToken = string.Empty;
+            if (long.TryParse(accountIdText, out var accountId))
+            {
+                var account = DAO_TwitchAccount.SelectById(accountId);
+                if (account is not null)
+                {
+                    broadcasterId = account.BroadcasterId;
+                    try
+                    {
+                        var token = await TwitchHelper.RefreshAccessTokenAsync(account.RefreshToken);
+                        accessToken = token?.accessToken ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(token?.refreshToken))
+                            DAO_TwitchAccount.UpdateRefreshToken(account.Id, token.refreshToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _ = Dispatcher.BeginInvoke(() => AppLogPanel.Error(
+                            GetType().Name,
+                            $"OBS配信開始時のTwitch認証更新失敗 「 {ex.GetBaseException().Message} 」"));
+                    }
+                }
+            }
+            await streamExpansionService.HandleAsync(
+                StreamExpansionTriggerType.ObsStreamStart, obsName,
+                triggerObs: obsName, broadcasterId: broadcasterId, accessToken: accessToken);
+        }
+
+        private void HandleObsStreamingStateEvent(ObsController controller, bool isSub, bool isStreaming)
+        {
+            UpdateObsButtonFromEvent(controller, isStreaming);
+            var previous = isSub ? subObsLastStreamingState : mainObsLastStreamingState;
+            if (isSub) subObsLastStreamingState = isStreaming;
+            else mainObsLastStreamingState = isStreaming;
+            if (previous == false && isStreaming)
+                _ = HandleObsStreamStartedAsync(isSub);
         }
 
         private async Task RefreshObsStreamStateAsync(ObsController controller)

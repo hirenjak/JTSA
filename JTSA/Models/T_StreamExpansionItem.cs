@@ -13,4 +13,10 @@ internal class T_StreamExpansionItem : DBBaseTransaction
     public int Weight { get; set; } = 1;
 
     public int Volume { get; set; } = 100;
+
+    public bool IsSubObs { get; set; }
+
+    public string ObsSceneName { get; set; } = string.Empty;
+
+    public string ObsSourceName { get; set; } = string.Empty;
 }
