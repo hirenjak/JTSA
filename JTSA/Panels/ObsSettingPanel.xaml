@@ -1,45 +1,17 @@
-<UserControl x:Class="JTSA.Panels.ObsSettingPanel"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="16" MaxWidth="760" HorizontalAlignment="Left">
-            <TextBlock Text="OBS連携設定" Foreground="White" FontSize="22" FontWeight="Bold"/>
-            <TextBlock Margin="0,6,0,16" Foreground="LightGray" TextWrapping="Wrap"
-                       Text="OBSの［ツール → WebSocketサーバー設定］でサーバーを有効にして、同じ接続情報を入力してください。"/>
-
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150"/>
-                    <ColumnDefinition Width="420"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Label Content="WebSocket URL" Foreground="White" VerticalAlignment="Center"/>
-                <TextBox x:Name="ObsUrlTextBox" Grid.Column="1" Margin="4" Padding="6"/>
-                <Label Grid.Row="1" Content="パスワード" Foreground="White" VerticalAlignment="Center"/>
-                <PasswordBox x:Name="ObsPasswordBox" Grid.Row="1" Grid.Column="1" Margin="4" Padding="6"/>
-                <CheckBox x:Name="ObsAutoConnectCheckBox" Grid.Row="2" Grid.Column="1" Margin="4,10"
-                          Content="起動時に自動接続する" Foreground="White"/>
-            </Grid>
-
-            <StackPanel Orientation="Horizontal" Margin="150,10,0,0">
-                <Button Content="保存して接続テスト" Width="160" Height="30" Click="SaveAndTestButton_Click"/>
-                <TextBlock x:Name="ObsConnectionStatusTextBlock" Margin="12,0" Foreground="LightGray" VerticalAlignment="Center" Text="未確認"/>
-            </StackPanel>
-
-            <Border Margin="0,20,0,14" Height="1" Background="Gray"/>
-            <TextBlock Text="OBSブラウザソース" Foreground="White" FontSize="18" FontWeight="Bold"/>
-            <TextBlock Margin="0,6,0,10" Foreground="LightGray" Text="OBSのブラウザソースに、用途に応じて以下のURLを設定してください。"/>
-            <TextBlock Text="チャット表示" Foreground="White"/>
-            <TextBox Text="http://localhost:8026/chat" Margin="0,4,0,10" Padding="6" IsReadOnly="True"/>
-            <TextBlock Text="ゲームプレイリスト表示" Foreground="White"/>
-            <TextBox Text="http://localhost:8026/obs" Margin="0,4,0,10" Padding="6" IsReadOnly="True"/>
-            <TextBlock Text="配信拡張画像出力" Foreground="White"/>
-            <TextBox Text="http://localhost:8026/expansion" Margin="0,4,0,4" Padding="6" IsReadOnly="True"/>
-            <TextBlock Foreground="LightGray" Text="背景は透明です。画像はトリガー実行時に5秒間表示されます。"/>
-        </StackPanel>
-    </ScrollViewer>
+<UserControl x:Class="JTSA.Panels.ObsSettingPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+  <DockPanel Margin="0,0,0,12"><StackPanel DockPanel.Dock="Left"><TextBlock Text="OBS連携設定" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Margin="0,4,0,0" Foreground="LightGray" Text="各PCのOBSにTwitchアカウントを割り当てます。送信先アカウントに応じて右上ボタンの操作OBSが切り替わります。"/></StackPanel><CheckBox x:Name="ObsAutoConnectCheckBox" HorizontalAlignment="Right" VerticalAlignment="Center" Content="起動時に登録済みのOBSへ自動接続" Foreground="White"/></DockPanel>
+  <Border Padding="10" Margin="0,0,0,8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1"><Grid>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="72"/><ColumnDefinition Width="220"/><ColumnDefinition Width="72"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+   <TextBlock Grid.RowSpan="2" Text="メインOBS" TextAlignment="Center" Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="URL" Foreground="LightGray" VerticalAlignment="Center"/><TextBox x:Name="ObsUrlTextBox" Grid.Column="2" Margin="3" Padding="5"/><TextBlock Grid.Column="3" Text="パスワード" Foreground="LightGray" VerticalAlignment="Center"/><PasswordBox x:Name="ObsPasswordBox" Grid.Column="4" Margin="3" Padding="5"/>
+   <TextBlock Grid.Row="1" Grid.Column="1" Text="アカウント" Foreground="LightGray" VerticalAlignment="Center"/><ComboBox x:Name="MainTwitchAccountComboBox" Grid.Row="1" Grid.Column="2" Margin="3" Padding="3" DisplayMemberPath="UserName" SelectedValuePath="Id"/><Button Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Content="保存・接続テスト" Margin="3" Width="150" HorizontalAlignment="Left" Click="SaveAndTestButton_Click"/><TextBlock x:Name="ObsConnectionStatusTextBlock" Grid.Row="1" Grid.Column="5" Margin="8,0" Foreground="LightGray" VerticalAlignment="Center" Text="未確認"/>
+  </Grid></Border>
+  <Button x:Name="AddSubObsButton" Content="＋ サブOBSを追加" Width="140" Height="28" HorizontalAlignment="Left" Margin="0,0,0,10" Click="AddSubObsButton_Click"/>
+  <Border x:Name="SubObsSettingBorder" Padding="10" Margin="0,0,0,14" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1"><Grid>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="72"/><ColumnDefinition Width="220"/><ColumnDefinition Width="72"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+   <TextBlock Grid.RowSpan="2" Text="サブOBS" TextAlignment="Center" Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="URL" Foreground="LightGray" VerticalAlignment="Center"/><TextBox x:Name="SubObsUrlTextBox" Grid.Column="2" Margin="3" Padding="5"/><TextBlock Grid.Column="3" Text="パスワード" Foreground="LightGray" VerticalAlignment="Center"/><PasswordBox x:Name="SubObsPasswordBox" Grid.Column="4" Margin="3" Padding="5"/><Button Grid.Column="5" Content="削除" Width="56" Height="24" HorizontalAlignment="Right" Click="RemoveSubObsButton_Click"/>
+   <TextBlock Grid.Row="1" Grid.Column="1" Text="アカウント" Foreground="LightGray" VerticalAlignment="Center"/><ComboBox x:Name="SubTwitchAccountComboBox" Grid.Row="1" Grid.Column="2" Margin="3" Padding="3" DisplayMemberPath="UserName" SelectedValuePath="Id"/><Button Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Content="保存・接続テスト" Margin="3" Width="150" HorizontalAlignment="Left" Click="SaveAndTestSubButton_Click"/><TextBlock x:Name="SubObsConnectionStatusTextBlock" Grid.Row="1" Grid.Column="5" Margin="8,0" Foreground="LightGray" VerticalAlignment="Center" Text="未確認"/>
+  </Grid></Border>
+  <TextBlock Text="OBSブラウザソース" Foreground="White" FontSize="18" FontWeight="Bold"/><UniformGrid Columns="3" Margin="0,8,0,0"><StackPanel Margin="0,0,8,0"><TextBlock Text="チャット表示" Foreground="White"/><TextBox Text="http://localhost:8026/chat" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel><StackPanel Margin="0,0,8,0"><TextBlock Text="ゲームプレイリスト表示" Foreground="White"/><TextBox Text="http://localhost:8026/obs" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel><StackPanel><TextBlock Text="配信拡張画像出力" Foreground="White"/><TextBox Text="http://localhost:8026/expansion" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel></UniformGrid><TextBlock Margin="0,5,0,0" Foreground="LightGray" Text="ブラウザソースの背景は透明です。"/>
+ </StackPanel></ScrollViewer>
 </UserControl>

@@ -39,6 +39,12 @@ namespace JTSA.Dao
             ObsWebSocketPassword = 24,
             /// <summary>起動時にOBSへ自動接続するか</summary>
             ObsAutoConnect = 25,
+            MainObsTwitchAccountId = 26,
+            MainObsControlEnabled = 27,
+            SubObsWebSocketUrl = 28,
+            SubObsWebSocketPassword = 29,
+            SubObsTwitchAccountId = 30,
+            SubObsControlEnabled = 31,
         }
 
 

@@ -18,12 +18,6 @@
                 FontSize="20"
                 Foreground="White"/>
             
-            <StackPanel Orientation="Horizontal">
-                <Button x:Name="AddSubAccountButton" Content="サブ垢を追加"
-                        Width="96" Height="20" Margin="8,0,0,0"
-                        Click="AddSubAccountButton_Click"/>
-            </StackPanel>
-
             <StackPanel Margin="8,10,0,4" MaxWidth="560" HorizontalAlignment="Left">
                 <TextBlock x:Name="NoRegisteredAccountTextBlock"
                            Text="登録済みアカウントはありません"
@@ -35,9 +29,10 @@
                                     BorderThickness="1" CornerRadius="3" Margin="0,0,0,4" Padding="8,5">
                                 <Grid Width="520">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="110"/>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="72"/>
                                         <ColumnDefinition Width="72"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock VerticalAlignment="Center">
@@ -64,11 +59,31 @@
                                             HorizontalAlignment="Right"
                                             Tag="{Binding Id}"
                                             Click="ReauthenticateAccountButton_Click"/>
+                                    <Button Grid.Column="4" Content="削除" Width="64" Height="22"
+                                            HorizontalAlignment="Right"
+                                            Tag="{Binding Id}"
+                                            Click="DeleteAccountButton_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPrimary}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <Button x:Name="AddSubAccountButton" Content="サブ垢を追加"
+                        Width="96" Height="22" Margin="0,6,0,0"
+                        HorizontalAlignment="Left"
+                        Click="AddSubAccountButton_Click"/>
 
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                     <TextBlock Text="認証コード" Foreground="LightGray"

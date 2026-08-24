@@ -131,6 +131,18 @@ namespace JTSA.Panels
             }
         }
 
+        /// <summary>
+        /// レイド先ユーザーの配信を既定のブラウザで開く。
+        /// </summary>
+        private void OpenTwitchChannelMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem { Parent: ContextMenu contextMenu }
+                && contextMenu.PlacementTarget is FrameworkElement { DataContext: RaidUserForm item })
+            {
+                JTSAHelper.OpenTwitchChannel(item.UserLogin);
+            }
+        }
+
         #endregion
     }
 }

@@ -30,6 +30,11 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
+                            <StackPanel.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="配信をブラウザで開く" Click="OpenTwitchChannelMenuItem_Click"/>
+                                </ContextMenu>
+                            </StackPanel.ContextMenu>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>

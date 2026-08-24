@@ -33,7 +33,8 @@ namespace JTSA
 	{
 		public const string DefaultObsWebSocketUrl = "ws://127.0.0.1:4455";
 
-		private readonly ObsController obsController = new();
+		private readonly ObsController mainObsController = new();
+		private readonly ObsController subObsController = new();
 		private bool isObsOperationRunning;
 		private bool isObsStreaming;
 
@@ -50,6 +51,10 @@ namespace JTSA
         private DateTime? currentStreamStartedAtUtc;
         private int? currentViewerCount;
         private bool isViewerCountHidden;
+        private const int SecretPanelClickCount = 10;
+        private static readonly TimeSpan SecretPanelClickInterval = TimeSpan.FromSeconds(2);
+        private int viewerCountConsecutiveClicks;
+        private DateTime lastViewerCountClickUtc;
 
         /// <summary> ヘッダ部分：現在の設定タイトル </summary>
         public string CurrentTitleText 
@@ -182,7 +187,11 @@ namespace JTSA
 
             Loaded += MainWindow_LoadedAsync;
             SizeChanged += MainWindow_SizeChanged;
-            Closed += (_, _) => obsController.Dispose();
+            Closed += (_, _) =>
+            {
+                mainObsController.Dispose();
+                subObsController.Dispose();
+            };
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
             #endregion
@@ -275,7 +284,12 @@ namespace JTSA
             processLog.EventStartLogWrite();
 
             if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1")
-                await ConnectObsAsync(forceReconnect: false, showError: false);
+            {
+                if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
+                    await ConnectObsAsync(forceReconnect: false, showError: false);
+                if (long.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
+                    await ConnectObsAsync(forceReconnect: false, showError: false, isSub: true);
+            }
 
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
@@ -578,7 +592,7 @@ namespace JTSA
         }
 
         /// <summary>保存済み設定でOBSへ接続し、ヘッダーの操作状態を更新する。</summary>
-        public async Task ConnectObsAsync(bool forceReconnect, bool showError)
+        public async Task ConnectObsAsync(bool forceReconnect, bool showError, bool isSub = false)
         {
             if (isObsOperationRunning)
                 return;
@@ -587,20 +601,23 @@ namespace JTSA
             SetObsButtonState(enabled: false, isObsStreaming);
             try
             {
+                var controller = isSub ? subObsController : mainObsController;
                 if (forceReconnect)
-                    await obsController.DisconnectAsync();
+                    await controller.DisconnectAsync();
 
-                var url = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketUrl)?.Value
-                    ?? DefaultObsWebSocketUrl;
-                var password = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketPassword)?.Value ?? "";
-                await obsController.ConnectAsync(url, password);
-                await RefreshObsStreamStateAsync();
-                ObsSettingPanel.SetConnectionStatus(true);
+                var urlSetting = isSub ? DAO_Setting.SettingName.SubObsWebSocketUrl : DAO_Setting.SettingName.ObsWebSocketUrl;
+                var passwordSetting = isSub ? DAO_Setting.SettingName.SubObsWebSocketPassword : DAO_Setting.SettingName.ObsWebSocketPassword;
+                var url = DAO_Setting.SelectOneById(urlSetting)?.Value
+                    ?? (isSub ? "ws://127.0.0.1:4456" : DefaultObsWebSocketUrl);
+                var password = DAO_Setting.SelectOneById(passwordSetting)?.Value ?? "";
+                await controller.ConnectAsync(url, password);
+                ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
+                RefreshObsControlTarget();
             }
             catch (Exception ex)
             {
                 SetObsButtonState(enabled: true, isStreaming: false);
-                ObsSettingPanel.SetConnectionStatus(false, "接続失敗");
+                ObsSettingPanel.SetConnectionStatus(false, "接続失敗", isSub);
                 AppLogPanel.Error(GetType().Name, $"OBS接続失敗 「 {ex.GetBaseException().Message} 」");
                 if (showError)
                     MessageBox.Show($"OBSに接続できませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
@@ -611,16 +628,49 @@ namespace JTSA
             }
         }
 
-        private async Task EnsureObsConnectedAsync()
+        private async Task<ObsController?> EnsureObsConnectedAsync()
         {
-            if (!obsController.IsConnected)
-                await ConnectObsAsync(forceReconnect: false, showError: true);
+            var target = GetObsControlTarget();
+            if (target is null)
+            {
+                MessageBox.Show("選択中のTwitchアカウントに操作対象のOBSが設定されていません。", "OBS連携");
+                return null;
+            }
+            var (controller, isSub) = target.Value;
+            if (!controller.IsConnected)
+                await ConnectObsAsync(forceReconnect: false, showError: true, isSub);
+            return controller.IsConnected ? controller : null;
         }
 
-        private async Task RefreshObsStreamStateAsync()
+        private async Task RefreshObsStreamStateAsync(ObsController controller)
         {
-            var isStreaming = await Task.Run(obsController.IsStreaming);
+            var isStreaming = await Task.Run(controller.IsStreaming);
             SetObsButtonState(enabled: true, isStreaming);
+        }
+
+        private (ObsController Controller, bool IsSub)? GetObsControlTarget()
+        {
+            if (TargetAccountComboBox.SelectedValue is not long accountId)
+                return null;
+            var mainId = DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId)?.Value;
+            if (mainId == accountId.ToString())
+                return (mainObsController, false);
+            var subId = DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value;
+            if (subId == accountId.ToString())
+                return (subObsController, true);
+            return null;
+        }
+
+        public async void RefreshObsControlTarget()
+        {
+            var target = GetObsControlTarget();
+            if (target is null || !target.Value.Controller.IsConnected)
+            {
+                SetObsButtonState(enabled: target is not null, isStreaming: false);
+                return;
+            }
+            try { await RefreshObsStreamStateAsync(target.Value.Controller); }
+            catch { SetObsButtonState(enabled: true, isStreaming: false); }
         }
 
         private void SetObsButtonState(bool enabled, bool isStreaming)
@@ -636,8 +686,8 @@ namespace JTSA
             if (isObsOperationRunning)
                 return;
 
-            await EnsureObsConnectedAsync();
-            if (!obsController.IsConnected)
+            var controller = await EnsureObsConnectedAsync();
+            if (controller is null)
                 return;
 
             if (isObsStreaming && MessageBox.Show("OBSの配信を停止しますか？", "OBS連携",
@@ -649,10 +699,10 @@ namespace JTSA
             try
             {
                 if (isObsStreaming)
-                    await Task.Run(obsController.StopStreaming);
+                    await Task.Run(controller.StopStreaming);
                 else
-                    await Task.Run(obsController.StartStreaming);
-                await RefreshObsStreamStateAsync();
+                    await Task.Run(controller.StartStreaming);
+                await RefreshObsStreamStateAsync(controller);
             }
             catch (Exception ex)
             {
@@ -684,6 +734,7 @@ namespace JTSA
         {
             if (TargetAccountComboBox.SelectedValue is long id)
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
+            RefreshObsControlTarget();
         }
 
         private async Task<(M_TwitchAccount Account, string AccessToken)?> GetSelectedTargetAccountAsync()
@@ -1302,8 +1353,29 @@ namespace JTSA
             object sender,
             System.Windows.Input.MouseButtonEventArgs e)
         {
+            var clickedAtUtc = DateTime.UtcNow;
+            viewerCountConsecutiveClicks = clickedAtUtc - lastViewerCountClickUtc <= SecretPanelClickInterval
+                ? viewerCountConsecutiveClicks + 1
+                : 1;
+            lastViewerCountClickUtc = clickedAtUtc;
+
             isViewerCountHidden = !isViewerCountHidden;
             UpdateDisplayedViewerCount();
+
+            if (viewerCountConsecutiveClicks < SecretPanelClickCount)
+                return;
+
+            viewerCountConsecutiveClicks = 0;
+            ChatStatisticsPanel.ReloadStatistics();
+            ChatStatisticsTabItem.Visibility = Visibility.Visible;
+            MainTabControl.SelectedItem = ChatStatisticsTabItem;
+            e.Handled = true;
+        }
+
+        private void ChatStatisticsPanel_CloseRequested(object sender, RoutedEventArgs e)
+        {
+            ChatStatisticsTabItem.Visibility = Visibility.Collapsed;
+            MainTabControl.SelectedIndex = 0;
         }
 
         private void UpdateDisplayedViewerCount()

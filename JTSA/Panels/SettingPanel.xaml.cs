@@ -322,6 +322,36 @@ namespace JTSA.Panels
             }
         }
 
+        private void DeleteAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not long accountId)
+                return;
+
+            var account = DAO_TwitchAccount.SelectById(accountId);
+            if (account is null || account.IsPrimary)
+            {
+                MessageBox.Show("このアカウントは削除できません。", "Twitchアカウント");
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"サブ垢「{account.UserName}」を削除しますか？\n保存されている認証情報も削除されます。",
+                "Twitchアカウント",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            if (!DAO_TwitchAccount.DeleteSubAccount(account.Id))
+            {
+                MessageBox.Show("サブ垢を削除できませんでした。", "Twitchアカウント");
+                return;
+            }
+
+            ReloadRegisteredAccounts();
+            mainWindow.ReloadTargetAccounts();
+        }
+
 
         /// <summary>
         /// ヘッダ部:DBフォルダオープンボタン（クリック）

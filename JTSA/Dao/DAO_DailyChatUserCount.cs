@@ -52,5 +52,27 @@ namespace JTSA.Dao
                 .ThenBy(x => x.DisplayName)
                 .ToList();
         }
+
+        /// <summary>保存されている全期間のユーザー別チャット数を取得する。</summary>
+        public static List<T_DailyChatUserCount> SelectAll()
+        {
+            using var db = new AppDbContext();
+            return db.T_DailyChatUserCount
+                .AsNoTracking()
+                .OrderByDescending(x => x.ChatDate)
+                .ThenByDescending(x => x.ChatCount)
+                .ToList();
+        }
+
+        /// <summary>指定ユーザーの保存済み日別チャット数を取得する。</summary>
+        public static List<T_DailyChatUserCount> SelectByUserId(string userId)
+        {
+            using var db = new AppDbContext();
+            return db.T_DailyChatUserCount
+                .AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .OrderBy(x => x.ChatDate)
+                .ToList();
+        }
     }
 }

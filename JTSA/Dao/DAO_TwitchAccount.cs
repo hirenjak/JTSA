@@ -55,5 +55,15 @@ namespace JTSA.Dao
             account.UpdatedDateTime = DateTime.Now;
             db.SaveChanges();
         }
+
+        public static bool DeleteSubAccount(long id)
+        {
+            using var db = new AppDbContext();
+            var account = db.M_TwitchAccount.SingleOrDefault(x => x.Id == id);
+            if (account is null || account.IsPrimary)
+                return false;
+            db.M_TwitchAccount.Remove(account);
+            return db.SaveChanges() > 0;
+        }
     }
 }

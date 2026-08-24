@@ -122,7 +122,17 @@ namespace JTSA.Utility
         /// <param name="BroadcasterLogin"></param>
         public static void OpenMyTwitchChannel()
         {
-            var url = $"https://www.twitch.tv/{LoginName}";
+            OpenTwitchChannel(LoginName);
+        }
+
+        /// <summary>
+        /// 指定したユーザーのTwitchチャンネルを既定のブラウザで開く
+        /// </summary>
+        public static void OpenTwitchChannel(string loginName)
+        {
+            if (string.IsNullOrWhiteSpace(loginName)) return;
+
+            var url = $"https://www.twitch.tv/{Uri.EscapeDataString(loginName.Trim())}";
 
             Process.Start(new ProcessStartInfo
             {

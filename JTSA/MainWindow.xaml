@@ -439,6 +439,13 @@
                     <panels:ChatPanel x:Name="ChatPanel"/>
                 </TabItem>
 
+                <TabItem x:Name="ChatStatisticsTabItem"
+                         Header="チャット統計"
+                         Visibility="Collapsed">
+                    <panels:ChatStatisticsPanel x:Name="ChatStatisticsPanel"
+                                                CloseRequested="ChatStatisticsPanel_CloseRequested"/>
+                </TabItem>
+
                 <TabItem Header="レイド">
                     <panels:RaidPanel x:Name="RaidPanel"/>
                 </TabItem>
@@ -480,5 +487,6 @@
                 </TabItem>
             </TabControl>
         </Grid>
+
     </Grid>
 </Window>
