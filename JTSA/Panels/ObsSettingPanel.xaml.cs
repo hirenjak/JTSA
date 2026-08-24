@@ -98,7 +98,13 @@ public partial class ObsSettingPanel : UserControl
         if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards)
             return;
 
-        card.IsSub = ((sender as ComboBox)?.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "sub";
+        var isSub = ((sender as ComboBox)?.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "sub";
+        // ItemsControl生成時にもSelectionChangedが発火するため、保存値と同じ初期選択では
+        // 復元済みのシーン・ソースを消さない。
+        if (card.IsSub == isSub && card.SelectedScene is not null)
+            return;
+
+        card.IsSub = isSub;
         card.SelectedScene = null;
         card.SelectedSource = null;
         card.Scenes.Clear();
@@ -131,6 +137,11 @@ public partial class ObsSettingPanel : UserControl
     private async void CardScene_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards || card.SelectedScene is null)
+            return;
+
+        // 保存済みカードの初期描画イベントでは、復元済みソースを維持する。
+        // Loaded後の再取得処理が一覧と現在テキストを更新する。
+        if (card.Controller is null && card.SelectedSource is not null)
             return;
 
         card.SelectedSource = null;
