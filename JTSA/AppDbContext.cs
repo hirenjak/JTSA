@@ -29,11 +29,13 @@ namespace JTSA.Models
         public DbSet<M_User> M_User { get; set; }
         public DbSet<M_Setting> M_Setting { get; set; }
         public DbSet<M_TwitchAccount> M_TwitchAccount { get; set; }
+        public DbSet<M_ObsTextSource> M_ObsTextSource { get; set; }
         public DbSet<M_TitleTag> M_TitleTag { get; set; }
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
         public DbSet<T_ChatUser> T_ChatUser { get; set; }
-        public DbSet<T_DailyChatUserCount> T_DailyChatUserCount { get; set; }
+        public DbSet<T_StreamChatUserCount> T_StreamChatUserCount { get; set; }
+        public DbSet<T_StreamHistory> T_StreamHistory { get; set; }
         public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
         public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
         public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
@@ -142,8 +144,11 @@ namespace JTSA.Models
             modelBuilder.Entity<T_ChannelPointPresetItem>()
                 .HasKey(c => new { c.PresetId, c.RewardId });
 
-            modelBuilder.Entity<T_DailyChatUserCount>()
-                .HasKey(c => new { c.ChatDate, c.UserId });
+            modelBuilder.Entity<T_StreamChatUserCount>()
+                .HasKey(c => new { c.StreamId, c.UserId });
+
+            modelBuilder.Entity<T_StreamChatUserCount>()
+                .HasIndex(c => c.StreamId);
 
             modelBuilder.Entity<T_StreamExpansionItem>()
                 .HasIndex(c => new { c.Id, c.HeaderId });

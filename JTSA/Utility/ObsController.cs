@@ -1,4 +1,5 @@
 using OBSWebsocketDotNet;
+using Newtonsoft.Json.Linq;
 
 namespace JTSA.Utility;
 
@@ -7,6 +8,14 @@ public sealed class ObsController : IDisposable
 {
     private readonly OBSWebsocket client = new();
     private readonly SemaphoreSlim connectionLock = new(1, 1);
+
+    public event Action<bool>? StreamingStateChanged;
+
+    public ObsController()
+    {
+        client.StreamStateChanged += (_, e) =>
+            StreamingStateChanged?.Invoke(e.OutputState.IsActive);
+    }
 
     public bool IsConnected => client.IsConnected;
 
@@ -71,6 +80,38 @@ public sealed class ObsController : IDisposable
     {
         EnsureConnected();
         client.StopStream();
+    }
+
+    public IReadOnlyList<string> GetSceneNames()
+    {
+        EnsureConnected();
+        return client.GetSceneList().Scenes
+            .Select(scene => scene.Name)
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public IReadOnlyList<string> GetTextSourceNames(string sceneName)
+    {
+        EnsureConnected();
+        return client.GetSceneItemList(sceneName)
+            .Where(item => item.SourceKind?.StartsWith("text_gdiplus", StringComparison.OrdinalIgnoreCase) == true)
+            .Select(item => item.SourceName)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public string GetTextSourceText(string inputName)
+    {
+        EnsureConnected();
+        return client.GetInputSettings(inputName).Settings.Value<string>("text") ?? string.Empty;
+    }
+
+    public void SetTextSourceText(string inputName, string text)
+    {
+        EnsureConnected();
+        client.SetInputSettings(inputName, new JObject { ["text"] = text }, true);
     }
 
     private void EnsureConnected()

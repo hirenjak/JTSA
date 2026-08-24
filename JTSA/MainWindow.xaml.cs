@@ -11,6 +11,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -48,6 +49,7 @@ namespace JTSA
         private readonly DispatcherTimer streamStatusTimer;
         private readonly DispatcherTimer streamDurationTimer;
         private bool isStreamStatusUpdating;
+        private DateTime? nextStreamStatusUpdateAtUtc;
         private DateTime? currentStreamStartedAtUtc;
         private int? currentViewerCount;
         private bool isViewerCountHidden;
@@ -159,6 +161,11 @@ namespace JTSA
             // WPF上の初期化処理
 			InitializeComponent();
             DataContext = this;
+            RestoreWindowPosition();
+            mainObsController.StreamingStateChanged += isStreaming =>
+                UpdateObsButtonFromEvent(mainObsController, isStreaming);
+            subObsController.StreamingStateChanged += isStreaming =>
+                UpdateObsButtonFromEvent(subObsController, isStreaming);
 
             // タイトルのバージョン設定
             var version = Assembly.GetExecutingAssembly().GetName().Version;
@@ -177,7 +184,11 @@ namespace JTSA
 
             // APIの取得間隔中も、取得済みの配信開始時刻を基準に表示を進める。
             streamDurationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            streamDurationTimer.Tick += (_, _) => UpdateDisplayedStreamDuration();
+            streamDurationTimer.Tick += (_, _) =>
+            {
+                UpdateDisplayedStreamDuration();
+                UpdateStreamStatusCountdown();
+            };
             streamDurationTimer.Start();
 
             #endregion
@@ -187,6 +198,7 @@ namespace JTSA
 
             Loaded += MainWindow_LoadedAsync;
             SizeChanged += MainWindow_SizeChanged;
+            Closing += (_, _) => SaveWindowPosition();
             Closed += (_, _) =>
             {
                 mainObsController.Dispose();
@@ -195,6 +207,57 @@ namespace JTSA
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
             #endregion
+        }
+
+        /// <summary>前回終了時のメインウィンドウ位置を復元する。</summary>
+        private void RestoreWindowPosition()
+        {
+            var savedX = DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainWindowPosX)?.Value;
+            var savedY = DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainWindowPosY)?.Value;
+
+            if (!double.TryParse(savedX, NumberStyles.Float, CultureInfo.InvariantCulture, out var x) ||
+                !double.TryParse(savedY, NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+            {
+                return;
+            }
+
+            // モニター構成が変わった場合、タイトルバーを含むウィンドウ全体が
+            // 画面外に残らないよう、保存位置を使わず WPF の既定位置で開く。
+            var isVisible =
+                x < SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth &&
+                y < SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight &&
+                x + Width > SystemParameters.VirtualScreenLeft &&
+                y + Height > SystemParameters.VirtualScreenTop;
+
+            if (!isVisible)
+            {
+                return;
+            }
+
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = x;
+            Top = y;
+        }
+
+        /// <summary>次回起動用にメインウィンドウ位置を保存する。</summary>
+        private void SaveWindowPosition()
+        {
+            var bounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, ActualWidth, ActualHeight)
+                : RestoreBounds;
+
+            if (double.IsNaN(bounds.X) || double.IsNaN(bounds.Y) ||
+                double.IsInfinity(bounds.X) || double.IsInfinity(bounds.Y))
+            {
+                return;
+            }
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.MainWindowPosX,
+                bounds.X.ToString(CultureInfo.InvariantCulture));
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.MainWindowPosY,
+                bounds.Y.ToString(CultureInfo.InvariantCulture));
         }
 
         /// <summary>
@@ -642,6 +705,15 @@ namespace JTSA
             return controller.IsConnected ? controller : null;
         }
 
+        public async Task<ObsController?> EnsureObsConnectedAsync(bool isSub)
+        {
+            var controller = isSub ? subObsController : mainObsController;
+            if (!controller.IsConnected)
+                await ConnectObsAsync(forceReconnect: false, showError: true, isSub);
+
+            return controller.IsConnected ? controller : null;
+        }
+
         private async Task RefreshObsStreamStateAsync(ObsController controller)
         {
             var isStreaming = await Task.Run(controller.IsStreaming);
@@ -679,6 +751,19 @@ namespace JTSA
             ObsStreamButton.IsEnabled = enabled;
             ObsStreamButton.Content = isStreaming ? "OBS 配信停止" : "OBS 配信開始";
             ObsStreamButton.ToolTip = isStreaming ? "OBSの配信を停止" : "OBSの配信を開始";
+            ObsStreamButton.Background = isStreaming ? Brushes.Red : Brushes.Green;
+            ObsStreamButton.Foreground = Brushes.White;
+        }
+
+        /// <summary>OBS側で直接開始・停止された場合も、選択中の操作対象へ表示を追従させる。</summary>
+        private void UpdateObsButtonFromEvent(ObsController controller, bool isStreaming)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                var target = GetObsControlTarget();
+                if (target is not null && ReferenceEquals(target.Value.Controller, controller))
+                    SetObsButtonState(enabled: true, isStreaming);
+            });
         }
 
         private async void ObsStreamButton_Click(object sender, RoutedEventArgs e)
@@ -1306,11 +1391,15 @@ namespace JTSA
             }
 
             isStreamStatusUpdating = true;
+            streamStatusTimer.Stop();
             try
             {
                 var stream = await TwitchHelper.GetCurrentStreamAsync();
                 if (stream == null)
                 {
+                    DAO_StreamHistory.EndActiveStreams(TwitchHelper.BroadcasterId, DateTime.Now);
+                    TwitchHelper.CurrentStreamId = string.Empty;
+                    StreamSupportTracker.StartStream(string.Empty);
                     currentStreamStartedAtUtc = null;
                     currentViewerCount = null;
                     StreamStatusIndicator.Fill = Brushes.Gray;
@@ -1321,6 +1410,20 @@ namespace JTSA
                 }
 
                 currentStreamStartedAtUtc = stream.StartedAt.ToUniversalTime();
+                TwitchHelper.CurrentStreamId = stream.StreamId;
+                StreamSupportTracker.StartStream(stream.StreamId);
+
+                var now = DateTime.Now;
+                DAO_StreamHistory.Upsert(new T_StreamHistory
+                {
+                    StreamId = stream.StreamId,
+                    BroadcasterId = stream.UserId,
+                    Title = stream.Title,
+                    CategoryName = stream.GameName,
+                    StartedAt = stream.StartedAt.ToLocalTime(),
+                    CreatedDateTime = now,
+                    UpdatedDateTime = now
+                });
 
                 StreamStatusIndicator.Fill = Brushes.LimeGreen;
                 StreamStatusTextBlock.Text = "配信中";
@@ -1331,7 +1434,27 @@ namespace JTSA
             finally
             {
                 isStreamStatusUpdating = false;
+                nextStreamStatusUpdateAtUtc = DateTime.UtcNow + streamStatusTimer.Interval;
+                UpdateStreamStatusCountdown();
+                streamStatusTimer.Start();
             }
+        }
+
+        /// <summary>視聴者数を次に取得するまでの残り時間を表示する。</summary>
+        private void UpdateStreamStatusCountdown()
+        {
+            if (nextStreamStatusUpdateAtUtc is not DateTime nextUpdateAtUtc)
+            {
+                ViewerCountUpdateCountdownTextBlock.Text = "次回更新 --:--";
+                return;
+            }
+
+            var remainingSeconds = Math.Max(
+                0,
+                (int)Math.Ceiling((nextUpdateAtUtc - DateTime.UtcNow).TotalSeconds));
+            var remaining = TimeSpan.FromSeconds(remainingSeconds);
+            ViewerCountUpdateCountdownTextBlock.Text =
+                $"次回更新 {(int)remaining.TotalMinutes:00}:{remaining.Seconds:00}";
         }
 
         /// <summary>最後に取得した配信開始時刻から、現在の配信時間をローカル計算して表示する。</summary>
@@ -1349,7 +1472,7 @@ namespace JTSA
                 : duration.ToString(@"hh\:mm\:ss");
         }
 
-        private void ViewerCountTextBlock_MouseLeftButtonDown(
+        private async void ViewerCountTextBlock_MouseLeftButtonDown(
             object sender,
             System.Windows.Input.MouseButtonEventArgs e)
         {
@@ -1366,6 +1489,7 @@ namespace JTSA
                 return;
 
             viewerCountConsecutiveClicks = 0;
+            await ChatStatisticsPanel.SyncArchivedStreamsAsync();
             ChatStatisticsPanel.ReloadStatistics();
             ChatStatisticsTabItem.Visibility = Visibility.Visible;
             MainTabControl.SelectedItem = ChatStatisticsTabItem;

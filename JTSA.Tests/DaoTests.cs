@@ -100,38 +100,54 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
-    public void DailyChatUserCount_Increment_AggregatesByDateAndUser()
+    public void StreamChatUserCount_Increment_AggregatesAcrossDatesInSameStream()
     {
         var firstDay = new DateTime(2026, 8, 16, 23, 59, 0);
         var nextDay = firstDay.AddDays(1);
 
-        DAO_DailyChatUserCount.Increment(firstDay, "user-1", "login", "Display");
-        DAO_DailyChatUserCount.Increment(firstDay, "user-1", "login", "Display Updated");
-        DAO_DailyChatUserCount.Increment(firstDay, "user-2", "other", "Other");
-        DAO_DailyChatUserCount.Increment(nextDay, "user-1", "login", "Display Updated");
+        DAO_StreamChatUserCount.Increment(firstDay, "user-1", "login", "Display", "stream-1");
+        DAO_StreamChatUserCount.Increment(firstDay, "user-1", "login", "Display Updated", "stream-1");
+        DAO_StreamChatUserCount.Increment(firstDay, "user-2", "other", "Other", "stream-1");
+        DAO_StreamChatUserCount.Increment(nextDay, "user-1", "login", "Display Updated", "stream-1");
 
-        var firstDayCounts = DAO_DailyChatUserCount.SelectByDate(firstDay);
-        Assert.Equal(2, firstDayCounts.Count);
-        Assert.Equal("user-1", firstDayCounts[0].UserId);
-        Assert.Equal(2, firstDayCounts[0].ChatCount);
-        Assert.Equal("Display Updated", firstDayCounts[0].DisplayName);
-
-        var nextDayCount = Assert.Single(DAO_DailyChatUserCount.SelectByDate(nextDay));
-        Assert.Equal(1, nextDayCount.ChatCount);
+        var counts = DAO_StreamChatUserCount.SelectByStreamId("stream-1");
+        Assert.Equal(2, counts.Count);
+        Assert.Equal("user-1", counts[0].UserId);
+        Assert.Equal(3, counts[0].ChatCount);
+        Assert.Equal(firstDay, counts[0].FirstChatDateTime);
+        Assert.Equal(nextDay, counts[0].LastChatDateTime);
+        Assert.Equal("Display Updated", counts[0].DisplayName);
     }
 
     [Fact]
-    public void DailyChatUserCount_Increment_HandlesConcurrentUpdatesWithoutLosingCounts()
+    public void StreamChatUserCount_Increment_HandlesConcurrentUpdatesWithoutLosingCounts()
     {
         var chatDate = new DateTime(2026, 8, 20, 10, 57, 0);
         const int incrementCount = 40;
 
         Parallel.For(0, incrementCount, index =>
-            DAO_DailyChatUserCount.Increment(
-                chatDate, "concurrent-user", "login", $"Display {index}"));
+            DAO_StreamChatUserCount.Increment(
+                chatDate, "concurrent-user", "login", $"Display {index}", "stream-concurrent"));
 
-        var count = Assert.Single(DAO_DailyChatUserCount.SelectByDate(chatDate));
+        var count = Assert.Single(DAO_StreamChatUserCount.SelectByStreamId("stream-concurrent"));
         Assert.Equal(incrementCount, count.ChatCount);
+    }
+
+    [Fact]
+    public void StreamChatUserCount_Increment_SeparatesSameUserByStreamId()
+    {
+        var chatDate = new DateTime(2026, 8, 24, 12, 0, 0);
+
+        DAO_StreamChatUserCount.Increment(chatDate, "user-1", "login", "Display", "stream-a");
+        DAO_StreamChatUserCount.Increment(chatDate, "user-1", "login", "Display", "stream-a");
+        DAO_StreamChatUserCount.Increment(chatDate, "user-1", "login", "Display", "stream-b");
+
+        var streamA = Assert.Single(DAO_StreamChatUserCount.SelectByStreamId("stream-a"));
+        var streamB = Assert.Single(DAO_StreamChatUserCount.SelectByStreamId("stream-b"));
+        Assert.Equal(2, streamA.ChatCount);
+        Assert.Equal(1, streamB.ChatCount);
+        Assert.Equal("user-1", streamA.UserId);
+        Assert.Equal("user-1", streamB.UserId);
     }
 
     [Fact]

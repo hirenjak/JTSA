@@ -6,15 +6,25 @@ namespace JTSA.Forms
         public required DateTime Date { get; init; }
         public required int DisplayMonth { get; init; }
         public int ChatCount { get; init; }
+        public string StreamSummaryText { get; init; } = string.Empty;
         public int Day => Date.Day;
         public bool IsCurrentMonth => Date.Month == DisplayMonth;
         public bool IsToday => Date == DateTime.Today;
         public bool IsSunday => Date.DayOfWeek == DayOfWeek.Sunday;
         public bool IsSaturday => Date.DayOfWeek == DayOfWeek.Saturday;
         public bool HasActivity => ChatCount > 0;
+        public bool HasStreams => !string.IsNullOrWhiteSpace(StreamSummaryText);
+        public string StreamCountText { get; init; } = string.Empty;
         public string ChatCountText => $"{ChatCount:N0}件";
-        public string ToolTipText => HasActivity
-            ? $"{Date:yyyy/MM/dd}  {ChatCount:N0} 発言"
-            : $"{Date:yyyy/MM/dd}";
+        public string ToolTipText
+        {
+            get
+            {
+                var text = HasActivity
+                    ? $"{Date:yyyy/MM/dd}  {ChatCount:N0} 発言"
+                    : $"{Date:yyyy/MM/dd}";
+                return HasStreams ? $"{text}\n\n配信履歴\n{StreamSummaryText}" : text;
+            }
+        }
     }
 }

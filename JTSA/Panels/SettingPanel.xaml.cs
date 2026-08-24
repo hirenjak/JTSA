@@ -207,6 +207,15 @@ namespace JTSA.Panels
             JTSAHelper.CopyClipBoad(SettingOAuthCodeBox.Text);
         }
 
+        private void CreditLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
+            {
+                UseShellExecute = true
+            });
+            e.Handled = true;
+        }
+
         private async void AddSubAccountButton_Click(object sender, RoutedEventArgs e)
         {
             AddSubAccountButton.IsEnabled = false;

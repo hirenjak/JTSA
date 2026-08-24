@@ -45,6 +45,12 @@ namespace JTSA.Dao
             SubObsWebSocketPassword = 29,
             SubObsTwitchAccountId = 30,
             SubObsControlEnabled = 31,
+            /// <summary>メインウィンドウの終了時の左位置</summary>
+            MainWindowPosX = 32,
+            /// <summary>メインウィンドウの終了時の上位置</summary>
+            MainWindowPosY = 33,
+            /// <summary>現在の配信におけるビッツ・サブスク・レイド集計</summary>
+            StreamSupportSnapshot = 34,
         }
 
 

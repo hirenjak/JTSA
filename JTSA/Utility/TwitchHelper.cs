@@ -1,6 +1,7 @@
 ﻿using JTSA.Forms;
 using JTSA.Forms.TwitchIF;
 using JTSA.Panels;
+using JTSA.Models;
 using JTSA.TwitchIF;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -23,6 +24,9 @@ namespace JTSA.Utility
     static class TwitchHelper
     {
         public static readonly TwitchAPI api;
+
+        /// <summary>直近の配信状態取得で確認できた現在のTwitch配信ID。</summary>
+        public static string CurrentStreamId { get; set; } = string.Empty;
 
         private static MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
@@ -188,11 +192,13 @@ namespace JTSA.Utility
 
                 return new TwitchStreamIF
                 {
+                    StreamId = data.Id,
                     UserId = data.UserId,
                     Title = data.Title,
                     UserName = data.UserName,
                     UserLogin = data.UserLogin,
                     GameId = data.GameId,
+                    GameName = data.GameName,
                     StartedAt = data.StartedAt,
                     ViewerCount = data.ViewerCount,
                     ThumbnailUrl = data.ThumbnailUrl
@@ -237,6 +243,86 @@ namespace JTSA.Utility
                 mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "カテゴリ設定失敗：" + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>認証中配信者の保存済みアーカイブを取得する。</summary>
+        public static async Task<List<T_StreamHistory>> GetArchivedStreamHistoryAsync()
+        {
+            var results = new List<T_StreamHistory>();
+            if (string.IsNullOrWhiteSpace(BroadcasterId) || string.IsNullOrWhiteSpace(AccessToken))
+                return results;
+
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+            string? cursor = null;
+
+            for (var page = 0; page < 10; page++)
+            {
+                var url = $"https://api.twitch.tv/helix/videos?user_id={Uri.EscapeDataString(BroadcasterId)}&type=archive&first=100";
+                if (!string.IsNullOrWhiteSpace(cursor))
+                    url += $"&after={Uri.EscapeDataString(cursor)}";
+
+                var response = await client.GetFromJsonAsync<HelixVideosResponse>(url);
+                if (response?.Data is null || response.Data.Count == 0)
+                    break;
+
+                var now = DateTime.Now;
+                foreach (var video in response.Data)
+                {
+                    var startedAt = video.CreatedAt.ToLocalTime();
+                    results.Add(new T_StreamHistory
+                    {
+                        StreamId = string.IsNullOrWhiteSpace(video.StreamId) ? $"video-{video.Id}" : video.StreamId,
+                        BroadcasterId = BroadcasterId,
+                        Title = video.Title,
+                        StartedAt = startedAt,
+                        EndedAt = startedAt.Add(ParseTwitchDuration(video.Duration)),
+                        ArchiveVideoId = video.Id,
+                        ArchiveUrl = video.Url,
+                        CreatedDateTime = now,
+                        UpdatedDateTime = now
+                    });
+                }
+
+                cursor = response.Pagination?.Cursor;
+                if (string.IsNullOrWhiteSpace(cursor))
+                    break;
+            }
+            return results;
+        }
+
+        private static TimeSpan ParseTwitchDuration(string value)
+        {
+            var match = Regex.Match(value ?? string.Empty, @"^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$");
+            if (!match.Success) return TimeSpan.Zero;
+            return new TimeSpan(
+                int.TryParse(match.Groups[1].Value, out var hours) ? hours : 0,
+                int.TryParse(match.Groups[2].Value, out var minutes) ? minutes : 0,
+                int.TryParse(match.Groups[3].Value, out var seconds) ? seconds : 0);
+        }
+
+        private sealed class HelixVideosResponse
+        {
+            [JsonPropertyName("data")]
+            public List<HelixVideo> Data { get; set; } = [];
+            [JsonPropertyName("pagination")]
+            public HelixPagination? Pagination { get; set; }
+        }
+
+        private sealed class HelixVideo
+        {
+            [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
+            [JsonPropertyName("stream_id")] public string StreamId { get; set; } = string.Empty;
+            [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+            [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
+            [JsonPropertyName("duration")] public string Duration { get; set; } = string.Empty;
+            [JsonPropertyName("url")] public string Url { get; set; } = string.Empty;
+        }
+
+        private sealed class HelixPagination
+        {
+            [JsonPropertyName("cursor")] public string? Cursor { get; set; }
         }
 
 

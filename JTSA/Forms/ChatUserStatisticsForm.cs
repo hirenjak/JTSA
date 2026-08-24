@@ -14,7 +14,7 @@ namespace JTSA.Forms
 
         public string RankText => $"#{Rank}";
         public string ChatCountText => $"{ChatCount:N0}";
-        public string ActiveDaysText => $"{ActiveDays:N0} 日";
+        public string ActiveDaysText => $"{ActiveDays:N0} 配信";
         public string FirstChatDateText => FirstChatDate.ToString("yyyy/MM/dd");
         public string LastChatDateText => LastChatDate.ToString("yyyy/MM/dd");
     }

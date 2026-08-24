@@ -1,4 +1,8 @@
 using JTSA.Dao;
+using JTSA.Utility;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using JTSA.Models;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -6,13 +10,19 @@ namespace JTSA.Panels;
 
 public partial class ObsSettingPanel : UserControl
 {
+    private readonly ObservableCollection<ObsTextSourceCard> textSourceCards = [];
+    private bool isRestoringCards;
+    private bool cardsLoaded;
+
     public ObsSettingPanel()
     {
         InitializeComponent();
+        TextSourceCardsItemsControl.ItemsSource = textSourceCards;
         var accounts = DAO_TwitchAccount.SelectAll();
         MainTwitchAccountComboBox.ItemsSource = accounts;
         SubTwitchAccountComboBox.ItemsSource = accounts;
         ReloadSettings();
+        RestoreTextSourceCards();
     }
 
     public void ReloadSettings()
@@ -40,6 +50,232 @@ public partial class ObsSettingPanel : UserControl
         status.Foreground = connected
             ? System.Windows.Media.Brushes.LightGreen
             : System.Windows.Media.Brushes.Orange;
+    }
+
+    private async void ObsSettingPanel_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (cardsLoaded) return;
+        cardsLoaded = true;
+        isRestoringCards = true;
+        try
+        {
+            foreach (var card in textSourceCards.Where(card => card.SelectedScene is not null))
+            {
+                var sceneName = card.SelectedScene;
+                var sourceName = card.SelectedSource;
+                await LoadScenesAsync(card);
+                card.SelectedScene = sceneName;
+                if (card.Controller is null || sceneName is null) continue;
+                ReplaceItems(card.Sources, card.Controller.GetTextSourceNames(sceneName));
+                card.SelectedSource = sourceName;
+                if (sourceName is not null && card.Sources.Contains(sourceName))
+                    card.Text = card.Controller.GetTextSourceText(sourceName);
+                card.Status = sourceName is null ? "ソースを選択してください" : "保存済み設定を読み込みました";
+            }
+        }
+        finally
+        {
+            isRestoringCards = false;
+        }
+    }
+
+    private void AddTextSourceCardButton_Click(object sender, RoutedEventArgs e)
+    {
+        textSourceCards.Add(new ObsTextSourceCard());
+    }
+
+    private void RemoveTextSourceCardButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is ObsTextSourceCard card)
+        {
+            textSourceCards.Remove(card);
+            SaveTextSourceCards();
+        }
+    }
+
+    private async void CardObs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards)
+            return;
+
+        card.IsSub = ((sender as ComboBox)?.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "sub";
+        card.SelectedScene = null;
+        card.SelectedSource = null;
+        card.Scenes.Clear();
+        card.Sources.Clear();
+        card.Text = "";
+        await LoadScenesAsync(card);
+    }
+
+    private async Task LoadScenesAsync(ObsTextSourceCard card)
+    {
+        card.Status = "接続中...";
+        try
+        {
+            card.Controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(card.IsSub);
+            if (card.Controller is null)
+            {
+                card.Status = "OBSに接続できません";
+                return;
+            }
+
+            ReplaceItems(card.Scenes, card.Controller.GetSceneNames());
+            card.Status = card.Scenes.Count == 0 ? "シーンがありません" : "シーンを選択してください";
+        }
+        catch (Exception ex)
+        {
+            card.Status = $"接続失敗: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private async void CardScene_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards || card.SelectedScene is null)
+            return;
+
+        card.SelectedSource = null;
+        card.Sources.Clear();
+        card.Text = "";
+        if (card.Controller is null)
+            await LoadScenesAsync(card);
+
+        try
+        {
+            if (card.Controller is null)
+                return;
+            ReplaceItems(card.Sources, card.Controller.GetTextSourceNames(card.SelectedScene));
+            card.Status = card.Sources.Count == 0 ? "GDI+テキストソースがありません" : "ソースを選択してください";
+        }
+        catch (Exception ex)
+        {
+            card.Status = $"ソース取得失敗: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private void CardSource_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards || card.SelectedSource is null || card.Controller is null)
+            return;
+
+        try
+        {
+            card.Text = card.Controller.GetTextSourceText(card.SelectedSource);
+            card.Status = "現在の文言を取得しました";
+        }
+        catch (Exception ex)
+        {
+            card.Status = $"文言取得失敗: {ex.GetBaseException().Message}";
+        }
+        SaveTextSourceCards();
+    }
+
+    private void CardDisplayName_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if ((sender as TextBox)?.Tag is ObsTextSourceCard card && card.SelectedSource is not null)
+            SaveTextSourceCards();
+    }
+
+    private void ApplySourceCardButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not ObsTextSourceCard card || card.Controller is null || card.SelectedSource is null)
+            return;
+        try
+        {
+            card.Controller.SetTextSourceText(card.SelectedSource, card.Text);
+            card.Status = "反映しました";
+        }
+        catch (Exception ex)
+        {
+            card.Status = $"反映失敗: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private void RestoreTextSourceCards()
+    {
+        isRestoringCards = true;
+        try
+        {
+            foreach (var setting in DAO_ObsTextSource.SelectAll())
+            {
+                var card = new ObsTextSourceCard { IsSub = setting.IsSubObs, DisplayName = setting.DisplayName };
+                if (setting.SceneName is not null) card.Scenes.Add(setting.SceneName);
+                if (setting.SourceName is not null) card.Sources.Add(setting.SourceName);
+                card.SelectedScene = setting.SceneName;
+                card.SelectedSource = setting.SourceName;
+                card.Status = "接続先を選び直すと一覧を更新します";
+                textSourceCards.Add(card);
+            }
+            if (textSourceCards.Count == 0)
+                textSourceCards.Add(new ObsTextSourceCard());
+        }
+        catch
+        {
+            textSourceCards.Add(new ObsTextSourceCard { Status = "保存済み設定を読み込めませんでした" });
+        }
+        finally
+        {
+            isRestoringCards = false;
+        }
+    }
+
+    private void SaveTextSourceCards()
+    {
+        if (isRestoringCards) return;
+        DAO_ObsTextSource.ReplaceAll(textSourceCards
+            .Where(card => card.SelectedScene is not null && card.SelectedSource is not null)
+            .Select((card, index) => new M_ObsTextSource
+        {
+            IsSubObs = card.IsSub,
+            DisplayName = card.DisplayName,
+            SceneName = card.SelectedScene,
+            SourceName = card.SelectedSource,
+            SortNumber = index,
+            UpdatedDateTime = DateTime.Now
+        }));
+    }
+
+    private static void ReplaceItems(ObservableCollection<string> target, IEnumerable<string> values)
+    {
+        target.Clear();
+        foreach (var value in values) target.Add(value);
+    }
+
+    private sealed class ObsTextSourceCard : INotifyPropertyChanged
+    {
+        private string text = "";
+        private string status = "";
+        private string? selectedScene;
+        private string? selectedSource;
+        public string DisplayName { get; set; } = "";
+        public bool IsSub { get; set; }
+        public int ObsSelectedIndex { get => IsSub ? 1 : 0; set => IsSub = value == 1; }
+        public ObservableCollection<string> Scenes { get; } = [];
+        public ObservableCollection<string> Sources { get; } = [];
+        public string? SelectedScene
+        {
+            get => selectedScene;
+            set
+            {
+                if (selectedScene == value) return;
+                selectedScene = value;
+                Notify();
+            }
+        }
+        public string? SelectedSource
+        {
+            get => selectedSource;
+            set
+            {
+                if (selectedSource == value) return;
+                selectedSource = value;
+                Notify();
+            }
+        }
+        public ObsController? Controller { get; set; }
+        public string Text { get => text; set { text = value; Notify(); } }
+        public string Status { get => status; set { status = value; Notify(); } }
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void Notify([System.Runtime.CompilerServices.CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     private async void SaveAndTestButton_Click(object sender, RoutedEventArgs e)

@@ -91,7 +91,7 @@
                     <DataGridTextColumn Header="ユーザー名" Binding="{Binding DisplayName}" Width="2*"/>
                     <DataGridTextColumn Header="ログインID" Binding="{Binding LoginId}" Width="120"/>
                     <DataGridTextColumn Header="発言数" Binding="{Binding ChatCountText}" Width="75"/>
-                    <DataGridTextColumn Header="活動日数" Binding="{Binding ActiveDaysText}" Width="75"/>
+                    <DataGridTextColumn Header="配信数" Binding="{Binding ActiveDaysText}" Width="75"/>
                     <DataGridTextColumn Header="初回記録日" Binding="{Binding FirstChatDateText}" Width="95"/>
                     <DataGridTextColumn Header="最終記録日" Binding="{Binding LastChatDateText}" Width="95"/>
                 </DataGrid.Columns>
@@ -162,6 +162,12 @@
                                                 <TextBlock x:Name="DayNumber" Text="{Binding Day}" FontSize="11"
                                                            HorizontalAlignment="Left" VerticalAlignment="Top"
                                                            Foreground="#FFE8E8E8" FontWeight="SemiBold"/>
+                                                <Border x:Name="StreamBadge" Visibility="Collapsed"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                        Padding="3,1" Background="#FFB04A7A" CornerRadius="3">
+                                                    <TextBlock Text="{Binding StreamCountText}"
+                                                               Foreground="White" FontSize="8"/>
+                                                </Border>
                                                 <TextBlock x:Name="ActivityCount" Visibility="Collapsed"
                                                            Text="{Binding ChatCountText}"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -187,6 +193,9 @@
                                                 <Setter TargetName="DayCell" Property="Background" Value="#FF285653"/>
                                                 <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
                                                 <Setter TargetName="ActivityCount" Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding HasStreams}" Value="True">
+                                                <Setter TargetName="StreamBadge" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>

@@ -202,11 +202,11 @@
             </StackPanel>
 
             <Border
-                Margin="0,12,0,0"
+                Margin="0, 12, 0, 0"
                 Width="Auto" Height="2"
                 Background="White"/>
 
-            <StackPanel
+                <StackPanel
                 Margin="0, 8, 0, 0">
 
                 <Label 
@@ -221,6 +221,50 @@
                     HorizontalAlignment="Left"
                     Click="DBFolderOpen"/>
             </StackPanel>
+
+            <Border Margin="0,24,0,12"
+                    Padding="0,12,0,0"
+                    BorderBrush="#FF666666"
+                    BorderThickness="0,1,0,0">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="Credits"
+                               HorizontalAlignment="Center"
+                               Foreground="LightGray"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Margin="0,0,0,6"/>
+
+                    <!-- 表示名と配信URLは、以下の各Hyperlinkを直接編集してください。 -->
+                    <TextBlock HorizontalAlignment="Center"
+                               Foreground="DarkGray"
+                               FontSize="12"
+                               Margin="0,2">
+                        【メイン制作者】緋蓮じゃく - hirenjak
+                        <Hyperlink NavigateUri="https://www.twitch.tv/hiren_jak"
+                                   RequestNavigate="CreditLink_RequestNavigate">Twitchリンク</Hyperlink>
+                    </TextBlock>
+                    <TextBlock HorizontalAlignment="Center"
+                            Foreground="DarkGray"
+                            FontSize="12"
+                            Margin="0,2">
+                        【共同制作者】さいふ - Xiphelier
+                        <Hyperlink NavigateUri="https://www.twitch.tv/xiphelier"
+                                   RequestNavigate="CreditLink_RequestNavigate">Twitchリンク</Hyperlink>
+                        </TextBlock>
+                    <TextBlock HorizontalAlignment="Center"
+                            Foreground="DarkGray"
+                            FontSize="12"
+                            Margin="0,2">
+                        【アイコン制作】波乱 - haran
+                    </TextBlock>
+
+                    <TextBlock Text="JTSA © 2026 緋蓮じゃく"
+                            HorizontalAlignment="Center"
+                            Foreground="DarkGray"
+                            FontSize="12"
+                            Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
 
         </StackPanel>
     </StackPanel>

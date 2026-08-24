@@ -3,6 +3,7 @@ using System;
 using JTSA.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,48 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824041830_AddStreamIdToDailyChatUserCount")]
+    partial class AddStreamIdToDailyChatUserCount
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
-
-            modelBuilder.Entity("JTSA.Models.M_ObsTextSource", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsSubObs")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUsedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SceneName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SourceName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("M_ObsTextSource");
-                });
 
             modelBuilder.Entity("JTSA.Models.M_TwitchAccount", b =>
                 {
@@ -195,6 +162,41 @@ namespace JTSA.Migrations
                     b.ToTable("T_ChatUser");
                 });
 
+            modelBuilder.Entity("JTSA.Models.T_DailyChatUserCount", b =>
+                {
+                    b.Property<DateTime>("ChatDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StreamId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ChatCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LoginId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ChatDate", "UserId", "StreamId");
+
+                    b.HasIndex("StreamId");
+
+                    b.ToTable("T_DailyChatUserCount");
+                });
+
             modelBuilder.Entity("JTSA.Models.T_GamePlaylistHeader", b =>
                 {
                     b.Property<long>("GamePlayListId")
@@ -258,44 +260,6 @@ namespace JTSA.Migrations
                     b.HasKey("GamePlayListId", "CategoryId");
 
                     b.ToTable("T_GamePlaylistItem");
-                });
-
-            modelBuilder.Entity("JTSA.Models.T_StreamChatUserCount", b =>
-                {
-                    b.Property<string>("StreamId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ChatCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("FirstChatDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("LastChatDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LoginId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("StreamId", "UserId");
-
-                    b.HasIndex("StreamId");
-
-                    b.ToTable("T_StreamChatUserCount");
                 });
 
             modelBuilder.Entity("JTSA.Models.T_StreamExpansionHeader", b =>

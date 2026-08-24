@@ -3,6 +3,7 @@ using System;
 using JTSA.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,48 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824042337_AggregateChatCountsByStream")]
+    partial class AggregateChatCountsByStream
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
-
-            modelBuilder.Entity("JTSA.Models.M_ObsTextSource", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsSubObs")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUsedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SceneName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SourceName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("M_ObsTextSource");
-                });
 
             modelBuilder.Entity("JTSA.Models.M_TwitchAccount", b =>
                 {
