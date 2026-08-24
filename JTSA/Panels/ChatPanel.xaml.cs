@@ -19,6 +19,8 @@ namespace JTSA.Panels
 
         public string? ImageUrl { get; set; }
 
+        public string? Foreground { get; set; }
+
         public bool IsEmote => !string.IsNullOrEmpty(ImageUrl);
     }
 
@@ -76,7 +78,8 @@ namespace JTSA.Panels
                         {
                             text = part.Text,
                             imageUrl = part.ImageUrl,
-                            isEmote = part.IsEmote
+                            isEmote = part.IsEmote,
+                            foreground = part.Foreground
                         }).ToList()
                     })
                     .ToArray();
@@ -183,7 +186,10 @@ namespace JTSA.Panels
                             return image;
                         }
 
-                        return document.createTextNode(part.text ?? "");
+                        const text = document.createElement("span");
+                        text.textContent = part.text ?? "";
+                        if (part.foreground) text.style.color = part.foreground;
+                        return text;
                     }
 
                     function render(items) {
@@ -373,6 +379,11 @@ namespace JTSA.Panels
 
                 twitchChatService.MessageReceived += message =>
                 {
+                    // 入力必須のチャンネルポイント交換は、IRCの通常チャットと
+                    // EventSubの交換通知の両方で届く。交換通知側へ入力文もまとめるため、
+                    // IRC側はチャット一覧へ重複追加しない。
+                    if (!string.IsNullOrWhiteSpace(message.CustomRewardId)) return;
+
                     SpeakChatMessage(message.Message);
 
                     var isFirstEntrance = chatEntranceTracker.TryEnter(
@@ -431,14 +442,20 @@ namespace JTSA.Panels
 
                     Dispatcher.InvokeAsync(() =>
                     {
+                        var message = ChannelPointChatFormatter.Format(
+                            channelPoint.RewardTitle,
+                            channelPoint.UserInput);
+
                         ChatAddAsync(new TwitchChatForm
                         {
                             UserId = channelPoint.UserId,
                             UserName = channelPoint.UserLogin,
-                            DisplayName = "ChannelPonint",
+                            DisplayName = channelPoint.UserName,
                             HexColor = "White",
-                            Message = channelPoint.RewardTitle + " by." + channelPoint.UserName,
-                            MessageParts = TwitchHelper.CreateParts(channelPoint.RewardTitle + " by." + channelPoint.UserName)
+                            Message = message,
+                            MessageParts = ChannelPointChatFormatter.CreateParts(
+                                channelPoint.RewardTitle,
+                                channelPoint.UserInput)
                         }, true, isFirstEntrance);
                     });
 
