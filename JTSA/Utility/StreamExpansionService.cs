@@ -19,7 +19,8 @@ internal sealed class StreamExpansionService
         ChatPlaceholderValues? chatPlaceholders = null,
         string triggerObs = "",
         string broadcasterId = "",
-        string accessToken = "")
+        string accessToken = "",
+        string channelPointInput = "")
     {
         try
         {
@@ -38,7 +39,7 @@ internal sealed class StreamExpansionService
             // Run each matching rule independently so every delay starts at the trigger time.
             await Task.WhenAll(rules.Select(rule =>
                 ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders,
-                    triggerObs, broadcasterId, accessToken)));
+                    triggerObs, broadcasterId, accessToken, channelPointInput)));
         }
         catch (Exception ex)
         {
@@ -54,7 +55,8 @@ internal sealed class StreamExpansionService
         ChatPlaceholderValues? chatPlaceholders,
         string triggerObs,
         string broadcasterId,
-        string accessToken)
+        string accessToken,
+        string channelPointInput)
     {
         if (rule.DelaySeconds > 0)
         {
@@ -72,7 +74,7 @@ internal sealed class StreamExpansionService
         {
             var selectedGroup = ChooseByWeight(groups);
             var triggerValues = await CreateTriggerValuesAsync(
-                selectedGroup, type, value, triggerObs, broadcasterId, accessToken);
+                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, channelPointInput);
             tasks.AddRange(selectedGroup.Where(item => item.ActionType != "ObsText").Select(item =>
                 ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues)));
             foreach (var item in selectedGroup.Where(item => item.ActionType == "ObsText"))
@@ -207,8 +209,10 @@ internal sealed class StreamExpansionService
                 return rule.IsBits;
 
             case StreamExpansionTriggerType.ObsStreamStart:
-                return rule.IsObsStreamStart &&
-                    rule.IsObsStreamStartSub == string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase);
+                if (!rule.IsObsStreamStart) return false;
+                return string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase)
+                    ? rule.IsObsStreamStartSub
+                    : rule.IsObsStreamStartMain;
         }
 
         return false;
@@ -295,7 +299,8 @@ internal sealed class StreamExpansionService
         string value,
         string triggerObs,
         string broadcasterId,
-        string accessToken)
+        string accessToken,
+        string channelPointInput)
     {
         var needsStreamInfo = items.Any(item => item.ActionType == "ObsText" &&
             (item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamTitlePlaceholder, StringComparison.OrdinalIgnoreCase) ||
@@ -322,7 +327,7 @@ internal sealed class StreamExpansionService
         }
 
         return new StreamExpansionTriggerValues(
-            ToTriggerName(type), value, triggerObs, title, category);
+            ToTriggerName(type), value, triggerObs, title, category, channelPointInput);
     }
 
     private static string ToTriggerName(StreamExpansionTriggerType type) => type switch

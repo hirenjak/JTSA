@@ -149,12 +149,12 @@
                     <StackPanel Orientation="Horizontal" Height="28" Margin="16,0,0,0">
                         <CheckBox IsChecked="{Binding IsObsStreamStart}" VerticalAlignment="Center"/>
                         <Label Content="配信開始時" Foreground="White" VerticalAlignment="Center"/>
-                        <ComboBox Width="110" Height="22" Margin="8,0,0,0"
-                                  IsEnabled="{Binding IsObsStreamStart}"
-                                  SelectedIndex="{Binding ObsStreamStartSelectedIndex}">
-                            <ComboBoxItem Content="メインOBS"/>
-                            <ComboBoxItem Content="サブOBS"/>
-                        </ComboBox>
+                        <CheckBox Margin="8,0,0,0" Content="メインOBS" Foreground="White"
+                                  VerticalAlignment="Center" IsEnabled="{Binding IsObsStreamStart}"
+                                  IsChecked="{Binding IsObsStreamStartMain}"/>
+                        <CheckBox Margin="12,0,0,0" Content="サブOBS" Foreground="White"
+                                  VerticalAlignment="Center" IsEnabled="{Binding IsObsStreamStart}"
+                                  IsChecked="{Binding IsObsStreamStartSub}"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Height="24">
@@ -506,8 +506,35 @@
 
                                 <TextBlock FontSize="18" FontWeight="Bold" Foreground="White" Margin="0,0,0,6"
                                            Text="OBSテキストソース用プレースホルダー"/>
-                                <TextBlock Margin="0,0,0,16" Foreground="LightGray" TextWrapping="Wrap"
-                                           Text="{}{chat_user}  {chat_login}  {raid_user}  {raid_title}  {raid_category}&#x0a;{trigger_type}  {trigger_value}  {trigger_obs}  {stream_title}  {stream_category}"/>
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                    </Grid.RowDefinitions>
+                                    <TextBox Grid.Row="0" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{chat_user}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャットしたユーザーの表示名（チャット・初回チャット時）"/>
+                                    <TextBox Grid.Row="1" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{chat_login}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャットしたユーザーのログイン名（チャット・初回チャット時）"/>
+                                    <TextBox Grid.Row="2" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{raid_user}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="レイド元ユーザーの表示名（レイド時）"/>
+                                    <TextBox Grid.Row="3" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{raid_title}"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="レイド元ユーザーの直近配信タイトル（レイド時）"/>
+                                    <TextBox Grid.Row="4" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{raid_category}"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="レイド元ユーザーの直近配信カテゴリ（レイド時）"/>
+                                    <TextBox Grid.Row="5" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{trigger_type}"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="発火したトリガーの種類"/>
+                                    <TextBox Grid.Row="6" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{trigger_value}"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="コメント本文、ユーザー名、報酬ID、Bits数などのトリガー値"/>
+                                    <TextBox Grid.Row="7" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{trigger_obs}"/>
+                                    <TextBlock Grid.Row="7" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="配信開始イベントの発火元OBS（main / sub）"/>
+                                    <TextBox Grid.Row="8" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_title}"/>
+                                    <TextBlock Grid.Row="8" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信タイトル"/>
+                                    <TextBox Grid.Row="9" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_category}"/>
+                                    <TextBlock Grid.Row="9" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信カテゴリ"/>
+                                    <TextBox Grid.Row="10" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{channel_point_input}"/>
+                                    <TextBlock Grid.Row="10" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャンネルポイント交換時にユーザーが入力した文言"/>
+                                </Grid>
 
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>

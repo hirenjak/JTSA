@@ -7,14 +7,18 @@ namespace JTSA.Tests;
 public class StreamExpansionObsTriggerTests
 {
     [Theory]
-    [InlineData(false, "main", true)]
-    [InlineData(false, "sub", false)]
-    [InlineData(true, "main", false)]
-    [InlineData(true, "sub", true)]
-    public void ObsStreamStartMatchesOnlyConfiguredObs(bool isSubObs, string eventObs, bool expected)
+    [InlineData(true, false, "main", true)]
+    [InlineData(true, false, "sub", false)]
+    [InlineData(false, true, "main", false)]
+    [InlineData(false, true, "sub", true)]
+    [InlineData(true, true, "main", true)]
+    [InlineData(true, true, "sub", true)]
+    public void ObsStreamStartMatchesConfiguredObs(
+        bool isMainObs, bool isSubObs, string eventObs, bool expected)
     {
         var rule = CreateRule();
         rule.IsObsStreamStart = true;
+        rule.IsObsStreamStartMain = isMainObs;
         rule.IsObsStreamStartSub = isSubObs;
 
         Assert.Equal(expected,

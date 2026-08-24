@@ -28,6 +28,8 @@ namespace JTSA.Models
 
         public bool IsObsStreamStart { get; set; }
 
+        public bool IsObsStreamStartMain { get; set; }
+
         public bool IsObsStreamStartSub { get; set; }
 
         public bool DoShoutout { get; set; }

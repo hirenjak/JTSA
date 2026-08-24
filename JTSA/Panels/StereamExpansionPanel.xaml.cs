@@ -22,8 +22,8 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
     public bool IsObsStreamStart { get; set; }
+    public bool IsObsStreamStartMain { get; set; }
     public bool IsObsStreamStartSub { get; set; }
-    public int ObsStreamStartSelectedIndex { get => IsObsStreamStartSub ? 1 : 0; set { IsObsStreamStartSub = value == 1; Changed(); } }
     public bool DoShoutout { get; set; }
     public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
@@ -163,6 +163,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
                 IsObsStreamStart = x.IsObsStreamStart,
+                IsObsStreamStartMain = x.IsObsStreamStartMain,
                 IsObsStreamStartSub = x.IsObsStreamStartSub,
                 DoShoutout = x.DoShoutout,
                 DelaySeconds = x.DelaySeconds,
@@ -396,6 +397,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsFirstChat = SelectedHeader.IsFirstChat,
             IsFollow = SelectedHeader.IsFollow,
             IsObsStreamStart = SelectedHeader.IsObsStreamStart,
+            IsObsStreamStartMain = SelectedHeader.IsObsStreamStartMain,
             IsObsStreamStartSub = SelectedHeader.IsObsStreamStartSub,
             DoShoutout = SelectedHeader.DoShoutout,
             DelaySeconds = Math.Clamp(SelectedHeader.DelaySeconds, 0, 3600),
@@ -455,9 +457,17 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
     private async void ObsSceneSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.DataContext is not StreamExpansionObsTextForm card ||
-            string.IsNullOrWhiteSpace(card.SceneName) || Application.Current.MainWindow is not MainWindow mainWindow)
+        if (sender is not ComboBox comboBox ||
+            comboBox.DataContext is not StreamExpansionObsTextForm card ||
+            Application.Current.MainWindow is not MainWindow mainWindow)
             return;
+
+        var selectedScene = comboBox.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(selectedScene))
+            selectedScene = comboBox.Text;
+        if (string.IsNullOrWhiteSpace(selectedScene)) return;
+
+        card.SceneName = selectedScene;
         var controller = await mainWindow.EnsureObsConnectedAsync(card.IsSubObs);
         if (controller is not null) await ReloadSourceNamesAsync(card, controller);
     }

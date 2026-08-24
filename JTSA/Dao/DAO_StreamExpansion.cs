@@ -39,6 +39,7 @@ internal static class DAO_StreamExpansion
             entity.IsFirstChat = header.IsFirstChat;
             entity.IsFollow = header.IsFollow;
             entity.IsObsStreamStart = header.IsObsStreamStart;
+            entity.IsObsStreamStartMain = header.IsObsStreamStartMain;
             entity.IsObsStreamStartSub = header.IsObsStreamStartSub;
             entity.DoShoutout = header.DoShoutout;
             entity.DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600);

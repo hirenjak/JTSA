@@ -442,7 +442,10 @@ namespace JTSA.Panels
                         }, true, isFirstEntrance);
                     });
 
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.ChannelPoint, channelPoint.RewardId);
+                    _ = streamExpansionService.HandleAsync(
+                        StreamExpansionTriggerType.ChannelPoint,
+                        channelPoint.RewardId,
+                        channelPointInput: channelPoint.UserInput);
 
                     if (isFirstEntrance)
                     {

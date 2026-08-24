@@ -63,4 +63,16 @@ public class StreamExpansionPlaceholderReplacerTests
 
         Assert.Equal("obs_stream_start|main|main|Title|Category|{unknown}", result);
     }
+
+    [Fact]
+    public void ReplaceExpandsChannelPointInput()
+    {
+        var result = StreamExpansionPlaceholderReplacer.Replace(
+            "入力: {channel_point_input}",
+            null,
+            null,
+            new StreamExpansionTriggerValues("channel_point", "reward-id", "", "", "", "リクエスト文言"));
+
+        Assert.Equal("入力: リクエスト文言", result);
+    }
 }

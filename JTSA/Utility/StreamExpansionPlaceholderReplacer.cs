@@ -7,7 +7,8 @@ public sealed record StreamExpansionTriggerValues(
     string TriggerValue,
     string TriggerObs,
     string StreamTitle,
-    string StreamCategory);
+    string StreamCategory,
+    string ChannelPointInput = "");
 
 public static class StreamExpansionPlaceholderReplacer
 {
@@ -21,6 +22,7 @@ public static class StreamExpansionPlaceholderReplacer
     public const string TriggerObsPlaceholder = "{trigger_obs}";
     public const string StreamTitlePlaceholder = "{stream_title}";
     public const string StreamCategoryPlaceholder = "{stream_category}";
+    public const string ChannelPointInputPlaceholder = "{channel_point_input}";
 
     public static string Replace(
         string content,
@@ -40,7 +42,8 @@ public static class StreamExpansionPlaceholderReplacer
             .Replace(TriggerValuePlaceholder, trigger?.TriggerValue ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(TriggerObsPlaceholder, trigger?.TriggerObs ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(StreamTitlePlaceholder, trigger?.StreamTitle ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace(StreamCategoryPlaceholder, trigger?.StreamCategory ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            .Replace(StreamCategoryPlaceholder, trigger?.StreamCategory ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(ChannelPointInputPlaceholder, trigger?.ChannelPointInput ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         return content;
     }
