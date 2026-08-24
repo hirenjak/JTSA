@@ -183,7 +183,20 @@ namespace JTSA.Panels
                     _ => GameStatus.Playing
                 };
 
-                DAO_GamePlaylist.UpdatePlaylistItemStatus(CurrentGamePlaylistId, item.CategoryId, item.Status);
+                if (item.Status == GameStatus.Playing)
+                {
+                    foreach (var otherPlayingItem in playlistItemFormList.Where(x =>
+                        x != item && x.Status == GameStatus.Playing))
+                    {
+                        otherPlayingItem.Status = GameStatus.Interrupted;
+                    }
+
+                    DAO_GamePlaylist.SetPlaylistItemPlaying(CurrentGamePlaylistId, item.CategoryId);
+                }
+                else
+                {
+                    DAO_GamePlaylist.UpdatePlaylistItemStatus(CurrentGamePlaylistId, item.CategoryId, item.Status);
+                }
 
                 DAO_GamePlaylist.UpdateLastUsed(CurrentGamePlaylistId);
 

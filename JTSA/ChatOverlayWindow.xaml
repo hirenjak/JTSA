@@ -17,6 +17,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <controls:OverlayNameBrightnessConverter x:Key="OverlayNameBrightnessConverter"/>
     </Window.Resources>
 
     <Grid Background="Transparent">
@@ -83,9 +84,9 @@
                                                    Text="{Binding DisplayName}"
                                                    d:Text="GamePlayListName"
                                                    Width="Auto" 
-                                                   Foreground="{Binding HexColor}"
-                                                   FontSize="10" >
-                                            </TextBlock>
+                                                   Foreground="{Binding HexColor, Converter={StaticResource OverlayNameBrightnessConverter}}"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"/>
 
                                             <!-- ユーザー名 -->
                                             <TextBlock Grid.Column="1" 
@@ -94,8 +95,8 @@
                                                    Width="Auto" 
                                                    Margin="4, 0, 0, 0"
                                                    Foreground="White"
-                                                   FontSize="10" >
-                                            </TextBlock>
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"/>
                                         </Grid>
 
                                         <!-- メッセージ -->

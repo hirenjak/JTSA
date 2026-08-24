@@ -26,6 +26,12 @@ namespace JTSA.Models
 
         public bool IsFollow { get; set; }
 
+        public bool IsObsStreamStart { get; set; }
+
+        public bool IsObsStreamStartMain { get; set; }
+
+        public bool IsObsStreamStartSub { get; set; }
+
         public bool DoShoutout { get; set; }
 
         public int DelaySeconds { get; set; }

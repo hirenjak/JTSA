@@ -78,8 +78,14 @@ namespace JTSA.Controls
                 {
                     if (!part.IsEmote)
                     {
-                        paragraph.Inlines.Add(
-                            new Run(part.Text ?? ""));
+                        var run = new Run(part.Text ?? "");
+                        if (!string.IsNullOrWhiteSpace(part.Foreground))
+                        {
+                            run.Foreground = (Brush)new BrushConverter()
+                                .ConvertFromString(part.Foreground)!;
+                        }
+
+                        paragraph.Inlines.Add(run);
 
                         continue;
                     }

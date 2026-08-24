@@ -115,7 +115,9 @@ public sealed class TwitchChatService
 
     private Task Client_OnGiftedSubscription(object? sender, OnGiftedSubscriptionArgs e)
     {
-        JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.GiftedSubscription, "DisplayName", "Login"));
+        // GiftedSubscription の DisplayName は受取側になる場合があるため、
+        // IRC の送信者を表す Login を優先してギフトした側を集計する。
+        JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.GiftedSubscription, "Login", "DisplayName"));
         SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }

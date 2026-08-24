@@ -9,57 +9,94 @@
                   HorizontalScrollBarVisibility="Disabled">
     <StackPanel>
         
-        <!--OAuth再認証-->
+        <!--Twitchアカウント管理-->
         <StackPanel
             Margin="8, 0, 8, 0">
 
             <Label 
-                Content="OAuth再認証"
+                Content="Twitchアカウント"
                 FontSize="20"
                 Foreground="White"/>
-
-            <Grid Margin="8,0,0,8" MaxWidth="560" HorizontalAlignment="Left">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150"/>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="150"/>
-                    <ColumnDefinition Width="120"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="26"/>
-                    <RowDefinition Height="26"/>
-                </Grid.RowDefinitions>
-                <TextBlock Text="Twitch名" Foreground="LightGray" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" x:Name="UserNameTextBlock" Foreground="White" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="2" Text="アクセストークン" Foreground="LightGray" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="3" x:Name="AccessTokenStatusTextBlock" Text="NG" Foreground="White" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="1" Text="ブロードキャスターID" Foreground="LightGray" VerticalAlignment="Center"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" x:Name="BroadcasterIdStatusTextBlock" Text="NG" Foreground="White" VerticalAlignment="Center"/>
-            </Grid>
             
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Margin="8,10,0,4" MaxWidth="560" HorizontalAlignment="Left">
+                <TextBlock x:Name="NoRegisteredAccountTextBlock"
+                           Text="登録済みアカウントはありません"
+                           Foreground="Gray"/>
+                <ItemsControl x:Name="RegisteredAccountItemsControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#FF4A4747" BorderBrush="#FF666666"
+                                    BorderThickness="1" CornerRadius="3" Margin="0,0,0,4" Padding="8,5">
+                                <Grid Width="520">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="72"/>
+                                        <ColumnDefinition Width="72"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="サブ垢"/>
+                                                <Setter Property="Foreground" Value="LightSkyBlue"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPrimary}" Value="True">
+                                                        <Setter Property="Text" Value="メイン"/>
+                                                        <Setter Property="Foreground" Value="LightGreen"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Grid.Column="1" Text="{Binding UserName}"
+                                               Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="ID: " Foreground="DarkGray"/>
+                                        <TextBlock Text="{Binding BroadcasterId}" Foreground="LightGray"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="3" Content="再認証" Width="64" Height="22"
+                                            HorizontalAlignment="Right"
+                                            Tag="{Binding Id}"
+                                            Click="ReauthenticateAccountButton_Click"/>
+                                    <Button Grid.Column="4" Content="削除" Width="64" Height="22"
+                                            HorizontalAlignment="Right"
+                                            Tag="{Binding Id}"
+                                            Click="DeleteAccountButton_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPrimary}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <Button 
-                    x:Name="ReOAuthButton" Content="認証" 
-                    Width="64" Height="20" 
-                    Margin="8, 0, 0, 0" 
-                    HorizontalAlignment="Left"/>
+                <Button x:Name="AddSubAccountButton" Content="サブ垢を追加"
+                        Width="96" Height="22" Margin="0,6,0,0"
+                        HorizontalAlignment="Left"
+                        Click="AddSubAccountButton_Click"/>
 
-                <TextBox 
-                    x:Name="SettingOAuthCodeBox"
-                    Margin="8, 0, 0, 0"
-                    Width="200" Height="Auto"
-                    Foreground="White" FontSize="16" 
-                    Background="#FF4A4747" BorderBrush="White" 
-                    TextAlignment="Center" 
-                    IsReadOnly="True"/>
-
-                <Button 
-                    x:Name="SettingOAuthCodeCopyButton"
-                    Width="64" Height="20" 
-                    Margin="8, 0, 0, 0"
-                    FontSize="12" 
-                    Content="Copy"/>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <TextBlock Text="認証コード" Foreground="LightGray"
+                               Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBox x:Name="SettingOAuthCodeBox"
+                             Width="200" Height="24"
+                             Foreground="White" FontSize="16"
+                             Background="#FF4A4747" BorderBrush="White"
+                             TextAlignment="Center" IsReadOnly="True"/>
+                    <Button x:Name="SettingOAuthCodeCopyButton"
+                            Width="64" Height="22" Margin="8,0,0,0"
+                            FontSize="12" Content="Copy"/>
+                </StackPanel>
             </StackPanel>
 
             <Border 
@@ -165,11 +202,11 @@
             </StackPanel>
 
             <Border
-                Margin="0,12,0,0"
+                Margin="0, 12, 0, 0"
                 Width="Auto" Height="2"
                 Background="White"/>
 
-            <StackPanel
+                <StackPanel
                 Margin="0, 8, 0, 0">
 
                 <Label 
@@ -185,78 +222,50 @@
                     Click="DBFolderOpen"/>
             </StackPanel>
 
-            <Border 
-                Margin="0, 4, 0, 0"
-                Width="Auto" Height="2" 
-                Background="White"/>
+            <Border Margin="0,24,0,12"
+                    Padding="0,12,0,0"
+                    BorderBrush="#FF666666"
+                    BorderThickness="0,1,0,0">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="Credits"
+                               HorizontalAlignment="Center"
+                               Foreground="LightGray"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Margin="0,0,0,6"/>
 
-            <StackPanel>
+                    <!-- 表示名と配信URLは、以下の各Hyperlinkを直接編集してください。 -->
+                    <TextBlock HorizontalAlignment="Center"
+                               Foreground="DarkGray"
+                               FontSize="12"
+                               Margin="0,2">
+                        【メイン制作者】緋蓮じゃく - hirenjak
+                        <Hyperlink NavigateUri="https://www.twitch.tv/hiren_jak"
+                                   RequestNavigate="CreditLink_RequestNavigate">Twitchリンク</Hyperlink>
+                    </TextBlock>
+                    <TextBlock HorizontalAlignment="Center"
+                            Foreground="DarkGray"
+                            FontSize="12"
+                            Margin="0,2">
+                        【共同制作者】さいふ - Xiphelier
+                        <Hyperlink NavigateUri="https://www.twitch.tv/xiphelier"
+                                   RequestNavigate="CreditLink_RequestNavigate">Twitchリンク</Hyperlink>
+                        </TextBlock>
+                    <TextBlock HorizontalAlignment="Center"
+                            Foreground="DarkGray"
+                            FontSize="12"
+                            Margin="0,2">
+                        【アイコン制作】波乱 - haran
+                    </TextBlock>
 
-                <Label 
-                    Content="OBS側ソース連携設定"
-                    FontSize="20"
-                    Foreground="White"/>
-                
-                <Label 
-                    Content="OBSのブラウザソースに以下のURLを設定してください。"
-                    Foreground="White"/>
-                <Label 
-                    Content="チャット表示"
-                    Margin="4, -8, 0, -4"
-                    FontSize="14"
-                    Foreground="White"/>
+                    <TextBlock Text="JTSA © 2026 緋蓮じゃく"
+                            HorizontalAlignment="Center"
+                            Foreground="DarkGray"
+                            FontSize="12"
+                            Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
 
-                <TextBox 
-                    Text="http://localhost:8026/chat"
-                    Width="Auto" 
-                    Margin="8, 0, 0, 0"
-                    Foreground="White" FontSize="16" 
-                    Background="#FF4A4747" BorderBrush="White" 
-                    TextAlignment="Center" 
-                    IsReadOnly="True" 
-                    Height="Auto"/>
-
-                <Label 
-                    Content="ゲームプレイリスト表示"
-                    Margin="4, 0, 0, -4"
-                    FontSize="14"
-                    Foreground="White"/>
-
-                <TextBox 
-                    Text="http://localhost:8026/obs"
-                    Width="Auto" 
-                    Margin="8, 0, 0, 0"
-                    Foreground="White" FontSize="16" 
-                    Background="#FF4A4747" BorderBrush="White" 
-                    TextAlignment="Center" 
-                    IsReadOnly="True" 
-                    Height="Auto"/>
-
-                <Label 
-                    Content="配信拡張画像出力"
-                    Margin="4, 0, 0, -4"
-                    FontSize="14"
-                    Foreground="White"/>
-
-                <TextBox 
-                    Text="http://localhost:8026/expansion"
-                    Width="Auto" 
-                    Margin="8, 0, 0, 0"
-                    Foreground="White" FontSize="16" 
-                    Background="#FF4A4747" BorderBrush="White" 
-                    TextAlignment="Center" 
-                    IsReadOnly="True" 
-                    Height="Auto"/>
-                <Label 
-                    Content="背景は透明です。画像はトリガー実行時に5秒間表示されます。"
-                    Foreground="White"/>
-            </StackPanel>
-
-
-            <Border 
-                Margin="0, 4, 0, 0"
-                Width="Auto" Height="2" 
-                Background="White"/>
         </StackPanel>
     </StackPanel>
     </ScrollViewer>

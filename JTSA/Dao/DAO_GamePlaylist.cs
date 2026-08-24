@@ -128,6 +128,39 @@ namespace JTSA.Dao
             return true;
         }
 
+        /// <summary>
+        /// 指定したアイテムをプレイ中にし、同じプレイリスト内の他のプレイ中アイテムをプレイ中断にする。
+        /// </summary>
+        public static bool SetPlaylistItemPlaying(long playlistId, string categoryId)
+        {
+            using (var db = new AppDbContext())
+            {
+                var playlistItems = db.T_GamePlaylistItem
+                    .Where(x => x.GamePlayListId == playlistId)
+                    .ToList();
+
+                var targetItem = playlistItems.SingleOrDefault(x => x.CategoryId == categoryId);
+                if (targetItem == null) return false;
+
+                var now = DateTime.Now;
+
+                foreach (var playingItem in playlistItems.Where(x =>
+                    x.CategoryId != categoryId &&
+                    x.Status == (int)GameStatus.Playing))
+                {
+                    playingItem.Status = (int)GameStatus.Interrupted;
+                    playingItem.LastUsedDateTime = now;
+                }
+
+                targetItem.Status = (int)GameStatus.Playing;
+                targetItem.LastUsedDateTime = now;
+
+                db.SaveChanges();
+            }
+
+            return true;
+        }
+
 
         /// <summary>
         /// プレイリストの挿入更新処理

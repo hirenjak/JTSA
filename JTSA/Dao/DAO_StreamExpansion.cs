@@ -38,6 +38,9 @@ internal static class DAO_StreamExpansion
             entity.IsBits = header.IsBits;
             entity.IsFirstChat = header.IsFirstChat;
             entity.IsFollow = header.IsFollow;
+            entity.IsObsStreamStart = header.IsObsStreamStart;
+            entity.IsObsStreamStartMain = header.IsObsStreamStartMain;
+            entity.IsObsStreamStartSub = header.IsObsStreamStartSub;
             entity.DoShoutout = header.DoShoutout;
             entity.DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600);
             entity.TriggerComment = header.TriggerComment;
@@ -55,6 +58,9 @@ internal static class DAO_StreamExpansion
             Content = item.Content,
             Weight = Math.Max(1, item.Weight),
             Volume = Math.Clamp(item.Volume, 0, 100),
+            IsSubObs = item.IsSubObs,
+            ObsSceneName = item.ObsSceneName,
+            ObsSourceName = item.ObsSourceName,
             SortNumber = item.SortNumber,
             CreatedDateTime = now,
             UpdatedDateTime = now,
@@ -62,6 +68,20 @@ internal static class DAO_StreamExpansion
         }));
         db.SaveChanges();
         return entity.Id;
+    }
+
+    public static void UpdateIsActive(long headerId, bool isActive)
+    {
+        using var db = new AppDbContext();
+        var header = db.T_StreamExpansionHeader.SingleOrDefault(x => x.Id == headerId);
+        if (header is null)
+        {
+            return;
+        }
+
+        header.IsActive = isActive;
+        header.UpdatedDateTime = DateTime.Now;
+        db.SaveChanges();
     }
 
     public static void Delete(long headerId)

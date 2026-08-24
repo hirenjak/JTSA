@@ -129,18 +129,41 @@
                         <Ellipse x:Name="StreamStatusIndicator" Width="10" Height="10" Fill="Gray" Margin="0,0,6,0"/>
                         <TextBlock x:Name="StreamStatusTextBlock" Text="配信状態を確認中..." Foreground="White" FontWeight="Bold"/>
                     </StackPanel>
-                    <Grid Grid.Row="1" x:Name="StreamMetricsGrid">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal"
+                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <TextBlock Text="送信先" Foreground="LightGray" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="TargetAccountComboBox" Width="150"
+                                  DisplayMemberPath="UserName" SelectedValuePath="Id"
+                                  SelectionChanged="TargetAccountComboBox_SelectionChanged"
+                                  ToolTip="設定の送信先アカウント"/>
+                    </StackPanel>
+                    <Grid Grid.Row="1" x:Name="StreamMetricsGrid" Margin="0,0,104,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
                         <TextBlock x:Name="StreamDurationLabel" Text="配信時間" Foreground="LightGray" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" x:Name="StreamDurationTextBlock" Text="--:--:--" Foreground="White" Margin="6,0,14,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" x:Name="ViewerCountLabel" Text="視聴者数" Foreground="LightGray" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="3" x:Name="ViewerCountTextBlock" Text="-- 人" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" x:Name="StreamDurationTextBlock" Text="--:--:--" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" x:Name="ViewerCountLabel" Text="視聴者数" Foreground="LightGray" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock x:Name="ViewerCountTextBlock" Text="-- 人" Foreground="White"
+                                       Margin="6,0,0,0" VerticalAlignment="Center" Cursor="Hand"
+                                       ToolTip="クリックで視聴者数の表示／非表示を切り替え"
+                                       MouseLeftButtonDown="ViewerCountTextBlock_MouseLeftButtonDown"/>
+                            <TextBlock x:Name="ViewerCountUpdateCountdownTextBlock" Text="次回更新 --:--"
+                                       Foreground="DarkGray" FontSize="10" Margin="8,0,0,0"
+                                       VerticalAlignment="Bottom"/>
+                        </StackPanel>
                     </Grid>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button x:Name="ObsStreamButton" Content="OBS 配信開始" Width="96" Height="26"
+                                Background="Green" Foreground="White"
+                                IsEnabled="True" Click="ObsStreamButton_Click" ToolTip="OBSの配信を開始"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Grid>
@@ -422,6 +445,13 @@
                     <panels:ChatPanel x:Name="ChatPanel"/>
                 </TabItem>
 
+                <TabItem x:Name="ChatStatisticsTabItem"
+                         Header="チャット統計"
+                         Visibility="Collapsed">
+                    <panels:ChatStatisticsPanel x:Name="ChatStatisticsPanel"
+                                                CloseRequested="ChatStatisticsPanel_CloseRequested"/>
+                </TabItem>
+
                 <TabItem Header="レイド">
                     <panels:RaidPanel x:Name="RaidPanel"/>
                 </TabItem>
@@ -445,13 +475,17 @@
                 <TabItem Header="外部アプリ">
                     <panels:AppArrangePanel x:Name="AppArrangePanel"/>
                 </TabItem>
+                
+                <TabItem Header="OBS">
+                    <panels:ObsSettingPanel x:Name="ObsSettingPanel"/>
+                </TabItem>
+
+                <TabItem Header="設定" controls:SplitTabPanel.IsRightAligned="True">
+                    <panels:SettingPanel x:Name="SettingPanel"/>
+                </TabItem>
 
                 <TabItem Header="パッチノート" controls:SplitTabPanel.IsRightAligned="True">
                     <panels:PatchNotePanel x:Name="PatchNotePanel"/>
-                </TabItem>
-
-                <TabItem Header="Setting" controls:SplitTabPanel.IsRightAligned="True">
-                    <panels:SettingPanel x:Name="SettingPanel"/>
                 </TabItem>
 
                 <TabItem Header="AppLog" controls:SplitTabPanel.IsRightAligned="True">
@@ -459,5 +493,6 @@
                 </TabItem>
             </TabControl>
         </Grid>
+
     </Grid>
 </Window>

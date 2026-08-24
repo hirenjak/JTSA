@@ -6,7 +6,7 @@ using System.Windows;
 
 namespace JTSA.Utility;
 
-internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits }
+internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart }
 
 internal sealed class StreamExpansionService
 {
@@ -16,7 +16,11 @@ internal sealed class StreamExpansionService
     public async Task HandleAsync(
         StreamExpansionTriggerType type,
         string value,
-        ChatPlaceholderValues? chatPlaceholders = null)
+        ChatPlaceholderValues? chatPlaceholders = null,
+        string triggerObs = "",
+        string broadcasterId = "",
+        string accessToken = "",
+        string channelPointInput = "")
     {
         try
         {
@@ -34,7 +38,8 @@ internal sealed class StreamExpansionService
 
             // Run each matching rule independently so every delay starts at the trigger time.
             await Task.WhenAll(rules.Select(rule =>
-                ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders)));
+                ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders,
+                    triggerObs, broadcasterId, accessToken, channelPointInput)));
         }
         catch (Exception ex)
         {
@@ -47,7 +52,11 @@ internal sealed class StreamExpansionService
         StreamExpansionTriggerType type,
         string value,
         RaidPlaceholderValues? raidPlaceholders,
-        ChatPlaceholderValues? chatPlaceholders)
+        ChatPlaceholderValues? chatPlaceholders,
+        string triggerObs,
+        string broadcasterId,
+        string accessToken,
+        string channelPointInput)
     {
         if (rule.DelaySeconds > 0)
         {
@@ -64,8 +73,12 @@ internal sealed class StreamExpansionService
         if (groups.Count > 0)
         {
             var selectedGroup = ChooseByWeight(groups);
-            tasks.AddRange(selectedGroup.Select(item =>
-                ExecuteAsync(item, raidPlaceholders, chatPlaceholders)));
+            var triggerValues = await CreateTriggerValuesAsync(
+                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, channelPointInput);
+            tasks.AddRange(selectedGroup.Where(item => item.ActionType != "ObsText").Select(item =>
+                ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues)));
+            foreach (var item in selectedGroup.Where(item => item.ActionType == "ObsText"))
+                await ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues);
         }
 
         if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
@@ -153,7 +166,7 @@ internal sealed class StreamExpansionService
     /// <summary>
     /// 発火条件の確認
     /// </summary>
-    private static bool Matches(T_StreamExpansionHeader rule, StreamExpansionTriggerType type, string value)
+    internal static bool Matches(T_StreamExpansionHeader rule, StreamExpansionTriggerType type, string value)
     {
         if (!rule.IsActive)
         {
@@ -194,6 +207,12 @@ internal sealed class StreamExpansionService
 
             case StreamExpansionTriggerType.Bits:
                 return rule.IsBits;
+
+            case StreamExpansionTriggerType.ObsStreamStart:
+                if (!rule.IsObsStreamStart) return false;
+                return string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase)
+                    ? rule.IsObsStreamStartSub
+                    : rule.IsObsStreamStartMain;
         }
 
         return false;
@@ -224,16 +243,31 @@ internal sealed class StreamExpansionService
     private async Task ExecuteAsync(
         T_StreamExpansionItem item,
         RaidPlaceholderValues? raidPlaceholders,
-        ChatPlaceholderValues? chatPlaceholders)
+        ChatPlaceholderValues? chatPlaceholders,
+        StreamExpansionTriggerValues triggerValues)
     {
-        if (string.IsNullOrWhiteSpace(item.Content)) return;
+        if (string.IsNullOrWhiteSpace(item.Content) && item.ActionType != "ObsText") return;
         switch (item.ActionType)
         {
             case "Chat":
                 await TwitchHelper.SendChat(StreamExpansionPlaceholderReplacer.Replace(
                     item.Content,
                     raidPlaceholders,
-                    chatPlaceholders));
+                    chatPlaceholders,
+                    triggerValues));
+                break;
+
+            case "ObsText":
+                try
+                {
+                    var text = StreamExpansionPlaceholderReplacer.Replace(
+                        item.Content, raidPlaceholders, chatPlaceholders, triggerValues);
+                    await SetObsTextOnUiThreadAsync(item.IsSubObs, item.ObsSourceName, text);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"OBSテキストソース変更失敗（{item.ObsSourceName}）：{ex.GetBaseException().Message}");
+                }
                 break;
 
             case "Image":
@@ -245,6 +279,64 @@ internal sealed class StreamExpansionService
                 break;
         }
     }
+
+    private static async Task SetObsTextOnUiThreadAsync(bool isSubObs, string sourceName, string text)
+    {
+        var application = Application.Current
+            ?? throw new InvalidOperationException("アプリケーションを取得できませんでした。");
+        await application.Dispatcher.InvokeAsync(async () =>
+        {
+            if (application.MainWindow is not MainWindow mainWindow)
+                throw new InvalidOperationException("メインウィンドウを取得できませんでした。");
+            await mainWindow.SetObsTextSourceAsync(isSubObs, sourceName, text);
+        }).Task.Unwrap();
+    }
+
+
+    private static async Task<StreamExpansionTriggerValues> CreateTriggerValuesAsync(
+        IReadOnlyCollection<T_StreamExpansionItem> items,
+        StreamExpansionTriggerType type,
+        string value,
+        string triggerObs,
+        string broadcasterId,
+        string accessToken,
+        string channelPointInput)
+    {
+        var needsStreamInfo = items.Any(item => item.ActionType == "ObsText" &&
+            (item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamTitlePlaceholder, StringComparison.OrdinalIgnoreCase) ||
+             item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamCategoryPlaceholder, StringComparison.OrdinalIgnoreCase)));
+        var title = string.Empty;
+        var category = string.Empty;
+        if (needsStreamInfo)
+        {
+            try
+            {
+                var id = string.IsNullOrWhiteSpace(broadcasterId) ? TwitchHelper.BroadcasterId : broadcasterId;
+                var token = string.IsNullOrWhiteSpace(accessToken) ? TwitchHelper.AccessToken : accessToken;
+                if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(token))
+                {
+                    var info = await TwitchHelper.GetTwitchStreamInfo(id, token);
+                    title = info?.title ?? string.Empty;
+                    category = info?.gameName ?? string.Empty;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"配信情報プレースホルダー取得失敗：{ex.GetBaseException().Message}");
+            }
+        }
+
+        return new StreamExpansionTriggerValues(
+            ToTriggerName(type), value, triggerObs, title, category, channelPointInput);
+    }
+
+    private static string ToTriggerName(StreamExpansionTriggerType type) => type switch
+    {
+        StreamExpansionTriggerType.FirstChat => "first_chat",
+        StreamExpansionTriggerType.ChannelPoint => "channel_point",
+        StreamExpansionTriggerType.ObsStreamStart => "obs_stream_start",
+        _ => type.ToString().ToLowerInvariant()
+    };
 
 
     /// <summary>

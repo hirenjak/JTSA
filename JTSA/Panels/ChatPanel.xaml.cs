@@ -10,7 +10,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using NAudio.Wave;
-using System.Collections.Concurrent;
 
 namespace JTSA.Panels
 {
@@ -19,6 +18,8 @@ namespace JTSA.Panels
         public string? Text { get; set; }
 
         public string? ImageUrl { get; set; }
+
+        public string? Foreground { get; set; }
 
         public bool IsEmote => !string.IsNullOrEmpty(ImageUrl);
     }
@@ -46,7 +47,7 @@ namespace JTSA.Panels
         private string voiceVoxEndpoint = VoiceVoxClient.DefaultEndpoint;
         private int voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
 
-        private readonly ConcurrentDictionary<string, byte> chattedUserIds = new();
+        private readonly StreamChatEntranceTracker chatEntranceTracker = new();
 
         // XAML construction can raise ValueChanged/Checked before persisted values are loaded.
         private bool overlayAppearanceInitialized;
@@ -77,7 +78,8 @@ namespace JTSA.Panels
                         {
                             text = part.Text,
                             imageUrl = part.ImageUrl,
-                            isEmote = part.IsEmote
+                            isEmote = part.IsEmote,
+                            foreground = part.Foreground
                         }).ToList()
                     })
                     .ToArray();
@@ -184,7 +186,10 @@ namespace JTSA.Panels
                             return image;
                         }
 
-                        return document.createTextNode(part.text ?? "");
+                        const text = document.createElement("span");
+                        text.textContent = part.text ?? "";
+                        if (part.foreground) text.style.color = part.foreground;
+                        return text;
                     }
 
                     function render(items) {
@@ -360,8 +365,12 @@ namespace JTSA.Panels
             // 前回配信時のチャットユーザーをクリア
             DAO_ChatUser.AllDelete();
             ChatUserFormList.Clear();
-            chattedUserIds.Clear();
-            StreamSupportTracker.Reset();
+            chatEntranceTracker.Clear();
+            chatEntranceTracker.Restore(
+                TwitchHelper.CurrentStreamId,
+                DAO_StreamChatUserCount.SelectByStreamId(TwitchHelper.CurrentStreamId)
+                    .Select(x => x.UserId));
+            StreamSupportTracker.StartStream(TwitchHelper.CurrentStreamId);
 
             if(twitchChatService == null)
             {
@@ -370,7 +379,16 @@ namespace JTSA.Panels
 
                 twitchChatService.MessageReceived += message =>
                 {
+                    // 入力必須のチャンネルポイント交換は、IRCの通常チャットと
+                    // EventSubの交換通知の両方で届く。交換通知側へ入力文もまとめるため、
+                    // IRC側はチャット一覧へ重複追加しない。
+                    if (!string.IsNullOrWhiteSpace(message.CustomRewardId)) return;
+
                     SpeakChatMessage(message.Message);
+
+                    var isFirstEntrance = chatEntranceTracker.TryEnter(
+                        TwitchHelper.CurrentStreamId,
+                        message.UserId);
 
                     Dispatcher.InvokeAsync(() =>
                     {
@@ -388,7 +406,7 @@ namespace JTSA.Panels
                             IsSubscriber = message.UserDetail.IsSubscriber,
                             IsVip = message.UserDetail.IsVip,
                             MessageParts = TwitchHelper.CreateParts(message)
-                        }, false);
+                        }, false, isFirstEntrance);
                     });
 
                     // チャットの発火条件確認
@@ -398,7 +416,7 @@ namespace JTSA.Panels
                         message.Message,
                         chatPlaceholders);
 
-                    if (!string.IsNullOrWhiteSpace(message.UserId) && chattedUserIds.TryAdd(message.UserId, 0))
+                    if (isFirstEntrance)
                     {
                         _ = streamExpansionService.HandleAsync(
                             StreamExpansionTriggerType.FirstChat,
@@ -418,20 +436,46 @@ namespace JTSA.Panels
 
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
+                    // IRC側の交換メッセージは重複防止で除外しているため、
+                    // ユーザー入力はEventSub側から読み上げへ渡す。
+                    SpeakChatMessage(channelPoint.UserInput);
+
+                    var isFirstEntrance = chatEntranceTracker.TryEnter(
+                        TwitchHelper.CurrentStreamId,
+                        channelPoint.UserId);
+
                     Dispatcher.InvokeAsync(() =>
                     {
+                        var message = ChannelPointChatFormatter.Format(
+                            channelPoint.RewardTitle,
+                            channelPoint.UserInput);
+
                         ChatAddAsync(new TwitchChatForm
                         {
                             UserId = channelPoint.UserId,
                             UserName = channelPoint.UserLogin,
-                            DisplayName = "ChannelPonint",
+                            DisplayName = channelPoint.UserName,
                             HexColor = "White",
-                            Message = channelPoint.RewardTitle + " by." + channelPoint.UserName,
-                            MessageParts = TwitchHelper.CreateParts(channelPoint.RewardTitle + " by." + channelPoint.UserName)
-                        }, true);
+                            Message = message,
+                            MessageParts = ChannelPointChatFormatter.CreateParts(
+                                channelPoint.RewardTitle,
+                                channelPoint.UserInput)
+                        }, true, isFirstEntrance);
                     });
 
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.ChannelPoint, channelPoint.RewardId);
+                    _ = streamExpansionService.HandleAsync(
+                        StreamExpansionTriggerType.ChannelPoint,
+                        channelPoint.RewardId,
+                        channelPointInput: channelPoint.UserInput);
+
+                    if (isFirstEntrance)
+                    {
+                        var chatPlaceholders = new ChatPlaceholderValues(channelPoint.UserName, channelPoint.UserLogin);
+                        _ = streamExpansionService.HandleAsync(
+                            StreamExpansionTriggerType.FirstChat,
+                            channelPoint.UserLogin,
+                            chatPlaceholders);
+                    }
                 };
 
                 twitchEventSubService.FollowReceived += userName =>
@@ -506,10 +550,18 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="form"></param>
         /// <param name="isChannelPoint"></param>
-        private async void ChatAddAsync(TwitchChatForm form, bool isChannelPoint)
+        /// <param name="isFirstEntrance">現在の配信で最初のチャット入室か。</param>
+        private async void ChatAddAsync(
+            TwitchChatForm form,
+            bool isChannelPoint,
+            bool isFirstEntrance)
         {
-            DAO_DailyChatUserCount.Increment(
-                DateTime.Now, form.UserId, form.UserName, form.DisplayName);
+            DAO_StreamChatUserCount.Increment(
+                DateTime.Now,
+                form.UserId,
+                form.UserName,
+                form.DisplayName,
+                TwitchHelper.CurrentStreamId);
 
             var userData = DAO_User.SelectOneByUserId(form.UserId);
 
@@ -551,11 +603,7 @@ namespace JTSA.Panels
                 form.HexColor = "#FFFFFF";
             }
 
-            var chatedUser = DAO_ChatUser.SelectOneByUserId(form.UserId);
-
-            UnmanagedMemoryStream soundData;
-
-            if (chatedUser == null)
+            if (isFirstEntrance)
             {
                 JoinChatReader.Position = 0;
                 JoinChatPlayer.Volume = (float)JoinChatVolumeSlider.Value / 100f;

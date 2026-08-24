@@ -31,6 +31,26 @@ namespace JTSA.Dao
             SpeechEngine = 19,
             VoiceVoxEndpoint = 20,
             VoiceVoxSpeakerId = 21,
+            /// <summary>ヘッダーで選択中のTwitch送信先アカウントID</summary>
+            SelectedTwitchAccountId = 22,
+            /// <summary>OBS WebSocket接続URL</summary>
+            ObsWebSocketUrl = 23,
+            /// <summary>OBS WebSocketパスワード</summary>
+            ObsWebSocketPassword = 24,
+            /// <summary>起動時にOBSへ自動接続するか</summary>
+            ObsAutoConnect = 25,
+            MainObsTwitchAccountId = 26,
+            MainObsControlEnabled = 27,
+            SubObsWebSocketUrl = 28,
+            SubObsWebSocketPassword = 29,
+            SubObsTwitchAccountId = 30,
+            SubObsControlEnabled = 31,
+            /// <summary>メインウィンドウの終了時の左位置</summary>
+            MainWindowPosX = 32,
+            /// <summary>メインウィンドウの終了時の上位置</summary>
+            MainWindowPosY = 33,
+            /// <summary>現在の配信におけるビッツ・サブスク・レイド集計</summary>
+            StreamSupportSnapshot = 34,
         }
 
 

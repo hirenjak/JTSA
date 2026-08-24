@@ -17,6 +17,77 @@ namespace JTSA.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
 
+            modelBuilder.Entity("JTSA.Models.M_ObsTextSource", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsSubObs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastUsedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SceneName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("M_ObsTextSource");
+                });
+
+            modelBuilder.Entity("JTSA.Models.M_TwitchAccount", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BroadcasterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastUsedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("M_TwitchAccount");
+                });
+
             modelBuilder.Entity("JTSA.Models.T_ChannelPointPresetHeader", b =>
                 {
                     b.Property<long>("PresetId")
@@ -124,36 +195,6 @@ namespace JTSA.Migrations
                     b.ToTable("T_ChatUser");
                 });
 
-            modelBuilder.Entity("JTSA.Models.T_DailyChatUserCount", b =>
-                {
-                    b.Property<DateTime>("ChatDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ChatCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("LoginId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("ChatDate", "UserId");
-
-                    b.ToTable("T_DailyChatUserCount");
-                });
-
             modelBuilder.Entity("JTSA.Models.T_GamePlaylistHeader", b =>
                 {
                     b.Property<long>("GamePlayListId")
@@ -219,6 +260,44 @@ namespace JTSA.Migrations
                     b.ToTable("T_GamePlaylistItem");
                 });
 
+            modelBuilder.Entity("JTSA.Models.T_StreamChatUserCount", b =>
+                {
+                    b.Property<string>("StreamId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ChatCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("FirstChatDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastChatDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LoginId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("StreamId", "UserId");
+
+                    b.HasIndex("StreamId");
+
+                    b.ToTable("T_StreamChatUserCount");
+                });
+
             modelBuilder.Entity("JTSA.Models.T_StreamExpansionHeader", b =>
                 {
                     b.Property<long>("Id")
@@ -244,6 +323,15 @@ namespace JTSA.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsFollow")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsObsStreamStart")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsObsStreamStartMain")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsObsStreamStartSub")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsRaid")
@@ -301,7 +389,18 @@ namespace JTSA.Migrations
                     b.Property<long>("HeaderId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsSubObs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastUsedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ObsSceneName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ObsSourceName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("SelectedCount")
@@ -324,6 +423,48 @@ namespace JTSA.Migrations
                     b.HasIndex("Id", "HeaderId");
 
                     b.ToTable("T_StreamExpansionItem");
+                });
+
+            modelBuilder.Entity("JTSA.Models.T_StreamHistory", b =>
+                {
+                    b.Property<string>("StreamId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArchiveUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArchiveVideoId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BroadcasterId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDateTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("StreamId");
+
+                    b.ToTable("T_StreamHistory");
                 });
 
             modelBuilder.Entity("JTSA.Models.T_StreamWindow", b =>
