@@ -5,6 +5,8 @@ using System.ComponentModel;
 using JTSA.Models;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
+using System.Diagnostics;
 
 namespace JTSA.Panels;
 
@@ -52,6 +54,15 @@ public partial class ObsSettingPanel : UserControl
         status.Foreground = connected
             ? System.Windows.Media.Brushes.LightGreen
             : System.Windows.Media.Brushes.Orange;
+    }
+
+    private void TipsLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
+        {
+            UseShellExecute = true
+        });
+        e.Handled = true;
     }
 
     private void ObsAutoConnectCheckBox_Click(object sender, RoutedEventArgs e)
