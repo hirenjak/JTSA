@@ -36,8 +36,11 @@ namespace JTSA
 
 		private readonly ObsController mainObsController = new();
 		private readonly ObsController subObsController = new();
+        private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
+        private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
         private readonly StreamExpansionService streamExpansionService = new();
 		private bool isObsOperationRunning;
+        private bool isAccountAwarePanelsInitialized;
         private bool isObsStreaming;
         private bool? mainObsLastStreamingState;
         private bool? subObsLastStreamingState;
@@ -353,14 +356,6 @@ namespace JTSA
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "メインウィンドウ（読込）");
             processLog.EventStartLogWrite();
 
-            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1")
-            {
-                if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
-                    await ConnectObsAsync(forceReconnect: false, showError: false);
-                if (long.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
-                    await ConnectObsAsync(forceReconnect: false, showError: false, isSub: true);
-            }
-
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
             LoadSubPanel.Visibility = Visibility.Collapsed;
@@ -402,8 +397,40 @@ namespace JTSA
             // 認証後の初期化（OAuth認証直後と共通）
             await InitializeAfterAuthAsync();
 
+            // OBSは補助機能なので、Twitch画面・チャットなど本体の初期化完了後、
+            // UIが落ち着いてから低優先で自動接続する。
+            _ = AutoConnectObsAfterStartupAsync();
+
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
+        }
+
+        private async Task AutoConnectObsAfterStartupAsync()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            await AutoConnectObsAsync();
+        }
+
+        private async Task AutoConnectObsAsync()
+        {
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value != "1")
+                return;
+
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
+            {
+                await ConnectObsAsync(forceReconnect: false, showError: false);
+                if (mainObsController.IsConnected)
+                    await ObsSettingPanel.RefreshSavedTextSourcesAsync(mainObsController, isSub: false);
+            }
+
+            if (long.TryParse(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value,
+                out _))
+            {
+                await ConnectObsAsync(forceReconnect: false, showError: false, isSub: true);
+                if (subObsController.IsConnected)
+                    await ObsSettingPanel.RefreshSavedTextSourcesAsync(subObsController, isSub: true);
+            }
         }
 
         /// <summary>
@@ -664,10 +691,11 @@ namespace JTSA
         /// <summary>保存済み設定でOBSへ接続し、ヘッダーの操作状態を更新する。</summary>
         public async Task ConnectObsAsync(bool forceReconnect, bool showError, bool isSub = false)
         {
-            if (isObsOperationRunning)
-                return;
-
+            var connectionLock = isSub ? subObsConnectionLock : mainObsConnectionLock;
+            ObsSettingPanel.SetConnectionStatus(false, "接続待機中...", isSub);
+            await connectionLock.WaitAsync();
             isObsOperationRunning = true;
+            ObsSettingPanel.SetConnectionStatus(false, "接続中...", isSub);
             SetObsButtonState(enabled: false, isObsStreaming);
             try
             {
@@ -681,7 +709,8 @@ namespace JTSA
                     ?? (isSub ? "ws://127.0.0.1:4456" : DefaultObsWebSocketUrl);
                 var password = DAO_Setting.SelectOneById(passwordSetting)?.Value ?? "";
                 await controller.ConnectAsync(url, password);
-                var connectedStreamingState = await Task.Run(controller.IsStreaming);
+                var connectedStreamingState = await Task.Run(controller.IsStreaming)
+                    .WaitAsync(TimeSpan.FromSeconds(5));
                 if (isSub) subObsLastStreamingState = connectedStreamingState;
                 else mainObsLastStreamingState = connectedStreamingState;
                 ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
@@ -698,6 +727,7 @@ namespace JTSA
             finally
             {
                 isObsOperationRunning = false;
+                connectionLock.Release();
             }
         }
 
@@ -884,14 +914,27 @@ namespace JTSA
                 TargetAccountComboBox.SelectedIndex = 0;
         }
 
-        private void TargetAccountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void TargetAccountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (TargetAccountComboBox.SelectedValue is long id)
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
             RefreshObsControlTarget();
+
+            if (!isAccountAwarePanelsInitialized)
+                return;
+
+            var target = await GetSelectedTargetAccountAsync();
+            if (target is not null)
+            {
+                await ChatPanel.InitializeAsync(
+                    target.Value.Account.UserName,
+                    target.Value.Account.BroadcasterId,
+                    target.Value.AccessToken);
+                await RaidPanel.RefreshRaidUsersAsync();
+            }
         }
 
-        private async Task<(M_TwitchAccount Account, string AccessToken)?> GetSelectedTargetAccountAsync()
+        public async Task<(M_TwitchAccount Account, string AccessToken)?> GetSelectedTargetAccountAsync()
         {
             if (TargetAccountComboBox.SelectedValue is not long accountId)
                 return null;
@@ -1629,7 +1672,15 @@ namespace JTSA
             await UpdateStreamStatusAsync();
 
             // 各パネルの初期化処理
-            ChatPanel.Initialize();
+            var selectedAccount = await GetSelectedTargetAccountAsync();
+            if (selectedAccount is not null)
+            {
+                await ChatPanel.InitializeAsync(
+                    selectedAccount.Value.Account.UserName,
+                    selectedAccount.Value.Account.BroadcasterId,
+                    selectedAccount.Value.AccessToken);
+            }
+            isAccountAwarePanelsInitialized = true;
             CategoryPanel.Initialize();
             PlayingGamePanel.BindExistingCategoryList(CategoryPanel.CategoryFormList);
             await ChannelPointPanel.Initialize();

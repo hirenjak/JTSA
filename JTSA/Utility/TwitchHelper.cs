@@ -140,13 +140,19 @@ namespace JTSA.Utility
         /// <param name="accessToken"></param>
         /// <returns></returns>
         public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync()
+            => await GetStreamingFollowUserAsync(BroadcasterId, AccessToken);
+
+        public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync(string broadcasterId, string accessToken)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "フォロー中配信中チャンネル取得");
 
             List<TwitchStreamIF> results = [];
             try
             {
-                var apiResponse = await api.Helix.Streams.GetFollowedStreamsAsync(BroadcasterId);
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Streams.GetFollowedStreamsAsync(broadcasterId);
 
                 if (apiResponse?.Data != null)
                 {
@@ -368,12 +374,18 @@ namespace JTSA.Utility
 
 
         public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
+            => await StreamRaid(BroadcasterId, toRaidBroadcasterId, AccessToken);
+
+        public static async Task<DateTime?> StreamRaid(string fromBroadcasterId, string toRaidBroadcasterId, string accessToken)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
 
             try
             {
-                var apiResponse = await api.Helix.Raids.StartRaidAsync(BroadcasterId, toRaidBroadcasterId);
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Raids.StartRaidAsync(fromBroadcasterId, toRaidBroadcasterId);
 
                 mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                 return apiResponse.Data.FirstOrDefault().CreatedAt;

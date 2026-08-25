@@ -11,6 +11,8 @@ namespace JTSA.Panels;
 public partial class ObsSettingPanel : UserControl
 {
     private readonly ObservableCollection<ObsTextSourceCard> textSourceCards = [];
+    private readonly TaskCompletionSource<bool> panelLoaded =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool isRestoringCards;
     private bool cardsLoaded;
 
@@ -52,26 +54,72 @@ public partial class ObsSettingPanel : UserControl
             : System.Windows.Media.Brushes.Orange;
     }
 
-    private async void ObsSettingPanel_Loaded(object sender, RoutedEventArgs e)
+    private void ObsAutoConnectCheckBox_Click(object sender, RoutedEventArgs e)
     {
-        if (cardsLoaded) return;
+        DAO_Setting.InsertUpdate(
+            DAO_Setting.SettingName.ObsAutoConnect,
+            ObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
+    }
+
+    private void ObsSettingPanel_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (cardsLoaded)
+        {
+            panelLoaded.TrySetResult(true);
+            return;
+        }
         cardsLoaded = true;
+        foreach (var card in textSourceCards)
+            card.Status = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1"
+                ? "OBS接続完了後に読み込みます"
+                : "自動接続オフ（文言読込を押すと接続します）";
+        panelLoaded.TrySetResult(true);
+    }
+
+    public async Task RefreshSavedTextSourcesAsync(ObsController controller, bool isSub)
+    {
+        // ローカルOBSは接続が速く、画面のLoadedより先にここへ到達することがある。
+        // カード初期表示による状態上書きを防ぐため、パネル準備完了後に読み込む。
+        if (await Task.WhenAny(panelLoaded.Task, Task.Delay(TimeSpan.FromSeconds(5))) != panelLoaded.Task)
+            return;
         isRestoringCards = true;
         try
         {
-            foreach (var card in textSourceCards.Where(card => card.SelectedScene is not null))
+            foreach (var card in textSourceCards.Where(card =>
+                         card.IsSub == isSub && card.SelectedScene is not null))
             {
                 var sceneName = card.SelectedScene;
                 var sourceName = card.SelectedSource;
-                await LoadScenesAsync(card);
+                card.Controller = controller;
+                card.Status = "文言読込中...";
+
+                var scenes = await Task.Run(controller.GetSceneNames);
+                ReplaceItems(card.Scenes, scenes);
                 card.SelectedScene = sceneName;
-                if (card.Controller is null || sceneName is null) continue;
-                ReplaceItems(card.Sources, card.Controller.GetTextSourceNames(sceneName));
+                if (sceneName is null || !card.Scenes.Contains(sceneName))
+                {
+                    card.Status = "保存済みシーンが見つかりません";
+                    continue;
+                }
+
+                var sources = await Task.Run(() => controller.GetTextSourceNames(sceneName));
+                ReplaceItems(card.Sources, sources);
                 card.SelectedSource = sourceName;
-                if (sourceName is not null && card.Sources.Contains(sourceName))
-                    card.Text = card.Controller.GetTextSourceText(sourceName);
-                card.Status = sourceName is null ? "ソースを選択してください" : "保存済み設定を読み込みました";
+                if (sourceName is null || !card.Sources.Contains(sourceName))
+                {
+                    card.Status = "保存済みソースが見つかりません";
+                    continue;
+                }
+
+                card.Text = await Task.Run(() => controller.GetTextSourceText(sourceName));
+                card.IsTextLoaded = true;
+                card.Status = "保存済み設定を読み込みました";
             }
+        }
+        catch (Exception ex)
+        {
+            foreach (var card in textSourceCards.Where(card => card.IsSub == isSub))
+                card.Status = $"読込失敗: {ex.GetBaseException().Message}";
         }
         finally
         {
@@ -110,6 +158,7 @@ public partial class ObsSettingPanel : UserControl
         card.Scenes.Clear();
         card.Sources.Clear();
         card.Text = "";
+        card.IsTextLoaded = false;
         await LoadScenesAsync(card);
     }
 
@@ -147,6 +196,7 @@ public partial class ObsSettingPanel : UserControl
         card.SelectedSource = null;
         card.Sources.Clear();
         card.Text = "";
+        card.IsTextLoaded = false;
         if (card.Controller is null)
             await LoadScenesAsync(card);
 
@@ -171,6 +221,7 @@ public partial class ObsSettingPanel : UserControl
         try
         {
             card.Text = card.Controller.GetTextSourceText(card.SelectedSource);
+            card.IsTextLoaded = true;
             card.Status = "現在の文言を取得しました";
         }
         catch (Exception ex)
@@ -186,14 +237,38 @@ public partial class ObsSettingPanel : UserControl
             SaveTextSourceCards();
     }
 
-    private void ApplySourceCardButton_Click(object sender, RoutedEventArgs e)
+    private async void ApplySourceCardButton_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.Tag is not ObsTextSourceCard card || card.Controller is null || card.SelectedSource is null)
+        if ((sender as Button)?.Tag is not ObsTextSourceCard card || card.SelectedSource is null)
             return;
+
         try
         {
+            // 自動接続オフで復元されたカードも、OBS反映を押した時点で明示的に接続する。
+            if (card.Controller is null)
+            {
+                card.Status = "接続中...";
+                card.Controller = await ((MainWindow)Application.Current.MainWindow)
+                    .EnsureObsConnectedAsync(card.IsSub);
+            }
+
+            if (card.Controller is null)
+            {
+                card.Status = "OBSに接続できません";
+                return;
+            }
+
+            if (!card.IsTextLoaded)
+            {
+                card.Text = card.Controller.GetTextSourceText(card.SelectedSource);
+                card.IsTextLoaded = true;
+                card.Status = "現在の文言を読み込みました";
+                return;
+            }
+
             card.Controller.SetTextSourceText(card.SelectedSource, card.Text);
             card.Status = "反映しました";
+            SaveTextSourceCards();
         }
         catch (Exception ex)
         {
@@ -257,6 +332,7 @@ public partial class ObsSettingPanel : UserControl
         private string status = "";
         private string? selectedScene;
         private string? selectedSource;
+        private bool isTextLoaded;
         public string DisplayName { get; set; } = "";
         public bool IsSub { get; set; }
         public int ObsSelectedIndex { get => IsSub ? 1 : 0; set => IsSub = value == 1; }
@@ -283,6 +359,18 @@ public partial class ObsSettingPanel : UserControl
             }
         }
         public ObsController? Controller { get; set; }
+        public bool IsTextLoaded
+        {
+            get => isTextLoaded;
+            set
+            {
+                if (isTextLoaded == value) return;
+                isTextLoaded = value;
+                Notify();
+                Notify(nameof(ActionButtonText));
+            }
+        }
+        public string ActionButtonText => IsTextLoaded ? "OBS反映" : "文言読込";
         public string Text { get => text; set { text = value; Notify(); } }
         public string Status { get => status; set { status = value; Notify(); } }
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -427,10 +427,12 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
     private async void ObsTargetSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.DataContext is not StreamExpansionObsTextForm card ||
+        if (sender is not ComboBox comboBox ||
+            !comboBox.IsKeyboardFocusWithin ||
+            comboBox.DataContext is not StreamExpansionObsTextForm card ||
             Application.Current.MainWindow is not MainWindow mainWindow) return;
 
-        card.IsSubObs = (sender as ComboBox)?.SelectedIndex == 1;
+        card.IsSubObs = comboBox.SelectedIndex == 1;
         var controller = await mainWindow.EnsureObsConnectedAsync(card.IsSubObs);
         if (controller is null) return;
         try
@@ -458,6 +460,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     private async void ObsSceneSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is not ComboBox comboBox ||
+            !comboBox.IsKeyboardFocusWithin ||
             comboBox.DataContext is not StreamExpansionObsTextForm card ||
             Application.Current.MainWindow is not MainWindow mainWindow)
             return;

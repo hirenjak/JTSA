@@ -55,11 +55,23 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void RaidPanel_Loaded(object sender, RoutedEventArgs e)
         {
+            await RefreshRaidUsersAsync();
+        }
+
+        public async Task RefreshRaidUsersAsync()
+        {
             StreamSupportTracker.Changed -= StreamSupportTracker_Changed;
             StreamSupportTracker.Changed += StreamSupportTracker_Changed;
             RefreshSupportLists();
             RaidUserList.Clear();
-            var apiResluts = await TwitchHelper.GetStreamingFollowUserAsync();
+            var target = await mainWindow.GetSelectedTargetAccountAsync();
+            if (target is null)
+                return;
+            var apiResluts = await TwitchHelper.GetStreamingFollowUserAsync(
+                target.Value.Account.BroadcasterId,
+                target.Value.AccessToken);
+            if (apiResluts is null)
+                return;
 
             var nowTime = DateTime.Now;
 
@@ -126,7 +138,13 @@ namespace JTSA.Panels
         {
             if ((sender as ListBox)?.SelectedItem is RaidUserForm item)
             {
-                await TwitchHelper.StreamRaid(item.UserId);
+                var target = await mainWindow.GetSelectedTargetAccountAsync();
+                if (target is null)
+                    return;
+                await TwitchHelper.StreamRaid(
+                    target.Value.Account.BroadcasterId,
+                    item.UserId,
+                    target.Value.AccessToken);
                 JTSAHelper.OpenMyTwitchChannel();
             }
         }

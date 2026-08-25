@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using NAudio.Wave;
+using TwitchLib.Api;
 
 namespace JTSA.Panels
 {
@@ -35,6 +36,7 @@ namespace JTSA.Panels
         private TwitchChatService? twitchChatService;
 
         private TwitchEventSubService? twitchEventSubService;
+        private string connectedBroadcasterId = string.Empty;
 
         private readonly StreamExpansionService streamExpansionService = new();
 
@@ -347,8 +349,20 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public async void Initialize()
+        public async Task InitializeAsync(string channelName, string broadcasterId, string accessToken)
         {
+            if (twitchChatService is not null && connectedBroadcasterId == broadcasterId)
+                return;
+
+            if (twitchChatService is not null && connectedBroadcasterId != broadcasterId)
+            {
+                await twitchChatService.DisconnectAsync();
+                if (twitchEventSubService is not null)
+                    await twitchEventSubService.DisposeAsync();
+                twitchChatService = null;
+                twitchEventSubService = null;
+            }
+
             ReloadSpeechSettings();
 
             ChatNotificationVolumeSlider.Value =
@@ -374,8 +388,12 @@ namespace JTSA.Panels
 
             if(twitchChatService == null)
             {
-                twitchChatService = new TwitchChatService(JTSAHelper.LoginName);
-                twitchEventSubService = new TwitchEventSubService(TwitchHelper.api, TwitchHelper.BroadcasterId);
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = TwitchHelper.ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                twitchChatService = new TwitchChatService(channelName);
+                twitchEventSubService = new TwitchEventSubService(accountApi, broadcasterId);
+                connectedBroadcasterId = broadcasterId;
 
                 twitchChatService.MessageReceived += message =>
                 {
