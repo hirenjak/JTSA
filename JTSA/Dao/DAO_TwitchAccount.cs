@@ -16,6 +16,12 @@ namespace JTSA.Dao
             return db.M_TwitchAccount.SingleOrDefault(x => x.Id == id);
         }
 
+        public static M_TwitchAccount? SelectPrimary()
+        {
+            using var db = new AppDbContext();
+            return db.M_TwitchAccount.FirstOrDefault(x => x.IsPrimary);
+        }
+
         public static M_TwitchAccount InsertUpdate(string userName, string broadcasterId, string refreshToken, bool isPrimary = false)
         {
             using var db = new AppDbContext();

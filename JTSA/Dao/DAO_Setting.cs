@@ -51,6 +51,10 @@ namespace JTSA.Dao
             MainWindowPosY = 33,
             /// <summary>現在の配信におけるビッツ・サブスク・レイド集計</summary>
             StreamSupportSnapshot = 34,
+            /// <summary>OBSシーン切替タブに登録したボタン</summary>
+            ObsSceneSwitchPresets = 35,
+            /// <summary>ヘッダー下のOBSシーン切替ボタンを表示するか</summary>
+            ObsSceneShortcutPanelVisible = 36,
         }
 
 

@@ -28,7 +28,64 @@
     </DataTemplate></ItemsControl.ItemTemplate>
    </ItemsControl>
   </StackPanel></ScrollViewer></TabItem>
-  <TabItem Header="OBS設定"><ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+  <TabItem x:Name="SceneSwitchTab" Header="シーン切替" IsVisibleChanged="SceneSwitchTab_IsVisibleChanged">
+   <Grid Background="#FF404040" Margin="16">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <TextBlock Text="OBSシーン切替" Foreground="White" FontSize="22" FontWeight="Bold"/>
+    <DockPanel Grid.Row="1" Margin="0,10,0,12">
+     <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+      <Button Content="両方の一覧を更新" Width="120" Height="26" Click="RefreshScenesButton_Click"/>
+      <ComboBox x:Name="SceneSelectionComboBox" Width="240" Height="26" Margin="12,0,0,0" DisplayMemberPath="DisplayName"/>
+      <Button Content="＋ 切替ボタンを追加" Width="130" Height="26" Margin="8,0,0,0" Click="AddSceneSwitchPresetButton_Click"/>
+     </StackPanel>
+     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+      <TextBlock Text="現在のシーン：" Foreground="LightGray"/>
+      <TextBlock x:Name="CurrentProgramSceneTextBlock" Text="未取得" Foreground="LightGreen" FontWeight="Bold"/>
+     </StackPanel>
+    </DockPanel>
+    <Border Grid.Row="2" Padding="12" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+     <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <TextBlock x:Name="SceneSwitchStatusTextBlock" Text="シーン一覧を読み込んでください" Foreground="LightGray" Margin="0,0,0,10"/>
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+       <StackPanel>
+       <StackPanel x:Name="MainSceneSwitchPresetPanel"><TextBlock Text="メインOBS" Foreground="#FFAEDCFA" FontWeight="Bold" Margin="5,4,5,1"/>
+       <ItemsControl x:Name="MainSceneSwitchPresetsItemsControl">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate><DataTemplate>
+         <Border Width="240" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3"
+                 Tag="{Binding}" AllowDrop="True" Cursor="SizeAll"
+                 PreviewMouseLeftButtonDown="ScenePresetCard_PreviewMouseLeftButtonDown"
+                 PreviewMouseMove="ScenePresetCard_PreviewMouseMove"
+                 Drop="ScenePresetCard_Drop">
+          <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsCurrentScene}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <TextBlock Text="{Binding ObsDisplayName, StringFormat=操作するOBS：{0}}" Foreground="LightGray" FontWeight="Bold" Margin="3,2,3,5" FontSize="11"/>
+           <Button Grid.Row="1" Content="{Binding SceneName}" Tag="{Binding}" Click="SwitchSceneButton_Click" Height="36" Padding="8" FontSize="13" Cursor="Hand" ToolTip="このシーンへ切り替え"/>
+           <Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSceneSwitchPresetButton_Click" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" ToolTip="登録を削除"/>
+          </Grid>
+         </Border>
+        </DataTemplate></ItemsControl.ItemTemplate>
+       </ItemsControl></StackPanel>
+       <StackPanel x:Name="SubSceneSwitchPresetPanel"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontWeight="Bold" Margin="5,8,5,1"/>
+       <ItemsControl x:Name="SubSceneSwitchPresetsItemsControl">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate><DataTemplate>
+         <Border Width="240" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="ScenePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="ScenePresetCard_PreviewMouseMove" Drop="ScenePresetCard_Drop">
+          <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsCurrentScene}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <TextBlock Text="{Binding ObsDisplayName, StringFormat=操作するOBS：{0}}" Foreground="LightGray" FontWeight="Bold" Margin="3,2,3,5" FontSize="11"/><Button Grid.Row="1" Content="{Binding SceneName}" Tag="{Binding}" Click="SwitchSceneButton_Click" Height="36" Padding="8" FontSize="13" Cursor="Hand" ToolTip="このシーンへ切り替え"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSceneSwitchPresetButton_Click" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" ToolTip="登録を削除"/>
+          </Grid>
+         </Border>
+        </DataTemplate></ItemsControl.ItemTemplate>
+       </ItemsControl></StackPanel>
+       </StackPanel>
+      </ScrollViewer>
+     </Grid>
+    </Border>
+   </Grid>
+  </TabItem>
+  <TabItem x:Name="ObsSettingsTab" Header="OBS設定"><ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+   <StackPanel x:Name="ObsConnectionSettingsSection">
    <DockPanel Margin="0,0,0,12"><StackPanel DockPanel.Dock="Left"><TextBlock Text="OBS連携設定" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Margin="0,4,0,0" Foreground="LightGray" Text="各PCのOBSにTwitchアカウントを割り当てます。送信先アカウントに応じて右上ボタンの操作OBSが切り替わります。"/></StackPanel><CheckBox x:Name="ObsAutoConnectCheckBox" HorizontalAlignment="Right" VerticalAlignment="Center" Content="起動時に登録済みのOBSへ自動接続" Foreground="White" Click="ObsAutoConnectCheckBox_Click"/></DockPanel>
    <Border Padding="10" Margin="0,0,0,8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1"><Grid>
     <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="72"/><ColumnDefinition Width="220"/><ColumnDefinition Width="72"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
@@ -41,12 +98,15 @@
     <TextBlock Grid.RowSpan="2" Text="サブOBS" TextAlignment="Center" Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="URL" Foreground="LightGray" VerticalAlignment="Center"/><TextBox x:Name="SubObsUrlTextBox" Grid.Column="2" Margin="3" Padding="5"/><TextBlock Grid.Column="3" Text="パスワード" Foreground="LightGray" VerticalAlignment="Center"/><PasswordBox x:Name="SubObsPasswordBox" Grid.Column="4" Margin="3" Padding="5"/><Button Grid.Column="5" Content="削除" Width="56" Height="24" HorizontalAlignment="Right" Click="RemoveSubObsButton_Click"/>
     <TextBlock Grid.Row="1" Grid.Column="1" Text="アカウント" Foreground="LightGray" VerticalAlignment="Center"/><ComboBox x:Name="SubTwitchAccountComboBox" Grid.Row="1" Grid.Column="2" Margin="3" Padding="3" DisplayMemberPath="UserName" SelectedValuePath="Id"/><Button Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Content="保存・接続テスト" Margin="3" Width="150" HorizontalAlignment="Left" Click="SaveAndTestSubButton_Click"/><TextBlock x:Name="SubObsConnectionStatusTextBlock" Grid.Row="1" Grid.Column="5" Margin="8,0" Foreground="LightGray" VerticalAlignment="Center" Text="未確認"/>
    </Grid></Border>
-   <TextBlock Text="OBSブラウザソース" Foreground="White" FontSize="18" FontWeight="Bold"/><UniformGrid Columns="3" Margin="0,8,0,0"><StackPanel Margin="0,0,8,0"><TextBlock Text="チャット表示" Foreground="White"/><TextBox Text="http://localhost:8026/chat" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel><StackPanel Margin="0,0,8,0"><TextBlock Text="ゲームプレイリスト表示" Foreground="White"/><TextBox Text="http://localhost:8026/obs" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel><StackPanel><TextBlock Text="配信拡張画像出力" Foreground="White"/><TextBox Text="http://localhost:8026/expansion" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel></UniformGrid><TextBlock Margin="0,5,0,0" Foreground="LightGray" Text="ブラウザソースの背景は透明です。"/>
+   </StackPanel>
   </StackPanel></ScrollViewer></TabItem>
   <TabItem Header="Tips">
    <ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="16">
      <TextBlock Text="Tips" Foreground="White" FontSize="22" FontWeight="Bold"/>
+     <TextBlock Text="OBSブラウザソース" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,14,0,0"/>
+     <UniformGrid Columns="3" Margin="0,8,0,0"><StackPanel Margin="0,0,8,0"><TextBlock Text="チャット表示" Foreground="White"/><TextBox Text="http://localhost:8026/chat" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel><StackPanel Margin="0,0,8,0"><TextBlock Text="ゲームプレイリスト表示" Foreground="White"/><TextBox Text="http://localhost:8026/obs" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel><StackPanel><TextBlock Text="配信拡張画像出力" Foreground="White"/><TextBox Text="http://localhost:8026/expansion" Margin="0,4,0,0" Padding="6" IsReadOnly="True"/></StackPanel></UniformGrid>
+     <TextBlock Margin="0,5,0,8" Foreground="LightGray" Text="ブラウザソースの背景は透明です。"/>
                         <TextBlock Margin="0,10,0,0" Foreground="LightGray" TextWrapping="Wrap">
       <Hyperlink NavigateUri="https://reactive.fugi.tech/library"
                  RequestNavigate="TipsLink_RequestNavigate"

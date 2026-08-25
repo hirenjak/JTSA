@@ -34,6 +34,7 @@ namespace JTSA
         private const double DefaultFontSize = 16;
         private bool showUserIcons = true;
         private double overlayFontSize = DefaultFontSize;
+        private readonly Window mainWindow;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -74,7 +75,8 @@ namespace JTSA
         /// <param name="twitchChatFormList"></param>
         public ChatOverlayWindow(Window owner, ObservableCollection<TwitchChatForm> twitchChatFormList)
         {
-            this.Owner = owner;
+            mainWindow = owner;
+            mainWindow.Closed += MainWindow_Closed;
             InitializeComponent();
 
             TwitchChatFormList = twitchChatFormList;
@@ -102,6 +104,7 @@ namespace JTSA
             Closed += (_, _) =>
             {
                 SaveBounds();
+                mainWindow.Closed -= MainWindow_Closed;
                 TwitchChatFormList.CollectionChanged -=
                     TwitchChatFormList_CollectionChanged;
             };
@@ -109,6 +112,11 @@ namespace JTSA
             MouseLeftButtonDown += Window_MouseLeftButtonDown;
 
             MouseLeftButtonUp += ChatOverlayWindow_MouseLeftButtonUp;
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            Close();
         }
 
 

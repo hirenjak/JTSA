@@ -18,6 +18,7 @@ namespace JTSA.Forms
         public int Day => Date.Day;
         public bool IsCurrentMonth => Date.Month == DisplayMonth;
         public bool IsToday => Date == DateTime.Today;
+        public bool IsInAggregationPeriod { get; init; }
         public bool IsSunday => Date.DayOfWeek == DayOfWeek.Sunday;
         public bool IsSaturday => Date.DayOfWeek == DayOfWeek.Saturday;
         public bool HasActivity => StreamChatCounts.Count > 0;

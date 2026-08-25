@@ -11,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using NAudio.Wave;
 using TwitchLib.Api;
+using System.Threading;
 
 namespace JTSA.Panels
 {
@@ -37,6 +38,8 @@ namespace JTSA.Panels
 
         private TwitchEventSubService? twitchEventSubService;
         private string connectedBroadcasterId = string.Empty;
+        private string connectedAccessToken = string.Empty;
+        private readonly SemaphoreSlim initializationLock = new(1, 1);
 
         private readonly StreamExpansionService streamExpansionService = new();
 
@@ -59,6 +62,9 @@ namespace JTSA.Panels
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
 
         public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
+
+        internal (string BroadcasterId, string AccessToken) GetConnectedAccountContext()
+            => (connectedBroadcasterId, connectedAccessToken);
 
         /// <summary>OBSブラウザソース用のチャットデータを返す。</summary>
         public string CreateObsChatJson()
@@ -318,7 +324,10 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void PinedChatButton_Click(object sender, RoutedEventArgs e)
         {
-            var chatId = await TwitchHelper.SendChat(sendChatTextBox.Text);
+            var chatId = await TwitchHelper.SendChat(
+                sendChatTextBox.Text,
+                connectedBroadcasterId,
+                connectedAccessToken);
 
             if (string.IsNullOrWhiteSpace(chatId)) return;
 
@@ -339,8 +348,12 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void SendChatButton_Click(object sender, RoutedEventArgs e)
         {
-            await TwitchHelper.SendChat(sendChatTextBox.Text);
-            sendChatTextBox.Text = string.Empty;
+            var chatId = await TwitchHelper.SendChat(
+                sendChatTextBox.Text,
+                connectedBroadcasterId,
+                connectedAccessToken);
+            if (!string.IsNullOrWhiteSpace(chatId))
+                sendChatTextBox.Text = string.Empty;
         }
 
 
@@ -351,6 +364,21 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         public async Task InitializeAsync(string channelName, string broadcasterId, string accessToken)
         {
+            await initializationLock.WaitAsync();
+            try
+            {
+                await InitializeCoreAsync(channelName, broadcasterId, accessToken);
+            }
+            finally
+            {
+                initializationLock.Release();
+            }
+        }
+
+        private async Task InitializeCoreAsync(string channelName, string broadcasterId, string accessToken)
+        {
+            connectedAccessToken = accessToken;
+
             if (twitchChatService is not null && connectedBroadcasterId == broadcasterId)
                 return;
 
@@ -512,6 +540,7 @@ namespace JTSA.Panels
             var settingIsChatOverlay = DAO_Setting.SelectOneById(DAO_Setting.SettingName.IsChatOverlay);
             if (settingIsChatOverlay != null && settingIsChatOverlay.Value == "1")
             {
+                transparentWindow?.Close();
                 transparentWindow = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
                 transparentWindow.Show();
                 IsStartShowChatOverlayDisp.IsChecked = true;

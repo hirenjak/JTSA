@@ -4,10 +4,12 @@ using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 
 namespace JTSA.Panels
 {
-    /// <summary>保存済みのチャット発言数を全期間で集計して表示するパネル。</summary>
+    /// <summary>保存済みのチャット発言数を指定期間で集計して表示するパネル。</summary>
     public partial class ChatStatisticsPanel : UserControl
     {
         public static readonly RoutedEvent CloseRequestedEvent = EventManager.RegisterRoutedEvent(
@@ -30,11 +32,15 @@ namespace JTSA.Panels
         private Dictionary<DateTime, List<Models.T_StreamHistory>> streamsByDate = new();
         private Dictionary<string, Models.T_StreamHistory> streamHistoryById = new();
         private DateTime displayedCalendarMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+        private DateTime? aggregationStartDate;
+        private DateTime? aggregationEndDate;
 
         public ChatStatisticsPanel()
         {
             InitializeComponent();
             DataContext = this;
+            StartDatePicker.SelectedDate = DateTime.Today.AddDays(-7);
+            EndDatePicker.SelectedDate = DateTime.Today;
         }
 
         private void ReloadButton_Click(object sender, RoutedEventArgs e)
@@ -65,6 +71,11 @@ namespace JTSA.Panels
             }
 
             ReloadStatistics(startDate, endDate);
+        }
+
+        public void ReloadStatisticsForSelectedPeriod()
+        {
+            ApplyPeriodFilter();
         }
 
         public async Task SyncArchivedStreamsAsync()
@@ -132,6 +143,19 @@ namespace JTSA.Panels
             BuildCalendarDays();
         }
 
+        private void DayCell_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not Border { Parent: Grid container })
+                return;
+
+            var popup = container.Children.OfType<Popup>().FirstOrDefault();
+            if (popup is null)
+                return;
+
+            popup.IsOpen = !popup.IsOpen;
+            e.Handled = true;
+        }
+
         private void BuildCalendarDays()
         {
             CalendarMonthTextBlock.Text = displayedCalendarMonth.ToString("yyyy年 M月");
@@ -164,6 +188,8 @@ namespace JTSA.Panels
                 {
                     Date = date,
                     DisplayMonth = displayedCalendarMonth.Month,
+                    IsInAggregationPeriod = (!aggregationStartDate.HasValue || date >= aggregationStartDate.Value) &&
+                                            (!aggregationEndDate.HasValue || date <= aggregationEndDate.Value),
                     ChatCount = chatCount,
                     StreamChatCounts = streamChatCounts,
                     StreamSummaryText = streamSummary,
@@ -212,6 +238,9 @@ namespace JTSA.Panels
 
         public void ReloadStatistics(DateTime? startDate = null, DateTime? endDate = null)
         {
+            aggregationStartDate = startDate?.Date;
+            aggregationEndDate = endDate?.Date;
+
             var streamCounts = DAO_StreamChatUserCount.SelectAll();
             var streamHistory = DAO_StreamHistory.SelectAll();
             streamHistoryById = streamHistory.ToDictionary(x => x.StreamId);
