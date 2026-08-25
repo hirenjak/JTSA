@@ -26,7 +26,9 @@ namespace JTSA.Panels
         public ObservableCollection<ChatCalendarDayForm> CalendarDays { get; } = new();
         private Dictionary<DateTime, int> selectedUserChatCountsByDate = new();
         private Dictionary<string, int> selectedUserChatCountsByStream = new();
+        private List<Models.T_StreamChatUserCount> selectedUserStreamCounts = [];
         private Dictionary<DateTime, List<Models.T_StreamHistory>> streamsByDate = new();
+        private Dictionary<string, Models.T_StreamHistory> streamHistoryById = new();
         private DateTime displayedCalendarMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
 
         public ChatStatisticsPanel()
@@ -37,7 +39,32 @@ namespace JTSA.Panels
 
         private void ReloadButton_Click(object sender, RoutedEventArgs e)
         {
+            ApplyPeriodFilter();
+        }
+
+        private void ApplyPeriodButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyPeriodFilter();
+        }
+
+        private void AllPeriodButton_Click(object sender, RoutedEventArgs e)
+        {
+            StartDatePicker.SelectedDate = null;
+            EndDatePicker.SelectedDate = null;
             ReloadStatistics();
+        }
+
+        private void ApplyPeriodFilter()
+        {
+            var startDate = StartDatePicker.SelectedDate?.Date;
+            var endDate = EndDatePicker.SelectedDate?.Date;
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            {
+                PeriodTextBlock.Text = "集計期間エラー：開始日は終了日以前にしてください";
+                return;
+            }
+
+            ReloadStatistics(startDate, endDate);
         }
 
         public async Task SyncArchivedStreamsAsync()
@@ -69,14 +96,12 @@ namespace JTSA.Panels
             }
 
             var streamCounts = DAO_StreamChatUserCount.SelectByUserId(user.UserId);
+            selectedUserStreamCounts = streamCounts;
             selectedUserChatCountsByStream = streamCounts
                 .GroupBy(x => x.StreamId)
                 .ToDictionary(x => x.Key, x => x.Sum(y => y.ChatCount));
-            var streamDates = DAO_StreamHistory.SelectAll().ToDictionary(x => x.StreamId, x => x.StartedAt.Date);
             selectedUserChatCountsByDate = streamCounts
-                .GroupBy(x => streamDates.TryGetValue(x.StreamId, out var date)
-                    ? date
-                    : x.FirstChatDateTime.Date)
+                .GroupBy(ResolveStreamDate)
                 .ToDictionary(x => x.Key, x => x.Sum(y => y.ChatCount));
             CalendarUserNameTextBlock.Text = user.DisplayName;
 
@@ -118,6 +143,15 @@ namespace JTSA.Panels
             {
                 var date = calendarStart.AddDays(index);
                 selectedUserChatCountsByDate.TryGetValue(date, out var chatCount);
+                var streamChatCounts = selectedUserStreamCounts
+                    .Where(x => ResolveStreamDate(x) == date)
+                    .OrderBy(ResolveStreamStartDateTime)
+                    .Select(x => new ChatCalendarStreamCountForm
+                    {
+                        StreamId = x.StreamId,
+                        ChatCount = x.ChatCount
+                    })
+                    .ToList();
                 streamsByDate.TryGetValue(date, out var streams);
                 var streamSummary = streams is null
                     ? string.Empty
@@ -131,16 +165,19 @@ namespace JTSA.Panels
                     Date = date,
                     DisplayMonth = displayedCalendarMonth.Month,
                     ChatCount = chatCount,
+                    StreamChatCounts = streamChatCounts,
                     StreamSummaryText = streamSummary,
                     StreamCountText = streams is null ? string.Empty : $"配信×{streams.Count}"
                 });
             }
 
             var monthEnd = displayedCalendarMonth.AddMonths(1);
-            var monthEntries = selectedUserChatCountsByDate
-                .Where(x => x.Key >= displayedCalendarMonth && x.Key < monthEnd)
+            var monthEntries = selectedUserStreamCounts
+                .Where(x => ResolveStreamDate(x) >= displayedCalendarMonth &&
+                            ResolveStreamDate(x) < monthEnd)
                 .ToList();
-            CalendarMonthSummaryTextBlock.Text = $"{monthEntries.Count:N0} 日 / {monthEntries.Sum(x => x.Value):N0} 発言";
+            CalendarMonthSummaryTextBlock.Text =
+                $"{monthEntries.Select(x => x.StreamId).Distinct().Count():N0} 配信 / {monthEntries.Sum(x => x.ChatCount):N0} 発言";
         }
 
         private static string FormatStreamSummary(Models.T_StreamHistory stream, int chatCountForStream)
@@ -167,18 +204,25 @@ namespace JTSA.Panels
         {
             selectedUserChatCountsByDate.Clear();
             selectedUserChatCountsByStream.Clear();
+            selectedUserStreamCounts.Clear();
             CalendarUserNameTextBlock.Text = "ユーザーを選択";
             displayedCalendarMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             BuildCalendarDays();
         }
 
-        public void ReloadStatistics()
+        public void ReloadStatistics(DateTime? startDate = null, DateTime? endDate = null)
         {
             var streamCounts = DAO_StreamChatUserCount.SelectAll();
-            streamsByDate = DAO_StreamHistory.SelectAll()
+            var streamHistory = DAO_StreamHistory.SelectAll();
+            streamHistoryById = streamHistory.ToDictionary(x => x.StreamId);
+            streamsByDate = streamHistory
                 .GroupBy(x => x.StartedAt.Date)
                 .ToDictionary(x => x.Key, x => x.OrderBy(y => y.StartedAt).ToList());
-            var statistics = streamCounts
+            var filteredStreamCounts = streamCounts
+                .Where(x => !startDate.HasValue || ResolveStreamDate(x) >= startDate.Value.Date)
+                .Where(x => !endDate.HasValue || ResolveStreamDate(x) <= endDate.Value.Date)
+                .ToList();
+            var statistics = filteredStreamCounts
                 .GroupBy(x => x.UserId)
                 .Select(group => new
                 {
@@ -212,15 +256,32 @@ namespace JTSA.Panels
 
             UserStatisticsDataGrid.SelectedItem = UserStatistics.FirstOrDefault();
 
-            if (streamCounts.Count == 0)
+            if (filteredStreamCounts.Count == 0)
             {
-                PeriodTextBlock.Text = "保存済みのチャット統計はまだありません";
+                ClearActivityCalendar();
+                PeriodTextBlock.Text = streamCounts.Count == 0
+                    ? "保存済みのチャット統計はまだありません"
+                    : $"指定期間のチャット統計はありません（{FormatPeriod(startDate, endDate)}）";
                 return;
             }
 
-            var firstDate = streamCounts.Min(x => x.FirstChatDateTime);
-            var lastDate = streamCounts.Max(x => x.LastChatDateTime);
-            PeriodTextBlock.Text = $"集計期間  {firstDate:yyyy/MM/dd} ～ {lastDate:yyyy/MM/dd}";
+            PeriodTextBlock.Text = startDate.HasValue || endDate.HasValue
+                ? $"集計期間  {FormatPeriod(startDate, endDate)}"
+                : $"集計期間  {filteredStreamCounts.Min(x => ResolveStreamDate(x)):yyyy/MM/dd} ～ {filteredStreamCounts.Max(x => ResolveStreamDate(x)):yyyy/MM/dd}";
         }
+
+        private DateTime ResolveStreamDate(Models.T_StreamChatUserCount count)
+            => streamHistoryById.TryGetValue(count.StreamId, out var stream)
+                ? stream.StartedAt.Date
+                : count.FirstChatDateTime.Date;
+
+        private DateTime ResolveStreamStartDateTime(Models.T_StreamChatUserCount count)
+            => streamHistoryById.TryGetValue(count.StreamId, out var stream)
+                ? stream.StartedAt
+                : count.FirstChatDateTime;
+
+        private static string FormatPeriod(DateTime? startDate, DateTime? endDate)
+            => $"{(startDate.HasValue ? startDate.Value.ToString("yyyy/MM/dd") : "指定なし")} ～ " +
+               $"{(endDate.HasValue ? endDate.Value.ToString("yyyy/MM/dd") : "指定なし")}";
     }
 }

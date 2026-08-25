@@ -9,6 +9,10 @@
         </Grid.RowDefinitions>
 
         <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -46,6 +50,16 @@
                     Content="✕"
                     ToolTip="閉じる"
                     Click="CloseButton_Click"/>
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,0,0">
+                <TextBlock Text="集計期間" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <DatePicker x:Name="StartDatePicker" Width="125" Height="26"/>
+                <TextBlock Text="～" Foreground="LightGray" VerticalAlignment="Center" Margin="8,0"/>
+                <DatePicker x:Name="EndDatePicker" Width="125" Height="26"/>
+                <Button Content="集計" Width="68" Height="26" Margin="10,0,0,0"
+                        Click="ApplyPeriodButton_Click"/>
+                <Button Content="全期間" Width="68" Height="26" Margin="8,0,0,0"
+                        Click="AllPeriodButton_Click"/>
+            </StackPanel>
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,16,0,0">
@@ -110,8 +124,6 @@
                         <TextBlock x:Name="CalendarUserNameTextBlock" Text="ユーザーを選択"
                                    Foreground="White" FontSize="18" FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="チャット記録日"
-                                   Margin="0,3,0,0" Foreground="LightGray" FontSize="12"/>
                     </StackPanel>
 
                     <Border Grid.Row="1" Margin="0,8,0,8" Padding="7"
@@ -159,19 +171,31 @@
                                                 BorderThickness="1" CornerRadius="5"
                                                 ToolTip="{Binding ToolTipText}">
                                             <Grid>
-                                                <TextBlock x:Name="DayNumber" Text="{Binding Day}" FontSize="11"
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock x:Name="DayNumber" Grid.Row="0" Text="{Binding Day}" FontSize="11"
                                                            HorizontalAlignment="Left" VerticalAlignment="Top"
                                                            Foreground="#FFE8E8E8" FontWeight="SemiBold"/>
-                                                <Border x:Name="StreamBadge" Visibility="Collapsed"
+                                                <Border x:Name="StreamBadge" Grid.Row="0" Visibility="Collapsed"
                                                         HorizontalAlignment="Right" VerticalAlignment="Top"
                                                         Padding="3,1" Background="#FFB04A7A" CornerRadius="3">
                                                     <TextBlock Text="{Binding StreamCountText}"
                                                                Foreground="White" FontSize="8"/>
                                                 </Border>
-                                                <TextBlock x:Name="ActivityCount" Visibility="Collapsed"
-                                                           Text="{Binding ChatCountText}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                                <ItemsControl x:Name="ActivityCounts" Grid.Row="1" Visibility="Collapsed"
+                                                              ItemsSource="{Binding StreamChatCounts}"
+                                                              Margin="0,3,0,0"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding ChatCountText}" Foreground="White"
+                                                                       FontSize="9" FontWeight="SemiBold"
+                                                                       HorizontalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </Grid>
                                         </Border>
                                         <DataTemplate.Triggers>
@@ -192,7 +216,7 @@
                                             <DataTrigger Binding="{Binding HasActivity}" Value="True">
                                                 <Setter TargetName="DayCell" Property="Background" Value="#FF285653"/>
                                                 <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
-                                                <Setter TargetName="ActivityCount" Property="Visibility" Value="Visible"/>
+                                                <Setter TargetName="ActivityCounts" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding HasStreams}" Value="True">
                                                 <Setter TargetName="StreamBadge" Property="Visibility" Value="Visible"/>

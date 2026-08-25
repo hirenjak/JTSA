@@ -341,10 +341,20 @@ public partial class ObsSettingPanel : UserControl
     {
         private string text = "";
         private string status = "";
+        private string displayName = "";
         private string? selectedScene;
         private string? selectedSource;
         private bool isTextLoaded;
-        public string DisplayName { get; set; } = "";
+        public string DisplayName
+        {
+            get => displayName;
+            set
+            {
+                if (displayName == value) return;
+                displayName = value;
+                Notify();
+            }
+        }
         public bool IsSub { get; set; }
         public int ObsSelectedIndex { get => IsSub ? 1 : 0; set => IsSub = value == 1; }
         public ObservableCollection<string> Scenes { get; } = [];

@@ -6,7 +6,14 @@
    <ItemsControl x:Name="TextSourceCardsItemsControl">
     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
     <ItemsControl.ItemTemplate><DataTemplate>
-     <Border Margin="0,0,0,8" Padding="9" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+     <Expander Margin="0,0,0,8" IsExpanded="True" Foreground="White">
+      <Expander.Header>
+       <DockPanel MinWidth="360">
+        <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" Foreground="White"/>
+        <TextBlock Margin="12,0,0,0" Text="{Binding Status}" Foreground="LightGreen" FontSize="11"/>
+       </DockPanel>
+      </Expander.Header>
+      <Border Padding="9" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
       <Grid><Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="48"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
        <DockPanel LastChildFill="False"><Button DockPanel.Dock="Right" Content="削除" Width="50" Height="24" Margin="6,0,0,0" Tag="{Binding}" Click="RemoveTextSourceCardButton_Click"/><TextBlock DockPanel.Dock="Left" Text="カード名称" Width="76" Foreground="White" VerticalAlignment="Center"/><TextBox DockPanel.Dock="Left" Width="220" Height="24" Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" LostFocus="CardDisplayName_LostFocus" Tag="{Binding}"/><Button DockPanel.Dock="Left" Content="{Binding ActionButtonText}" Width="96" Height="24" Margin="8,0,0,0" Tag="{Binding}" Click="ApplySourceCardButton_Click"/><TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" Text="{Binding Status}" Foreground="LightGreen" VerticalAlignment="Center" FontSize="11"/></DockPanel>
        <Grid Grid.Row="1" Margin="0,3,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -16,7 +23,8 @@
        </Grid>
        <StackPanel Grid.Row="2" Margin="0,5,0,4"><TextBlock Text="テキスト内容" Foreground="LightGray" FontSize="11"/><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTextLoaded}" MinHeight="68" MaxHeight="100" Margin="0,2,0,0" Padding="5" Background="#FFE0E0E0" Foreground="Black" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/></StackPanel>
       </Grid>
-     </Border>
+      </Border>
+     </Expander>
     </DataTemplate></ItemsControl.ItemTemplate>
    </ItemsControl>
   </StackPanel></ScrollViewer></TabItem>
