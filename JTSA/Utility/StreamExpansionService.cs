@@ -73,8 +73,9 @@ internal sealed class StreamExpansionService
         if (groups.Count > 0)
         {
             var selectedGroup = ChooseByWeight(groups);
+            var resolvedChannelPointInput = ResolveChannelPointInput(rule, type, value, channelPointInput);
             var triggerValues = await CreateTriggerValuesAsync(
-                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, channelPointInput);
+                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, resolvedChannelPointInput);
             tasks.AddRange(selectedGroup.Where(item => item.ActionType != "ObsText").Select(item =>
                 ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues)));
             foreach (var item in selectedGroup.Where(item => item.ActionType == "ObsText"))
@@ -209,13 +210,27 @@ internal sealed class StreamExpansionService
                 return rule.IsBits;
 
             case StreamExpansionTriggerType.ObsStreamStart:
-                if (!rule.IsObsStreamStart) return false;
                 return string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase)
                     ? rule.IsObsStreamStartSub
                     : rule.IsObsStreamStartMain;
         }
 
         return false;
+    }
+
+    internal static string ResolveChannelPointInput(
+        T_StreamExpansionHeader rule,
+        StreamExpansionTriggerType type,
+        string value,
+        string channelPointInput)
+    {
+        if (type != StreamExpansionTriggerType.Chat || string.IsNullOrWhiteSpace(rule.TriggerComment))
+            return channelPointInput;
+
+        var triggerIndex = value.IndexOf(rule.TriggerComment, StringComparison.OrdinalIgnoreCase);
+        if (triggerIndex < 0) return string.Empty;
+
+        return value[(triggerIndex + rule.TriggerComment.Length)..].Trim();
     }
 
 
