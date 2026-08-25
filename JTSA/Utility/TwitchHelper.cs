@@ -100,11 +100,17 @@ namespace JTSA.Utility
         /// <param name="accessToken"></param>
         /// <returns></returns>
         public static async Task<TwitchUserIF?> GetBroadcasterIdAsync(string userName)
+            => await GetBroadcasterIdAsync(userName, AccessToken);
+
+        public static async Task<TwitchUserIF?> GetBroadcasterIdAsync(string userName, string accessToken)
         {
             TwitchUserIF result = null;
             try
             {
-                var apiResponse = await api.Helix.Users.GetUsersAsync(logins: new List<string>() { userName });
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Users.GetUsersAsync(logins: new List<string>() { userName });
 
                 if (apiResponse?.Users != null)
                 {
@@ -140,13 +146,19 @@ namespace JTSA.Utility
         /// <param name="accessToken"></param>
         /// <returns></returns>
         public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync()
+            => await GetStreamingFollowUserAsync(BroadcasterId, AccessToken);
+
+        public static async Task<List<TwitchStreamIF>?> GetStreamingFollowUserAsync(string broadcasterId, string accessToken)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "フォロー中配信中チャンネル取得");
 
             List<TwitchStreamIF> results = [];
             try
             {
-                var apiResponse = await api.Helix.Streams.GetFollowedStreamsAsync(BroadcasterId);
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Streams.GetFollowedStreamsAsync(broadcasterId);
 
                 if (apiResponse?.Data != null)
                 {
@@ -368,12 +380,18 @@ namespace JTSA.Utility
 
 
         public static async Task<DateTime?> StreamRaid(string toRaidBroadcasterId)
+            => await StreamRaid(BroadcasterId, toRaidBroadcasterId, AccessToken);
+
+        public static async Task<DateTime?> StreamRaid(string fromBroadcasterId, string toRaidBroadcasterId, string accessToken)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "レイド実行");
 
             try
             {
-                var apiResponse = await api.Helix.Raids.StartRaidAsync(BroadcasterId, toRaidBroadcasterId);
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Raids.StartRaidAsync(fromBroadcasterId, toRaidBroadcasterId);
 
                 mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                 return apiResponse.Data.FirstOrDefault().CreatedAt;
@@ -788,19 +806,25 @@ namespace JTSA.Utility
         #region ==================== チャット関連 ====================
 
         public static async Task<bool> SendShoutout(string toBroadcasterId)
+            => await SendShoutout(toBroadcasterId, BroadcasterId, AccessToken);
+
+        public static async Task<bool> SendShoutout(
+            string toBroadcasterId,
+            string broadcasterId,
+            string accessToken)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "Shoutout処理");
             try
             {
                 using var client = new HttpClient();
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
                 client.DefaultRequestHeaders.Add("Client-Id", ClientID);
 
                 using var response = await client.PostAsync(
                     $"https://api.twitch.tv/helix/chat/shoutouts" +
-                    $"?from_broadcaster_id={BroadcasterId}" +
+                    $"?from_broadcaster_id={broadcasterId}" +
                     $"&to_broadcaster_id={toBroadcasterId}" +
-                    $"&moderator_id={BroadcasterId}", null);
+                    $"&moderator_id={broadcasterId}", null);
 
                 await TwitchPermissionNotifier.NotifyIfRequiredAsync(
                     response, "Shoutout", "moderator:manage:shoutouts");
@@ -825,21 +849,53 @@ namespace JTSA.Utility
         }
 
         public static async Task<string?> SendChat(string chatContent)
+            => await SendChat(chatContent, BroadcasterId, AccessToken);
+
+        public static async Task<string?> SendChat(
+            string chatContent,
+            string broadcasterId,
+            string accessToken)
         {
             ProcessLog processLog = new ProcessLog(mainWindow.AppLogPanel, nameof(TwitchHelper), "チャット送信処理");
 
             try
             {
-                var sendChatMessageRequest = new SendChatMessageRequest
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", accessToken);
+                client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+                using var response = await client.PostAsJsonAsync(
+                    "https://api.twitch.tv/helix/chat/messages",
+                    new SendChatRequest
+                    {
+                        BroadcasterId = broadcasterId,
+                        SenderId = broadcasterId,
+                        Message = chatContent
+                    });
+
+                await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                    response, "チャット送信", "user:write:chat");
+
+                var responseDetail = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
                 {
-                    BroadcasterId = BroadcasterId,
-                    SenderId = BroadcasterId,
-                    Message = chatContent
-                };
-                var apiResponse = await api.Helix.Chat.SendChatMessage(sendChatMessageRequest);
+                    processLog.ErrorLogWrite(
+                        $"Twitch APIエラー ({(int)response.StatusCode} {response.StatusCode}): {responseDetail}");
+                    return null;
+                }
+
+                var apiResponse = JsonSerializer.Deserialize<SendChatResponse>(responseDetail);
+                var result = apiResponse?.Data.FirstOrDefault();
+                if (result is null || !result.IsSent)
+                {
+                    var reason = result?.DropReason?.Message ?? "Twitchがメッセージを送信しませんでした。";
+                    processLog.ErrorLogWrite(reason);
+                    return null;
+                }
 
                 processLog.SuccessLogWrite();
-                return apiResponse.Data.FirstOrDefault().MessageId;
+                return result.MessageId;
             }
             catch (Exception ex)
             {
@@ -847,6 +903,42 @@ namespace JTSA.Utility
             }
 
             return null;
+        }
+
+        private sealed class SendChatRequest
+        {
+            [JsonPropertyName("broadcaster_id")]
+            public string BroadcasterId { get; init; } = string.Empty;
+
+            [JsonPropertyName("sender_id")]
+            public string SenderId { get; init; } = string.Empty;
+
+            [JsonPropertyName("message")]
+            public string Message { get; init; } = string.Empty;
+        }
+
+        private sealed class SendChatResponse
+        {
+            [JsonPropertyName("data")]
+            public List<SendChatResult> Data { get; init; } = [];
+        }
+
+        private sealed class SendChatResult
+        {
+            [JsonPropertyName("message_id")]
+            public string MessageId { get; init; } = string.Empty;
+
+            [JsonPropertyName("is_sent")]
+            public bool IsSent { get; init; }
+
+            [JsonPropertyName("drop_reason")]
+            public SendChatDropReason? DropReason { get; init; }
+        }
+
+        private sealed class SendChatDropReason
+        {
+            [JsonPropertyName("message")]
+            public string Message { get; init; } = string.Empty;
         }
 
 

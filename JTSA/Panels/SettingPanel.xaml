@@ -140,6 +140,13 @@
                 Width="Auto" Height="2"
                 Background="White"/>
 
+            <StackPanel x:Name="ObsConnectionSettingsHost" Margin="0,8,0,0"/>
+
+            <Border
+                Margin="0, 12, 0, 0"
+                Width="Auto" Height="2"
+                Background="White"/>
+
             <StackPanel Margin="0,8,0,0">
                 <Label Content="チャット読み上げ連携"
                        Padding="4,0"

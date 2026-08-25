@@ -82,6 +82,10 @@ public class StreamExpansionChannelPointForm
 public partial class StereamExpansionPanel : UserControl , INotifyPropertyChanged
 {
     private StreamExpansionHeaderForm? selectedHeader;
+    private StreamExpansionHeaderForm? editingHeader;
+    private bool isReloading;
+    private bool isSwitchingHeader;
+    private bool isSaving;
 
     public ObservableCollection<StreamExpansionHeaderForm> HeaderFormList { get; } = [];
     public ObservableCollection<StreamExpansionItemForm> ItemFormList { get; } = [];
@@ -102,6 +106,12 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         Loaded += StereamExpansionPanel_Loaded;
         IsVisibleChanged += StereamExpansionPanel_IsVisibleChanged;
+        AddHandler(TextBox.LostKeyboardFocusEvent, new System.Windows.Input.KeyboardFocusChangedEventHandler(AutoSaveTextBox_LostKeyboardFocus), true);
+        AddHandler(CheckBox.ClickEvent, new RoutedEventHandler(AutoSaveCheckBox_Click), true);
+        AddHandler(System.Windows.Controls.Primitives.Selector.SelectionChangedEvent,
+            new SelectionChangedEventHandler(AutoSaveComboBox_SelectionChanged), true);
+        AddHandler(System.Windows.Controls.Primitives.RangeBase.ValueChangedEvent,
+            new RoutedPropertyChangedEventHandler<double>(AutoSaveSlider_ValueChanged), true);
     }
 
     private void StereamExpansionPanel_Loaded(object sender, RoutedEventArgs e)
@@ -145,6 +155,9 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     /// </summary>
     private void Reload(long selectId = 0)
     {
+        isReloading = true;
+        try
+        {
         // ヘッダーリストの初期化
         HeaderFormList.Clear();
 
@@ -175,6 +188,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         // 選択しているアイテムを格納
         SelectedHeader = HeaderFormList.FirstOrDefault(x => x.HeaderId == selectId) ?? HeaderFormList.FirstOrDefault();
         StreamExpansionListBox.SelectedItem = SelectedHeader;
+        }
+        finally
+        {
+            isReloading = false;
+        }
     }
 
 
@@ -189,6 +207,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         };
 
         HeaderFormList.Add(item); SelectedHeader = item; StreamExpansionListBox.SelectedItem = item; ClearItemForms();
+        SaveCurrent();
     }
 
     /// <summary>
@@ -210,49 +229,58 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     /// </summary>
     private void HeaderSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ClearItemForms();
-
-        if (SelectedHeader is null || SelectedHeader.HeaderId == 0) return;
-        foreach (var group in DAO_StreamExpansion.SelectItems(SelectedHeader.HeaderId).GroupBy(x => x.SortNumber))
+        isSwitchingHeader = true;
+        try
         {
-            var form = new StreamExpansionItemForm
-            {
-                Weight = group.First().Weight
-            };
+            ClearItemForms();
+            editingHeader = SelectedHeader;
 
-            foreach (var item in group)
+            if (editingHeader is null || editingHeader.HeaderId == 0) return;
+            foreach (var group in DAO_StreamExpansion.SelectItems(editingHeader.HeaderId).GroupBy(x => x.SortNumber))
             {
-                switch (item.ActionType)
+                var form = new StreamExpansionItemForm
                 {
-                    case "Image":
-                        form.IsImage = true;
-                        form.ImageContent = item.Content;
-                        break;
-                    case "Chat":
-                        form.IsChat = true;
-                        form.ChatContent = item.Content;
-                        break;
-                    case "ObsText":
-                        form.ObsTextForms.Add(new()
-                        {
-                            IsSubObs = item.IsSubObs,
-                            SceneName = item.ObsSceneName,
-                            SourceName = item.ObsSourceName,
-                            TextTemplate = item.Content
-                        });
-                        break;
-                    default:
-                        form.IsAudio = true;
-                        form.AudioContent = item.Content;
-                        form.AudioVolume = item.Volume;
-                        break;
+                    Weight = group.First().Weight
+                };
+
+                foreach (var item in group)
+                {
+                    switch (item.ActionType)
+                    {
+                        case "Image":
+                            form.IsImage = true;
+                            form.ImageContent = item.Content;
+                            break;
+                        case "Chat":
+                            form.IsChat = true;
+                            form.ChatContent = item.Content;
+                            break;
+                        case "ObsText":
+                            form.ObsTextForms.Add(new()
+                            {
+                                IsSubObs = item.IsSubObs,
+                                SceneName = item.ObsSceneName,
+                                SourceName = item.ObsSourceName,
+                                TextTemplate = item.Content
+                            });
+                            break;
+                        default:
+                            form.IsAudio = true;
+                            form.AudioContent = item.Content;
+                            form.AudioVolume = item.Volume;
+                            break;
+                    }
                 }
+
+                AddItemForm(form);
             }
 
-            AddItemForm(form);
+            UpdateProbabilities();
         }
-
-        UpdateProbabilities();
+        finally
+        {
+            isSwitchingHeader = false;
+        }
     }
 
 
@@ -263,6 +291,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     {
         AddItemForm(new());
         UpdateProbabilities();
+        SaveCurrent();
     }
 
 
@@ -276,6 +305,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             x.PropertyChanged -= StreamExpansionItemForm_PropertyChanged;
             ItemFormList.Remove(x);
             UpdateProbabilities();
+            SaveCurrent();
         }
     }
 
@@ -346,6 +376,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 item.AudioContent = dialog.FileName;
             }
             FileExeItemListBox.Items.Refresh();
+            SaveCurrent();
         }
     }
 
@@ -353,14 +384,19 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     /// <summary>
     /// 
     /// </summary>
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    private void SaveCurrent()
     {
-        if (SelectedHeader is null || string.IsNullOrWhiteSpace(SelectedHeader.HeaderName)) 
+        if (isReloading || isSwitchingHeader || isSaving) return;
+        var header = editingHeader;
+        if (header is null || string.IsNullOrWhiteSpace(header.HeaderName))
         { 
             //StatusText.Text = "実装名を入力してね"; 
             return; 
         }
 
+        isSaving = true;
+        try
+        {
         var saveItems = new List<T_StreamExpansionItem>();
         for (var groupIndex = 0; groupIndex < ItemFormList.Count; groupIndex++)
         {
@@ -388,49 +424,138 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader
         {
-            Id = SelectedHeader.HeaderId, 
-            Name = SelectedHeader.HeaderName.Trim(), 
-            IsActive = SelectedHeader.IsActive,
-            IsRaid = SelectedHeader.IsRaid, 
-            IsSubscribe = SelectedHeader.IsSubscribe, 
-            IsBits = SelectedHeader.IsBits,
-            IsFirstChat = SelectedHeader.IsFirstChat,
-            IsFollow = SelectedHeader.IsFollow,
-            IsObsStreamStart = SelectedHeader.IsObsStreamStart,
-            IsObsStreamStartMain = SelectedHeader.IsObsStreamStartMain,
-            IsObsStreamStartSub = SelectedHeader.IsObsStreamStartSub,
-            DoShoutout = SelectedHeader.DoShoutout,
-            DelaySeconds = Math.Clamp(SelectedHeader.DelaySeconds, 0, 3600),
-            TriggerComment = SelectedHeader.TriggerComment?.Trim() ?? "", 
-            TriggerChannelPointId = SelectedHeader.TriggerChannelPointId?.Trim() ?? "",
+            Id = header.HeaderId,
+            Name = header.HeaderName.Trim(),
+            IsActive = header.IsActive,
+            IsRaid = header.IsRaid,
+            IsSubscribe = header.IsSubscribe,
+            IsBits = header.IsBits,
+            IsFirstChat = header.IsFirstChat,
+            IsFollow = header.IsFollow,
+            IsObsStreamStart = header.IsObsStreamStartMain || header.IsObsStreamStartSub,
+            IsObsStreamStartMain = header.IsObsStreamStartMain,
+            IsObsStreamStartSub = header.IsObsStreamStartSub,
+            DoShoutout = header.DoShoutout,
+            DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600),
+            TriggerComment = header.TriggerComment?.Trim() ?? "",
+            TriggerChannelPointId = header.TriggerChannelPointId?.Trim() ?? "",
             UpdatedDateTime = DateTime.Now, 
             LastUsedDateTime = DateTime.Now
         }, saveItems);
         
-        Reload(id); 
-        //StatusText.Text = "保存した";
+        header.HeaderId = id;
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
 
     private void AddObsTextButton_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.Tag is StreamExpansionItemForm item)
+        {
             item.ObsTextForms.Add(new());
+            SaveCurrent();
+        }
     }
 
     private void DeleteObsTextButton_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.Tag is StreamExpansionItemForm item &&
             (sender as Button)?.DataContext is StreamExpansionObsTextForm card)
+        {
             item.ObsTextForms.Remove(card);
+            SaveCurrent();
+        }
+    }
+
+    private void AutoSaveTextBox_LostKeyboardFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+    {
+        if (e.OriginalSource is not TextBox textBox) return;
+        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        FindVisualParent<ComboBox>(textBox)?.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
+        SaveCurrent();
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        while (parent is not null)
+        {
+            if (parent is T result) return result;
+            parent = System.Windows.Media.VisualTreeHelper.GetParent(parent);
+        }
+
+        return null;
+    }
+
+    private void AutoSaveCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is not CheckBox checkBox) return;
+        if (checkBox.DataContext is StreamExpansionHeaderForm header && header != editingHeader) return;
+        checkBox.GetBindingExpression(CheckBox.IsCheckedProperty)?.UpdateSource();
+        SaveCurrent();
+    }
+
+    private void AutoSaveComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.OriginalSource is not ComboBox comboBox) return;
+        comboBox.GetBindingExpression(ComboBox.SelectedValueProperty)?.UpdateSource();
+        comboBox.GetBindingExpression(ComboBox.SelectedIndexProperty)?.UpdateSource();
+        comboBox.GetBindingExpression(ComboBox.TextProperty)?.UpdateSource();
+        SaveCurrent();
+    }
+
+    private void AutoSaveSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (e.OriginalSource is not Slider slider) return;
+        slider.GetBindingExpression(System.Windows.Controls.Primitives.RangeBase.ValueProperty)?.UpdateSource();
+        SaveCurrent();
+    }
+
+    private async void ReloadObsCandidatesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not StreamExpansionObsTextForm card ||
+            Application.Current.MainWindow is not MainWindow mainWindow)
+            return;
+
+        var controller = await mainWindow.EnsureObsConnectedAsync(card.IsSubObs);
+        if (controller is null) return;
+
+        try
+        {
+            var selectedScene = card.SceneName;
+            card.SceneNames.Clear();
+            foreach (var name in await Task.Run(controller.GetSceneNames)) card.SceneNames.Add(name);
+
+            if (!string.IsNullOrWhiteSpace(selectedScene))
+            {
+                if (!card.SceneNames.Contains(selectedScene)) card.SceneNames.Add(selectedScene);
+                card.SceneName = selectedScene;
+            }
+            else
+            {
+                card.SceneName = card.SceneNames.FirstOrDefault() ?? string.Empty;
+            }
+
+            await ReloadSourceNamesAsync(card, controller);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"OBS候補を取得できませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
+        }
     }
 
     private async void ObsTargetSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.DataContext is not StreamExpansionObsTextForm card ||
+        if (sender is not ComboBox comboBox ||
+            !comboBox.IsKeyboardFocusWithin ||
+            comboBox.DataContext is not StreamExpansionObsTextForm card ||
             Application.Current.MainWindow is not MainWindow mainWindow) return;
 
-        card.IsSubObs = (sender as ComboBox)?.SelectedIndex == 1;
+        card.IsSubObs = comboBox.SelectedIndex == 1;
         var controller = await mainWindow.EnsureObsConnectedAsync(card.IsSubObs);
         if (controller is null) return;
         try
@@ -458,6 +583,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     private async void ObsSceneSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is not ComboBox comboBox ||
+            !comboBox.IsKeyboardFocusWithin ||
             comboBox.DataContext is not StreamExpansionObsTextForm card ||
             Application.Current.MainWindow is not MainWindow mainWindow)
             return;

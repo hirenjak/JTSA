@@ -36,8 +36,13 @@ namespace JTSA
 
 		private readonly ObsController mainObsController = new();
 		private readonly ObsController subObsController = new();
+        private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
+        private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
+        private readonly SemaphoreSlim twitchAccountTokenLock = new(1, 1);
         private readonly StreamExpansionService streamExpansionService = new();
 		private bool isObsOperationRunning;
+        private bool isAccountAwarePanelsInitialized;
+        private int accountSwitchLoadingCount;
         private bool isObsStreaming;
         private bool? mainObsLastStreamingState;
         private bool? subObsLastStreamingState;
@@ -349,17 +354,84 @@ namespace JTSA
         /// </summary>
         private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
         {
+            ApplyObsSceneShortcutPanelVisibility(
+                DAO_Setting.SelectOneById(
+                    DAO_Setting.SettingName.ObsSceneShortcutPanelVisible)?.Value != "0");
+            RefreshObsSceneShortcutButtons();
+            SetAccountSwitchLoading(true, isStartup: true);
+            try
+            {
+                await MainWindowLoadedCoreAsync(sender, e);
+            }
+            catch (Exception ex)
+            {
+                AppLogPanel.Error(
+                    GetType().Name,
+                    $"起動時の読み込みに失敗しました。{ex.GetBaseException().Message}");
+                LoadSubPanel.Visibility = Visibility.Visible;
+            }
+            finally
+            {
+                SetAccountSwitchLoading(false);
+            }
+        }
+
+        public void RefreshObsSceneShortcutButtons()
+        {
+            long? accountId = TargetAccountComboBox.SelectedValue is long selectedAccountId
+                ? selectedAccountId
+                : null;
+            var presets = ObsSettingPanel.GetSceneSwitchPresets(accountId);
+            ObsSettingPanel.RefreshSceneSwitchPresetFilter(accountId);
+            var mainPresets = presets.Where(preset => !preset.IsSub).ToList();
+            var subPresets = presets.Where(preset => preset.IsSub).ToList();
+            MainObsSceneShortcutItemsControl.ItemsSource = mainPresets;
+            SubObsSceneShortcutItemsControl.ItemsSource = subPresets;
+            MainObsSceneShortcutItemsControl.Visibility = mainPresets.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            SubObsSceneShortcutItemsControl.Visibility = subPresets.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            ObsSceneShortcutEmptyTextBlock.Visibility = presets.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ObsSceneShortcutScrollViewer.Visibility = presets.Count == 0
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
+        public long? SelectedTargetAccountId =>
+            TargetAccountComboBox.SelectedValue is long accountId ? accountId : null;
+
+        private async void ObsSceneShortcutButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.Tag is not ObsSettingPanel.SceneSwitchPreset preset) return;
+            await ObsSettingPanel.ExecuteSceneSwitchPresetAsync(preset);
+        }
+
+        private void ObsSceneShortcutToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            var shouldShow = ObsSceneShortcutPanel.Visibility != Visibility.Visible;
+            ApplyObsSceneShortcutPanelVisibility(shouldShow);
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ObsSceneShortcutPanelVisible,
+                shouldShow ? "1" : "0");
+        }
+
+        private void ApplyObsSceneShortcutPanelVisibility(bool shouldShow)
+        {
+            ObsSceneShortcutPanel.Visibility = shouldShow
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ObsSceneShortcutToggleButton.Content = shouldShow ? "シーン ▲" : "シーン ▼";
+        }
+
+        private async Task MainWindowLoadedCoreAsync(object sender, RoutedEventArgs e)
+        {
             //【プロセス開始ログ】
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "メインウィンドウ（読込）");
             processLog.EventStartLogWrite();
-
-            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1")
-            {
-                if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
-                    await ConnectObsAsync(forceReconnect: false, showError: false);
-                if (long.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
-                    await ConnectObsAsync(forceReconnect: false, showError: false, isSub: true);
-            }
 
             // Loading画面表示（※MainWindow_Loaded終わりまで表示）
             LoadScreen.Visibility = Visibility.Visible;
@@ -374,8 +446,10 @@ namespace JTSA
 
             // リフレッシュトークン取得確認
             // ユーザー名はアクセストークンから特定できるため、保存済みトークンの有無だけを見る
-            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken) ?? null;
-            if (settingRefreshToken == null || string.IsNullOrEmpty(settingRefreshToken.Value))
+            var settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken)?.Value;
+            var primaryAccountRefreshToken = DAO_TwitchAccount.SelectPrimary()?.RefreshToken;
+            if (string.IsNullOrWhiteSpace(settingRefreshToken) &&
+                string.IsNullOrWhiteSpace(primaryAccountRefreshToken))
             {
                 processLog.CriticalErrorLogWrite("未認証（OAuth認証が必要）");
 
@@ -402,8 +476,40 @@ namespace JTSA
             // 認証後の初期化（OAuth認証直後と共通）
             await InitializeAfterAuthAsync();
 
+            // OBSは補助機能なので、Twitch画面・チャットなど本体の初期化完了後、
+            // UIが落ち着いてから低優先で自動接続する。
+            _ = AutoConnectObsAfterStartupAsync();
+
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
+        }
+
+        private async Task AutoConnectObsAfterStartupAsync()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            await AutoConnectObsAsync();
+        }
+
+        private async Task AutoConnectObsAsync()
+        {
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value != "1")
+                return;
+
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
+            {
+                await ConnectObsAsync(forceReconnect: false, showError: false);
+                if (mainObsController.IsConnected)
+                    await ObsSettingPanel.RefreshSavedTextSourcesAsync(mainObsController, isSub: false);
+            }
+
+            if (long.TryParse(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value,
+                out _))
+            {
+                await ConnectObsAsync(forceReconnect: false, showError: false, isSub: true);
+                if (subObsController.IsConnected)
+                    await ObsSettingPanel.RefreshSavedTextSourcesAsync(subObsController, isSub: true);
+            }
         }
 
         /// <summary>
@@ -664,10 +770,11 @@ namespace JTSA
         /// <summary>保存済み設定でOBSへ接続し、ヘッダーの操作状態を更新する。</summary>
         public async Task ConnectObsAsync(bool forceReconnect, bool showError, bool isSub = false)
         {
-            if (isObsOperationRunning)
-                return;
-
+            var connectionLock = isSub ? subObsConnectionLock : mainObsConnectionLock;
+            ObsSettingPanel.SetConnectionStatus(false, "接続待機中...", isSub);
+            await connectionLock.WaitAsync();
             isObsOperationRunning = true;
+            ObsSettingPanel.SetConnectionStatus(false, "接続中...", isSub);
             SetObsButtonState(enabled: false, isObsStreaming);
             try
             {
@@ -681,7 +788,8 @@ namespace JTSA
                     ?? (isSub ? "ws://127.0.0.1:4456" : DefaultObsWebSocketUrl);
                 var password = DAO_Setting.SelectOneById(passwordSetting)?.Value ?? "";
                 await controller.ConnectAsync(url, password);
-                var connectedStreamingState = await Task.Run(controller.IsStreaming);
+                var connectedStreamingState = await Task.Run(controller.IsStreaming)
+                    .WaitAsync(TimeSpan.FromSeconds(5));
                 if (isSub) subObsLastStreamingState = connectedStreamingState;
                 else mainObsLastStreamingState = connectedStreamingState;
                 ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
@@ -698,6 +806,7 @@ namespace JTSA
             finally
             {
                 isObsOperationRunning = false;
+                connectionLock.Release();
             }
         }
 
@@ -884,26 +993,102 @@ namespace JTSA
                 TargetAccountComboBox.SelectedIndex = 0;
         }
 
-        private void TargetAccountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void TargetAccountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (TargetAccountComboBox.SelectedValue is long id)
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
             RefreshObsControlTarget();
+            RefreshObsSceneShortcutButtons();
+
+            if (!isAccountAwarePanelsInitialized)
+                return;
+
+            SetAccountSwitchLoading(true);
+            try
+            {
+                var target = await GetSelectedTargetAccountAsync();
+                if (target is not null &&
+                    TargetAccountComboBox.SelectedValue is long selectedId &&
+                    selectedId == target.Value.Account.Id)
+                {
+                    await ChatPanel.InitializeAsync(
+                        target.Value.Account.UserName,
+                        target.Value.Account.BroadcasterId,
+                        target.Value.AccessToken);
+                    await RaidPanel.RefreshRaidUsersAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogPanel.Error(
+                    GetType().Name,
+                    $"アカウント切替に失敗しました。{ex.GetBaseException().Message}");
+            }
+            finally
+            {
+                SetAccountSwitchLoading(false);
+            }
         }
 
-        private async Task<(M_TwitchAccount Account, string AccessToken)?> GetSelectedTargetAccountAsync()
+        private void SetAccountSwitchLoading(bool isLoading, bool isStartup = false)
         {
-            if (TargetAccountComboBox.SelectedValue is not long accountId)
+            if (isLoading)
+            {
+                BlockingLoadingTitleTextBlock.Text = isStartup
+                    ? "アプリを読み込んでいます…"
+                    : "アカウントを切り替えています…";
+                BlockingLoadingDetailTextBlock.Text = isStartup
+                    ? "認証情報と各機能を準備中"
+                    : "チャット接続と関連データを読み込み中";
+            }
+
+            accountSwitchLoadingCount = isLoading
+                ? accountSwitchLoadingCount + 1
+                : Math.Max(0, accountSwitchLoadingCount - 1);
+            AccountSwitchLoadingOverlay.Visibility = accountSwitchLoadingCount > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        public async Task<(M_TwitchAccount Account, string AccessToken)?> GetSelectedTargetAccountAsync()
+        {
+            if (TargetAccountComboBox.SelectedValue is not long selectedAccountId)
                 return null;
-            var account = DAO_TwitchAccount.SelectById(accountId);
-            if (account is null) return null;
-            var token = await TwitchHelper.RefreshAccessTokenAsync(account.RefreshToken);
-            if (token is null) return null;
-            DAO_TwitchAccount.UpdateRefreshToken(account.Id, token.refreshToken);
-            if (account.IsPrimary)
-                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RefreshToken, token.refreshToken);
-            account.RefreshToken = token.refreshToken;
-            return (account, token.accessToken);
+
+            await twitchAccountTokenLock.WaitAsync();
+            try
+            {
+                // 待機中に別処理が更新トークンをローテーションしている場合があるため、
+                // ロック取得後にDBから最新値を読み直す。
+                var account = DAO_TwitchAccount.SelectById(selectedAccountId);
+                if (account is null || string.IsNullOrWhiteSpace(account.RefreshToken))
+                    return null;
+
+                var token = await TwitchHelper.RefreshAccessTokenAsync(account.RefreshToken);
+                if (token is null ||
+                    string.IsNullOrWhiteSpace(token.accessToken) ||
+                    string.IsNullOrWhiteSpace(token.refreshToken))
+                {
+                    AppLogPanel.Error(
+                        GetType().Name,
+                        $"{account.UserName} のアクセストークン更新に失敗しました。再認証してください。");
+                    return null;
+                }
+
+                DAO_TwitchAccount.UpdateRefreshToken(account.Id, token.refreshToken);
+                if (account.IsPrimary)
+                {
+                    DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RefreshToken, token.refreshToken);
+                    TwitchHelper.AccessToken = token.accessToken;
+                }
+
+                account.RefreshToken = token.refreshToken;
+                return (account, token.accessToken);
+            }
+            finally
+            {
+                twitchAccountTokenLock.Release();
+            }
         }
 
 
@@ -1559,7 +1744,7 @@ namespace JTSA
 
             viewerCountConsecutiveClicks = 0;
             await ChatStatisticsPanel.SyncArchivedStreamsAsync();
-            ChatStatisticsPanel.ReloadStatistics();
+            ChatStatisticsPanel.ReloadStatisticsForSelectedPeriod();
             ChatStatisticsTabItem.Visibility = Visibility.Visible;
             MainTabControl.SelectedItem = ChatStatisticsTabItem;
             e.Handled = true;
@@ -1629,7 +1814,15 @@ namespace JTSA
             await UpdateStreamStatusAsync();
 
             // 各パネルの初期化処理
-            ChatPanel.Initialize();
+            var selectedAccount = await GetSelectedTargetAccountAsync();
+            if (selectedAccount is not null)
+            {
+                await ChatPanel.InitializeAsync(
+                    selectedAccount.Value.Account.UserName,
+                    selectedAccount.Value.Account.BroadcasterId,
+                    selectedAccount.Value.AccessToken);
+            }
+            isAccountAwarePanelsInitialized = true;
             CategoryPanel.Initialize();
             PlayingGamePanel.BindExistingCategoryList(CategoryPanel.CategoryFormList);
             await ChannelPointPanel.Initialize();
@@ -1653,33 +1846,61 @@ namespace JTSA
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "アクセストークン再取得処理");
 
-            // リフレッシュトークンの取得（設定に無ければ失敗として戻す）
-            M_Setting? settingRefreshToken = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RefreshToken);
-            if (settingRefreshToken == null)
+            await twitchAccountTokenLock.WaitAsync();
+            try
             {
-                processLog.ErrorLogWrite("リフレッシュトークン未設定");
-                return null;
-            }
+                var primaryAccount = DAO_TwitchAccount.SelectPrimary();
+                var settingRefreshToken = DAO_Setting
+                    .SelectOneById(DAO_Setting.SettingName.RefreshToken)?.Value;
+                var refreshTokenCandidates = new[]
+                    {
+                        settingRefreshToken,
+                        primaryAccount?.RefreshToken
+                    }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct()
+                    .ToList();
 
-            var accessTokenResponse = await TwitchHelper.RefreshAccessTokenAsync(settingRefreshToken.Value);
-            if (accessTokenResponse == null)
+                if (refreshTokenCandidates.Count == 0)
+                {
+                    processLog.ErrorLogWrite("リフレッシュトークン未設定");
+                    return string.Empty;
+                }
+
+                AccessTokenResponseIF? accessTokenResponse = null;
+                foreach (var refreshToken in refreshTokenCandidates)
+                {
+                    var refreshed = await TwitchHelper.RefreshAccessTokenAsync(refreshToken!);
+                    if (!string.IsNullOrWhiteSpace(refreshed?.accessToken) &&
+                        !string.IsNullOrWhiteSpace(refreshed.refreshToken))
+                    {
+                        accessTokenResponse = refreshed;
+                        break;
+                    }
+                }
+
+                if (accessTokenResponse is null)
+                {
+                    processLog.ErrorLogWrite("アクセストークン未取得");
+                    return string.Empty;
+                }
+
+                DAO_Setting.InsertUpdate(
+                    DAO_Setting.SettingName.RefreshToken,
+                    accessTokenResponse.refreshToken);
+                DAO_Setting.InsertUpdate(
+                    DAO_Setting.SettingName.ExpiresIn,
+                    accessTokenResponse.expiresIn.ToString());
+                if (primaryAccount is not null)
+                    DAO_TwitchAccount.UpdateRefreshToken(primaryAccount.Id, accessTokenResponse.refreshToken);
+
+                processLog.SuccessLogWrite();
+                return accessTokenResponse.accessToken;
+            }
+            finally
             {
-                processLog.ErrorLogWrite("アクセストークン未取得");
-                return null;
+                twitchAccountTokenLock.Release();
             }
-
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.RefreshToken,
-                accessTokenResponse.refreshToken
-            );
-
-            DAO_Setting.InsertUpdate(
-                DAO_Setting.SettingName.ExpiresIn,
-                accessTokenResponse.expiresIn.ToString()
-            );
-
-            processLog.SuccessLogWrite();
-            return accessTokenResponse.accessToken;
         }
 
         #endregion

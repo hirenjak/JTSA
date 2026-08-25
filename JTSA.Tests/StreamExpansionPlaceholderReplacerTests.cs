@@ -75,4 +75,39 @@ public class StreamExpansionPlaceholderReplacerTests
 
         Assert.Equal("入力: リクエスト文言", result);
     }
+
+    [Theory]
+    [InlineData("!request テスト曲", "!request", "テスト曲")]
+    [InlineData("!REQUEST    テスト曲  ", "!request", "テスト曲")]
+    [InlineData("先頭 !request テスト曲", "!request", "テスト曲")]
+    [InlineData("!request", "!request", "")]
+    public void ResolveChannelPointInputUsesTextAfterChatTrigger(
+        string message, string triggerComment, string expected)
+    {
+        var rule = new JTSA.Models.T_StreamExpansionHeader
+        {
+            TriggerComment = triggerComment,
+            UpdatedDateTime = DateTime.Now
+        };
+
+        var result = StreamExpansionService.ResolveChannelPointInput(
+            rule, StreamExpansionTriggerType.Chat, message, "元の入力");
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ResolveChannelPointInputKeepsRewardInputForChannelPointTrigger()
+    {
+        var rule = new JTSA.Models.T_StreamExpansionHeader
+        {
+            TriggerComment = "!request",
+            UpdatedDateTime = DateTime.Now
+        };
+
+        var result = StreamExpansionService.ResolveChannelPointInput(
+            rule, StreamExpansionTriggerType.ChannelPoint, "reward-id", "リクエスト文言");
+
+        Assert.Equal("リクエスト文言", result);
+    }
 }

@@ -5,14 +5,24 @@ using System.ComponentModel;
 using JTSA.Models;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Navigation;
+using System.Diagnostics;
+using System.Text.Json;
+using System.Windows.Input;
 
 namespace JTSA.Panels;
 
 public partial class ObsSettingPanel : UserControl
 {
     private readonly ObservableCollection<ObsTextSourceCard> textSourceCards = [];
+    private readonly ObservableCollection<SceneSwitchPreset> sceneSwitchPresets = [];
+    private readonly TaskCompletionSource<bool> panelLoaded =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool isRestoringCards;
     private bool cardsLoaded;
+    private bool isLoadingScenes;
+    private Point scenePresetDragStart;
+    private SceneSwitchPreset? draggedScenePreset;
 
     public ObsSettingPanel()
     {
@@ -23,6 +33,7 @@ public partial class ObsSettingPanel : UserControl
         SubTwitchAccountComboBox.ItemsSource = accounts;
         ReloadSettings();
         RestoreTextSourceCards();
+        RestoreSceneSwitchPresets();
     }
 
     public void ReloadSettings()
@@ -52,26 +63,379 @@ public partial class ObsSettingPanel : UserControl
             : System.Windows.Media.Brushes.Orange;
     }
 
-    private async void ObsSettingPanel_Loaded(object sender, RoutedEventArgs e)
+    public void MoveConnectionSettingsTo(Panel host)
     {
-        if (cardsLoaded) return;
+        if (ReferenceEquals(ObsConnectionSettingsSection.Parent, host)) return;
+        if (ObsConnectionSettingsSection.Parent is Panel currentParent)
+            currentParent.Children.Remove(ObsConnectionSettingsSection);
+        host.Children.Add(ObsConnectionSettingsSection);
+        ObsSettingsTab.Visibility = Visibility.Collapsed;
+    }
+
+    private void TipsLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
+        {
+            UseShellExecute = true
+        });
+        e.Handled = true;
+    }
+
+    private async void SceneSwitchTab_IsVisibleChanged(
+        object sender,
+        DependencyPropertyChangedEventArgs e)
+    {
+        if (SceneSwitchTab.IsSelected && SceneSelectionComboBox.Items.Count == 0)
+            await RefreshSceneSwitchListAsync();
+    }
+
+    private async void RefreshScenesButton_Click(object sender, RoutedEventArgs e)
+        => await RefreshSceneSwitchListAsync();
+
+    private async Task RefreshSceneSwitchListAsync()
+    {
+        if (isLoadingScenes) return;
+        isLoadingScenes = true;
+        SceneSwitchStatusTextBlock.Text = "メイン・サブOBSへ接続しています...";
+        try
+        {
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            var targets = new List<(bool IsSub, string Name)> { (false, "メイン") };
+            if (long.TryParse(DAO_Setting.SelectOneById(
+                    DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
+                targets.Add((true, "サブ"));
+
+            var results = await Task.WhenAll(targets.Select(async target =>
+            {
+                try
+                {
+                    var controller = await mainWindow.EnsureObsConnectedAsync(target.IsSub);
+                    if (controller is null)
+                        return (target, Scenes: Array.Empty<string>(), Current: "", Error: "接続失敗");
+                    var scenes = await Task.Run(controller.GetSceneNames);
+                    var current = await Task.Run(controller.GetCurrentProgramScene);
+                    return (target, Scenes: scenes.ToArray(), Current: current, Error: "");
+                }
+                catch (Exception ex)
+                {
+                    return (target, Scenes: Array.Empty<string>(), Current: "",
+                        Error: ex.GetBaseException().Message);
+                }
+            }));
+
+            var choices = results
+                .SelectMany(result => result.Scenes.Select(scene => new SceneChoice
+                {
+                    IsSub = result.target.IsSub,
+                    SceneName = scene
+                }))
+                .ToList();
+            SceneSelectionComboBox.ItemsSource = choices;
+            SceneSelectionComboBox.SelectedItem = choices.FirstOrDefault();
+            CurrentProgramSceneTextBlock.Text = string.Join(" / ", results
+                .Where(result => string.IsNullOrEmpty(result.Error))
+                .Select(result => $"{result.target.Name}: {result.Current}"));
+            foreach (var preset in sceneSwitchPresets)
+            {
+                var result = results.FirstOrDefault(item => item.target.IsSub == preset.IsSub);
+                preset.IsCurrentScene = string.IsNullOrEmpty(result.Error) &&
+                    string.Equals(preset.SceneName, result.Current, StringComparison.OrdinalIgnoreCase);
+            }
+            RefreshSceneSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+            mainWindow.RefreshObsSceneShortcutButtons();
+
+            var errors = results.Where(result => !string.IsNullOrEmpty(result.Error)).ToList();
+            SceneSwitchStatusTextBlock.Text = choices.Count == 0
+                ? "取得できるシーンがありませんでした"
+                : errors.Count == 0
+                    ? $"両方のOBSから{choices.Count}件のシーンを読み込みました"
+                    : $"{choices.Count}件を読み込みました（{string.Join("、", errors.Select(x => x.target.Name + "OBS取得失敗"))}）";
+        }
+        catch (Exception ex)
+        {
+            SceneSwitchStatusTextBlock.Text = $"読込失敗: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            isLoadingScenes = false;
+        }
+    }
+
+    private async void SwitchSceneButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not SceneSwitchPreset preset) return;
+        await SwitchSceneAsync(preset);
+    }
+
+    private async Task SwitchSceneAsync(SceneSwitchPreset preset)
+    {
+        if (isLoadingScenes) return;
+        var sceneName = preset.SceneName;
+        isLoadingScenes = true;
+        SceneSwitchStatusTextBlock.Text = $"{sceneName} へ切り替えています...";
+        try
+        {
+            var isSub = preset.IsSub;
+            var controller = await ((MainWindow)Application.Current.MainWindow)
+                .EnsureObsConnectedAsync(isSub);
+            if (controller is null)
+            {
+                SceneSwitchStatusTextBlock.Text = "OBSに接続できませんでした";
+                return;
+            }
+
+            await Task.Run(() => controller.SetCurrentProgramScene(sceneName));
+            foreach (var item in sceneSwitchPresets.Where(item => item.IsSub == preset.IsSub))
+                item.IsCurrentScene = string.Equals(
+                    item.SceneName, sceneName, StringComparison.OrdinalIgnoreCase);
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            RefreshSceneSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+            mainWindow.RefreshObsSceneShortcutButtons();
+            CurrentProgramSceneTextBlock.Text = sceneName;
+            SceneSwitchStatusTextBlock.Text = $"{sceneName} に切り替えました";
+        }
+        catch (Exception ex)
+        {
+            SceneSwitchStatusTextBlock.Text = $"切替失敗: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            isLoadingScenes = false;
+        }
+    }
+
+    private void AddSceneSwitchPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SceneSelectionComboBox.SelectedItem is not SceneChoice choice) return;
+        var sceneName = choice.SceneName;
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        var accountId = mainWindow.SelectedTargetAccountId;
+        if (accountId is null)
+        {
+            SceneSwitchStatusTextBlock.Text = "右上の保存先アカウントを選択してください";
+            return;
+        }
+        var isSub = choice.IsSub;
+        if (sceneSwitchPresets.Any(x => x.AccountId == accountId.Value &&
+            x.IsSub == isSub &&
+            string.Equals(x.SceneName, sceneName, StringComparison.OrdinalIgnoreCase)))
+        {
+            SceneSwitchStatusTextBlock.Text = "そのシーンはすでに登録されています";
+            return;
+        }
+
+        sceneSwitchPresets.Add(new SceneSwitchPreset
+        {
+            AccountId = accountId.Value,
+            AccountDisplayName = DAO_TwitchAccount.SelectById(accountId.Value)?.UserName ?? $"ID: {accountId.Value}",
+            IsSub = isSub,
+            SceneName = sceneName
+        });
+        SaveSceneSwitchPresets();
+        RefreshSceneSwitchPresetFilter(accountId.Value);
+        mainWindow.RefreshObsSceneShortcutButtons();
+        SceneSwitchStatusTextBlock.Text = $"右上の選択アカウントに {sceneName} の切替ボタンを追加しました";
+    }
+
+    private void RemoveSceneSwitchPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not SceneSwitchPreset preset) return;
+        sceneSwitchPresets.Remove(preset);
+        SaveSceneSwitchPresets();
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        RefreshSceneSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+        mainWindow.RefreshObsSceneShortcutButtons();
+    }
+
+    private void ScenePresetCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        scenePresetDragStart = e.GetPosition(this);
+        draggedScenePreset = (sender as FrameworkElement)?.Tag as SceneSwitchPreset;
+    }
+
+    private void ScenePresetCard_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || draggedScenePreset is null) return;
+        var current = e.GetPosition(this);
+        if (Math.Abs(current.X - scenePresetDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(current.Y - scenePresetDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+        var preset = draggedScenePreset;
+        draggedScenePreset = null;
+        DragDrop.DoDragDrop((DependencyObject)sender, preset, DragDropEffects.Move);
+    }
+
+    private void ScenePresetCard_Drop(object sender, DragEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not SceneSwitchPreset target ||
+            e.Data.GetData(typeof(SceneSwitchPreset)) is not SceneSwitchPreset source ||
+            ReferenceEquals(source, target) || source.AccountId != target.AccountId) return;
+
+        sceneSwitchPresets.Remove(source);
+        var targetIndex = sceneSwitchPresets.IndexOf(target);
+        sceneSwitchPresets.Insert(targetIndex, source);
+        SaveSceneSwitchPresets();
+        RefreshSceneSwitchPresetFilter(target.AccountId);
+        ((MainWindow)Application.Current.MainWindow).RefreshObsSceneShortcutButtons();
+        SceneSwitchStatusTextBlock.Text = "ボタンの順番を変更しました";
+        e.Handled = true;
+    }
+
+    public IReadOnlyList<SceneSwitchPreset> GetSceneSwitchPresets(long? accountId = null)
+        => sceneSwitchPresets
+            .Where(preset => accountId is null || preset.AccountId == accountId)
+            .ToList();
+
+    public void RefreshSceneSwitchPresetFilter(long? accountId)
+    {
+        var presets = accountId is null
+            ? []
+            : sceneSwitchPresets.Where(preset => preset.AccountId == accountId.Value).ToList();
+        var mainPresets = presets.Where(preset => !preset.IsSub).ToList();
+        var subPresets = presets.Where(preset => preset.IsSub).ToList();
+        MainSceneSwitchPresetsItemsControl.ItemsSource = mainPresets;
+        SubSceneSwitchPresetsItemsControl.ItemsSource = subPresets;
+        MainSceneSwitchPresetPanel.Visibility = mainPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        SubSceneSwitchPresetPanel.Visibility = subPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public async Task ExecuteSceneSwitchPresetAsync(SceneSwitchPreset preset)
+    {
+        if (sceneSwitchPresets.Contains(preset))
+            await SwitchSceneAsync(preset);
+    }
+
+    private void RestoreSceneSwitchPresets()
+    {
+        try
+        {
+            var json = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.ObsSceneSwitchPresets)?.Value;
+            if (string.IsNullOrWhiteSpace(json)) return;
+            foreach (var preset in JsonSerializer.Deserialize<List<SceneSwitchPreset>>(json) ?? [])
+            {
+                if (!string.IsNullOrWhiteSpace(preset.SceneName))
+                {
+                    // 旧形式は接続先OBSだけを保存していたため、初回読込時に紐づくアカウントへ移行する。
+                    if (preset.AccountId <= 0)
+                        preset.AccountId = GetObsAccountId(preset.IsSub);
+                    preset.AccountDisplayName = DAO_TwitchAccount.SelectById(preset.AccountId)?.UserName
+                        ?? $"ID: {preset.AccountId}";
+                    sceneSwitchPresets.Add(preset);
+                }
+            }
+            SaveSceneSwitchPresets();
+        }
+        catch
+        {
+            SceneSwitchStatusTextBlock.Text = "保存済みの切替ボタンを読み込めませんでした";
+        }
+    }
+
+    private void SaveSceneSwitchPresets()
+    {
+        DAO_Setting.InsertUpdate(
+            DAO_Setting.SettingName.ObsSceneSwitchPresets,
+            JsonSerializer.Serialize(sceneSwitchPresets));
+    }
+
+    public sealed class SceneSwitchPreset
+    {
+        public long AccountId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string AccountDisplayName { get; set; } = string.Empty;
+        public bool IsSub { get; set; }
+        public string SceneName { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string ObsDisplayName => IsSub ? "サブOBS" : "メインOBS";
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsCurrentScene { get; set; }
+        public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SceneName}";
+    }
+
+    private sealed class SceneChoice
+    {
+        public bool IsSub { get; init; }
+        public string SceneName { get; init; } = string.Empty;
+        public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SceneName}";
+    }
+
+    private static long GetObsAccountId(bool isSub)
+    {
+        var setting = isSub
+            ? DAO_Setting.SettingName.SubObsTwitchAccountId
+            : DAO_Setting.SettingName.MainObsTwitchAccountId;
+        return long.TryParse(DAO_Setting.SelectOneById(setting)?.Value, out var accountId)
+            ? accountId
+            : 0;
+    }
+
+    private void ObsAutoConnectCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        DAO_Setting.InsertUpdate(
+            DAO_Setting.SettingName.ObsAutoConnect,
+            ObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
+    }
+
+    private void ObsSettingPanel_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (cardsLoaded)
+        {
+            panelLoaded.TrySetResult(true);
+            return;
+        }
         cardsLoaded = true;
+        foreach (var card in textSourceCards)
+            card.Status = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1"
+                ? "OBS接続完了後に読み込みます"
+                : "自動接続オフ（文言読込を押すと接続します）";
+        panelLoaded.TrySetResult(true);
+    }
+
+    public async Task RefreshSavedTextSourcesAsync(ObsController controller, bool isSub)
+    {
+        // ローカルOBSは接続が速く、画面のLoadedより先にここへ到達することがある。
+        // カード初期表示による状態上書きを防ぐため、パネル準備完了後に読み込む。
+        if (await Task.WhenAny(panelLoaded.Task, Task.Delay(TimeSpan.FromSeconds(5))) != panelLoaded.Task)
+            return;
         isRestoringCards = true;
         try
         {
-            foreach (var card in textSourceCards.Where(card => card.SelectedScene is not null))
+            foreach (var card in textSourceCards.Where(card =>
+                         card.IsSub == isSub && card.SelectedScene is not null))
             {
                 var sceneName = card.SelectedScene;
                 var sourceName = card.SelectedSource;
-                await LoadScenesAsync(card);
+                card.Controller = controller;
+                card.Status = "文言読込中...";
+
+                var scenes = await Task.Run(controller.GetSceneNames);
+                ReplaceItems(card.Scenes, scenes);
                 card.SelectedScene = sceneName;
-                if (card.Controller is null || sceneName is null) continue;
-                ReplaceItems(card.Sources, card.Controller.GetTextSourceNames(sceneName));
+                if (sceneName is null || !card.Scenes.Contains(sceneName))
+                {
+                    card.Status = "保存済みシーンが見つかりません";
+                    continue;
+                }
+
+                var sources = await Task.Run(() => controller.GetTextSourceNames(sceneName));
+                ReplaceItems(card.Sources, sources);
                 card.SelectedSource = sourceName;
-                if (sourceName is not null && card.Sources.Contains(sourceName))
-                    card.Text = card.Controller.GetTextSourceText(sourceName);
-                card.Status = sourceName is null ? "ソースを選択してください" : "保存済み設定を読み込みました";
+                if (sourceName is null || !card.Sources.Contains(sourceName))
+                {
+                    card.Status = "保存済みソースが見つかりません";
+                    continue;
+                }
+
+                card.Text = await Task.Run(() => controller.GetTextSourceText(sourceName));
+                card.IsTextLoaded = true;
+                card.Status = "保存済み設定を読み込みました";
             }
+        }
+        catch (Exception ex)
+        {
+            foreach (var card in textSourceCards.Where(card => card.IsSub == isSub))
+                card.Status = $"読込失敗: {ex.GetBaseException().Message}";
         }
         finally
         {
@@ -110,6 +474,7 @@ public partial class ObsSettingPanel : UserControl
         card.Scenes.Clear();
         card.Sources.Clear();
         card.Text = "";
+        card.IsTextLoaded = false;
         await LoadScenesAsync(card);
     }
 
@@ -147,6 +512,7 @@ public partial class ObsSettingPanel : UserControl
         card.SelectedSource = null;
         card.Sources.Clear();
         card.Text = "";
+        card.IsTextLoaded = false;
         if (card.Controller is null)
             await LoadScenesAsync(card);
 
@@ -171,6 +537,7 @@ public partial class ObsSettingPanel : UserControl
         try
         {
             card.Text = card.Controller.GetTextSourceText(card.SelectedSource);
+            card.IsTextLoaded = true;
             card.Status = "現在の文言を取得しました";
         }
         catch (Exception ex)
@@ -186,14 +553,38 @@ public partial class ObsSettingPanel : UserControl
             SaveTextSourceCards();
     }
 
-    private void ApplySourceCardButton_Click(object sender, RoutedEventArgs e)
+    private async void ApplySourceCardButton_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.Tag is not ObsTextSourceCard card || card.Controller is null || card.SelectedSource is null)
+        if ((sender as Button)?.Tag is not ObsTextSourceCard card || card.SelectedSource is null)
             return;
+
         try
         {
+            // 自動接続オフで復元されたカードも、OBS反映を押した時点で明示的に接続する。
+            if (card.Controller is null)
+            {
+                card.Status = "接続中...";
+                card.Controller = await ((MainWindow)Application.Current.MainWindow)
+                    .EnsureObsConnectedAsync(card.IsSub);
+            }
+
+            if (card.Controller is null)
+            {
+                card.Status = "OBSに接続できません";
+                return;
+            }
+
+            if (!card.IsTextLoaded)
+            {
+                card.Text = card.Controller.GetTextSourceText(card.SelectedSource);
+                card.IsTextLoaded = true;
+                card.Status = "現在の文言を読み込みました";
+                return;
+            }
+
             card.Controller.SetTextSourceText(card.SelectedSource, card.Text);
             card.Status = "反映しました";
+            SaveTextSourceCards();
         }
         catch (Exception ex)
         {
@@ -255,9 +646,20 @@ public partial class ObsSettingPanel : UserControl
     {
         private string text = "";
         private string status = "";
+        private string displayName = "";
         private string? selectedScene;
         private string? selectedSource;
-        public string DisplayName { get; set; } = "";
+        private bool isTextLoaded;
+        public string DisplayName
+        {
+            get => displayName;
+            set
+            {
+                if (displayName == value) return;
+                displayName = value;
+                Notify();
+            }
+        }
         public bool IsSub { get; set; }
         public int ObsSelectedIndex { get => IsSub ? 1 : 0; set => IsSub = value == 1; }
         public ObservableCollection<string> Scenes { get; } = [];
@@ -283,6 +685,18 @@ public partial class ObsSettingPanel : UserControl
             }
         }
         public ObsController? Controller { get; set; }
+        public bool IsTextLoaded
+        {
+            get => isTextLoaded;
+            set
+            {
+                if (isTextLoaded == value) return;
+                isTextLoaded = value;
+                Notify();
+                Notify(nameof(ActionButtonText));
+            }
+        }
+        public string ActionButtonText => IsTextLoaded ? "OBS反映" : "文言読込";
         public string Text { get => text; set { text = value; Notify(); } }
         public string Status { get => status; set { status = value; Notify(); } }
         public event PropertyChangedEventHandler? PropertyChanged;

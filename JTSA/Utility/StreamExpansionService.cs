@@ -24,6 +24,14 @@ internal sealed class StreamExpansionService
     {
         try
         {
+            var selectedContext = GetSelectedAccountContext();
+            if (!string.IsNullOrWhiteSpace(selectedContext.BroadcasterId) &&
+                !string.IsNullOrWhiteSpace(selectedContext.AccessToken))
+            {
+                broadcasterId = selectedContext.BroadcasterId;
+                accessToken = selectedContext.AccessToken;
+            }
+
             // 発火条件に一致するものだけ取得
             var rules = DAO_StreamExpansion.SelectAllHeaders().Where(rule => Matches(rule, type, value)).ToList();
 
@@ -33,7 +41,7 @@ internal sealed class StreamExpansionService
             }
 
             var raidPlaceholders = type == StreamExpansionTriggerType.Raid && rules.Count > 0
-                ? await GetRaidPlaceholderValuesAsync(value)
+                ? await GetRaidPlaceholderValuesAsync(value, accessToken)
                 : null;
 
             // Run each matching rule independently so every delay starts at the trigger time.
@@ -73,26 +81,30 @@ internal sealed class StreamExpansionService
         if (groups.Count > 0)
         {
             var selectedGroup = ChooseByWeight(groups);
+            var resolvedChannelPointInput = ResolveChannelPointInput(rule, type, value, channelPointInput);
             var triggerValues = await CreateTriggerValuesAsync(
-                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, channelPointInput);
+                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, resolvedChannelPointInput);
             tasks.AddRange(selectedGroup.Where(item => item.ActionType != "ObsText").Select(item =>
-                ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues)));
+                ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues, broadcasterId, accessToken)));
             foreach (var item in selectedGroup.Where(item => item.ActionType == "ObsText"))
-                await ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues);
+                await ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues, broadcasterId, accessToken);
         }
 
         if (type == StreamExpansionTriggerType.Raid && rule.DoShoutout && !string.IsNullOrWhiteSpace(value))
         {
-            tasks.Add(SendRaidShoutoutAsync(value));
+            tasks.Add(SendRaidShoutoutAsync(value, broadcasterId, accessToken));
         }
 
         await Task.WhenAll(tasks);
     }
 
-    private static async Task SendRaidShoutoutAsync(string userName)
+    private static async Task SendRaidShoutoutAsync(
+        string userName,
+        string broadcasterId,
+        string accessToken)
     {
         LogSuccess($"自動Shoutout対象ユーザーを検索：{userName}");
-        var raider = await TwitchHelper.GetBroadcasterIdAsync(userName);
+        var raider = await TwitchHelper.GetBroadcasterIdAsync(userName, accessToken);
         if (string.IsNullOrWhiteSpace(raider?.UserId))
         {
             LogError($"自動Shoutout中断：Twitchユーザーを特定できませんでした（{userName}）");
@@ -100,7 +112,7 @@ internal sealed class StreamExpansionService
         }
 
         LogSuccess($"自動Shoutout送信開始：{raider.DisplayName}（ID: {raider.UserId}）");
-        var succeeded = await TwitchHelper.SendShoutout(raider.UserId);
+        var succeeded = await TwitchHelper.SendShoutout(raider.UserId, broadcasterId, accessToken);
         if (!succeeded)
         {
             LogError($"自動Shoutout送信失敗：{raider.DisplayName}。直前のShoutout失敗ログを確認してください");
@@ -147,15 +159,17 @@ internal sealed class StreamExpansionService
         }
     }
 
-    private static async Task<RaidPlaceholderValues> GetRaidPlaceholderValuesAsync(string userName)
+    private static async Task<RaidPlaceholderValues> GetRaidPlaceholderValuesAsync(
+        string userName,
+        string accessToken)
     {
-        var raider = await TwitchHelper.GetBroadcasterIdAsync(userName);
+        var raider = await TwitchHelper.GetBroadcasterIdAsync(userName, accessToken);
         if (string.IsNullOrWhiteSpace(raider?.UserId))
         {
             return new RaidPlaceholderValues(userName, string.Empty, string.Empty);
         }
 
-        var channel = await TwitchHelper.GetTwitchStreamInfo(raider.UserId);
+        var channel = await TwitchHelper.GetTwitchStreamInfo(raider.UserId, accessToken);
         return new RaidPlaceholderValues(
             string.IsNullOrWhiteSpace(raider.DisplayName) ? userName : raider.DisplayName,
             channel?.title ?? string.Empty,
@@ -209,13 +223,27 @@ internal sealed class StreamExpansionService
                 return rule.IsBits;
 
             case StreamExpansionTriggerType.ObsStreamStart:
-                if (!rule.IsObsStreamStart) return false;
                 return string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase)
                     ? rule.IsObsStreamStartSub
                     : rule.IsObsStreamStartMain;
         }
 
         return false;
+    }
+
+    internal static string ResolveChannelPointInput(
+        T_StreamExpansionHeader rule,
+        StreamExpansionTriggerType type,
+        string value,
+        string channelPointInput)
+    {
+        if (type != StreamExpansionTriggerType.Chat || string.IsNullOrWhiteSpace(rule.TriggerComment))
+            return channelPointInput;
+
+        var triggerIndex = value.IndexOf(rule.TriggerComment, StringComparison.OrdinalIgnoreCase);
+        if (triggerIndex < 0) return string.Empty;
+
+        return value[(triggerIndex + rule.TriggerComment.Length)..].Trim();
     }
 
 
@@ -244,17 +272,22 @@ internal sealed class StreamExpansionService
         T_StreamExpansionItem item,
         RaidPlaceholderValues? raidPlaceholders,
         ChatPlaceholderValues? chatPlaceholders,
-        StreamExpansionTriggerValues triggerValues)
+        StreamExpansionTriggerValues triggerValues,
+        string broadcasterId,
+        string accessToken)
     {
         if (string.IsNullOrWhiteSpace(item.Content) && item.ActionType != "ObsText") return;
         switch (item.ActionType)
         {
             case "Chat":
-                await TwitchHelper.SendChat(StreamExpansionPlaceholderReplacer.Replace(
-                    item.Content,
-                    raidPlaceholders,
-                    chatPlaceholders,
-                    triggerValues));
+                await TwitchHelper.SendChat(
+                    StreamExpansionPlaceholderReplacer.Replace(
+                        item.Content,
+                        raidPlaceholders,
+                        chatPlaceholders,
+                        triggerValues),
+                    broadcasterId,
+                    accessToken);
                 break;
 
             case "ObsText":
@@ -290,6 +323,18 @@ internal sealed class StreamExpansionService
                 throw new InvalidOperationException("メインウィンドウを取得できませんでした。");
             await mainWindow.SetObsTextSourceAsync(isSubObs, sourceName, text);
         }).Task.Unwrap();
+    }
+
+    private static (string BroadcasterId, string AccessToken) GetSelectedAccountContext()
+    {
+        var application = Application.Current;
+        if (application?.Dispatcher == null)
+            return (string.Empty, string.Empty);
+
+        return application.Dispatcher.Invoke(() =>
+            application.MainWindow is MainWindow mainWindow
+                ? mainWindow.ChatPanel.GetConnectedAccountContext()
+                : (string.Empty, string.Empty));
     }
 
 

@@ -72,6 +72,7 @@ namespace JTSA.Panels
         private async void SettingPanel_Loaded(object sender, RoutedEventArgs e)
         {
             Loaded -= SettingPanel_Loaded;
+            mainWindow.ObsSettingPanel.MoveConnectionSettingsTo(ObsConnectionSettingsHost);
             await LoadVoiceVoxSpeakersAsync(showError: false);
         }
 

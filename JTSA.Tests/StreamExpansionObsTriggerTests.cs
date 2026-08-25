@@ -17,7 +17,6 @@ public class StreamExpansionObsTriggerTests
         bool isMainObs, bool isSubObs, string eventObs, bool expected)
     {
         var rule = CreateRule();
-        rule.IsObsStreamStart = true;
         rule.IsObsStreamStartMain = isMainObs;
         rule.IsObsStreamStartSub = isSubObs;
 
@@ -26,7 +25,7 @@ public class StreamExpansionObsTriggerTests
     }
 
     [Fact]
-    public void ObsStreamStartDoesNotMatchDisabledTrigger()
+    public void ObsStreamStartDoesNotMatchWhenNeitherObsIsSelected()
     {
         var rule = CreateRule();
 

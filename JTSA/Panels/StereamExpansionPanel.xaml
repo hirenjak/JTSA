@@ -98,28 +98,26 @@
         <!-- 実装内容 -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="198"/>
+                <RowDefinition Height="134"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <!-- トリガー内容 -->
             <Grid Grid.Row="0" DataContext="{Binding SelectedHeader}">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Height="Auto">
+                <Grid Margin="0,0,8,4">
+                    <StackPanel>
+                    <DockPanel Height="24">
                         <Label
                             Content="実装名："
+                            Width="64"
                             Foreground="White"
                             VerticalAlignment="Center"/>
 
                         <TextBox
-                            Width="240" Height="20"
+                            Height="20"
                             FontSize="12" 
                             Text="{Binding HeaderName, UpdateSourceTrigger=PropertyChanged}"/>
-
-                        <Button
-                            Content="保存"
-                            Click="SaveButton_Click"/>
-                    </StackPanel>
+                    </DockPanel>
 
                     <StackPanel Orientation="Horizontal" Height="Auto">
                         <StackPanel
@@ -144,34 +142,6 @@
                             <CheckBox IsChecked="{Binding IsBits}" VerticalAlignment="Center"/>
                             <Label Content="ビッツ起動" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Height="28" Margin="16,0,0,0">
-                        <CheckBox IsChecked="{Binding IsObsStreamStart}" VerticalAlignment="Center"/>
-                        <Label Content="配信開始時" Foreground="White" VerticalAlignment="Center"/>
-                        <CheckBox Margin="8,0,0,0" Content="メインOBS" Foreground="White"
-                                  VerticalAlignment="Center" IsEnabled="{Binding IsObsStreamStart}"
-                                  IsChecked="{Binding IsObsStreamStartMain}"/>
-                        <CheckBox Margin="12,0,0,0" Content="サブOBS" Foreground="White"
-                                  VerticalAlignment="Center" IsEnabled="{Binding IsObsStreamStart}"
-                                  IsChecked="{Binding IsObsStreamStartSub}"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Height="24">
-                        <Label
-                            Content="実行遅延（秒）："
-                            Width="150"
-                            Foreground="White"
-                            VerticalAlignment="Center"/>
-
-                        <TextBox
-                            Width="80" Height="20"
-                            FontSize="12"
-                            ToolTip="トリガー発生後、音声・画像・チャット・Shoutoutを実行するまでの待機時間（0～3600秒）"
-                            Text="{Binding DelaySeconds, UpdateSourceTrigger=PropertyChanged}"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Height="Auto">
                         <StackPanel Orientation="Horizontal" Margin="16, 0, 0, 0">
                             <CheckBox IsChecked="{Binding IsFirstChat}" VerticalAlignment="Center"/>
                             <Label Content="チャット入室時" Foreground="White" VerticalAlignment="Center"/>
@@ -183,39 +153,56 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Height="24">
-                        <Label 
-                            Content="トリガーコメント：" 
-                            Width="150"
-                            Foreground="White" 
-                            VerticalAlignment="Center"/>
-                        
-                        <TextBox
-                            Width="240" Height="20"
-                            FontSize="12" 
-                            Text="{Binding TriggerComment, UpdateSourceTrigger=PropertyChanged}"/>
-                        
+                    <StackPanel Orientation="Horizontal" Height="28" Margin="16,0,0,0">
+                        <Label Content="配信開始時：" Padding="0" Foreground="White" VerticalAlignment="Center"/>
+                        <CheckBox Margin="8,0,0,0" Content="メインOBS" Foreground="White"
+                                  VerticalAlignment="Center" IsChecked="{Binding IsObsStreamStartMain}"/>
+                        <CheckBox Margin="12,0,0,0" Content="サブOBS" Foreground="White"
+                                  VerticalAlignment="Center" IsChecked="{Binding IsObsStreamStartSub}"/>
                     </StackPanel>
 
-                    <StackPanel 
-                        Orientation="Horizontal" 
-                        Margin="0, 4, 0, 0"
-                        Height="24">
+                    <Grid Height="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
                         <Label 
-                            Content="トリガーチャンネルポイント：" 
-                            Width="150"
+                            Content="実行遅延（秒）："
                             Foreground="White" 
                             VerticalAlignment="Center"/>
-                        
-                        <ComboBox
-                            Width="240" Height="20"
+
+                        <TextBox
+                            Grid.Column="1"
+                            Height="20"
                             FontSize="12"
-                            ItemsSource="{Binding DataContext.ChannelPointFormList, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            DisplayMemberPath="DisplayName"
-                            SelectedValuePath="RewardId"
-                            SelectedValue="{Binding TriggerChannelPointId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            ToolTip="トリガー発生後、音声・画像・チャット・Shoutoutを実行するまでの待機時間（0～3600秒）"
+                            Text="{Binding DelaySeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+
+                    <Grid Height="24" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Label 
+                            Content="トリガーチャンネルポイント："
+                            Foreground="White" 
+                            VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" Height="20" Margin="0,0,8,0" FontSize="12"
+                                  ItemsSource="{Binding DataContext.ChannelPointFormList, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValuePath="RewardId"
+                                  SelectedValue="{Binding TriggerChannelPointId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Label Grid.Column="2" Content="トリガーコメント："
+                               Foreground="White" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="3" Height="20" FontSize="12"
+                                 Text="{Binding TriggerComment, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Grid>
 
             <!-- 実行内容 -->
@@ -421,7 +408,7 @@
                                     VerticalAlignment="Center"/>
                                 
                                 <Label 
-                                    Content="Shoutout" 
+                                    Content="Shoutout（Raid時のみ対応）"
                                     Foreground="White" 
                                     VerticalAlignment="Center"/>
                                 
@@ -450,9 +437,13 @@
                                                                 <Expander Header="ソース変更" IsExpanded="False" Foreground="White" Margin="0,6,0,0">
                                                                     <Border Background="#FF505050" Padding="10" CornerRadius="3">
                                                                         <StackPanel>
-                                                                            <Button Content="削除" Width="52" Height="22" HorizontalAlignment="Right"
-                                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                                                    Click="DeleteObsTextButton_Click"/>
+                                                                            <DockPanel Margin="0,0,0,4">
+                                                                                <Button Content="一覧取得" Width="72" Height="22" HorizontalAlignment="Left"
+                                                                                        Click="ReloadObsCandidatesButton_Click"/>
+                                                                                <Button DockPanel.Dock="Right" Content="削除" Width="52" Height="22" HorizontalAlignment="Right"
+                                                                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                                        Click="DeleteObsTextButton_Click"/>
+                                                                            </DockPanel>
                                                                             <Grid Margin="0,0,0,8">
                                                                                 <Grid.ColumnDefinitions>
                                                                                     <ColumnDefinition Width="110"/><ColumnDefinition Width="8"/>
@@ -533,7 +524,7 @@
                                     <TextBox Grid.Row="9" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_category}"/>
                                     <TextBlock Grid.Row="9" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信カテゴリ"/>
                                     <TextBox Grid.Row="10" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{channel_point_input}"/>
-                                    <TextBlock Grid.Row="10" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャンネルポイント交換時にユーザーが入力した文言"/>
+                                    <TextBlock Grid.Row="10" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャンネルポイントの入力文言、またはチャットのトリガーコメントより後ろの文言"/>
                                 </Grid>
 
                                 <Grid Margin="0,0,0,6">

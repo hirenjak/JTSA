@@ -26,6 +26,7 @@ namespace JTSA.Panels
         public ObservableCollection<BitsUserForm> BitsUserList { get; } = new();
         public ObservableCollection<SubscribeUserForm> SubscribeUserList { get; } = new();
         public ObservableCollection<RaidedUserForm> RaidedUserList { get; } = new();
+        private Task? refreshRaidUsersTask;
 
         /// <summary>
         /// コンストラクタ
@@ -55,16 +56,41 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void RaidPanel_Loaded(object sender, RoutedEventArgs e)
         {
+            await RefreshRaidUsersAsync();
+        }
+
+        public Task RefreshRaidUsersAsync()
+        {
+            // タブのLoadedとアカウント切替が重なった場合は、同じ取得処理を共有する。
+            if (refreshRaidUsersTask is { IsCompleted: false })
+                return refreshRaidUsersTask;
+
+            refreshRaidUsersTask = RefreshRaidUsersCoreAsync();
+            return refreshRaidUsersTask;
+        }
+
+        private async Task RefreshRaidUsersCoreAsync()
+        {
             StreamSupportTracker.Changed -= StreamSupportTracker_Changed;
             StreamSupportTracker.Changed += StreamSupportTracker_Changed;
             RefreshSupportLists();
-            RaidUserList.Clear();
-            var apiResluts = await TwitchHelper.GetStreamingFollowUserAsync();
+            var target = await mainWindow.GetSelectedTargetAccountAsync();
+            if (target is null)
+                return;
+            var apiResluts = await TwitchHelper.GetStreamingFollowUserAsync(
+                target.Value.Account.BroadcasterId,
+                target.Value.AccessToken);
+            if (apiResluts is null)
+                return;
 
             var nowTime = DateTime.Now;
 
-            apiResluts = apiResluts.OrderBy(x => x.StartedAt).ToList();
-            apiResluts.Reverse();
+            apiResluts = apiResluts
+                .DistinctBy(x => x.UserId)
+                .OrderByDescending(x => x.StartedAt)
+                .ToList();
+
+            var refreshedRaidUsers = new List<RaidUserForm>();
 
             foreach (var data in apiResluts)
             {
@@ -79,7 +105,7 @@ namespace JTSA.Panels
                 // TotalHoursの小数点以下を切り捨てて合計時間（Time部分）を取得
                 int totalHours = (int)Math.Floor(timeSpan.TotalHours);
 
-                RaidUserList.Add(new RaidUserForm
+                refreshedRaidUsers.Add(new RaidUserForm
                 {
                     UserId = data.UserId,
                     UserName = data.UserName,
@@ -90,6 +116,8 @@ namespace JTSA.Panels
                     ThumbnailUrl = ThumbnailUrl
                 });
             }
+
+            ReplaceItems(RaidUserList, refreshedRaidUsers);
         }
 
         private void StreamSupportTracker_Changed()
@@ -126,7 +154,13 @@ namespace JTSA.Panels
         {
             if ((sender as ListBox)?.SelectedItem is RaidUserForm item)
             {
-                await TwitchHelper.StreamRaid(item.UserId);
+                var target = await mainWindow.GetSelectedTargetAccountAsync();
+                if (target is null)
+                    return;
+                await TwitchHelper.StreamRaid(
+                    target.Value.Account.BroadcasterId,
+                    item.UserId,
+                    target.Value.AccessToken);
                 JTSAHelper.OpenMyTwitchChannel();
             }
         }

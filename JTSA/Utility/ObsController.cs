@@ -91,6 +91,18 @@ public sealed class ObsController : IDisposable
             .ToList();
     }
 
+    public string GetCurrentProgramScene()
+    {
+        EnsureConnected();
+        return client.GetCurrentProgramScene();
+    }
+
+    public void SetCurrentProgramScene(string sceneName)
+    {
+        EnsureConnected();
+        client.SetCurrentProgramScene(sceneName);
+    }
+
     public IReadOnlyList<string> GetTextSourceNames(string sceneName)
     {
         EnsureConnected();

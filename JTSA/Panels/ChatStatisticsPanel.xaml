@@ -9,6 +9,10 @@
         </Grid.RowDefinitions>
 
         <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -46,6 +50,16 @@
                     Content="✕"
                     ToolTip="閉じる"
                     Click="CloseButton_Click"/>
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,10,0,0">
+                <TextBlock Text="集計期間" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <DatePicker x:Name="StartDatePicker" Width="125" Height="26"/>
+                <TextBlock Text="～" Foreground="LightGray" VerticalAlignment="Center" Margin="8,0"/>
+                <DatePicker x:Name="EndDatePicker" Width="125" Height="26"/>
+                <Button Content="集計" Width="68" Height="26" Margin="10,0,0,0"
+                        Click="ApplyPeriodButton_Click"/>
+                <Button Content="全期間" Width="68" Height="26" Margin="8,0,0,0"
+                        Click="AllPeriodButton_Click"/>
+            </StackPanel>
         </Grid>
 
         <Grid Grid.Row="1" Margin="0,16,0,0">
@@ -99,7 +113,7 @@
             </Border>
 
             <Border Grid.Column="2" Background="#FF303030" BorderBrush="#FF606060"
-                    BorderThickness="1" CornerRadius="6" Padding="14">
+                    BorderThickness="1" CornerRadius="6" Padding="10">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -108,13 +122,11 @@
                     </Grid.RowDefinitions>
                     <StackPanel>
                         <TextBlock x:Name="CalendarUserNameTextBlock" Text="ユーザーを選択"
-                                   Foreground="White" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="White" FontSize="15" FontWeight="SemiBold"
                                    TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="チャット記録日"
-                                   Margin="0,3,0,0" Foreground="LightGray" FontSize="12"/>
                     </StackPanel>
 
-                    <Border Grid.Row="1" Margin="0,8,0,8" Padding="7"
+                    <Border Grid.Row="1" Margin="0,5,0,5" Padding="5"
                             Background="#FF242424" BorderBrush="#FF505050"
                             BorderThickness="1" CornerRadius="6">
                         <Grid>
@@ -123,25 +135,25 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <Grid Margin="0,0,0,4">
+                            <Grid Margin="0,0,0,2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <Button Width="28" Height="24" Content="‹" FontSize="16"
+                                <Button Width="24" Height="21" Content="‹" FontSize="14"
                                         Background="#FF303030" Foreground="White"
                                         BorderBrush="#FF505050" Click="PreviousMonthButton_Click"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal"
                                             HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <TextBlock x:Name="CalendarMonthTextBlock" Foreground="White"
-                                               FontSize="14" FontWeight="SemiBold"/>
-                                    <Button Margin="8,0,0,0" Padding="6,1" Height="24" Content="今日"
-                                            FontSize="11"
+                                               FontSize="12" FontWeight="SemiBold"/>
+                                    <Button Margin="6,0,0,0" Padding="5,0" Height="21" Content="今日"
+                                            FontSize="10"
                                             Background="Transparent" Foreground="LightSeaGreen"
                                             BorderBrush="LightSeaGreen" Click="TodayButton_Click"/>
                                 </StackPanel>
-                                <Button Grid.Column="2" Width="28" Height="24" Content="›" FontSize="16"
+                                <Button Grid.Column="2" Width="24" Height="21" Content="›" FontSize="14"
                                         Background="#FF303030" Foreground="White"
                                         BorderBrush="#FF505050" Click="NextMonthButton_Click"/>
                             </Grid>
@@ -154,26 +166,58 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="DayCell" Margin="1.5" Padding="4"
+                                      <Grid>
+                                        <Border x:Name="DayCell" Margin="1" Padding="2"
                                                 Background="#FF303030" BorderBrush="Transparent"
                                                 BorderThickness="1" CornerRadius="5"
-                                                ToolTip="{Binding ToolTipText}">
+                                                Cursor="Hand"
+                                                MouseLeftButtonUp="DayCell_MouseLeftButtonUp">
                                             <Grid>
-                                                <TextBlock x:Name="DayNumber" Text="{Binding Day}" FontSize="11"
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock x:Name="DayNumber" Grid.Row="0" Text="{Binding Day}" FontSize="9"
                                                            HorizontalAlignment="Left" VerticalAlignment="Top"
                                                            Foreground="#FFE8E8E8" FontWeight="SemiBold"/>
-                                                <Border x:Name="StreamBadge" Visibility="Collapsed"
+                                                <Border x:Name="StreamBadge" Grid.Row="0" Visibility="Collapsed"
                                                         HorizontalAlignment="Right" VerticalAlignment="Top"
                                                         Padding="3,1" Background="#FFB04A7A" CornerRadius="3">
                                                     <TextBlock Text="{Binding StreamCountText}"
-                                                               Foreground="White" FontSize="8"/>
+                                                               Foreground="White" FontSize="9" FontWeight="SemiBold"/>
                                                 </Border>
-                                                <TextBlock x:Name="ActivityCount" Visibility="Collapsed"
-                                                           Text="{Binding ChatCountText}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                           Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                                                <ItemsControl x:Name="ActivityCounts" Grid.Row="1" Visibility="Collapsed"
+                                                              ItemsSource="{Binding StreamChatCounts}"
+                                                              Margin="0,1,0,0"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding ChatCountText}" Foreground="White"
+                                                                       FontSize="9" FontWeight="SemiBold"
+                                                                       HorizontalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </Grid>
                                         </Border>
+                                        <Popup x:Name="DayDetailsPopup"
+                                               PlacementTarget="{Binding ElementName=DayCell}"
+                                               Placement="MousePoint"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Margin="4" Padding="10"
+                                                    MaxWidth="360"
+                                                    Background="#FF202020"
+                                                    BorderBrush="#FF707070"
+                                                    BorderThickness="1"
+                                                    CornerRadius="5">
+                                                <TextBlock Text="{Binding ToolTipText}"
+                                                           Foreground="White"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"/>
+                                            </Border>
+                                        </Popup>
+                                      </Grid>
                                         <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding IsCurrentMonth}" Value="False">
                                                 <Setter TargetName="DayCell" Property="Opacity" Value="0.28"/>
@@ -192,10 +236,14 @@
                                             <DataTrigger Binding="{Binding HasActivity}" Value="True">
                                                 <Setter TargetName="DayCell" Property="Background" Value="#FF285653"/>
                                                 <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
-                                                <Setter TargetName="ActivityCount" Property="Visibility" Value="Visible"/>
+                                                <Setter TargetName="ActivityCounts" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding HasStreams}" Value="True">
                                                 <Setter TargetName="StreamBadge" Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsInAggregationPeriod}" Value="True">
+                                                <Setter TargetName="DayCell" Property="BorderBrush" Value="#FFFFC857"/>
+                                                <Setter TargetName="DayCell" Property="BorderThickness" Value="2"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>

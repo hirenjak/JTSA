@@ -6,8 +6,15 @@
             mc:Ignorable="d"
             Background="#FF404040">
 
-    <DockPanel>
-        <Grid DockPanel.Dock="Left" Height="Auto" Grid.Row="2">
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="12"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Height="Auto" Grid.Row="2"
+              Background="#FF3A3A3A">
             <Grid.RowDefinitions>
                 <RowDefinition Height="24"/>
                 <RowDefinition Height="18"/>
@@ -101,7 +108,7 @@
             </ListBox>
         </Grid>
         
-        <Grid DockPanel.Dock="Right">
+        <Grid Grid.Column="2" Background="#FF3A3A3A">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -214,5 +221,5 @@
                 </ListBox>
             </Grid>
         </Grid>
-    </DockPanel>
+    </Grid>
 </UserControl>
