@@ -28,6 +28,57 @@
     </DataTemplate></ItemsControl.ItemTemplate>
    </ItemsControl>
   </StackPanel></ScrollViewer></TabItem>
+  <TabItem Header="プレースホルダー">
+   <ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="16">
+     <TextBlock Text="OBSテキストソース用プレースホルダー" Foreground="White" FontSize="22" FontWeight="Bold"/>
+     <TextBlock Margin="0,6,0,14" Foreground="LightGray" TextWrapping="Wrap"
+                Text="配信拡張のOBSテキストソース変更で以下を入力すると、トリガー受信時の情報へ自動的に置き換わります。"/>
+     <Border Padding="12" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+      <Grid>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+       <Grid.RowDefinitions>
+        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+       </Grid.RowDefinitions>
+       <TextBox Grid.Row="0" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{chat_user}"/>
+       <TextBlock Grid.Row="0" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャットしたユーザーの表示名（チャット・初回チャット時）"/>
+       <TextBox Grid.Row="1" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{chat_login}"/>
+       <TextBlock Grid.Row="1" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャットしたユーザーのログイン名（チャット・初回チャット時）"/>
+       <TextBox Grid.Row="2" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{raid_user}"/>
+       <TextBlock Grid.Row="2" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="レイド元ユーザーの表示名（レイド時）"/>
+       <TextBox Grid.Row="3" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{raid_title}"/>
+       <TextBlock Grid.Row="3" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="レイド元ユーザーの直近配信タイトル（レイド時）"/>
+       <TextBox Grid.Row="4" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{raid_category}"/>
+       <TextBlock Grid.Row="4" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="レイド元ユーザーの直近配信カテゴリ（レイド時）"/>
+       <TextBox Grid.Row="5" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{trigger_type}"/>
+       <TextBlock Grid.Row="5" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="発火したトリガーの種類"/>
+       <TextBox Grid.Row="6" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{trigger_value}"/>
+       <TextBlock Grid.Row="6" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="コメント本文、ユーザー名、報酬ID、Bits数などのトリガー値"/>
+       <TextBox Grid.Row="7" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{trigger_obs}"/>
+       <TextBlock Grid.Row="7" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="配信開始イベントの発火元OBS（main / sub）"/>
+       <TextBox Grid.Row="8" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_title}"/>
+       <TextBlock Grid.Row="8" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信タイトル"/>
+       <TextBox Grid.Row="9" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_category}"/>
+       <TextBlock Grid.Row="9" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信カテゴリ"/>
+       <TextBox Grid.Row="10" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{channel_point_input}"/>
+       <TextBlock Grid.Row="10" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャンネルポイントの入力文言、またはチャットのトリガーコメントより後ろの文言"/>
+       <TextBox Grid.Row="11" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_category_ja}"/>
+       <TextBlock Grid.Row="11" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信カテゴリ名（日本語。未取得時はTwitchカテゴリ名）"/>
+       <TextBox Grid.Row="12" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_bits_users}"/>
+       <TextBlock Grid.Row="12" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="配信内のビッツユーザーと累計Bits（多い順・改行区切り）"/>
+       <TextBox Grid.Row="13" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_subscribe_users}"/>
+       <TextBlock Grid.Row="13" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="配信内のサブスク月数・Tier、またはサブギフ数・Tier（改行区切り）"/>
+       <TextBox Grid.Row="14" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_raid_users}"/>
+       <TextBlock Grid.Row="14" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="配信内のレイドユーザーと累計視聴者数（多い順・改行区切り）"/>
+       <TextBox Grid.Row="15" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_follow_users}"/>
+       <TextBlock Grid.Row="15" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="配信内のフォローユーザー（新しい順・改行区切り）"/>
+      </Grid>
+     </Border>
+    </StackPanel>
+   </ScrollViewer>
+  </TabItem>
   <TabItem x:Name="SceneSwitchTab" Header="シーン切替" IsVisibleChanged="SceneSwitchTab_IsVisibleChanged">
    <Grid Background="#FF404040" Margin="16">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>

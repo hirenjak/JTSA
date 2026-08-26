@@ -267,6 +267,7 @@ namespace JTSA.Utility
 
         private Task OnChannelFollow(object? sender, ChannelFollowArgs e)
         {
+            StreamSupportTracker.AddFollow(e.Payload.Event.UserName);
             FollowReceived?.Invoke(e.Payload.Event.UserName);
             return Task.CompletedTask;
         }

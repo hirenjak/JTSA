@@ -87,17 +87,44 @@
         <Grid Grid.Column="1" Margin="8, 0, 8, 0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="1*"/>
                 <RowDefinition Height="1*"/>
                 <RowDefinition Height="1*"/>
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="配信内容集計" Foreground="White" FontSize="14"></TextBlock>
-            <Grid Grid.Row="1" Margin="0, 8, 0, 0">
+            <DockPanel Grid.Row="0">
+                <TextBlock Text="配信内容集計" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+                <Button DockPanel.Dock="Right" x:Name="TestSupportPanelToggleButton"
+                        Content="テスト用" Width="70" Height="22" HorizontalAlignment="Right"
+                        Click="TestSupportPanelToggleButton_Click"
+                        ToolTip="配信内集計へテスト値を追加するボタンを表示／非表示"/>
+            </DockPanel>
+            <StackPanel Grid.Row="1" x:Name="TestSupportButtonPanel" Orientation="Horizontal"
+                        HorizontalAlignment="Right" Margin="0,6,0,0" Visibility="Collapsed">
+                <Button Content="Bits" Width="48" Height="22" Click="AddTestBitsButton_Click"
+                        ToolTip="テストBitsユーザーへ100 Bitsを加算します。現在の配信内集計に残ります。"/>
+                <Button Content="サブスク" Width="62" Height="22" Margin="4,0,0,0"
+                        Click="AddTestSubscribeButton_Click"
+                        ToolTip="累計1か月・Tier 1のテストサブスクユーザーを追加し、配信拡張を実行します。"/>
+                <Button Content="サブギフ" Width="62" Height="22" Margin="4,0,0,0"
+                        Click="AddTestGiftButton_Click"
+                        ToolTip="Tier 1のテストサブギフユーザーを配信内集計へ追加し、配信拡張を実行します。"/>
+                <Button Content="レイド" Width="54" Height="22" Margin="4,0,0,0"
+                        Click="AddTestRaidButton_Click"
+                        ToolTip="テストレイドユーザーへ10人を加算します。現在の配信内集計に残ります。"/>
+                <Button Content="フォロー" Width="62" Height="22" Margin="4,0,0,0"
+                        Click="AddTestFollowButton_Click"
+                        ToolTip="テストフォローユーザーを現在の配信内集計へ追加します。"/>
+                <Button Content="クリア" Width="54" Height="22" Margin="4,0,0,0"
+                        Click="ClearTestSupportButton_Click"
+                        ToolTip="テスト用ボタンで追加したユーザーだけを配信内集計から削除します。"/>
+            </StackPanel>
+            <Grid Grid.Row="2" Margin="0, 8, 0, 0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="・ビッツユーザー" Foreground="White" FontSize="14"></TextBlock>
+                <TextBlock Grid.Row="0" Text="・ビッツユーザー" Foreground="White" FontSize="14"/>
                 <ListBox Grid.Row="1" ItemsSource="{Binding BitsUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                         x:Name="BitsUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -138,12 +165,12 @@
 
             </Grid>
 
-            <Grid Grid.Row="2" Margin="0, 8, 0, 0">
+            <Grid Grid.Row="3" Margin="0, 8, 0, 0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="・サブスクユーザー" Foreground="White" FontSize="14"></TextBlock>
+                <TextBlock Grid.Row="0" Text="・サブスクユーザー" Foreground="White" FontSize="14"/>
                 <ListBox Grid.Row="1" ItemsSource="{Binding SubscribeUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
                      x:Name="SubscribeUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -170,8 +197,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                            <TextBlock Text="サブスク回数:" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
-                                            <TextBlock Text="{Binding SubscribeAmount}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
+                                            <TextBlock Text="{Binding DetailText}" Width="Auto" Foreground="White" FontSize="12" TextWrapping="Wrap"></TextBlock>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
@@ -184,13 +210,17 @@
 
             </Grid>
 
-            <Grid Grid.Row="3" Margin="0, 8, 0, 0">
+            <Grid Grid.Row="4" Margin="0, 8, 0, 0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="・レイドユーザー" Foreground="White" FontSize="14"></TextBlock>
-                <ListBox Grid.Row="1" ItemsSource="{Binding RaidedUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Column="1" Background="#FF404040" 
+                <TextBlock Grid.Row="0" Text="・レイドユーザー" Foreground="White" FontSize="14"/>
+                <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding RaidedUserList}" d:ItemsSource="{d:SampleData ItemCount=3}" Background="#FF404040"
                     x:Name="RaidedUserListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
 
@@ -239,6 +269,24 @@
                                     </Grid>
                                 </StackPanel>
 
+                                <Border Width="Auto" Height="2" Background="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Grid.Row="0" Grid.Column="1" Margin="8,0,0,0"
+                           Text="・フォローユーザー" Foreground="White" FontSize="14"/>
+                <ListBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0"
+                         ItemsSource="{Binding FollowUserList}" d:ItemsSource="{d:SampleData ItemCount=3}"
+                         Background="#FF404040" Height="Auto" Width="Auto"
+                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding UserName}" Margin="8,2" Foreground="White" FontSize="16"/>
                                 <Border Width="Auto" Height="2" Background="White"/>
                             </StackPanel>
                         </DataTemplate>

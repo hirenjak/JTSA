@@ -77,6 +77,21 @@ public class StreamExpansionPlaceholderReplacerTests
     }
 
     [Fact]
+    public void ReplaceExpandsStreamSupportUserPlaceholders()
+    {
+        var result = StreamExpansionPlaceholderReplacer.Replace(
+            "Bits\n{stream_bits_users}\nSubs\n{stream_subscribe_users}\nRaids\n{stream_raid_users}\nFollows\n{stream_follow_users}",
+            null,
+            trigger: new StreamExpansionTriggerValues(
+                "chat", "message", "", "", "", "", "",
+                "alice: 150 Bits", "bob: 2件", "carol: 20人", "dave"));
+
+        Assert.Equal(
+            "Bits\nalice: 150 Bits\nSubs\nbob: 2件\nRaids\ncarol: 20人\nFollows\ndave",
+            result);
+    }
+
+    [Fact]
     public void ReplaceExpandsChannelPointInput()
     {
         var result = StreamExpansionPlaceholderReplacer.Replace(

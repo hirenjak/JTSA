@@ -9,7 +9,11 @@ public sealed record StreamExpansionTriggerValues(
     string StreamTitle,
     string StreamCategory,
     string ChannelPointInput = "",
-    string StreamCategoryJapanese = "");
+    string StreamCategoryJapanese = "",
+    string StreamBitsUsers = "",
+    string StreamSubscribeUsers = "",
+    string StreamRaidUsers = "",
+    string StreamFollowUsers = "");
 
 public static class StreamExpansionPlaceholderReplacer
 {
@@ -24,6 +28,10 @@ public static class StreamExpansionPlaceholderReplacer
     public const string StreamTitlePlaceholder = "{stream_title}";
     public const string StreamCategoryPlaceholder = "{stream_category}";
     public const string StreamCategoryJapanesePlaceholder = "{stream_category_ja}";
+    public const string StreamBitsUsersPlaceholder = "{stream_bits_users}";
+    public const string StreamSubscribeUsersPlaceholder = "{stream_subscribe_users}";
+    public const string StreamRaidUsersPlaceholder = "{stream_raid_users}";
+    public const string StreamFollowUsersPlaceholder = "{stream_follow_users}";
     public const string ChannelPointInputPlaceholder = "{channel_point_input}";
 
     public static string Replace(
@@ -46,6 +54,10 @@ public static class StreamExpansionPlaceholderReplacer
             .Replace(StreamTitlePlaceholder, trigger?.StreamTitle ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(StreamCategoryPlaceholder, trigger?.StreamCategory ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(StreamCategoryJapanesePlaceholder, trigger?.StreamCategoryJapanese ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(StreamBitsUsersPlaceholder, trigger?.StreamBitsUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(StreamSubscribeUsersPlaceholder, trigger?.StreamSubscribeUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(StreamRaidUsersPlaceholder, trigger?.StreamRaidUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(StreamFollowUsersPlaceholder, trigger?.StreamFollowUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(ChannelPointInputPlaceholder, trigger?.ChannelPointInput ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         return content;

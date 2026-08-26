@@ -101,14 +101,20 @@ public sealed class TwitchChatService
 
     private Task Client_OnNewSubscriber(object? sender, OnNewSubscriberArgs e)
     {
-        JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.Subscriber, "DisplayName", "Login"));
+        JTSA.Utility.StreamSupportTracker.AddSubscription(
+            GetString(e.Subscriber, "DisplayName", "Login"),
+            Math.Max(1, GetInt(e.Subscriber, 1, "MsgParamCumulativeMonths")),
+            GetString(e.Subscriber, "MsgParamSubPlan"));
         SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }
 
     private Task Client_OnReSubscriber(object? sender, OnReSubscriberArgs e)
     {
-        JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.ReSubscriber, "DisplayName", "Login"));
+        JTSA.Utility.StreamSupportTracker.AddSubscription(
+            GetString(e.ReSubscriber, "DisplayName", "Login"),
+            Math.Max(1, GetInt(e.ReSubscriber, 1, "MsgParamCumulativeMonths")),
+            GetString(e.ReSubscriber, "MsgParamSubPlan"));
         SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }
@@ -117,7 +123,9 @@ public sealed class TwitchChatService
     {
         // GiftedSubscription の DisplayName は受取側になる場合があるため、
         // IRC の送信者を表す Login を優先してギフトした側を集計する。
-        JTSA.Utility.StreamSupportTracker.AddSubscription(GetString(e.GiftedSubscription, "Login", "DisplayName"));
+        JTSA.Utility.StreamSupportTracker.AddGiftSubscription(
+            GetString(e.GiftedSubscription, "Login", "DisplayName"),
+            GetString(e.GiftedSubscription, "MsgParamSubPlan"));
         SubscriptionReceived?.Invoke();
         return Task.CompletedTask;
     }
@@ -130,6 +138,16 @@ public sealed class TwitchChatService
             if (!string.IsNullOrWhiteSpace(value)) return value;
         }
         return "不明なユーザー";
+    }
+
+    private static int GetInt(object source, int fallback, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            var value = source.GetType().GetProperty(propertyName)?.GetValue(source);
+            if (value is not null && int.TryParse(value.ToString(), out var parsed)) return parsed;
+        }
+        return fallback;
     }
 
     private Task Client_OnConnectionError(object? sender, OnConnectionErrorArgs e)

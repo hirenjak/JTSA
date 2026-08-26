@@ -26,7 +26,20 @@ namespace JTSA.Panels
         public ObservableCollection<BitsUserForm> BitsUserList { get; } = new();
         public ObservableCollection<SubscribeUserForm> SubscribeUserList { get; } = new();
         public ObservableCollection<RaidedUserForm> RaidedUserList { get; } = new();
+        public ObservableCollection<FollowUserForm> FollowUserList { get; } = new();
+        private readonly StreamExpansionService streamExpansionService = new();
         private Task? refreshRaidUsersTask;
+
+        private const string TestBitsUserPrefix = "テストBitsユーザー";
+        private const string TestSubscribeUserPrefix = "テストサブスクユーザー";
+        private const string TestGiftUserPrefix = "テストサブギフユーザー";
+        private const string TestRaidUserPrefix = "テストレイドユーザー";
+        private const string TestFollowUserPrefix = "テストフォローユーザー";
+        private int testBitsUserNumber;
+        private int testSubscribeUserNumber;
+        private int testGiftUserNumber;
+        private int testRaidUserNumber;
+        private int testFollowUserNumber;
 
         /// <summary>
         /// コンストラクタ
@@ -130,6 +143,64 @@ namespace JTSA.Panels
             ReplaceItems(BitsUserList, StreamSupportTracker.BitsUsers);
             ReplaceItems(SubscribeUserList, StreamSupportTracker.SubscribeUsers);
             ReplaceItems(RaidedUserList, StreamSupportTracker.RaidedUsers);
+            ReplaceItems(FollowUserList, StreamSupportTracker.FollowUsers);
+        }
+
+        private void TestSupportPanelToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            TestSupportButtonPanel.Visibility = TestSupportButtonPanel.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
+        private async void AddTestBitsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var userName = $"{TestBitsUserPrefix}{++testBitsUserNumber}";
+            StreamSupportTracker.AddBits(userName, 100);
+            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.Bits, "100");
+        }
+
+        private async void AddTestSubscribeButton_Click(object sender, RoutedEventArgs e)
+        {
+            var userName = $"{TestSubscribeUserPrefix}{++testSubscribeUserNumber}";
+            StreamSupportTracker.AddSubscription(userName, 1, "1");
+            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+        }
+
+        private async void AddTestGiftButton_Click(object sender, RoutedEventArgs e)
+        {
+            var userName = $"{TestGiftUserPrefix}{++testGiftUserNumber}";
+            StreamSupportTracker.AddGiftSubscription(userName, "1");
+            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+        }
+
+        private async void AddTestRaidButton_Click(object sender, RoutedEventArgs e)
+        {
+            var userName = $"{TestRaidUserPrefix}{++testRaidUserNumber}";
+            StreamSupportTracker.AddRaid(userName, 10);
+            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, userName);
+        }
+
+        private async void AddTestFollowButton_Click(object sender, RoutedEventArgs e)
+        {
+            var userName = $"{TestFollowUserPrefix}{++testFollowUserNumber}";
+            StreamSupportTracker.AddFollow(userName);
+            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.Follow, userName);
+        }
+
+        private void ClearTestSupportButton_Click(object sender, RoutedEventArgs e)
+        {
+            StreamSupportTracker.RemoveUsersByPrefixes(
+                TestBitsUserPrefix,
+                TestSubscribeUserPrefix,
+                TestGiftUserPrefix,
+                TestRaidUserPrefix,
+                TestFollowUserPrefix);
+            testBitsUserNumber = 0;
+            testSubscribeUserNumber = 0;
+            testGiftUserNumber = 0;
+            testRaidUserNumber = 0;
+            testFollowUserNumber = 0;
         }
 
         private static void ReplaceItems<T>(ObservableCollection<T> target, IEnumerable<T> source)

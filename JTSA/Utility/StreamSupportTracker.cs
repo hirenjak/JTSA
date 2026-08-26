@@ -13,6 +13,7 @@ namespace JTSA.Utility
         private static readonly Dictionary<string, BitsUserForm> bitsUsers = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, SubscribeUserForm> subscribeUsers = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, RaidedUserForm> raidedUsers = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, FollowUserForm> followUsers = new(StringComparer.OrdinalIgnoreCase);
         private static string activeStreamId = string.Empty;
 
         private sealed class SupportSnapshot
@@ -21,6 +22,7 @@ namespace JTSA.Utility
             public List<BitsUserForm> BitsUsers { get; set; } = [];
             public List<SubscribeUserForm> SubscribeUsers { get; set; } = [];
             public List<RaidedUserForm> RaidedUsers { get; set; } = [];
+            public List<FollowUserForm> FollowUsers { get; set; } = [];
         }
 
         public static event Action? Changed;
@@ -32,13 +34,41 @@ namespace JTSA.Utility
 
         public static IReadOnlyList<SubscribeUserForm> SubscribeUsers
         {
-            get { lock (syncRoot) return subscribeUsers.Values.OrderByDescending(x => x.SubscribeAmount).ToList(); }
+            get
+            {
+                lock (syncRoot)
+                    return subscribeUsers.Values
+                        .OrderByDescending(x => x.IsGift ? x.GiftCount : x.CumulativeMonths)
+                        .ThenBy(x => x.UserName)
+                        .ToList();
+            }
         }
 
         public static IReadOnlyList<RaidedUserForm> RaidedUsers
         {
             get { lock (syncRoot) return raidedUsers.Values.OrderByDescending(x => x.ViewerCount).ToList(); }
         }
+
+        public static IReadOnlyList<FollowUserForm> FollowUsers
+        {
+            get { lock (syncRoot) return followUsers.Values.OrderByDescending(x => x.FollowedAt).ToList(); }
+        }
+
+        internal static string FormatBitsUsers() => string.Join(
+            Environment.NewLine,
+            BitsUsers.Select(user => $"{user.UserName}: {user.BitsAmount:N0} Bits"));
+
+        internal static string FormatSubscribeUsers() => string.Join(
+            Environment.NewLine,
+            SubscribeUsers.Select(user => $"{user.UserName}: {user.DetailText}"));
+
+        internal static string FormatRaidUsers() => string.Join(
+            Environment.NewLine,
+            RaidedUsers.Select(user => $"{user.UserName}: {user.ViewerCount:N0}人"));
+
+        internal static string FormatFollowUsers() => string.Join(
+            Environment.NewLine,
+            FollowUsers.Select(user => user.UserName));
 
         public static void Reset()
         {
@@ -48,6 +78,7 @@ namespace JTSA.Utility
                 bitsUsers.Clear();
                 subscribeUsers.Clear();
                 raidedUsers.Clear();
+                followUsers.Clear();
             }
             Changed?.Invoke();
         }
@@ -64,6 +95,7 @@ namespace JTSA.Utility
                 bitsUsers.Clear();
                 subscribeUsers.Clear();
                 raidedUsers.Clear();
+                followUsers.Clear();
 
                 if (!string.IsNullOrWhiteSpace(streamId))
                 {
@@ -86,14 +118,37 @@ namespace JTSA.Utility
             Changed?.Invoke();
         }
 
-        public static void AddSubscription(string userName, int amount = 1)
+        public static void AddSubscription(string userName, int cumulativeMonths = 1, string tier = "1")
         {
-            if (string.IsNullOrWhiteSpace(userName) || amount <= 0) return;
+            if (string.IsNullOrWhiteSpace(userName) || cumulativeMonths <= 0) return;
             lock (syncRoot)
             {
-                if (!subscribeUsers.TryGetValue(userName, out var user))
-                    subscribeUsers[userName] = user = new SubscribeUserForm { UserName = userName };
-                user.SubscribeAmount += amount;
+                var key = $"subscription:{userName}";
+                if (!subscribeUsers.TryGetValue(key, out var user))
+                    subscribeUsers[key] = user = new SubscribeUserForm { UserName = userName };
+                user.IsGift = false;
+                user.Tier = NormalizeTier(tier);
+                user.CumulativeMonths = Math.Max(user.CumulativeMonths, cumulativeMonths);
+                SaveSnapshot();
+            }
+            Changed?.Invoke();
+        }
+
+        public static void AddGiftSubscription(string userName, string tier, int amount = 1)
+        {
+            if (string.IsNullOrWhiteSpace(userName) || amount <= 0) return;
+            tier = NormalizeTier(tier);
+            lock (syncRoot)
+            {
+                var key = $"gift:{userName}:{tier}";
+                if (!subscribeUsers.TryGetValue(key, out var user))
+                    subscribeUsers[key] = user = new SubscribeUserForm
+                    {
+                        UserName = userName,
+                        IsGift = true,
+                        Tier = tier
+                    };
+                user.GiftCount += amount;
                 SaveSnapshot();
             }
             Changed?.Invoke();
@@ -112,6 +167,79 @@ namespace JTSA.Utility
             Changed?.Invoke();
         }
 
+        public static void AddFollow(string userName)
+        {
+            if (string.IsNullOrWhiteSpace(userName)) return;
+            lock (syncRoot)
+            {
+                followUsers[userName] = new FollowUserForm
+                {
+                    UserName = userName,
+                    FollowedAt = DateTime.Now
+                };
+                SaveSnapshot();
+            }
+            Changed?.Invoke();
+        }
+
+        public static void RemoveUsers(
+            string? bitsUserName = null,
+            string? subscribeUserName = null,
+            string? raidUserName = null,
+            string? followUserName = null)
+        {
+            lock (syncRoot)
+            {
+                if (!string.IsNullOrWhiteSpace(bitsUserName)) bitsUsers.Remove(bitsUserName);
+                if (!string.IsNullOrWhiteSpace(subscribeUserName))
+                {
+                    foreach (var key in subscribeUsers
+                                 .Where(x => string.Equals(x.Value.UserName, subscribeUserName, StringComparison.OrdinalIgnoreCase))
+                                 .Select(x => x.Key)
+                                 .ToList())
+                        subscribeUsers.Remove(key);
+                }
+                if (!string.IsNullOrWhiteSpace(raidUserName)) raidedUsers.Remove(raidUserName);
+                if (!string.IsNullOrWhiteSpace(followUserName)) followUsers.Remove(followUserName);
+                SaveSnapshot();
+            }
+            Changed?.Invoke();
+        }
+
+        public static void RemoveUsersByPrefixes(params string[] userNamePrefixes)
+        {
+            userNamePrefixes = userNamePrefixes.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+            if (userNamePrefixes.Length == 0) return;
+            lock (syncRoot)
+            {
+                RemoveMatchingUsers(bitsUsers, userNamePrefixes);
+                RemoveMatchingUsers(subscribeUsers, userNamePrefixes);
+                RemoveMatchingUsers(raidedUsers, userNamePrefixes);
+                RemoveMatchingUsers(followUsers, userNamePrefixes);
+                SaveSnapshot();
+            }
+            Changed?.Invoke();
+        }
+
+        private static void RemoveMatchingUsers<T>(Dictionary<string, T> users, IReadOnlyCollection<string> prefixes)
+        {
+            foreach (var key in users
+                         .Where(x => prefixes.Any(prefix =>
+                             GetUserName(x.Value).StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                         .Select(x => x.Key)
+                         .ToList())
+                users.Remove(key);
+        }
+
+        private static string GetUserName<T>(T user) => user switch
+        {
+            BitsUserForm bits => bits.UserName,
+            SubscribeUserForm subscribe => subscribe.UserName,
+            RaidedUserForm raid => raid.UserName,
+            FollowUserForm follow => follow.UserName,
+            _ => string.Empty
+        };
+
         private static void RestoreSnapshot(string streamId)
         {
             try
@@ -125,9 +253,16 @@ namespace JTSA.Utility
                 foreach (var user in snapshot.BitsUsers)
                     bitsUsers[user.UserName] = user;
                 foreach (var user in snapshot.SubscribeUsers)
-                    subscribeUsers[user.UserName] = user;
+                {
+                    var key = user.IsGift
+                        ? $"gift:{user.UserName}:{NormalizeTier(user.Tier)}"
+                        : $"subscription:{user.UserName}";
+                    subscribeUsers[key] = user;
+                }
                 foreach (var user in snapshot.RaidedUsers)
                     raidedUsers[user.UserName] = user;
+                foreach (var user in snapshot.FollowUsers)
+                    followUsers[user.UserName] = user;
             }
             catch (Exception)
             {
@@ -144,7 +279,8 @@ namespace JTSA.Utility
                 StreamId = activeStreamId,
                 BitsUsers = bitsUsers.Values.ToList(),
                 SubscribeUsers = subscribeUsers.Values.ToList(),
-                RaidedUsers = raidedUsers.Values.ToList()
+                RaidedUsers = raidedUsers.Values.ToList(),
+                FollowUsers = followUsers.Values.ToList()
             };
             try
             {
@@ -157,5 +293,15 @@ namespace JTSA.Utility
                 // 保存失敗でチャット・EventSubの受信処理を止めない。
             }
         }
+
+        private static string NormalizeTier(string? tier) => tier?.Trim() switch
+        {
+            "1000" or "1" => "1",
+            "2000" or "2" => "2",
+            "3000" or "3" => "3",
+            "Prime" or "prime" => "Prime",
+            { Length: > 0 } value => value,
+            _ => "1"
+        };
     }
 }

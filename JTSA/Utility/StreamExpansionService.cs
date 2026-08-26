@@ -380,7 +380,11 @@ internal sealed class StreamExpansionService
         }
 
         return new StreamExpansionTriggerValues(
-            ToTriggerName(type), value, triggerObs, title, category, channelPointInput, japaneseCategory);
+            ToTriggerName(type), value, triggerObs, title, category, channelPointInput, japaneseCategory,
+            StreamSupportTracker.FormatBitsUsers(),
+            StreamSupportTracker.FormatSubscribeUsers(),
+            StreamSupportTracker.FormatRaidUsers(),
+            StreamSupportTracker.FormatFollowUsers());
     }
 
     private static string ToTriggerName(StreamExpansionTriggerType type) => type switch
