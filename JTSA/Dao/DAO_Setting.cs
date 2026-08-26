@@ -57,6 +57,10 @@ namespace JTSA.Dao
             ObsSceneShortcutPanelVisible = 36,
             /// <summary>OBSソース表示切替タブに登録したボタン</summary>
             ObsSourceSwitchPresets = 37,
+            /// <summary>起動時にメインOBSへ自動接続するか</summary>
+            MainObsAutoConnect = 38,
+            /// <summary>起動時にサブOBSへ自動接続するか</summary>
+            SubObsAutoConnect = 39,
         }
 
 

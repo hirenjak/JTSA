@@ -528,17 +528,20 @@ namespace JTSA
 
         private async Task AutoConnectObsAsync()
         {
-            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value != "1")
-                return;
+            var legacyAutoConnect = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value;
+            var mainAutoConnect =
+                (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsAutoConnect)?.Value ?? legacyAutoConnect) == "1";
+            var subAutoConnect =
+                (DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsAutoConnect)?.Value ?? legacyAutoConnect) == "1";
 
-            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
+            if (mainAutoConnect && DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
             {
                 await ConnectObsAsync(forceReconnect: false, showError: false);
                 if (mainObsController.IsConnected)
                     await ObsSettingPanel.RefreshSavedTextSourcesAsync(mainObsController, isSub: false);
             }
 
-            if (long.TryParse(
+            if (subAutoConnect && long.TryParse(
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value,
                 out _))
             {
