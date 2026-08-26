@@ -46,8 +46,11 @@ public partial class ObsSettingPanel : UserControl
         ObsUrlTextBox.Text = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketUrl)?.Value
             ?? MainWindow.DefaultObsWebSocketUrl;
         ObsPasswordBox.Password = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketPassword)?.Value ?? "";
-        ObsAutoConnectCheckBox.IsChecked =
-            DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1";
+        var legacyAutoConnect = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value;
+        MainObsAutoConnectCheckBox.IsChecked =
+            (DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsAutoConnect)?.Value ?? legacyAutoConnect) == "1";
+        SubObsAutoConnectCheckBox.IsChecked =
+            (DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsAutoConnect)?.Value ?? legacyAutoConnect) == "1";
         if (long.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId)?.Value, out var mainAccountId))
             MainTwitchAccountComboBox.SelectedValue = mainAccountId;
 
@@ -630,11 +633,18 @@ public partial class ObsSettingPanel : UserControl
             : 0;
     }
 
-    private void ObsAutoConnectCheckBox_Click(object sender, RoutedEventArgs e)
+    private void MainObsAutoConnectCheckBox_Click(object sender, RoutedEventArgs e)
     {
         DAO_Setting.InsertUpdate(
-            DAO_Setting.SettingName.ObsAutoConnect,
-            ObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
+            DAO_Setting.SettingName.MainObsAutoConnect,
+            MainObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
+    }
+
+    private void SubObsAutoConnectCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        DAO_Setting.InsertUpdate(
+            DAO_Setting.SettingName.SubObsAutoConnect,
+            SubObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
     }
 
     private void ObsSettingPanel_Loaded(object sender, RoutedEventArgs e)
@@ -646,7 +656,7 @@ public partial class ObsSettingPanel : UserControl
         }
         cardsLoaded = true;
         foreach (var card in textSourceCards)
-            card.Status = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsAutoConnect)?.Value == "1"
+            card.Status = (card.IsSub ? SubObsAutoConnectCheckBox : MainObsAutoConnectCheckBox).IsChecked == true
                 ? "OBS接続完了後に読み込みます"
                 : "自動接続オフ（文言読込を押すと接続します）";
         panelLoaded.TrySetResult(true);
@@ -992,8 +1002,8 @@ public partial class ObsSettingPanel : UserControl
 
         DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ObsWebSocketUrl, url);
         DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ObsWebSocketPassword, ObsPasswordBox.Password);
-        DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ObsAutoConnect,
-            ObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
+        DAO_Setting.InsertUpdate(DAO_Setting.SettingName.MainObsAutoConnect,
+            MainObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
         if (MainTwitchAccountComboBox.SelectedValue is long accountId)
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.MainObsTwitchAccountId, accountId.ToString());
 
@@ -1029,6 +1039,8 @@ public partial class ObsSettingPanel : UserControl
 
         DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SubObsWebSocketUrl, url);
         DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SubObsWebSocketPassword, SubObsPasswordBox.Password);
+        DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SubObsAutoConnect,
+            SubObsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
         if (SubTwitchAccountComboBox.SelectedValue is long accountId)
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SubObsTwitchAccountId, accountId.ToString());
 
