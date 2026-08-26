@@ -124,8 +124,20 @@ namespace JTSA
 			set
 			{
 				SelectCategoryNameTextBlock.Text = value;
+                CurrentTitleTextUpdate();
             }
 		}
+
+        private string CurrentCategoryJapaneseName
+        {
+            get
+            {
+                var category = DAO_Category.SelectOneById(CurrentCategoryId);
+                return string.IsNullOrWhiteSpace(category?.JapaneseDisplayName)
+                    ? CurrentCategoryName
+                    : category.JapaneseDisplayName;
+            }
+        }
 
         /// <summary> ヘッダ部分：カテゴリBoxArt </summary>
         public string CurrentCategoryBoxArtUrl
@@ -1185,9 +1197,11 @@ namespace JTSA
             // 必要データの取得
             var combinedTitleText = TitlePlaceholderReplacer.ReplaceTitle(
                 TitleEditTextBox.Text,
-                TitlePlaceholderTextBox.Text);
+                TitlePlaceholderTextBox.Text,
+                CurrentCategoryJapaneseName);
             var streamTitleText = TitleTextFriendTagToXReplace(combinedTitleText);
             var categoryNameText = CurrentCategoryName;
+            var japaneseCategoryNameText = CurrentCategoryJapaneseName;
 
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
@@ -1202,6 +1216,7 @@ namespace JTSA
             var postText = template
                 .Replace("{title}", streamTitleText)
                 .Replace("{category}", categoryNameText)
+                .Replace("{category_ja}", japaneseCategoryNameText)
                 .Replace("{url}", streamUrlText);
 
             // URIエンコード
@@ -1336,12 +1351,15 @@ namespace JTSA
                 {
                     CategoryId = category.Id,
                     DisplayName = category.Name,
+                    JapaneseDisplayName = await IgdbService.GetJapaneseGameNameAsync(category.Id)
+                        ?? category.Name,
                     SteamUrl = steamUrl?.FirstOrDefault() ?? string.Empty,
                     BoxArtUrl = category.BoxArtUrl,
                     LastUsedDateTime = DateTime.Now,
                     CreatedDateTime = DateTime.Now,
                     UpdatedDateTime = DateTime.Now
                 };
+                DAO_Category.Insert(dbCategoryData);
             }
 
             CurrentCategoryId = dbCategoryData.CategoryId;
@@ -1497,7 +1515,8 @@ namespace JTSA
 
             var combinedTitleText = TitlePlaceholderReplacer.ReplaceTitle(
                 TitleEditTextBox.Text,
-                TitlePlaceholderTextBox.Text);
+                TitlePlaceholderTextBox.Text,
+                CurrentCategoryJapaneseName);
             CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(combinedTitleText);
             TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
 

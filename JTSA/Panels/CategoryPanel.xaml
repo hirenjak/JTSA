@@ -64,6 +64,7 @@
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
                                                 <TextBlock Grid.Row="0" Text="{Binding DisplayName}" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
 
@@ -80,8 +81,26 @@
                                                         Click="SteamURLUpdateButton_Click"/>
                                                 </Grid>
 
+                                                <Grid Grid.Row="2" Margin="0,4,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Label Grid.Column="0" Margin="0" VerticalAlignment="Center"
+                                                           Foreground="White" FontSize="10" Content="日本語名："/>
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding JapaneseDisplayName, Mode=TwoWay}"
+                                                             ToolTip="編集後、フォーカスを外すと保存されます"
+                                                             LostKeyboardFocus="JapaneseNameTextBox_LostKeyboardFocus"/>
+                                                    <Button Grid.Column="2" Content="取得" Width="64" Height="20"
+                                                            Margin="8,0,0,0" VerticalAlignment="Center"
+                                                            ToolTip="IGDBから日本向けカテゴリ名を再取得します"
+                                                            Click="JapaneseNameFetchButton_Click"/>
+                                                </Grid>
+
                                                 <!-- カテゴリに紐づくチャンネルポイントプリセット（未設定なら切り替えを行わない） -->
-                                                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0, 4, 0, 0">
+                                                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0, 4, 0, 0">
                                                     <Label Margin="0" VerticalAlignment="Center" Foreground="White" FontSize="10">CPプリセット：</Label>
                                                     <ComboBox Width="180" Height="20" VerticalAlignment="Center"
                                                               ItemsSource="{Binding DataContext.ChannelPointPresetFormList, RelativeSource={RelativeSource AncestorType=UserControl}}"

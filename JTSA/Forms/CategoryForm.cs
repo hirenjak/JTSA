@@ -14,6 +14,7 @@ namespace JTSA.Forms
     {
         public required String CategoryId { get; set; }
         public required String DisplayName { get; set; }
+        public required String JapaneseDisplayName { get; set; }
         public required String LastUsedDate { get; set; }
         public required String BoxArtUrl { get; set; }
         public required String SteamUrl { get; set; }

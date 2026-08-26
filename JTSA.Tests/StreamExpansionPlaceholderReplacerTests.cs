@@ -65,6 +65,18 @@ public class StreamExpansionPlaceholderReplacerTests
     }
 
     [Fact]
+    public void ReplaceExpandsJapaneseStreamCategoryPlaceholder()
+    {
+        var result = StreamExpansionPlaceholderReplacer.Replace(
+            "カテゴリ: {stream_category_ja}",
+            null,
+            trigger: new StreamExpansionTriggerValues(
+                "chat", "message", "", "Title", "Category", "", "日本語カテゴリ"));
+
+        Assert.Equal("カテゴリ: 日本語カテゴリ", result);
+    }
+
+    [Fact]
     public void ReplaceExpandsChannelPointInput()
     {
         var result = StreamExpansionPlaceholderReplacer.Replace(

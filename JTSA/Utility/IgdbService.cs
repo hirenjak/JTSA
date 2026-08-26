@@ -15,6 +15,7 @@ namespace JTSA.Utility
         private static HttpClient httpClient;
         private static string clientId;
         private static string accessToken;
+        private static long? japaneseRegionId;
 
         public static void Initialize(HttpClient _httpClient, string _clientID, string _accessToken)
         {
@@ -60,6 +61,75 @@ namespace JTSA.Utility
 
             [JsonPropertyName("external_game_source")]
             public long ExternalGameSource { get; set; }
+        }
+
+        private sealed class IgdbRegion
+        {
+            [JsonPropertyName("id")]
+            public long Id { get; set; }
+
+            [JsonPropertyName("identifier")]
+            public string Identifier { get; set; } = string.Empty;
+
+            [JsonPropertyName("name")]
+            public string Name { get; set; } = string.Empty;
+        }
+
+        private sealed class IgdbGameLocalization
+        {
+            [JsonPropertyName("name")]
+            public string Name { get; set; } = string.Empty;
+        }
+
+        /// <summary>Twitchカテゴリに対応するIGDBの日本向けタイトルを取得する。</summary>
+        public static async Task<string?> GetJapaneseGameNameAsync(string twitchCategoryId)
+        {
+            try
+            {
+                var igdbId = await GetIgdbIdAsync(twitchCategoryId);
+                if (string.IsNullOrWhiteSpace(igdbId)) return null;
+
+                japaneseRegionId ??= await GetJapaneseRegionIdAsync();
+                if (japaneseRegionId is null) return null;
+
+                using var request = CreateIgdbRequest("game_localizations", $"""
+                    fields name;
+                    where game = {igdbId} & region = {japaneseRegionId.Value};
+                    limit 1;
+                    """);
+                using var response = await httpClient.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+                var localizations = JsonSerializer.Deserialize<List<IgdbGameLocalization>>(
+                    await response.Content.ReadAsStringAsync()) ?? [];
+                return localizations.FirstOrDefault()?.Name?.Trim();
+            }
+            catch
+            {
+                // 日本語名は補助情報なので、取得失敗時は呼び出し元でTwitch名へフォールバックする。
+                return null;
+            }
+        }
+
+        private static async Task<long?> GetJapaneseRegionIdAsync()
+        {
+            using var request = CreateIgdbRequest("regions", "fields id,identifier,name; limit 500;");
+            using var response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var regions = JsonSerializer.Deserialize<List<IgdbRegion>>(
+                await response.Content.ReadAsStringAsync()) ?? [];
+            return regions.FirstOrDefault(region =>
+                region.Identifier.Equals("ja-JP", StringComparison.OrdinalIgnoreCase) ||
+                region.Identifier.Equals("JP", StringComparison.OrdinalIgnoreCase) ||
+                region.Name.Contains("Japan", StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+
+        private static HttpRequestMessage CreateIgdbRequest(string endpoint, string query)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.igdb.com/v4/{endpoint}");
+            request.Headers.Add("Client-ID", clientId);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Content = new StringContent(query, Encoding.UTF8, "text/plain");
+            return request;
         }
 
         /// <summary>

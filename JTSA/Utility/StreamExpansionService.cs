@@ -347,11 +347,13 @@ internal sealed class StreamExpansionService
         string accessToken,
         string channelPointInput)
     {
-        var needsStreamInfo = items.Any(item => item.ActionType == "ObsText" &&
-            (item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamTitlePlaceholder, StringComparison.OrdinalIgnoreCase) ||
-             item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamCategoryPlaceholder, StringComparison.OrdinalIgnoreCase)));
+        var needsStreamInfo = items.Any(item =>
+            item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamTitlePlaceholder, StringComparison.OrdinalIgnoreCase) ||
+             item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamCategoryPlaceholder, StringComparison.OrdinalIgnoreCase) ||
+             item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamCategoryJapanesePlaceholder, StringComparison.OrdinalIgnoreCase));
         var title = string.Empty;
         var category = string.Empty;
+        var japaneseCategory = string.Empty;
         if (needsStreamInfo)
         {
             try
@@ -363,6 +365,12 @@ internal sealed class StreamExpansionService
                     var info = await TwitchHelper.GetTwitchStreamInfo(id, token);
                     title = info?.title ?? string.Empty;
                     category = info?.gameName ?? string.Empty;
+                    var masterCategory = string.IsNullOrWhiteSpace(info?.gameId)
+                        ? null
+                        : DAO_Category.SelectOneById(info.gameId);
+                    japaneseCategory = string.IsNullOrWhiteSpace(masterCategory?.JapaneseDisplayName)
+                        ? category
+                        : masterCategory.JapaneseDisplayName;
                 }
             }
             catch (Exception ex)
@@ -372,7 +380,7 @@ internal sealed class StreamExpansionService
         }
 
         return new StreamExpansionTriggerValues(
-            ToTriggerName(type), value, triggerObs, title, category, channelPointInput);
+            ToTriggerName(type), value, triggerObs, title, category, channelPointInput, japaneseCategory);
     }
 
     private static string ToTriggerName(StreamExpansionTriggerType type) => type switch

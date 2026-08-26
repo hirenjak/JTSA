@@ -134,6 +134,7 @@ namespace JTSA.Panels
                 {
                     CategoryId = item.Id,
                     DisplayName = item.Name,
+                    JapaneseDisplayName = item.Name,
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = "",
                     LastUsedDate = ""

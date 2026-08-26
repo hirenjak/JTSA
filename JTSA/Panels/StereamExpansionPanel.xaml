@@ -501,7 +501,7 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="190"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
-                                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
                                     </Grid.RowDefinitions>
                                     <TextBox Grid.Row="0" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{chat_user}"/>
                                     <TextBlock Grid.Row="0" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャットしたユーザーの表示名（チャット・初回チャット時）"/>
@@ -525,6 +525,8 @@
                                     <TextBlock Grid.Row="9" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信カテゴリ"/>
                                     <TextBox Grid.Row="10" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{channel_point_input}"/>
                                     <TextBlock Grid.Row="10" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="チャンネルポイントの入力文言、またはチャットのトリガーコメントより後ろの文言"/>
+                                    <TextBox Grid.Row="11" FontFamily="Consolas" Foreground="LightSkyBlue" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{}{stream_category_ja}"/>
+                                    <TextBlock Grid.Row="11" Grid.Column="1" Foreground="White" VerticalAlignment="Center" Text="現在の配信カテゴリ名（日本語。未取得時はTwitchカテゴリ名）"/>
                                 </Grid>
 
                                 <Grid Margin="0,0,0,6">

@@ -24,6 +24,17 @@ public class TitlePlaceholderReplacerTests
     }
 
     [Fact]
+    public void ReplaceTitle_ReplacesJapaneseCategoryPlaceholder()
+    {
+        var result = TitlePlaceholderReplacer.ReplaceTitle(
+            "配信タイトル",
+            "${title}【${category_ja}】",
+            "日本語カテゴリ");
+
+        Assert.Equal("配信タイトル【日本語カテゴリ】", result);
+    }
+
+    [Fact]
     public void ReplaceDateReplacesAllDatePlaceholders()
     {
         var dateTime = new DateTime(2026, 8, 14, 23, 59, 0);

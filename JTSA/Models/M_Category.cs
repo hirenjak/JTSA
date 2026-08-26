@@ -8,6 +8,9 @@ public class M_Category : DBBase
 
     public required string DisplayName { get; set; }
 
+    /// <summary>IGDBから取得した日本向けカテゴリ名。取得できない場合はDisplayNameと同じ値。</summary>
+    public string JapaneseDisplayName { get; set; } = string.Empty;
+
     public required string BoxArtUrl { get; set; }
 
     public string? SteamUrl { get; set; }

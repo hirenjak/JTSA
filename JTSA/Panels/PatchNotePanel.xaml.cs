@@ -18,6 +18,27 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.2.20",
+                ReleaseDate = "2026/08/26",
+                Summary = "日本語カテゴリ名とプレースホルダーの追加",
+                Changes =
+                [
+                    "【カテゴリ】",
+                    "・カテゴリ登録時にIGDBから日本向けカテゴリ名を取得して保存するように変更",
+                    "・カテゴリパネルで日本語カテゴリ名を手入力して保存できる機能を追加",
+                    "・登録済みカテゴリの日本語名をIGDBから再取得できるボタンを追加",
+                    "・日本語名を取得できない場合はTwitchカテゴリ名を使用するように調整",
+                    "【タイトル編集】",
+                    "・日本語カテゴリ名を挿入する${category_ja}プレースホルダーを追加",
+                    "【X投稿】",
+                    "・日本語カテゴリ名を挿入する{category_ja}プレースホルダーを追加",
+                    "【配信拡張】",
+                    "・日本語カテゴリ名を挿入する{stream_category_ja}プレースホルダーを追加",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.2.19",
                 ReleaseDate = "2026/08/26",
                 Summary = "配信状態表示とチャットオーバーレイの安定性改善",

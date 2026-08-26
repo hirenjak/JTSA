@@ -68,6 +68,7 @@ namespace JTSA.Dao
                 {
                     CategoryId = record.CategoryId,
                     DisplayName = record.DisplayName,
+                    JapaneseDisplayName = record.JapaneseDisplayName,
                     BoxArtUrl = record.BoxArtUrl,
                     SteamUrl = record.SteamUrl,
                     SteamHeaderArtUrl = record.SteamHeaderArtUrl,
@@ -88,6 +89,9 @@ namespace JTSA.Dao
             var selectCategory = await TwitchHelper.GetCategoryByGameId(categoryId);
             if (selectCategory == null) return null;
 
+            var japaneseDisplayName = await IgdbService.GetJapaneseGameNameAsync(categoryId)
+                ?? selectCategory.Name;
+
             // Steamに無いカテゴリではappIdが取れないため、ヘッダー画像もnullになる
             var appId = SteamHelper.GetSteamAppId(steamUrl);
             var steamHeaderArtUrl = appId == null
@@ -98,6 +102,7 @@ namespace JTSA.Dao
             {
                 CategoryId = categoryId,
                 DisplayName = selectCategory.Name,
+                JapaneseDisplayName = japaneseDisplayName,
                 BoxArtUrl = selectCategory.BoxArtUrl,
                 SteamHeaderArtUrl = steamHeaderArtUrl,
                 SteamUrl = steamUrl,

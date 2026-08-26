@@ -130,6 +130,13 @@ namespace JTSA.Panels
             });
             TitleTagFormList.Add(new()
             {
+                Placeholder = "${category_ja}",
+                IsSystem = true,
+                DisplayName = "カテゴリ名（日本語）",
+                LastUsedDate = string.Empty
+            });
+            TitleTagFormList.Add(new()
+            {
                 Placeholder = "${friend}",
                 IsSystem = true,
                 DisplayName = "選択したフレンド",

@@ -112,7 +112,7 @@
                 <TextBlock Margin="4,4,0,8"
                            Foreground="LightGray"
                            TextWrapping="Wrap"
-                           Text="利用可能なプレースホルダー： {title} 配信タイトル / {category} 配信カテゴリ / {url} Twitch URL"/>
+                           Text="利用可能なプレースホルダー： {title} 配信タイトル / {category} 配信カテゴリ / {category_ja} カテゴリ名（日本語） / {url} Twitch URL"/>
                 <TextBox x:Name="XPostTemplateTextBox"
                          Margin="8,0,0,0"
                          MinHeight="96"

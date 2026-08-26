@@ -27,6 +27,7 @@ public sealed class DaoTests : IDisposable
         {
             CategoryId = "1234",
             DisplayName = "Test Game",
+            JapaneseDisplayName = "テストゲーム",
             BoxArtUrl = "https://example.test/box.jpg",
             SteamUrl = "https://store.steampowered.com/app/1234",
             LastUsedDateTime = created,
@@ -40,6 +41,7 @@ public sealed class DaoTests : IDisposable
         var inserted = DAO_Category.SelectOneById(category.CategoryId);
         Assert.NotNull(inserted);
         Assert.Equal("Test Game", inserted.DisplayName);
+        Assert.Equal("テストゲーム", inserted.JapaneseDisplayName);
 
         inserted.DisplayName = "Updated Game";
         inserted.UpdatedDateTime = created.AddDays(1);

@@ -299,7 +299,7 @@
                                             <Label Margin="0" Padding="0"
                                                    Foreground="White" Content="タイトルプレースホルダーの組み合わせ"/>
                                             <Label Margin="0" Padding="0"
-                                                   Foreground="White" Content="${title}：左のタイトル / ${friend}：フレンド / ${date}：今日の日付"/>
+                                                   Foreground="White" Content="${title}：左のタイトル / ${friend}：フレンド / ${date}：今日の日付 / ${category_ja}：カテゴリ名（日本語）"/>
                                             <TextBox x:Name="TitlePlaceholderTextBox"
                                                      Height="48" HorizontalAlignment="Stretch"
                                                      VerticalAlignment="Top" Text="${title}"

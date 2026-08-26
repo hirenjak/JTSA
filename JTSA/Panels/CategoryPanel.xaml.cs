@@ -104,6 +104,9 @@ namespace JTSA.Panels
                 {
                     CategoryId = item.CategoryId,
                     DisplayName = item.DisplayName,
+                    JapaneseDisplayName = string.IsNullOrWhiteSpace(item.JapaneseDisplayName)
+                        ? item.DisplayName
+                        : item.JapaneseDisplayName,
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = item.SteamUrl ?? "",
                     ChannelPointPresetId = item.ChannelPointPresetId ?? PRESET_ID_NONE,
@@ -199,6 +202,78 @@ namespace JTSA.Panels
             }
 
             ReloadCategory();
+        }
+
+        /// <summary>手入力された日本語カテゴリ名をフォーカス移動時に保存する。</summary>
+        private void JapaneseNameTextBox_LostKeyboardFocus(
+            object sender,
+            System.Windows.Input.KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is not TextBox textBox || textBox.DataContext is not CategoryForm item)
+                return;
+
+            textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            var category = DAO_Category.SelectOneById(item.CategoryId);
+            if (category is null) return;
+
+            var japaneseName = item.JapaneseDisplayName?.Trim() ?? string.Empty;
+            if (category.JapaneseDisplayName == japaneseName) return;
+
+            category.JapaneseDisplayName = japaneseName;
+            category.UpdatedDateTime = DateTime.Now;
+            var saved = DAO_Category.Update(category);
+            mainWindow.AppLogPanel.AddSwitchLog(
+                saved,
+                GetType().Name,
+                $"日本語カテゴリ名更新 「 {item.DisplayName} 」→「 {japaneseName} 」",
+                $"日本語カテゴリ名更新失敗 「 {item.DisplayName} 」");
+
+            if (saved && mainWindow.CurrentCategoryId == item.CategoryId)
+                mainWindow.CurrentTitleTextUpdate();
+        }
+
+        /// <summary>IGDBから日本向けカテゴリ名を再取得して保存する。</summary>
+        private async void JapaneseNameFetchButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.DataContext is not CategoryForm item)
+                return;
+
+            button.IsEnabled = false;
+            try
+            {
+                var japaneseName = await IgdbService.GetJapaneseGameNameAsync(item.CategoryId);
+                if (string.IsNullOrWhiteSpace(japaneseName))
+                {
+                    MessageBox.Show(
+                        $"「{item.DisplayName}」の日本語カテゴリ名を取得できませんでした。",
+                        "カテゴリ名取得");
+                    return;
+                }
+
+                var category = DAO_Category.SelectOneById(item.CategoryId);
+                if (category is null) return;
+                category.JapaneseDisplayName = japaneseName.Trim();
+                category.UpdatedDateTime = DateTime.Now;
+                if (!DAO_Category.Update(category))
+                {
+                    MessageBox.Show("日本語カテゴリ名を保存できませんでした。", "カテゴリ名取得");
+                    return;
+                }
+
+                if (mainWindow.CurrentCategoryId == item.CategoryId)
+                    mainWindow.CurrentTitleTextUpdate();
+                ReloadCategory();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"日本語カテゴリ名の取得に失敗しました。\n{ex.GetBaseException().Message}",
+                    "カテゴリ名取得");
+            }
+            finally
+            {
+                button.IsEnabled = true;
+            }
         }
 
 
