@@ -55,6 +55,8 @@ namespace JTSA.Dao
             ObsSceneSwitchPresets = 35,
             /// <summary>ヘッダー下のOBSシーン切替ボタンを表示するか</summary>
             ObsSceneShortcutPanelVisible = 36,
+            /// <summary>OBSソース表示切替タブに登録したボタン</summary>
+            ObsSourceSwitchPresets = 37,
         }
 
 

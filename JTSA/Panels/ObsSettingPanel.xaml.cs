@@ -16,6 +16,7 @@ public partial class ObsSettingPanel : UserControl
 {
     private readonly ObservableCollection<ObsTextSourceCard> textSourceCards = [];
     private readonly ObservableCollection<SceneSwitchPreset> sceneSwitchPresets = [];
+    private readonly ObservableCollection<SourceSwitchPreset> sourceSwitchPresets = [];
     private readonly TaskCompletionSource<bool> panelLoaded =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool isRestoringCards;
@@ -23,6 +24,9 @@ public partial class ObsSettingPanel : UserControl
     private bool isLoadingScenes;
     private Point scenePresetDragStart;
     private SceneSwitchPreset? draggedScenePreset;
+    private Point sourcePresetDragStart;
+    private SourceSwitchPreset? draggedSourcePreset;
+    private bool isLoadingSources;
 
     public ObsSettingPanel()
     {
@@ -34,6 +38,7 @@ public partial class ObsSettingPanel : UserControl
         ReloadSettings();
         RestoreTextSourceCards();
         RestoreSceneSwitchPresets();
+        RestoreSourceSwitchPresets();
     }
 
     public void ReloadSettings()
@@ -91,6 +96,139 @@ public partial class ObsSettingPanel : UserControl
 
     private async void RefreshScenesButton_Click(object sender, RoutedEventArgs e)
         => await RefreshSceneSwitchListAsync();
+
+    private async void SourceSwitchTab_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (SourceSwitchTab.IsSelected && SourceSceneSelectionComboBox.Items.Count == 0)
+            await RefreshSourceSwitchListAsync();
+    }
+
+    private async void RefreshSourcesButton_Click(object sender, RoutedEventArgs e)
+        => await RefreshSourceSwitchListAsync();
+
+    private async Task RefreshSourceSwitchListAsync()
+    {
+        if (isLoadingSources) return;
+        isLoadingSources = true;
+        SourceSwitchStatusTextBlock.Text = "メイン・サブOBSからソースを読み込んでいます...";
+        try
+        {
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            var targets = new List<bool> { false };
+            if (long.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
+                targets.Add(true);
+
+            var choices = new List<SourceSceneChoice>();
+            foreach (var isSub in targets)
+            {
+                var controller = await mainWindow.EnsureObsConnectedAsync(isSub);
+                if (controller is null) continue;
+                var scenes = await Task.Run(controller.GetSceneNames);
+                choices.AddRange(scenes.Select(scene => new SourceSceneChoice { IsSub = isSub, SceneName = scene }));
+            }
+            SourceSceneSelectionComboBox.ItemsSource = choices;
+            SourceSceneSelectionComboBox.SelectedItem = choices.FirstOrDefault();
+            await LoadSourcesForSelectedSceneAsync();
+            await RefreshSourceVisibilityStatesAsync(mainWindow.SelectedTargetAccountId);
+            SourceSwitchStatusTextBlock.Text = choices.Count == 0
+                ? "取得できるシーンがありませんでした"
+                : $"{choices.Count}件のシーンを読み込みました";
+        }
+        catch (Exception ex)
+        {
+            SourceSwitchStatusTextBlock.Text = $"読込失敗: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            isLoadingSources = false;
+        }
+    }
+
+    private async void SourceSceneSelectionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => await LoadSourcesForSelectedSceneAsync();
+
+    private async Task LoadSourcesForSelectedSceneAsync()
+    {
+        if (SourceSceneSelectionComboBox.SelectedItem is not SourceSceneChoice choice)
+        {
+            SourceSelectionComboBox.ItemsSource = null;
+            return;
+        }
+        var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(choice.IsSub);
+        if (controller is null) return;
+        var sources = await Task.Run(() => controller.GetSceneSources(choice.SceneName));
+        SourceSelectionComboBox.ItemsSource = sources;
+        SourceSelectionComboBox.SelectedItem = sources.FirstOrDefault();
+    }
+
+    private void AddSourceSwitchPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SourceSceneSelectionComboBox.SelectedItem is not SourceSceneChoice scene ||
+            SourceSelectionComboBox.SelectedItem is not ObsSceneSource source) return;
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        var accountId = mainWindow.SelectedTargetAccountId;
+        if (accountId is null)
+        {
+            SourceSwitchStatusTextBlock.Text = "右上の保存先アカウントを選択してください";
+            return;
+        }
+        if (sourceSwitchPresets.Any(x => x.AccountId == accountId && x.IsSub == scene.IsSub &&
+            string.Equals(x.SceneName, scene.SceneName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.SourceName, source.SourceName, StringComparison.OrdinalIgnoreCase)))
+        {
+            SourceSwitchStatusTextBlock.Text = "そのソースはすでに登録されています";
+            return;
+        }
+        sourceSwitchPresets.Add(new SourceSwitchPreset
+        {
+            AccountId = accountId.Value,
+            IsSub = scene.IsSub,
+            SceneName = scene.SceneName,
+            SourceName = source.SourceName,
+            IsVisible = source.IsEnabled
+        });
+        SaveSourceSwitchPresets();
+        RefreshSourceSwitchPresetFilter(accountId);
+        mainWindow.RefreshObsSourceShortcutButtons();
+        SourceSwitchStatusTextBlock.Text = $"{source.SourceName} の表示切替ボタンを追加しました";
+    }
+
+    private async void ToggleSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is SourceSwitchPreset preset)
+            await ToggleSourceAsync(preset);
+    }
+
+    private async Task ToggleSourceAsync(SourceSwitchPreset preset)
+    {
+        SourceSwitchStatusTextBlock.Text = $"{preset.SourceName} を切り替えています...";
+        try
+        {
+            var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(preset.IsSub);
+            if (controller is null) throw new InvalidOperationException("OBSに接続できませんでした");
+            var current = await Task.Run(() => controller.GetSceneSourceEnabled(preset.SceneName, preset.SourceName));
+            await Task.Run(() => controller.SetSceneSourceEnabled(preset.SceneName, preset.SourceName, !current));
+            preset.IsVisible = !current;
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+            mainWindow.RefreshObsSourceShortcutButtons();
+            SourceSwitchStatusTextBlock.Text = $"{preset.SourceName} を{(preset.IsVisible ? "表示" : "非表示")}にしました";
+        }
+        catch (Exception ex)
+        {
+            SourceSwitchStatusTextBlock.Text = $"切替失敗: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private void RemoveSourceSwitchPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not SourceSwitchPreset preset) return;
+        sourceSwitchPresets.Remove(preset);
+        SaveSourceSwitchPresets();
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+        mainWindow.RefreshObsSourceShortcutButtons();
+    }
 
     private async Task RefreshSceneSwitchListAsync()
     {
@@ -305,6 +443,109 @@ public partial class ObsSettingPanel : UserControl
             await SwitchSceneAsync(preset);
     }
 
+    public IReadOnlyList<SourceSwitchPreset> GetSourceSwitchPresets(long? accountId = null)
+        => sourceSwitchPresets
+            .Where(preset => accountId is null || preset.AccountId == accountId)
+            .ToList();
+
+    public void RefreshSourceSwitchPresetFilter(long? accountId)
+    {
+        var presets = accountId is null
+            ? []
+            : sourceSwitchPresets.Where(preset => preset.AccountId == accountId.Value).ToList();
+        var mainPresets = presets.Where(preset => !preset.IsSub).ToList();
+        var subPresets = presets.Where(preset => preset.IsSub).ToList();
+        MainSourceSwitchPresetsItemsControl.ItemsSource = mainPresets;
+        SubSourceSwitchPresetsItemsControl.ItemsSource = subPresets;
+        MainSourceSwitchPresetPanel.Visibility = mainPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        SubSourceSwitchPresetPanel.Visibility = subPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public async Task RefreshSourceVisibilityStatesAsync(long? accountId)
+    {
+        var presets = GetSourceSwitchPresets(accountId);
+        foreach (var group in presets.GroupBy(preset => preset.IsSub))
+        {
+            try
+            {
+                var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(group.Key);
+                if (controller is null) continue;
+                foreach (var preset in group)
+                {
+                    try
+                    {
+                        preset.IsVisible = await Task.Run(() =>
+                            controller.GetSceneSourceEnabled(preset.SceneName, preset.SourceName));
+                    }
+                    catch
+                    {
+                        preset.IsVisible = false;
+                    }
+                }
+            }
+            catch { }
+        }
+        RefreshSourceSwitchPresetFilter(accountId);
+        ((MainWindow)Application.Current.MainWindow).RefreshObsSourceShortcutButtons();
+    }
+
+    public async Task ExecuteSourceSwitchPresetAsync(SourceSwitchPreset preset)
+    {
+        if (sourceSwitchPresets.Contains(preset))
+            await ToggleSourceAsync(preset);
+    }
+
+    private void SourcePresetCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        sourcePresetDragStart = e.GetPosition(this);
+        draggedSourcePreset = (sender as FrameworkElement)?.Tag as SourceSwitchPreset;
+    }
+
+    private void SourcePresetCard_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || draggedSourcePreset is null) return;
+        var current = e.GetPosition(this);
+        if (Math.Abs(current.X - sourcePresetDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(current.Y - sourcePresetDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        var preset = draggedSourcePreset;
+        draggedSourcePreset = null;
+        DragDrop.DoDragDrop((DependencyObject)sender, preset, DragDropEffects.Move);
+    }
+
+    private void SourcePresetCard_Drop(object sender, DragEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not SourceSwitchPreset target ||
+            e.Data.GetData(typeof(SourceSwitchPreset)) is not SourceSwitchPreset source ||
+            ReferenceEquals(source, target) || source.AccountId != target.AccountId) return;
+        sourceSwitchPresets.Remove(source);
+        sourceSwitchPresets.Insert(sourceSwitchPresets.IndexOf(target), source);
+        SaveSourceSwitchPresets();
+        RefreshSourceSwitchPresetFilter(target.AccountId);
+        ((MainWindow)Application.Current.MainWindow).RefreshObsSourceShortcutButtons();
+        SourceSwitchStatusTextBlock.Text = "ボタンの順番を変更しました";
+        e.Handled = true;
+    }
+
+    private void RestoreSourceSwitchPresets()
+    {
+        try
+        {
+            var json = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsSourceSwitchPresets)?.Value;
+            if (string.IsNullOrWhiteSpace(json)) return;
+            foreach (var preset in JsonSerializer.Deserialize<List<SourceSwitchPreset>>(json) ?? [])
+                if (!string.IsNullOrWhiteSpace(preset.SceneName) && !string.IsNullOrWhiteSpace(preset.SourceName))
+                    sourceSwitchPresets.Add(preset);
+        }
+        catch
+        {
+            SourceSwitchStatusTextBlock.Text = "保存済みのソース切替ボタンを読み込めませんでした";
+        }
+    }
+
+    private void SaveSourceSwitchPresets() => DAO_Setting.InsertUpdate(
+        DAO_Setting.SettingName.ObsSourceSwitchPresets,
+        JsonSerializer.Serialize(sourceSwitchPresets));
+
     private void RestoreSceneSwitchPresets()
     {
         try
@@ -354,6 +595,25 @@ public partial class ObsSettingPanel : UserControl
     }
 
     private sealed class SceneChoice
+    {
+        public bool IsSub { get; init; }
+        public string SceneName { get; init; } = string.Empty;
+        public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SceneName}";
+    }
+
+    public sealed class SourceSwitchPreset
+    {
+        public long AccountId { get; set; }
+        public bool IsSub { get; set; }
+        public string SceneName { get; set; } = string.Empty;
+        public string SourceName { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsVisible { get; set; }
+        public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SourceName}";
+        public string DetailText => $"{SceneName} / {SourceName}";
+    }
+
+    private sealed class SourceSceneChoice
     {
         public bool IsSub { get; init; }
         public string SceneName { get; init; } = string.Empty;

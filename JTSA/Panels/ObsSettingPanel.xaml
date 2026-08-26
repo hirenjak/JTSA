@@ -135,6 +135,38 @@
     </Border>
    </Grid>
   </TabItem>
+  <TabItem x:Name="SourceSwitchTab" Header="ソース切替" IsVisibleChanged="SourceSwitchTab_IsVisibleChanged">
+   <Grid Background="#FF404040" Margin="16">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <TextBlock Text="OBSソース表示切替" Foreground="White" FontSize="22" FontWeight="Bold"/>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,12">
+     <Button Content="両方の一覧を更新" Width="120" Height="26" Click="RefreshSourcesButton_Click"/>
+     <ComboBox x:Name="SourceSceneSelectionComboBox" Width="220" Height="26" Margin="12,0,0,0" DisplayMemberPath="DisplayName" SelectionChanged="SourceSceneSelectionComboBox_SelectionChanged"/>
+     <ComboBox x:Name="SourceSelectionComboBox" Width="220" Height="26" Margin="8,0,0,0" DisplayMemberPath="SourceName"/>
+     <Button Content="＋ 切替ボタンを追加" Width="130" Height="26" Margin="8,0,0,0" Click="AddSourceSwitchPresetButton_Click"/>
+    </StackPanel>
+    <Border Grid.Row="2" Padding="12" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+     <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <TextBlock x:Name="SourceSwitchStatusTextBlock" Text="シーンとソースの一覧を読み込んでください" Foreground="LightGray" Margin="0,0,0,10"/>
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"><StackPanel>
+       <StackPanel x:Name="MainSourceSwitchPresetPanel"><TextBlock Text="メインOBS" Foreground="#FFAEDCFA" FontWeight="Bold" Margin="5,4,5,1"/>
+        <ItemsControl x:Name="MainSourceSwitchPresetsItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
+         <Border Width="260" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="SourcePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="SourcePresetCard_PreviewMouseMove" Drop="SourcePresetCard_Drop">
+          <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="{Binding SceneName, StringFormat=シーン：{0}}" Foreground="LightGray" FontSize="11" Margin="3,2,3,5"/><Button Grid.Row="1" Content="{Binding SourceName}" Tag="{Binding}" Click="ToggleSourceButton_Click" Height="36" Padding="8"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSourceSwitchPresetButton_Click" Width="24" Height="24"/></Grid>
+         </Border>
+        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+       </StackPanel>
+       <StackPanel x:Name="SubSourceSwitchPresetPanel"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontWeight="Bold" Margin="5,8,5,1"/>
+        <ItemsControl x:Name="SubSourceSwitchPresetsItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
+         <Border Width="260" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="SourcePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="SourcePresetCard_PreviewMouseMove" Drop="SourcePresetCard_Drop"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="{Binding SceneName, StringFormat=シーン：{0}}" Foreground="LightGray" FontSize="11" Margin="3,2,3,5"/><Button Grid.Row="1" Content="{Binding SourceName}" Tag="{Binding}" Click="ToggleSourceButton_Click" Height="36" Padding="8"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSourceSwitchPresetButton_Click" Width="24" Height="24"/></Grid></Border>
+        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+       </StackPanel>
+      </StackPanel></ScrollViewer>
+     </Grid>
+    </Border>
+   </Grid>
+  </TabItem>
   <TabItem x:Name="ObsSettingsTab" Header="OBS設定"><ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
    <StackPanel x:Name="ObsConnectionSettingsSection">
    <DockPanel Margin="0,0,0,12"><StackPanel DockPanel.Dock="Left"><TextBlock Text="OBS連携設定" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Margin="0,4,0,0" Foreground="LightGray" Text="各PCのOBSにTwitchアカウントを割り当てます。送信先アカウントに応じて右上ボタンの操作OBSが切り替わります。"/></StackPanel><CheckBox x:Name="ObsAutoConnectCheckBox" HorizontalAlignment="Right" VerticalAlignment="Center" Content="起動時に登録済みのOBSへ自動接続" Foreground="White" Click="ObsAutoConnectCheckBox_Click"/></DockPanel>

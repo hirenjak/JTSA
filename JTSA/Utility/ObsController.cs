@@ -114,6 +114,37 @@ public sealed class ObsController : IDisposable
             .ToList();
     }
 
+    public IReadOnlyList<ObsSceneSource> GetSceneSources(string sceneName)
+    {
+        EnsureConnected();
+        return client.GetSceneItemList(sceneName)
+            .Select(item => new ObsSceneSource(
+                item.SourceName,
+                client.GetSceneItemEnabled(sceneName, item.ItemId)))
+            .OrderBy(item => item.SourceName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public bool GetSceneSourceEnabled(string sceneName, string sourceName)
+    {
+        EnsureConnected();
+        var item = client.GetSceneItemList(sceneName).FirstOrDefault(item =>
+            string.Equals(item.SourceName, sourceName, StringComparison.OrdinalIgnoreCase));
+        if (item is null)
+            throw new InvalidOperationException($"シーン「{sceneName}」にソース「{sourceName}」がありません。");
+        return client.GetSceneItemEnabled(sceneName, item.ItemId);
+    }
+
+    public void SetSceneSourceEnabled(string sceneName, string sourceName, bool enabled)
+    {
+        EnsureConnected();
+        var item = client.GetSceneItemList(sceneName).FirstOrDefault(item =>
+            string.Equals(item.SourceName, sourceName, StringComparison.OrdinalIgnoreCase));
+        if (item is null)
+            throw new InvalidOperationException($"シーン「{sceneName}」にソース「{sourceName}」がありません。");
+        client.SetSceneItemEnabled(sceneName, item.ItemId, enabled);
+    }
+
     public string GetTextSourceText(string inputName)
     {
         EnsureConnected();
@@ -138,3 +169,5 @@ public sealed class ObsController : IDisposable
         connectionLock.Dispose();
     }
 }
+
+public sealed record ObsSceneSource(string SourceName, bool IsEnabled);

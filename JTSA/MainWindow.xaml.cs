@@ -370,6 +370,7 @@ namespace JTSA
                 DAO_Setting.SelectOneById(
                     DAO_Setting.SettingName.ObsSceneShortcutPanelVisible)?.Value != "0");
             RefreshObsSceneShortcutButtons();
+            RefreshObsSourceShortcutButtons();
             SetAccountSwitchLoading(true, isStartup: true);
             try
             {
@@ -416,6 +417,27 @@ namespace JTSA
         public long? SelectedTargetAccountId =>
             TargetAccountComboBox.SelectedValue is long accountId ? accountId : null;
 
+        public void RefreshObsSourceShortcutButtons()
+        {
+            var accountId = SelectedTargetAccountId;
+            var presets = ObsSettingPanel.GetSourceSwitchPresets(accountId);
+            ObsSettingPanel.RefreshSourceSwitchPresetFilter(accountId);
+            var mainPresets = presets.Where(preset => !preset.IsSub).ToList();
+            var subPresets = presets.Where(preset => preset.IsSub).ToList();
+            MainObsSourceShortcutItemsControl.ItemsSource = mainPresets;
+            SubObsSourceShortcutItemsControl.ItemsSource = subPresets;
+            MainObsSourceShortcutItemsControl.Visibility = mainPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            SubObsSourceShortcutItemsControl.Visibility = subPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            ObsSourceShortcutEmptyTextBlock.Visibility = presets.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            ObsSourceShortcutScrollViewer.Visibility = presets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private async void ObsSourceShortcutButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.Tag is not ObsSettingPanel.SourceSwitchPreset preset) return;
+            await ObsSettingPanel.ExecuteSourceSwitchPresetAsync(preset);
+        }
+
         private async void ObsSceneShortcutButton_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.Tag is not ObsSettingPanel.SceneSwitchPreset preset) return;
@@ -433,10 +455,12 @@ namespace JTSA
 
         private void ApplyObsSceneShortcutPanelVisibility(bool shouldShow)
         {
-            ObsSceneShortcutPanel.Visibility = shouldShow
+            ObsShortcutPanel.Visibility = shouldShow
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-            ObsSceneShortcutToggleButton.Content = shouldShow ? "シーン ▲" : "シーン ▼";
+            ObsSceneShortcutToggleButton.Content = shouldShow ? "シーン・ソース ▲" : "シーン・ソース ▼";
+            if (shouldShow)
+                _ = ObsSettingPanel.RefreshSourceVisibilityStatesAsync(SelectedTargetAccountId);
         }
 
         private async Task MainWindowLoadedCoreAsync(object sender, RoutedEventArgs e)
@@ -1032,6 +1056,9 @@ namespace JTSA
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
             RefreshObsControlTarget();
             RefreshObsSceneShortcutButtons();
+            RefreshObsSourceShortcutButtons();
+            if (ObsShortcutPanel.Visibility == Visibility.Visible)
+                _ = ObsSettingPanel.RefreshSourceVisibilityStatesAsync(SelectedTargetAccountId);
 
             if (!isAccountAwarePanelsInitialized)
                 return;

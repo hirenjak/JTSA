@@ -184,15 +184,17 @@
                        Margin="8,0,8,0" Height="16"
                        Foreground="Black" FontSize="8" Background="DarkGray" />
             <Button x:Name="ObsSceneShortcutToggleButton"
-                    Grid.Column="2" Content="シーン ▲"
-                    Width="64" Height="22" Margin="5,0,0,0"
+                    Grid.Column="2" Content="シーン・ソース ▲"
+                    Width="96" Height="22" Margin="5,0,0,0"
                     FontSize="10" VerticalAlignment="Center"
                     Click="ObsSceneShortcutToggleButton_Click"
-                    ToolTip="OBSシーン切替ボタンの表示／非表示"/>
+                    ToolTip="OBSシーン・ソース切替ボタンの表示／非表示"/>
         </Grid>
 
-        <!-- 配信中にすぐ押せるOBSシーン切替ショートカット -->
-        <Grid x:Name="ObsSceneShortcutPanel" Grid.Row="3" Margin="8,1,8,1">
+        <!-- 配信中にすぐ押せるOBSシーン・ソースショートカット -->
+        <Grid x:Name="ObsShortcutPanel" Grid.Row="3" Margin="8,1,8,1">
+         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid x:Name="ObsSceneShortcutPanel" Grid.Column="0" Margin="0,0,5,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -216,6 +218,21 @@
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
+        </Grid>
+
+        <Grid x:Name="ObsSourceShortcutPanel" Grid.Column="1" Margin="5,0,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <TextBlock Text="OBSソース&#x0a;表示" Foreground="LightGray" VerticalAlignment="Center" TextAlignment="Center" LineHeight="11" Margin="4,0,6,0" FontSize="10"/>
+            <Grid Grid.Column="1">
+                <TextBlock x:Name="ObsSourceShortcutEmptyTextBlock" Text="OBSタブ ＞ ソース切替タブにてソースの登録ができます" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0"/>
+                <ScrollViewer x:Name="ObsSourceShortcutScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <ItemsControl x:Name="MainObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Margin="1" MinWidth="96" Height="22" Padding="6,0" FontSize="10" Click="ObsSourceShortcutButton_Click"><Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF3D8B4D"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        <ItemsControl x:Name="SubObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Margin="1" MinWidth="96" Height="22" Padding="6,0" FontSize="10" Click="ObsSourceShortcutButton_Click"><Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF3D8B4D"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
         </Grid>
 
         <Grid 
