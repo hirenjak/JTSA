@@ -192,13 +192,23 @@ namespace JTSA.Utility
 
         /// <summary>認証中の配信者の現在の配信情報を取得する。オフライン時は null。</summary>
         public static async Task<TwitchStreamIF?> GetCurrentStreamAsync()
+            => await GetCurrentStreamAsync(BroadcasterId, AccessToken);
+
+        /// <summary>指定した配信者の現在の配信情報を取得する。オフライン時は null。</summary>
+        public static async Task<TwitchStreamIF?> GetCurrentStreamAsync(
+            string broadcasterId,
+            string accessToken)
         {
-            if (string.IsNullOrWhiteSpace(BroadcasterId)) return null;
+            if (string.IsNullOrWhiteSpace(broadcasterId) || string.IsNullOrWhiteSpace(accessToken))
+                return null;
 
             try
             {
-                var apiResponse = await api.Helix.Streams.GetStreamsAsync(
-                    userIds: new List<string> { BroadcasterId });
+                var accountApi = new TwitchAPI();
+                accountApi.Settings.ClientId = ClientID;
+                accountApi.Settings.AccessToken = accessToken;
+                var apiResponse = await accountApi.Helix.Streams.GetStreamsAsync(
+                    userIds: new List<string> { broadcasterId });
                 var data = apiResponse?.Streams?.FirstOrDefault();
                 if (data == null) return null;
 

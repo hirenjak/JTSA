@@ -540,9 +540,7 @@ namespace JTSA.Panels
             var settingIsChatOverlay = DAO_Setting.SelectOneById(DAO_Setting.SettingName.IsChatOverlay);
             if (settingIsChatOverlay != null && settingIsChatOverlay.Value == "1")
             {
-                transparentWindow?.Close();
-                transparentWindow = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
-                transparentWindow.Show();
+                RecreateChatOverlayWindow();
                 IsStartShowChatOverlayDisp.IsChecked = true;
             }
             else
@@ -842,10 +840,52 @@ namespace JTSA.Panels
             }
             else
             {
-                transparentWindow = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
-                ApplyOverlayAppearance();
-                transparentWindow.Show();
+                CreateChatOverlayWindow();
             }
+        }
+
+        /// <summary>停止・破損した可能性があるオーバーレイウィンドウを破棄して作り直す。</summary>
+        private void TransparentWindowRecreate_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                RecreateChatOverlayWindow();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"チャットオーバーレイを再生成できませんでした。\n{ex.GetBaseException().Message}",
+                    "チャットオーバーレイ");
+            }
+        }
+
+        private void RecreateChatOverlayWindow()
+        {
+            var oldWindow = transparentWindow;
+            transparentWindow = null;
+            try
+            {
+                oldWindow?.Close();
+            }
+            catch
+            {
+                // エラー停止したウィンドウは正常に閉じられない場合があるため、再生成を続行する。
+            }
+
+            CreateChatOverlayWindow();
+        }
+
+        private void CreateChatOverlayWindow()
+        {
+            var window = new ChatOverlayWindow(Application.Current.MainWindow, TwitchChatFormList);
+            window.Closed += (_, _) =>
+            {
+                if (ReferenceEquals(transparentWindow, window))
+                    transparentWindow = null;
+            };
+            transparentWindow = window;
+            ApplyOverlayAppearance();
+            window.Show();
         }
 
 

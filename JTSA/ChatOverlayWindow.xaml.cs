@@ -34,6 +34,7 @@ namespace JTSA
         private const double DefaultFontSize = 16;
         private bool showUserIcons = true;
         private double overlayFontSize = DefaultFontSize;
+        private bool scrollToBottomPending;
         private readonly Window mainWindow;
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -78,6 +79,10 @@ namespace JTSA
             mainWindow = owner;
             mainWindow.Closed += MainWindow_Closed;
             InitializeComponent();
+
+            OverlayTwitchChatListBox.AddHandler(
+                ScrollViewer.ScrollChangedEvent,
+                new ScrollChangedEventHandler(OverlayScrollViewer_ScrollChanged));
 
             TwitchChatFormList = twitchChatFormList;
 
@@ -154,6 +159,7 @@ namespace JTSA
         {
             ShowUserIcons = displayUserIcons;
             OverlayFontSize = Math.Clamp(fontSize, 10, 36);
+            QueueScrollToBottom();
         }
 
 
@@ -167,6 +173,7 @@ namespace JTSA
             IsSettingEnabled = true;
             SetClickThrough(IsSettingEnabled);
             ResizeMode = ResizeMode.NoResize;
+            QueueScrollToBottom();
 
             var settingChatOverlayPosX = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosX);
             var settingChatOverlayPosY = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosY);
@@ -224,17 +231,34 @@ namespace JTSA
                 OverlayTwitchChatFormList.Add(item);
             }
 
+            QueueScrollToBottom();
+        }
+
+        /// <summary>
+        /// メッセージ内の画像読み込みや折り返しで表示領域が変わった場合も、常に新着側へ追従する。
+        /// </summary>
+        private void OverlayScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
+                QueueScrollToBottom();
+        }
+
+        private void QueueScrollToBottom()
+        {
+            if (scrollToBottomPending)
+                return;
+
+            scrollToBottomPending = true;
             Dispatcher.BeginInvoke(() =>
             {
+                scrollToBottomPending = false;
                 if (OverlayTwitchChatListBox.Items.Count == 0)
                     return;
 
-                var lastItem =
-                    OverlayTwitchChatListBox.Items[
-                        OverlayTwitchChatListBox.Items.Count - 1];
-
+                var lastItem = OverlayTwitchChatListBox.Items[
+                    OverlayTwitchChatListBox.Items.Count - 1];
                 OverlayTwitchChatListBox.ScrollIntoView(lastItem);
-            }, DispatcherPriority.Loaded);
+            }, DispatcherPriority.ContextIdle);
         }
 
 

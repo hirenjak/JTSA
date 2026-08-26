@@ -793,7 +793,12 @@ namespace JTSA
                 if (isSub) subObsLastStreamingState = connectedStreamingState;
                 else mainObsLastStreamingState = connectedStreamingState;
                 ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
-                RefreshObsControlTarget();
+                var controlTarget = GetObsControlTarget();
+                if (controlTarget is not null &&
+                    ReferenceEquals(controlTarget.Value.Controller, controller))
+                {
+                    SetObsButtonState(enabled: true, connectedStreamingState);
+                }
             }
             catch (Exception ex)
             {
@@ -895,7 +900,9 @@ namespace JTSA
         private async Task RefreshObsStreamStateAsync(ObsController controller)
         {
             var isStreaming = await Task.Run(controller.IsStreaming);
-            SetObsButtonState(enabled: true, isStreaming);
+            var target = GetObsControlTarget();
+            if (target is not null && ReferenceEquals(target.Value.Controller, controller))
+                SetObsButtonState(enabled: true, isStreaming);
         }
 
         private (ObsController Controller, bool IsSub)? GetObsControlTarget()
@@ -920,7 +927,7 @@ namespace JTSA
                 return;
             }
             try { await RefreshObsStreamStateAsync(target.Value.Controller); }
-            catch { SetObsButtonState(enabled: true, isStreaming: false); }
+            catch { SetObsButtonState(enabled: false, isStreaming: false); }
         }
 
         private void SetObsButtonState(bool enabled, bool isStreaming)
@@ -952,6 +959,20 @@ namespace JTSA
             var controller = await EnsureObsConnectedAsync();
             if (controller is null)
                 return;
+
+            // 接続直後やOBS側で状態が変わった直後でも、操作前に実状態を同期する。
+            try
+            {
+                await RefreshObsStreamStateAsync(controller);
+            }
+            catch (Exception ex)
+            {
+                SetObsButtonState(enabled: false, isStreaming: false);
+                MessageBox.Show(
+                    $"OBSの配信状態を取得できませんでした。\n{ex.GetBaseException().Message}",
+                    "OBS連携");
+                return;
+            }
 
             if (isObsStreaming && MessageBox.Show("OBSの配信を停止しますか？", "OBS連携",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
@@ -1016,6 +1037,7 @@ namespace JTSA
                         target.Value.Account.BroadcasterId,
                         target.Value.AccessToken);
                     await RaidPanel.RefreshRaidUsersAsync();
+                    await UpdateStreamStatusAsync();
                 }
             }
             catch (Exception ex)
@@ -1639,19 +1661,31 @@ namespace JTSA
         private async Task UpdateStreamStatusAsync()
         {
             if (isStreamStatusUpdating || string.IsNullOrWhiteSpace(TwitchHelper.AccessToken) ||
-                string.IsNullOrWhiteSpace(TwitchHelper.BroadcasterId))
+                TargetAccountComboBox.SelectedValue is not long selectedAccountId)
             {
                 return;
             }
+
+            var selectedAccount = DAO_TwitchAccount.SelectById(selectedAccountId);
+            if (selectedAccount is null || string.IsNullOrWhiteSpace(selectedAccount.BroadcasterId))
+                return;
 
             isStreamStatusUpdating = true;
             streamStatusTimer.Stop();
             try
             {
-                var stream = await TwitchHelper.GetCurrentStreamAsync();
+                var stream = await TwitchHelper.GetCurrentStreamAsync(
+                    selectedAccount.BroadcasterId,
+                    TwitchHelper.AccessToken);
+
+                // Ignore a response for an account that was deselected while the API call ran.
+                if (TargetAccountComboBox.SelectedValue is not long currentAccountId ||
+                    currentAccountId != selectedAccountId)
+                    return;
+
                 if (stream == null)
                 {
-                    DAO_StreamHistory.EndActiveStreams(TwitchHelper.BroadcasterId, DateTime.Now);
+                    DAO_StreamHistory.EndActiveStreams(selectedAccount.BroadcasterId, DateTime.Now);
                     TwitchHelper.CurrentStreamId = string.Empty;
                     StreamSupportTracker.StartStream(string.Empty);
                     currentStreamStartedAtUtc = null;

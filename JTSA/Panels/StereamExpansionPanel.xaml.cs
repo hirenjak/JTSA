@@ -133,20 +133,40 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     /// </summary>
     public void ReloadChannelPoints()
     {
-        ChannelPointFormList.Clear();
-        ChannelPointFormList.Add(new()
+        // Clearing the ItemsSource temporarily clears ComboBox.SelectedValue. Since the
+        // binding is TwoWay, that transient value would otherwise overwrite and save the
+        // channel point selected on the header when this panel becomes visible again.
+        var triggerChannelPointIds = HeaderFormList.ToDictionary(
+            header => header,
+            header => header.TriggerChannelPointId);
+        var wasReloading = isReloading;
+        isReloading = true;
+        try
         {
-            RewardId = string.Empty,
-            DisplayName = "（指定なし）"
-        });
-
-        foreach (var reward in DAO_ChannelPoint.SelectAll())
-        {
+            ChannelPointFormList.Clear();
             ChannelPointFormList.Add(new()
             {
-                RewardId = reward.RewardId,
-                DisplayName = $"{reward.Title}（{reward.Cost:N0}pt）"
+                RewardId = string.Empty,
+                DisplayName = "（指定なし）"
             });
+
+            foreach (var reward in DAO_ChannelPoint.SelectAll())
+            {
+                ChannelPointFormList.Add(new()
+                {
+                    RewardId = reward.RewardId,
+                    DisplayName = $"{reward.Title}（{reward.Cost:N0}pt）"
+                });
+            }
+
+            foreach (var (header, triggerChannelPointId) in triggerChannelPointIds)
+            {
+                header.TriggerChannelPointId = triggerChannelPointId;
+            }
+        }
+        finally
+        {
+            isReloading = wasReloading;
         }
     }
 
