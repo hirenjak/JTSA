@@ -1,14 +1,82 @@
-﻿<Window xmlns:panels="clr-namespace:JTSA.Panels"
+<Window xmlns:panels="clr-namespace:JTSA.Panels"
         x:Class="JTSA.MainWindow"
+        x:Name="MainWindowRoot"
         xmlns:controls="clr-namespace:JTSA.Controls"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:JTSA"
         Title="JakTwtchStreamerAssistant"
         Icon="Resources/jtsa.ico"
-        Height="700" Width="1100">
+        Height="700" Width="1100"
+        WindowStyle="None"
+        ResizeMode="CanResize">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="32"
+                            ResizeBorderThickness="6"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <Style x:Key="MainCaptionButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="31"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBackground" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBackground" Property="Background" Value="#FF606060"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBackground" Property="Background" Value="#FF505050"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="#FF666666" BorderThickness="1" Background="#FF404040">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Background="#FF4A4A4A">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                <Image Source="Resources/jtsa.ico" Width="16" Height="16" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding Title, ElementName=MainWindowRoot}"
+                           Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Content="&#xE921;" Style="{StaticResource MainCaptionButtonStyle}" Click="MainMinimizeButton_Click"/>
+                <Button Content="&#xE922;" Style="{StaticResource MainCaptionButtonStyle}" Click="MainMaximizeButton_Click"/>
+                <Button Content="&#xE8BB;" Style="{StaticResource MainCaptionButtonStyle}" Click="MainCloseButton_Click"/>
+            </StackPanel>
+        </Grid>
 
     <Grid
+        Grid.Row="1"
         Background="#FF404040"
         VerticalAlignment="Stretch">
         <Grid.RowDefinitions>
@@ -34,70 +102,98 @@
         <!--  -->
         <Grid 
             Grid.Row="1" 
-            Margin="8, -2, 8, 0" 
+            Margin="8,4,8,0" 
             Width="Auto" Height="72">
             
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="60"/>
+                <ColumnDefinition x:Name="CategoryHeaderColumn" Width="180"/>
                 <ColumnDefinition Width="60"/>
-                <ColumnDefinition x:Name="CategoryHeaderColumn" Width="160"/>
                 <ColumnDefinition x:Name="TitleHeaderColumn" Width="480"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
 
-            <Grid Grid.Column="0" Margin="0, 4, 0, 0">
+            <Grid Grid.Column="0" Margin="0,2,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Button Grid.Column ="0" x:Name="SetTitleButton" Content="送信" 
+                <Button Grid.Column ="0" x:Name="SetTitleButton"
                     HorizontalAlignment="Stretch"
-                    Margin="2, 2, 2, 4"
-                    Click="SendTitleButton_Click"/>
+                    Padding="0"
+                    Margin="0,1,2,3"
+                    Background="#FF565656"
+                    BorderBrush="#FF777777"
+                    Foreground="White"
+                    Click="SendTitleButton_Click">
+                    <TextBlock Text="Twitch&#x0a;反映"
+                               FontSize="10"
+                               TextAlignment="Center"
+                               LineHeight="11">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="-1"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Button>
 
                 <Button Grid.Row="1" Content="X告知" 
-                    Margin="2, 2, 2, 4"
+                    Margin="0,1,2,3"
+                    Background="#FF565656"
+                    BorderBrush="#FF777777"
+                    Foreground="White"
                     Click="TweetButton_Click"/>
             </Grid>
 
-            <Grid Grid.Column="1" >
+            <Grid Grid.Column="2" >
                 <StackPanel Grid.Column="0" Grid.Row="0"
-                        Margin="8, 8, 8, 4"
+                        Margin="2,4,8,4"
                         Background="Black">
                     <Image x:Name="SelectCategoryBoxArt"
                        HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Column="2" Margin="-8, 12, 0, 4">
+            <Grid Grid.Column="1" Margin="0,0,0,4">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="1*"/>
-                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="28"/>
+                    <RowDefinition Height="22"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0"
-                  Margin="8, 0, 8, 0" >
+                <Grid Grid.Row="0" Margin="8,0,8,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="64"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" x:Name="SelectCategoryIdTextBlock" 
-                       Padding="2, 2, 2, 2" 
-                       Foreground="Black" FontSize="12" Background="DarkGray">
-                    </TextBlock>
-                    <Button Grid.Column="1" x:Name="GetTitleButton" Content="設定取得" 
-                        Height="24" Margin="8, 0, 0, 0" 
+                    <TextBlock x:Name="TwitchSettingStatusTextBlock"
+                               Text="設定未反映"
+                               Foreground="#FFFF6B6B"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" x:Name="GetTitleButton" Content="Twitch設定読込"
+                        Width="88" Height="22"
+                        Margin="6,0,0,0"
+                        FontSize="11"
+                        Background="#FF565656"
+                        BorderBrush="#FF777777"
+                        BorderThickness="1"
+                        Foreground="White"
+                        HorizontalAlignment="Right"
                         VerticalAlignment="Center"
                         Click="GetTitleButton_Click"/>
                 </Grid>
                 <TextBlock Grid.Row="1" x:Name="SelectCategoryNameTextBlock" 
-                       TextWrapping="Wrap" Padding="2, 2, 2, 2" Margin="8, 8, 8, 0" 
+                       TextWrapping="Wrap" Padding="2" Margin="8,0,8,0" 
                        Foreground="Black" FontSize="9" Background="DarkGray" 
                        MouseLeftButtonDown="SelectCategpryNameTextBlock_MouseLeftButtonDown">
                 </TextBlock>
+                <TextBlock Grid.Row="2" x:Name="SteamUrlTextBlock"
+                           Margin="8,1,8,0" Height="16"
+                           Foreground="Black" FontSize="8" Background="DarkGray"/>
             </Grid>
 
             <Grid Grid.Column="3" Margin="0, 0, 0, 4"
@@ -107,10 +203,20 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Label Grid.Row="0" x:Name="TitleWordNum"
-                   Content="0/140"
-                   Padding="0, 0, 0, 0"
-                   Foreground="White" />
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="反映されるタイトル"
+                               Foreground="LightGray"
+                               FontSize="10"
+                               VerticalAlignment="Center"/>
+                    <Label Grid.Column="1" x:Name="TitleWordNum"
+                           Content="0/140"
+                           Padding="0"
+                           Foreground="White"/>
+                </Grid>
 
                 <TextBlock Grid.Row="1" x:Name="CurrentTitleTextBlock" 
                        Padding="2, 2, 2, 2"
@@ -132,11 +238,22 @@
                     </StackPanel>
                     <StackPanel Grid.Row="0" Orientation="Horizontal"
                                 HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <TextBlock Text="送信先" Foreground="LightGray" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <ComboBox x:Name="TargetAccountComboBox" Width="150"
-                                  DisplayMemberPath="UserName" SelectedValuePath="Id"
-                                  SelectionChanged="TargetAccountComboBox_SelectionChanged"
-                                  ToolTip="設定の送信先アカウント"/>
+                        <Button Content="ヘルプ"
+                                Width="42" Height="22" Padding="0"
+                                Background="#FF565656" BorderBrush="#FF777777" BorderThickness="1"
+                                Foreground="White" Click="OpenHelpWindowButton_Click"/>
+                        <Button Content="設定"
+                                Width="38" Height="22" Margin="4,0,0,0" Padding="0"
+                                Background="#FF565656" BorderBrush="#FF777777" BorderThickness="1"
+                                Foreground="White" Click="OpenSettingsWindowButton_Click"/>
+                        <Button Content="パッチノート"
+                                Width="68" Height="22" Margin="4,0,0,0" Padding="0"
+                                Background="#FF565656" BorderBrush="#FF777777" BorderThickness="1"
+                                Foreground="White" Click="OpenPatchNotesWindowButton_Click"/>
+                        <Button Content="AppLog"
+                                Width="48" Height="22" Margin="4,0,0,0" Padding="0"
+                                Background="#FF565656" BorderBrush="#FF777777" BorderThickness="1"
+                                Foreground="White" Click="OpenAppLogWindowButton_Click"/>
                     </StackPanel>
                     <Grid Grid.Row="1" x:Name="StreamMetricsGrid" Margin="0,0,104,0">
                         <Grid.ColumnDefinitions>
@@ -162,8 +279,35 @@
                     </Grid>
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <Button x:Name="ObsStreamButton" Content="OBS 配信開始" Width="96" Height="26"
-                                Background="Green" Foreground="White"
-                                IsEnabled="True" Click="ObsStreamButton_Click" ToolTip="OBSの配信を開始"/>
+                                IsEnabled="True" Click="ObsStreamButton_Click" ToolTip="OBSの配信を開始">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Green"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderBrush" Value="#FF5C8A5C"/>
+                                    <Setter Property="Opacity" Value="1"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#FF565656"/>
+                                            <Setter Property="Foreground" Value="#FF303030"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -172,35 +316,224 @@
         <!-- シーン切替欄の開閉／SteamURL -->
         <Grid
             Grid.Row="2"
-            Margin="8, 0, 8, 0">
+            Height="22"
+            Margin="8,0,8,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Label Grid.Column="0" Content="SteamURL" Foreground="White" />
-            <TextBlock Grid.Column="1" x:Name="SteamUrlTextBlock"
-                       Margin="8,0,8,0" Height="16"
-                       Foreground="Black" FontSize="8" Background="DarkGray" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                        Margin="8,0,0,0"
+                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBlock Text="選択アカウント"
+                           Foreground="LightGray"
+                           Margin="0,0,6,0"
+                           VerticalAlignment="Center"/>
+                <ComboBox x:Name="TargetAccountComboBox"
+                          Width="150" Height="22"
+                          Padding="4,0"
+                          Background="#FF565656"
+                          Foreground="White"
+                          BorderBrush="#FF777777"
+                          BorderThickness="1"
+                          DisplayMemberPath="UserName"
+                          SelectedValuePath="Id"
+                          SelectionChanged="TargetAccountComboBox_SelectionChanged"
+                          ToolTip="操作対象のTwitchアカウント">
+                    <ComboBox.Template>
+                        <ControlTemplate TargetType="ComboBox">
+                            <Grid>
+                                <ToggleButton Focusable="False"
+                                              Foreground="White"
+                                              ClickMode="Press"
+                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="#FF565656"
+                                                    BorderBrush="#FF777777"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="22"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <ContentPresenter Margin="6,0,2,0"
+                                                                      VerticalAlignment="Center"
+                                                                      TextElement.Foreground="White"
+                                                                      Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                      ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                      ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                                                    <TextBlock Grid.Column="1" Text="▼"
+                                                               Foreground="White" FontSize="9"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <Popup x:Name="PART_Popup"
+                                       Placement="Bottom"
+                                       IsOpen="{TemplateBinding IsDropDownOpen}"
+                                       AllowsTransparency="True"
+                                       Focusable="False"
+                                       PopupAnimation="Fade">
+                                    <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                            Margin="0,1,0,0"
+                                            Background="#FF565656"
+                                            BorderBrush="#FF777777"
+                                            BorderThickness="1">
+                                        <ScrollViewer MaxHeight="300">
+                                            <ItemsPresenter/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </ControlTemplate>
+                    </ComboBox.Template>
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="Background" Value="#FF565656"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Padding" Value="6,3"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ComboBoxItem">
+                                        <Border x:Name="ItemBorder"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter VerticalAlignment="Center"
+                                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsHighlighted" Value="True">
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF707070"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF464646"/>
+                                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="LightSeaGreen"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsHighlighted" Value="True">
+                                    <Setter Property="Background" Value="#FF707070"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#FF464646"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+                                    <Setter Property="BorderThickness" Value="2"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                </ComboBox>
+            </StackPanel>
+
             <Button x:Name="ObsSceneShortcutToggleButton"
-                    Grid.Column="2" Content="シーン・ソース ▲"
-                    Width="96" Height="22" Margin="5,0,0,0"
-                    FontSize="10" VerticalAlignment="Center"
-                    Click="ObsSceneShortcutToggleButton_Click"
-                    ToolTip="OBSシーン・ソース切替ボタンの表示／非表示"/>
+                    Grid.Column="0" Content="ショートカット ☰"
+                    Width="90" Height="22" Margin="0"
+                    Padding="0" FontSize="11" VerticalAlignment="Center"
+                    Foreground="White" Background="#FF565656"
+                    BorderBrush="#FF777777" BorderThickness="1" Cursor="Hand"
+                    Click="ObsSceneShortcutToggleButton_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="AccordionHeaderBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
         </Grid>
 
         <!-- 配信中にすぐ押せるOBSシーン・ソースショートカット -->
-        <Grid x:Name="ObsShortcutPanel" Grid.Row="3" Margin="8,1,8,1">
+        <Border x:Name="ObsShortcutPanel" Grid.Row="3" Margin="8,0,8,4"
+                Padding="8,7"
+                Background="#FF464646"
+                BorderBrush="#FF555555"
+                BorderThickness="1"
+                CornerRadius="0">
+        <Grid>
+         <Grid.Resources>
+            <Style x:Key="ObsShortcutButtonBaseStyle" TargetType="Button">
+                <Setter Property="Background" Value="#FF565656"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderBrush" Value="#FF777777"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="6,0"/>
+                <Setter Property="Opacity" Value="1"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="ObsSceneShortcutButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource ObsShortcutButtonBaseStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsCurrentScene}" Value="True">
+                        <Setter Property="Background" Value="#FF464646"/>
+                        <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </DataTrigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="#FF565656"/>
+                        <Setter Property="Foreground" Value="#FF303030"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="ObsSourceShortcutButtonStyle"
+                   TargetType="Button"
+                   BasedOn="{StaticResource ObsShortcutButtonBaseStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsVisible}" Value="True">
+                        <Setter Property="Background" Value="#FF464646"/>
+                        <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </DataTrigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Background" Value="#FF565656"/>
+                        <Setter Property="Foreground" Value="#FF303030"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+         </Grid.Resources>
          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Grid x:Name="ObsSceneShortcutPanel" Grid.Column="0" Margin="0,0,5,0">
+        <Grid x:Name="ObsSceneShortcutPanel" Grid.Column="0" Margin="0,0,6,0" Background="#FF4C4C4C">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="OBSシーン&#x0a;選択" Foreground="LightGray" VerticalAlignment="Center"
-                       TextAlignment="Center" LineHeight="11" Margin="4,0,6,0" FontSize="10"/>
+            <TextBlock Text="SCENE&#x0a;シーン選択" Foreground="#FFD0D0D0" VerticalAlignment="Center"
+                       TextAlignment="Center" LineHeight="12" Margin="8,0,9,0" FontSize="10" FontWeight="SemiBold"/>
             <Grid Grid.Column="1">
                 <TextBlock x:Name="ObsSceneShortcutEmptyTextBlock"
                            Text="OBSタブ ＞ シーン切替タブにてシーンの登録ができます"
@@ -209,31 +542,32 @@
                     <StackPanel>
                         <ItemsControl x:Name="MainObsSceneShortcutItemsControl">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Margin="1" MinWidth="96" Height="22" Padding="6,0" FontSize="10" Click="ObsSceneShortcutButton_Click"><Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding IsCurrentScene}" Value="True"><Setter Property="Background" Value="#FF3D8B4D"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></DataTemplate></ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSceneShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSceneShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <ItemsControl x:Name="SubObsSceneShortcutItemsControl">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Margin="1" MinWidth="96" Height="22" Padding="6,0" FontSize="10" Click="ObsSceneShortcutButton_Click"><Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding IsCurrentScene}" Value="True"><Setter Property="Background" Value="#FF3D8B4D"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></DataTemplate></ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSceneShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSceneShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
         </Grid>
 
-        <Grid x:Name="ObsSourceShortcutPanel" Grid.Column="1" Margin="5,0,0,0">
+        <Grid x:Name="ObsSourceShortcutPanel" Grid.Column="1" Margin="6,0,0,0" Background="#FF4C4C4C">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <TextBlock Text="OBSソース&#x0a;表示" Foreground="LightGray" VerticalAlignment="Center" TextAlignment="Center" LineHeight="11" Margin="4,0,6,0" FontSize="10"/>
+            <TextBlock Text="SOURCE&#x0a;ソース表示" Foreground="#FFD0D0D0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="12" Margin="8,0,9,0" FontSize="10" FontWeight="SemiBold"/>
             <Grid Grid.Column="1">
                 <TextBlock x:Name="ObsSourceShortcutEmptyTextBlock" Text="OBSタブ ＞ ソース切替タブにてソースの登録ができます" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0"/>
                 <ScrollViewer x:Name="ObsSourceShortcutScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <ItemsControl x:Name="MainObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Margin="1" MinWidth="96" Height="22" Padding="6,0" FontSize="10" Click="ObsSourceShortcutButton_Click"><Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF3D8B4D"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-                        <ItemsControl x:Name="SubObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Margin="1" MinWidth="96" Height="22" Padding="6,0" FontSize="10" Click="ObsSourceShortcutButton_Click"><Button.Style><Style TargetType="Button"><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF3D8B4D"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Button.Style></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        <ItemsControl x:Name="MainObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        <ItemsControl x:Name="SubObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
         </Grid>
         </Grid>
+        </Border>
 
         <Grid 
             Grid.Row="4"
@@ -250,6 +584,11 @@
             </Grid.RowDefinitions>
 
             <TabControl x:Name="MainTabControl" Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2">
+                <TabControl.ItemContainerStyle>
+                    <Style TargetType="TabItem">
+                        <Setter Property="Width" Value="64"/>
+                    </Style>
+                </TabControl.ItemContainerStyle>
                 <TabControl.Template>
                     <ControlTemplate TargetType="TabControl">
                         <Grid KeyboardNavigation.TabNavigation="Local">
@@ -294,6 +633,7 @@
                                     MinWidth="560" Width="Auto">
 
                                     <Grid DockPanel.Dock="Top"
+                                          Margin="4,4,0,0"
                                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -302,9 +642,7 @@
 
                                         <StackPanel Grid.Column="0" Margin="0,0,4,0">
                                             <Label Margin="0" Padding="0"
-                                                   Foreground="White" Content="タイトル編集"/>
-                                            <Label Margin="0" Padding="0"
-                                                   Foreground="White" Content="配信タイトルの本文"/>
+                                                   Foreground="White" Content="タイトル本文編集：${title}の中身"/>
                                             <TextBox x:Name="TitleEditTextBox"
                                                      Height="48" HorizontalAlignment="Stretch"
                                                      VerticalAlignment="Top" Text=""
@@ -314,9 +652,7 @@
 
                                         <StackPanel Grid.Column="1" Margin="4,0,0,0">
                                             <Label Margin="0" Padding="0"
-                                                   Foreground="White" Content="タイトルプレースホルダーの組み合わせ"/>
-                                            <Label Margin="0" Padding="0"
-                                                   Foreground="White" Content="${title}：左のタイトル / ${friend}：フレンド / ${date}：今日の日付 / ${category_ja}：カテゴリ名（日本語）"/>
+                                                   Foreground="White" Content="プレースホルダー配置※右のタイトルタグをクリックでカーソル位置に挿入"/>
                                             <TextBox x:Name="TitlePlaceholderTextBox"
                                                      Height="48" HorizontalAlignment="Stretch"
                                                      VerticalAlignment="Top" Text="${title}"
@@ -340,8 +676,8 @@
 
                                         <Label 
                                             Grid.Row="0" Grid.Column="0" 
-                                            Content="タイトルログ ※クリックでタイトル編集にコピー"
-                                            Margin="0, 0, 0, 0" Padding="0, 0, 0, 0"
+                                            Content="送信履歴 ※クリックで現在の編集領域に反映"
+                                            Margin="4,0,0,0" Padding="0"
                                             Foreground="White"
                                             VerticalContentAlignment="Bottom"/>
                                         
@@ -349,7 +685,8 @@
                                             Grid.Row="1" Grid.Column="0" 
                                             x:Name="TitleTextLogListBox" 
                                             ItemsSource="{Binding TitleTextFormList}" 
-                                            Background="LightGray"
+                                            Background="#FF404040"
+                                            Margin="4,0,4,8"
                                             Width="Auto" 
                                             HorizontalAlignment="Stretch" 
                                             HorizontalContentAlignment="Stretch" 
@@ -367,26 +704,42 @@
                                                             </Grid.ColumnDefinitions>
                                                             <Image Source="{Binding CategoryBoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
 
-                                                            <StackPanel Grid.Column="1" Margin="8, 0, 8, 0">
-                                                                <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="Black" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                                                            <StackPanel Grid.Column="1" Margin="8,0,28,0">
+                                                                <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
                                                                 <TextBlock Text="{Binding TitlePlaceholder, StringFormat=テンプレート：{0}}"
-                                                                           Foreground="DimGray" FontSize="11" TextWrapping="Wrap"/>
+                                                                           Foreground="LightGray" FontSize="11" TextWrapping="Wrap"/>
 
                                                                 <Grid Margin="0" Height="Auto">
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="Auto"/>
                                                                         <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="Auto"/>
                                                                     </Grid.ColumnDefinitions>
 
-                                                                    <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="Black" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                                                    <TextBlock Text="{Binding CategoryName}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
                                                                     <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0">
-                                                                        <Label Margin="0" VerticalAlignment="Bottom" Foreground="Black" FontSize="10">最終使用日：</Label>
-                                                                        <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="Black" TextWrapping="Wrap"></TextBlock>
+                                                                        <Label Margin="0" VerticalAlignment="Bottom" Foreground="LightGray" FontSize="10">最終使用日：</Label>
+                                                                        <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="LightGray" TextWrapping="Wrap"></TextBlock>
                                                                     </StackPanel>
-                                                                    <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTextLogDeleteButton_Click"/>
                                                                 </Grid>
                                                             </StackPanel>
+                                                            <Button Grid.Column="1"
+                                                                    Width="20" Height="20"
+                                                                    Margin="0,2,4,0"
+                                                                    Padding="0"
+                                                                    HorizontalAlignment="Right"
+                                                                    VerticalAlignment="Top"
+                                                                    Background="Transparent"
+                                                                    Foreground="#FFFF6F78"
+                                                                    BorderThickness="0"
+                                                                    FontSize="16"
+                                                                    Click="TitleTextLogDeleteButton_Click">
+                                                                <TextBlock Text="×"
+                                                                           Padding="0,0,0,3"
+                                                                           TextAlignment="Center"
+                                                                           Foreground="#FFFF6F78"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                            </Button>
                                                         </Grid>
                                                         <Border Width="Auto" Height="2" Background="White"/>
                                                     </StackPanel>
@@ -394,15 +747,25 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
 
-                                        <Label 
-                                            Grid.Row="0" Grid.Column="1" 
-                                            Margin="4, 0, 0, 0" 
-                                            Foreground="White" 
-                                            Content="カテゴリ一覧 ※ダブルクリックで選択"
-                                            VerticalAlignment="Bottom"/>
+                                        <Grid Grid.Row="0" Grid.Column="1" Margin="4,0,0,0">
+                                            <Label Foreground="White"
+                                                   Padding="0"
+                                                   Content="カテゴリ一覧 ※ダブルクリックで送信内容に設定"
+                                                   VerticalAlignment="Center"/>
+                                            <Button Content="設定"
+                                                    Width="44" Height="20"
+                                                    Padding="0"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center"
+                                                    Background="#FF565656"
+                                                    BorderBrush="#FF777777"
+                                                    BorderThickness="1"
+                                                    Foreground="White"
+                                                    Click="OpenCategorySettingsButton_Click"/>
+                                        </Grid>
                                         
                                         <ListBox Grid.Row="1" Grid.Column="1"
-                                                 Margin="4, 0, 0, 0"
+                                                 Margin="4,0,0,8"
                                                  ItemsSource="{Binding CategoryFormList, ElementName=CategoryPanel}"
                                                  x:Name="OverviewCategoryListBox"
                                                  Background="#FF404040"
@@ -492,7 +855,7 @@
                 </TabItem>
 
                 <TabItem x:Name="ChatStatisticsTabItem"
-                         Header="チャット統計"
+                         Header="統計"
                          Visibility="Collapsed">
                     <panels:ChatStatisticsPanel x:Name="ChatStatisticsPanel"
                                                 CloseRequested="ChatStatisticsPanel_CloseRequested"/>
@@ -506,7 +869,7 @@
                     <panels:FriendPanel x:Name="FriendPanel"/>
                 </TabItem>
 
-                <TabItem Header="カテゴリ">
+                <TabItem Header="カテゴリ" Visibility="Collapsed">
                     <panels:CategoryPanel x:Name="CategoryPanel"/>
                 </TabItem>
 
@@ -526,18 +889,23 @@
                     <panels:ObsSettingPanel x:Name="ObsSettingPanel"/>
                 </TabItem>
 
-                <TabItem Header="設定" controls:SplitTabPanel.IsRightAligned="True">
-                    <panels:SettingPanel x:Name="SettingPanel"/>
-                </TabItem>
-
-                <TabItem Header="パッチノート" controls:SplitTabPanel.IsRightAligned="True">
-                    <panels:PatchNotePanel x:Name="PatchNotePanel"/>
-                </TabItem>
-
-                <TabItem Header="AppLog" controls:SplitTabPanel.IsRightAligned="True">
-                    <panels:AppLogPanel x:Name="AppLogPanel"/>
-                </TabItem>
             </TabControl>
+
+            <!-- Window表示用パネルの待避ホスト。タブには表示しない。 -->
+            <Grid Grid.Row="1" Grid.ColumnSpan="2" Visibility="Collapsed">
+                <ContentControl x:Name="HelpPanelHost">
+                    <panels:HelpPanel x:Name="HelpPanel"/>
+                </ContentControl>
+                <ContentControl x:Name="SettingsPanelHost">
+                    <panels:SettingPanel x:Name="SettingPanel"/>
+                </ContentControl>
+                <ContentControl x:Name="PatchNotesPanelHost">
+                    <panels:PatchNotePanel x:Name="PatchNotePanel"/>
+                </ContentControl>
+                <ContentControl x:Name="AppLogPanelHost">
+                    <panels:AppLogPanel x:Name="AppLogPanel"/>
+                </ContentControl>
+            </Grid>
         </Grid>
 
         <!-- アカウント切替中はウィンドウ全体の操作をブロックする。 -->
@@ -574,4 +942,7 @@
         </Grid>
 
     </Grid>
+    </Grid>
+    </Border>
 </Window>
+

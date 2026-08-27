@@ -276,39 +276,5 @@ namespace JTSA.Panels
             }
         }
 
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void CategorySetButton_Click(object sender, RoutedEventArgs e)
-        {
-            if ((sender as Button)?.DataContext is CategoryForm item)
-            {
-                mainWindow.CurrentCategoryId = item.CategoryId;
-                mainWindow.CurrentCategoryName = item.DisplayName;
-                mainWindow.CurrentCategoryBoxArtUrl = item.BoxArtUrl;
-            }
-
-            ReloadCategory();
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void PlayCategoryAddButton_Click(object sender, RoutedEventArgs e)
-        {
-            // ボタンのDataContextから追加対象を取得
-            if ((sender as Button)?.DataContext is CategoryForm item)
-            {
-                mainWindow.PlayingGamePanel.AddPlaylistItem(item.CategoryId);
-            }
-
-            ReloadCategory();
-        }
     }
 }

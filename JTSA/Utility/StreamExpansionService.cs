@@ -304,7 +304,7 @@ internal sealed class StreamExpansionService
                 break;
 
             case "Image":
-                StreamExpansionOverlayService.ShowImage(item.Content);
+                StreamExpansionOverlayService.ShowImage(StreamExpansionImageSettings.Decode(item.Content));
                 break;
 
             default:
@@ -417,4 +417,6 @@ internal sealed class StreamExpansionService
         }
         finally { executionLock.Release(); }
     }
+
+    internal Task PlayAudioPreviewAsync(string path, int volume) => PlayAudioAsync(path, volume);
 }

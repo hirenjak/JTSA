@@ -14,35 +14,29 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-            <Label Content="Twitchカテゴリの検索" Foreground="White"/>
+            <Label Content="カテゴリ検索※ダブルクリックで一覧に追加" Foreground="White"/>
             <TextBox x:Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTextBox_TextChanged"/>
         </StackPanel>
 
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="24"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <Label Grid.Row="0" Content="※ダブルクリックすると左のカテゴリ一覧に追加" Foreground="White"/>
-            <ListBox ItemsSource="{Binding SearchCategoryFormList}" Grid.Row="1" Background="#FF404040"
+        <ListBox ItemsSource="{Binding SearchCategoryFormList}" 
+                 Grid.Row="1" Background="#FF404040"
+                 Margin="0, 4, 0, 0"
                  x:Name="CategorySearchListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                  MouseDoubleClick="CategorySearchListBox_DoubleClick">
 
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="8, 0, 8, 0">
-                                <Image Source="{Binding BoxArtUrl}" Width="36" Height="48" Margin="0,0,8,0"/>
-                                <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
-                            </StackPanel>
-
-                            <Border Width="Auto" Height="2" Background="White"/>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="8, 0, 8, 0">
+                            <Image Source="{Binding BoxArtUrl}" Width="36" Height="48" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
                         </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </Grid>
+
+                        <Border Width="Auto" Height="2" Background="White"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </UserControl>

@@ -16,6 +16,32 @@ namespace JTSA.Panels
         {
             CurrentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString(2) ?? "-";
 
+
+            PatchNotes.Add(new PatchNoteForm
+            {
+                Version = "v1.2.20",
+                ReleaseDate = "2026/08/28",
+                Summary = "ヘッダ及び配信概要のデザイン調整",
+                Changes =
+                [
+                    "【タブ全体】",
+                    "・タブ幅を均一になるようデザイン調整",
+                    "・ヘルプ、設定、パッチノート、AppLogをウィンドウ右上のボタンからウィンドウを開くように変更",
+                    "・カテゴリを配信概要のカテゴリ一覧横の設定ボタンからウィンドウを開くように変更",
+                    "【配信概要パネル】",
+                    "・デザインを大幅に調整",
+                    "【レイドパネル】",
+                    "・テスト用ボタン周りのデザインを調整",
+                    "【配信拡張パネル】",
+                    "・画像の表示サイズおよび表示位置を指定できるように改善",
+                    "・テストボタンを追加",
+                    "【修正箇所】",
+                    "・シーンソースボタンを押しても上のショートカット部分が表示されない不具合を修正",
+                    "・OBSの自動接続を切っていても接続をしてしまう不具合を修正",
+                ]
+            });
+            
+
             PatchNotes.Add(new PatchNoteForm
             {
                 Version = "v1.2.19",

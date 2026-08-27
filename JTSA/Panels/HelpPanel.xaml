@@ -1,0 +1,191 @@
+<UserControl x:Class="JTSA.Panels.HelpPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="600"
+             d:DesignWidth="1000"
+             Background="#FF404040">
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" MinWidth="190"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*" MinWidth="320"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左ペイン: ヘルプ項目一覧 -->
+        <Border Grid.Column="0"
+                Background="#FF353535"
+                BorderBrush="#FF666666"
+                BorderThickness="1"
+                CornerRadius="4">
+            <DockPanel>
+                <Border DockPanel.Dock="Top"
+                        Padding="14,12"
+                        BorderBrush="#FF5A5A5A"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock Text="ヘルプ"
+                                   Foreground="White"
+                                   FontSize="20"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="確認したい項目を選択"
+                                   Margin="0,3,0,0"
+                                   Foreground="#FFB8B8B8"
+                                   FontSize="12"/>
+                    </StackPanel>
+                </Border>
+
+                <ListBox x:Name="TopicListBox"
+                         ItemsSource="{Binding Topics}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Foreground="White"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="6,3"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="8,7">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Summary}"
+                                           Margin="0,2,0,0"
+                                           Foreground="#FFC0C0C0"
+                                           FontSize="11"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Column="1"
+                      Width="5"
+                      HorizontalAlignment="Stretch"
+                      Background="Transparent"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Columns"/>
+
+        <!-- 右ペイン: 選択項目の詳細 -->
+        <Border Grid.Column="2"
+                Background="#FF353535"
+                BorderBrush="#FF666666"
+                BorderThickness="1"
+                CornerRadius="4"
+                DataContext="{Binding SelectedItem, ElementName=TopicListBox}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="24,20">
+                    <TextBlock Text="{Binding Title}"
+                               Foreground="White"
+                               FontSize="24"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Description}"
+                               Margin="0,10,0,0"
+                               Foreground="#FFE0E0E0"
+                               FontSize="14"
+                               LineHeight="22"
+                               TextWrapping="Wrap"/>
+
+                    <TextBlock Text="{Binding SectionTitle}"
+                               Margin="0,24,0,8"
+                               Foreground="White"
+                               FontSize="17"
+                               FontWeight="SemiBold"/>
+                    <ItemsControl ItemsSource="{Binding Steps}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="24"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="•" Foreground="#FF75C8FF" FontSize="17"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding}"
+                                               Foreground="#FFE0E0E0"
+                                               FontSize="14"
+                                               LineHeight="21"
+                                               TextWrapping="Wrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Margin="0,24,0,0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SourceSettings.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="OBSブラウザソース"
+                                   Foreground="White"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="OBSでソースを追加し、「ブラウザ」を選んで対応するURLを設定してください。"
+                                   Margin="0,6,0,10"
+                                   Foreground="#FFD0D0D0"
+                                   TextWrapping="Wrap"/>
+                        <ItemsControl ItemsSource="{Binding SourceSettings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="190"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Name}"
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Url}"
+                                                 Padding="7,5"
+                                                 IsReadOnly="True"
+                                                 Foreground="White"
+                                                 Background="#FF4A4747"
+                                                 BorderBrush="#FF707070"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="ブラウザソースの背景は透明です。"
+                                   Foreground="#FFB8B8B8"
+                                   FontSize="12"/>
+                    </StackPanel>
+
+                    <Border Margin="0,24,0,0"
+                            Padding="14,12"
+                            Background="#FF454545"
+                            BorderBrush="#FF666666"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="ヒント"
+                                       Foreground="#FF75C8FF"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Tip}"
+                                       Margin="0,6,0,0"
+                                       Foreground="#FFD8D8D8"
+                                       LineHeight="20"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>
