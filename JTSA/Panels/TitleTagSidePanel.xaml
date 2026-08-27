@@ -11,81 +11,116 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-                <Label Content="※追加したいタイトルタグを入れて追加ボタンを押す" Foreground="White"/>
                 <Grid Grid.Row="0" Grid.Column="0" Margin="0, 0, 0, 0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="4*"/>
                         <ColumnDefinition Width="1*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBox Name="TitleTextTagAddTextBox" Grid.Column="0"></TextBox>
-                    <Button Grid.Column="1" Margin="8, 0, 0, 0" Click="TitleTagAddButton_Click">追加</Button>
+                    <Label Grid.Row="0" Content="タイトルタグ" Foreground="White"/>
+                    <Grid Grid.Column="0" Height="20" VerticalAlignment="Center">
+                        <TextBox x:Name="TitleTextTagAddTextBox"
+                                 Padding="3,0"
+                                 VerticalContentAlignment="Center"/>
+                        <TextBlock Text="追加したいタイトルタグを入力"
+                                   Margin="5,0,0,0"
+                                   Foreground="Gray"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=TitleTextTagAddTextBox}"
+                                                     Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Button Grid.Column="1" Margin="8,0,0,0"
+                            Height="20" Padding="0"
+                            VerticalAlignment="Center"
+                            Background="LightSeaGreen"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Click="TitleTagAddButton_Click">追加</Button>
                 </Grid>
             </StackPanel>
 
-            <Grid Height="Auto" Grid.Row="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="24"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <Label Grid.Row="0" Content="※クリックすると ${ID} 形式でプレースホルダー欄のカーソル位置に挿入" Foreground="White"/>
-                <ListBox ItemsSource="{Binding TitleTagFormList}" Grid.Row="1" Background="#FF404040"
+            <ListBox ItemsSource="{Binding TitleTagFormList}" Grid.Row="2" Background="#FF404040"
                     x:Name="TitleTagListBox"
+                     Margin="0, 4, 0, 0"
                     Height="Auto" Width="Auto"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                     SelectionChanged="TitleTagListBox_SelectionChanged" PreviewMouseDown="TitleTagListBox_PreviewMouseDown">
 
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <StackPanel Margin="8, 0, 8, 0">
-                                    <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="14" TextWrapping="Wrap">
-                                    </TextBlock>
-                                    <Grid Margin="0" Height="Auto">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <Grid Margin="8,0,8,0">
+                            <StackPanel Margin="0,0,28,0">
+                                <TextBlock Text="{Binding DisplayName}" Width="Auto" Foreground="White" FontSize="14" TextWrapping="Wrap">
+                                </TextBlock>
+                                <Grid Margin="0" Height="Auto">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-                                        <TextBlock Text="{Binding Placeholder}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
-                                        <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0" >
-                                            <StackPanel.Style>
-                                                <Style TargetType="StackPanel">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSystem}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </StackPanel.Style>
-                                            <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
-                                            <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
-                                        </StackPanel>
-                                        <Button Grid.Column="2" Content="削除" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center" Click="TitleTagDeleteButton_Click">
-                                            <Button.Style>
-                                                <Style TargetType="Button">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSystem}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Button.Style>
-                                        </Button>
-                                    </Grid>
-                                </StackPanel>
-
-                                <Border Width="Auto" Height="2" Background="White"/>
+                                    <TextBlock Text="{Binding Placeholder}" Width="Auto" Grid.Column="0" Foreground="White" FontSize="10" VerticalAlignment="Center"></TextBlock>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="8, 0, 0, 0" >
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <Label Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
+                                        <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
+                                    </StackPanel>
+                                </Grid>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
+                                    <Button Width="20" Height="20"
+                                            Margin="0,2,0,0" Padding="0"
+                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            Background="Transparent" Foreground="#FFFF6F78"
+                                            BorderThickness="0" FontSize="16"
+                                            Click="TitleTagDeleteButton_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Foreground" Value="#FFFF6F78"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <TextBlock Text="×"
+                                                   Padding="0,0,0,3"
+                                                   TextAlignment="Center"
+                                                   Foreground="#FFFF6F78"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Button>
+                            </Grid>
+
+                            <Border Width="Auto" Height="2" Background="White"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Grid>
     </DockPanel>
 </UserControl>

@@ -65,6 +65,7 @@ namespace JTSA
         private static readonly TimeSpan SecretPanelClickInterval = TimeSpan.FromSeconds(2);
         private int viewerCountConsecutiveClicks;
         private DateTime lastViewerCountClickUtc;
+        private string currentCategoryId = string.Empty;
 
         /// <summary> ヘッダ部分：現在の設定タイトル </summary>
         public string CurrentTitleText 
@@ -77,7 +78,8 @@ namespace JTSA
 			set
 			{ 
 				CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(value); 
-				TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";  
+				TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
+                SetTwitchSettingApplied(false);
 			} 
 		}
 
@@ -101,12 +103,13 @@ namespace JTSA
 		{
 			get
 			{
-				return SelectCategoryIdTextBlock.Text;
+				return currentCategoryId;
 			}
 
 			set
 			{
-				SelectCategoryIdTextBlock.Text = value;
+				currentCategoryId = value;
+                SetTwitchSettingApplied(false);
 
 				// カテゴリ設定をしたら同時にSteamURLを取得して設定
                 SteamUrlTextSet(value);
@@ -344,10 +347,7 @@ namespace JTSA
         {
             var isCompact = e.NewSize.Width < 1000;
 
-            SelectCategoryIdTextBlock.Visibility = isCompact
-                ? Visibility.Collapsed
-                : Visibility.Visible;
-            CategoryHeaderColumn.Width = new GridLength(isCompact ? 120 : 160);
+            CategoryHeaderColumn.Width = new GridLength(isCompact ? 150 : 180);
             TitleHeaderColumn.Width = new GridLength(isCompact ? 240 : 480);
 
             SelectCategoryNameTextBlock.FontSize = isCompact ? 8 : 9;
@@ -355,9 +355,6 @@ namespace JTSA
             StreamStatusGrid.Margin = isCompact
                 ? new Thickness(4, 4, 0, 4)
                 : new Thickness(8, 4, 0, 4);
-
-            Grid.SetColumn(GetTitleButton, isCompact ? 0 : 1);
-            Grid.SetColumnSpan(GetTitleButton, isCompact ? 2 : 1);
 
         }
 
@@ -446,7 +443,7 @@ namespace JTSA
 
         private void ObsSceneShortcutToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            var shouldShow = ObsSceneShortcutPanel.Visibility != Visibility.Visible;
+            var shouldShow = ObsShortcutPanel.Visibility != Visibility.Visible;
             ApplyObsSceneShortcutPanelVisibility(shouldShow);
             DAO_Setting.InsertUpdate(
                 DAO_Setting.SettingName.ObsSceneShortcutPanelVisible,
@@ -458,7 +455,20 @@ namespace JTSA
             ObsShortcutPanel.Visibility = shouldShow
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-            ObsSceneShortcutToggleButton.Content = shouldShow ? "シーン・ソース ▲" : "シーン・ソース ▼";
+            ObsSceneShortcutToggleButton.Content = "ショートカット ☰";
+            ObsSceneShortcutToggleButton.Background = shouldShow
+                ? new SolidColorBrush(Color.FromRgb(70, 70, 70))
+                : new SolidColorBrush(Color.FromRgb(86, 86, 86));
+            ObsSceneShortcutToggleButton.Foreground = Brushes.White;
+            ObsSceneShortcutToggleButton.BorderBrush = shouldShow
+                ? new SolidColorBrush(Color.FromRgb(85, 85, 85))
+                : new SolidColorBrush(Color.FromRgb(119, 119, 119));
+            ObsSceneShortcutToggleButton.BorderThickness = shouldShow
+                ? new Thickness(1, 1, 1, 0)
+                : new Thickness(1);
+            ObsShortcutPanel.BorderThickness = shouldShow
+                ? new Thickness(1, 0, 1, 1)
+                : new Thickness(1);
             if (shouldShow)
                 _ = ObsSettingPanel.RefreshSourceVisibilityStatesAsync(SelectedTargetAccountId);
         }
@@ -678,7 +688,7 @@ namespace JTSA
             processLog.EventStartLogWrite();
 
             var title = CurrentTitleText;
-            var categoryId = SelectCategoryIdTextBlock.Text;
+            var categoryId = CurrentCategoryId;
             var categoryName = SelectCategoryNameTextBlock.Text;
             var categoryBoxArtUrl = SelectCategoryBoxArt.Source?.ToString() ?? "";  // ボックスアートが無いカテゴリではSourceがnullになる
 
@@ -697,7 +707,8 @@ namespace JTSA
 
             // TwitchAPIで配信タイトルを更新
             var response = await client.PatchAsync($"https://api.twitch.tv/helix/channels?broadcaster_id={target.Value.Account.BroadcasterId}", content);
-            if (response.IsSuccessStatusCode)
+            var titleApplied = response.IsSuccessStatusCode;
+            if (titleApplied)
             {
                 // 履歴追加処理
                 AddTitleText(
@@ -713,8 +724,9 @@ namespace JTSA
             }
 
             // カテゴリ設定処理
-            string gameId = SelectCategoryIdTextBlock.Text.Trim();
-            if(!await TwitchHelper.SetCategoryAsync(gameId, target.Value.Account.BroadcasterId, target.Value.AccessToken))
+            string gameId = CurrentCategoryId.Trim();
+            var categoryApplied = await TwitchHelper.SetCategoryAsync(gameId, target.Value.Account.BroadcasterId, target.Value.AccessToken);
+            if (!categoryApplied)
             {
                 processLog.ErrorLogWrite("カテゴリ設定処理失敗");
             }
@@ -750,6 +762,8 @@ namespace JTSA
             // サブアカウント送信時にメイン側の報酬を誤変更しない。
             if (target.Value.Account.BroadcasterId == TwitchHelper.BroadcasterId)
                 await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
+
+            SetTwitchSettingApplied(titleApplied && categoryApplied);
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -801,6 +815,7 @@ namespace JTSA
             CurrentCategoryId = category.Id;
             CurrentCategoryName = category.Name;
             CurrentCategoryBoxArtUrl = category.BoxArtUrl;
+            SetTwitchSettingApplied(true);
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -1173,7 +1188,7 @@ namespace JTSA
                     ? TitlePlaceholderReplacer.TitlePlaceholder
                     : selectedItem.TitlePlaceholder;
 
-                SelectCategoryIdTextBlock.Text = selectedItem.CategoryId;
+                CurrentCategoryId = selectedItem.CategoryId;
                 SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
                 if (!string.IsNullOrEmpty(selectedItem.CategoryBoxArtUrl))
                 {
@@ -1549,6 +1564,7 @@ namespace JTSA
                 CurrentCategoryJapaneseName);
             CurrentTitleTextBlock.Text = TitleTextFriendTagReplace(combinedTitleText);
             TitleWordNum.Content = CurrentTitleTextBlock.Text.Count() + "/140";
+            SetTwitchSettingApplied(false);
 
             processLog.SuccessLogWrite();
         }
@@ -1557,6 +1573,16 @@ namespace JTSA
 
 
         #region ===============privateメソッド===============
+
+        private void SetTwitchSettingApplied(bool isApplied)
+        {
+            if (TwitchSettingStatusTextBlock is null) return;
+
+            TwitchSettingStatusTextBlock.Text = isApplied ? "設定反映済" : "設定未反映";
+            TwitchSettingStatusTextBlock.Foreground = isApplied
+                ? new SolidColorBrush(Color.FromRgb(92, 214, 122))
+                : new SolidColorBrush(Color.FromRgb(255, 107, 107));
+        }
 
         /// <summary>
         /// SteamURLテキスト登録処理
