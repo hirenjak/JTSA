@@ -6,6 +6,30 @@
             mc:Ignorable="d"
             Background="#FF404040">
 
+    <UserControl.Resources>
+        <Style x:Key="SupportTestButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF565656"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF777777"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.FontSize="11"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*"/>
@@ -96,29 +120,37 @@
                 <TextBlock Text="配信内容集計" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
                 <Button DockPanel.Dock="Right" x:Name="TestSupportPanelToggleButton"
                         Content="テスト用" Width="70" Height="22" HorizontalAlignment="Right"
+                        Style="{StaticResource SupportTestButtonStyle}"
                         Click="TestSupportPanelToggleButton_Click"
                         ToolTip="配信内集計へテスト値を追加するボタンを表示／非表示"/>
             </DockPanel>
-            <StackPanel Grid.Row="1" x:Name="TestSupportButtonPanel" Orientation="Horizontal"
-                        HorizontalAlignment="Right" Margin="0,6,0,0" Visibility="Collapsed">
-                <Button Content="Bits" Width="48" Height="22" Click="AddTestBitsButton_Click"
+            <Border Grid.Row="1" x:Name="TestSupportButtonBorder"
+                    HorizontalAlignment="Right"
+                    Background="#FF464646"
+                    BorderBrush="#FF555555"
+                    BorderThickness="1,0,1,1"
+                    Padding="6"
+                    Visibility="Collapsed">
+            <StackPanel x:Name="TestSupportButtonPanel" Orientation="Horizontal">
+                <Button Content="Bits" Width="48" Height="22" Style="{StaticResource SupportTestButtonStyle}" Click="AddTestBitsButton_Click"
                         ToolTip="テストBitsユーザーへ100 Bitsを加算します。現在の配信内集計に残ります。"/>
-                <Button Content="サブスク" Width="62" Height="22" Margin="4,0,0,0"
+                <Button Content="サブスク" Width="62" Height="22" Margin="4,0,0,0" Style="{StaticResource SupportTestButtonStyle}"
                         Click="AddTestSubscribeButton_Click"
                         ToolTip="累計1か月・Tier 1のテストサブスクユーザーを追加し、配信拡張を実行します。"/>
-                <Button Content="サブギフ" Width="62" Height="22" Margin="4,0,0,0"
+                <Button Content="サブギフ" Width="62" Height="22" Margin="4,0,0,0" Style="{StaticResource SupportTestButtonStyle}"
                         Click="AddTestGiftButton_Click"
                         ToolTip="Tier 1のテストサブギフユーザーを配信内集計へ追加し、配信拡張を実行します。"/>
-                <Button Content="レイド" Width="54" Height="22" Margin="4,0,0,0"
+                <Button Content="レイド" Width="54" Height="22" Margin="4,0,0,0" Style="{StaticResource SupportTestButtonStyle}"
                         Click="AddTestRaidButton_Click"
                         ToolTip="テストレイドユーザーへ10人を加算します。現在の配信内集計に残ります。"/>
-                <Button Content="フォロー" Width="62" Height="22" Margin="4,0,0,0"
+                <Button Content="フォロー" Width="62" Height="22" Margin="4,0,0,0" Style="{StaticResource SupportTestButtonStyle}"
                         Click="AddTestFollowButton_Click"
                         ToolTip="テストフォローユーザーを現在の配信内集計へ追加します。"/>
-                <Button Content="クリア" Width="54" Height="22" Margin="4,0,0,0"
+                <Button Content="クリア" Width="54" Height="22" Margin="4,0,0,0" Style="{StaticResource SupportTestButtonStyle}"
                         Click="ClearTestSupportButton_Click"
                         ToolTip="テスト用ボタンで追加したユーザーだけを配信内集計から削除します。"/>
             </StackPanel>
+            </Border>
             <Grid Grid.Row="2" Margin="0, 8, 0, 0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>

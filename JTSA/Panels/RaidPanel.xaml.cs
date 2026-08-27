@@ -148,9 +148,21 @@ namespace JTSA.Panels
 
         private void TestSupportPanelToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            TestSupportButtonPanel.Visibility = TestSupportButtonPanel.Visibility == Visibility.Visible
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            var isOpening = TestSupportButtonBorder.Visibility != Visibility.Visible;
+            TestSupportButtonBorder.Visibility = isOpening
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            TestSupportPanelToggleButton.Background = new System.Windows.Media.SolidColorBrush(
+                isOpening
+                    ? System.Windows.Media.Color.FromRgb(70, 70, 70)
+                    : System.Windows.Media.Color.FromRgb(86, 86, 86));
+            TestSupportPanelToggleButton.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                isOpening
+                    ? System.Windows.Media.Color.FromRgb(85, 85, 85)
+                    : System.Windows.Media.Color.FromRgb(119, 119, 119));
+            TestSupportPanelToggleButton.BorderThickness = isOpening
+                ? new Thickness(1, 1, 1, 0)
+                : new Thickness(1);
         }
 
         private async void AddTestBitsButton_Click(object sender, RoutedEventArgs e)

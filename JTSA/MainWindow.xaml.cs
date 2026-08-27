@@ -17,12 +17,14 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace JTSA
@@ -32,6 +34,8 @@ namespace JTSA
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		private const int DwmWindowCornerPreference = 33;
+		private const int DwmWindowCornerDoNotRound = 1;
 		public const string DefaultObsWebSocketUrl = "ws://127.0.0.1:4455";
 
 		private readonly ObsController mainObsController = new();
@@ -46,6 +50,8 @@ namespace JTSA
         private bool isObsStreaming;
         private bool? mainObsLastStreamingState;
         private bool? subObsLastStreamingState;
+        private bool mainObsHasConnected;
+        private bool subObsHasConnected;
 
 		/// <summary> タイトルログ用のリスト  </summary>
 		public ObservableCollection<TitleTextForm> TitleTextFormList { get; } = new();
@@ -65,7 +71,44 @@ namespace JTSA
         private static readonly TimeSpan SecretPanelClickInterval = TimeSpan.FromSeconds(2);
         private int viewerCountConsecutiveClicks;
         private DateTime lastViewerCountClickUtc;
-        private string currentCategoryId = string.Empty;
+		private string currentCategoryId = string.Empty;
+        private readonly Dictionary<FrameworkElement, ToolPanelWindow> toolPanelWindows = new();
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+
+            var preference = DwmWindowCornerDoNotRound;
+            DwmSetWindowAttribute(
+                new WindowInteropHelper(this).Handle,
+                DwmWindowCornerPreference,
+                ref preference,
+                Marshal.SizeOf<int>());
+        }
+
+        private void MainMinimizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void MainMaximizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }
+
+        private void MainCloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(
+            IntPtr windowHandle,
+            int attribute,
+            ref int attributeValue,
+            int attributeSize);
 
         /// <summary> ヘッダ部分：現在の設定タイトル </summary>
         public string CurrentTitleText 
@@ -409,6 +452,7 @@ namespace JTSA
             ObsSceneShortcutScrollViewer.Visibility = presets.Count == 0
                 ? Visibility.Collapsed
                 : Visibility.Visible;
+            UpdateObsShortcutButtonStates();
         }
 
         public long? SelectedTargetAccountId =>
@@ -427,6 +471,15 @@ namespace JTSA
             SubObsSourceShortcutItemsControl.Visibility = subPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
             ObsSourceShortcutEmptyTextBlock.Visibility = presets.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ObsSourceShortcutScrollViewer.Visibility = presets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            UpdateObsShortcutButtonStates();
+        }
+
+        private void UpdateObsShortcutButtonStates()
+        {
+            MainObsSceneShortcutItemsControl.IsEnabled = mainObsController.IsConnected;
+            MainObsSourceShortcutItemsControl.IsEnabled = mainObsController.IsConnected;
+            SubObsSceneShortcutItemsControl.IsEnabled = subObsController.IsConnected;
+            SubObsSourceShortcutItemsControl.IsEnabled = subObsController.IsConnected;
         }
 
         private async void ObsSourceShortcutButton_Click(object sender, RoutedEventArgs e)
@@ -546,7 +599,7 @@ namespace JTSA
 
             if (mainAutoConnect && DAO_Setting.SelectOneById(DAO_Setting.SettingName.MainObsTwitchAccountId) is not null)
             {
-                await ConnectObsAsync(forceReconnect: false, showError: false);
+                await ConnectObsAsync(forceReconnect: false);
                 if (mainObsController.IsConnected)
                     await ObsSettingPanel.RefreshSavedTextSourcesAsync(mainObsController, isSub: false);
             }
@@ -555,7 +608,7 @@ namespace JTSA
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value,
                 out _))
             {
-                await ConnectObsAsync(forceReconnect: false, showError: false, isSub: true);
+                await ConnectObsAsync(forceReconnect: false, isSub: true);
                 if (subObsController.IsConnected)
                     await ObsSettingPanel.RefreshSavedTextSourcesAsync(subObsController, isSub: true);
             }
@@ -822,7 +875,7 @@ namespace JTSA
         }
 
         /// <summary>保存済み設定でOBSへ接続し、ヘッダーの操作状態を更新する。</summary>
-        public async Task ConnectObsAsync(bool forceReconnect, bool showError, bool isSub = false)
+        public async Task ConnectObsAsync(bool forceReconnect, bool isSub = false)
         {
             var connectionLock = isSub ? subObsConnectionLock : mainObsConnectionLock;
             ObsSettingPanel.SetConnectionStatus(false, "接続待機中...", isSub);
@@ -844,8 +897,16 @@ namespace JTSA
                 await controller.ConnectAsync(url, password);
                 var connectedStreamingState = await Task.Run(controller.IsStreaming)
                     .WaitAsync(TimeSpan.FromSeconds(5));
-                if (isSub) subObsLastStreamingState = connectedStreamingState;
-                else mainObsLastStreamingState = connectedStreamingState;
+                if (isSub)
+                {
+                    subObsLastStreamingState = connectedStreamingState;
+                    subObsHasConnected = true;
+                }
+                else
+                {
+                    mainObsLastStreamingState = connectedStreamingState;
+                    mainObsHasConnected = true;
+                }
                 ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
                 var controlTarget = GetObsControlTarget();
                 if (controlTarget is not null &&
@@ -856,15 +917,14 @@ namespace JTSA
             }
             catch (Exception ex)
             {
-                SetObsButtonState(enabled: true, isStreaming: false);
+                SetObsButtonState(enabled: false, isStreaming: false);
                 ObsSettingPanel.SetConnectionStatus(false, "接続失敗", isSub);
                 AppLogPanel.Error(GetType().Name, $"OBS接続失敗 「 {ex.GetBaseException().Message} 」");
-                if (showError)
-                    MessageBox.Show($"OBSに接続できませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
             }
             finally
             {
                 isObsOperationRunning = false;
+                UpdateObsShortcutButtonStates();
                 connectionLock.Release();
             }
         }
@@ -878,18 +938,31 @@ namespace JTSA
                 return null;
             }
             var (controller, isSub) = target.Value;
-            if (!controller.IsConnected)
-                await ConnectObsAsync(forceReconnect: false, showError: true, isSub);
+            if (!controller.IsConnected && CanAutomaticallyConnectObs(isSub))
+                await ConnectObsAsync(forceReconnect: false, isSub);
             return controller.IsConnected ? controller : null;
         }
 
         public async Task<ObsController?> EnsureObsConnectedAsync(bool isSub)
         {
             var controller = isSub ? subObsController : mainObsController;
-            if (!controller.IsConnected)
-                await ConnectObsAsync(forceReconnect: false, showError: true, isSub);
+            if (!controller.IsConnected && CanAutomaticallyConnectObs(isSub))
+                await ConnectObsAsync(forceReconnect: false, isSub);
 
             return controller.IsConnected ? controller : null;
+        }
+
+        private bool CanAutomaticallyConnectObs(bool isSub)
+        {
+            if (isSub ? subObsHasConnected : mainObsHasConnected)
+                return true;
+
+            var legacyAutoConnect = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.ObsAutoConnect)?.Value;
+            var setting = isSub
+                ? DAO_Setting.SettingName.SubObsAutoConnect
+                : DAO_Setting.SettingName.MainObsAutoConnect;
+            return (DAO_Setting.SelectOneById(setting)?.Value ?? legacyAutoConnect) == "1";
         }
 
         public async Task SetObsTextSourceAsync(bool isSub, string sourceName, string text)
@@ -977,7 +1050,7 @@ namespace JTSA
             var target = GetObsControlTarget();
             if (target is null || !target.Value.Controller.IsConnected)
             {
-                SetObsButtonState(enabled: target is not null, isStreaming: false);
+                SetObsButtonState(enabled: false, isStreaming: false);
                 return;
             }
             try { await RefreshObsStreamStateAsync(target.Value.Controller); }
@@ -990,8 +1063,13 @@ namespace JTSA
             ObsStreamButton.IsEnabled = enabled;
             ObsStreamButton.Content = isStreaming ? "OBS 配信停止" : "OBS 配信開始";
             ObsStreamButton.ToolTip = isStreaming ? "OBSの配信を停止" : "OBSの配信を開始";
-            ObsStreamButton.Background = isStreaming ? Brushes.Red : Brushes.Green;
-            ObsStreamButton.Foreground = Brushes.White;
+            ObsStreamButton.Background = enabled
+                ? (isStreaming ? Brushes.Red : Brushes.Green)
+                : new SolidColorBrush(Color.FromRgb(86, 86, 86));
+            ObsStreamButton.Foreground = enabled
+                ? Brushes.White
+                : new SolidColorBrush(Color.FromRgb(48, 48, 48));
+            ObsStreamButton.BorderThickness = enabled ? new Thickness(1) : new Thickness(0);
         }
 
         /// <summary>OBS側で直接開始・停止された場合も、選択中の操作対象へ表示を追従させる。</summary>
@@ -1582,6 +1660,54 @@ namespace JTSA
             TwitchSettingStatusTextBlock.Foreground = isApplied
                 ? new SolidColorBrush(Color.FromRgb(92, 214, 122))
                 : new SolidColorBrush(Color.FromRgb(255, 107, 107));
+        }
+
+        private void OpenCategorySettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CategoryWindow
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+            CategoryPanel.ReloadCategory();
+        }
+
+        private void OpenHelpWindowButton_Click(object sender, RoutedEventArgs e) =>
+            OpenToolPanelWindow(HelpPanelHost, HelpPanel, "ヘルプ");
+
+        private void OpenSettingsWindowButton_Click(object sender, RoutedEventArgs e) =>
+            OpenToolPanelWindow(SettingsPanelHost, SettingPanel, "設定");
+
+        private void OpenPatchNotesWindowButton_Click(object sender, RoutedEventArgs e) =>
+            OpenToolPanelWindow(PatchNotesPanelHost, PatchNotePanel, "パッチノート");
+
+        private void OpenAppLogWindowButton_Click(object sender, RoutedEventArgs e) =>
+            OpenToolPanelWindow(AppLogPanelHost, AppLogPanel, "AppLog");
+
+        private void OpenToolPanelWindow(ContentControl panelHost, FrameworkElement panel, string title)
+        {
+            if (toolPanelWindows.TryGetValue(panel, out var existingWindow))
+            {
+                if (existingWindow.WindowState == WindowState.Minimized)
+                    existingWindow.WindowState = WindowState.Normal;
+                existingWindow.Activate();
+                return;
+            }
+
+            panelHost.Content = null;
+            var window = new ToolPanelWindow(title, panel)
+            {
+                Owner = this
+            };
+            toolPanelWindows.Add(panel, window);
+            window.Closed += (_, _) =>
+            {
+                window.ReleaseContent();
+                panelHost.Content = panel;
+                toolPanelWindows.Remove(panel);
+            };
+            window.Show();
         }
 
         /// <summary>

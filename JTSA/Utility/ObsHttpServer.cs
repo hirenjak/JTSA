@@ -99,7 +99,14 @@ public class ObsHttpServer
 
     private static void WriteExpansionImage(HttpListenerContext ctx)
     {
-        var image = JTSA.Utility.StreamExpansionOverlayService.GetImage();
+        if (!long.TryParse(ctx.Request.QueryString["id"], out var id))
+        {
+            ctx.Response.StatusCode = 400;
+            ctx.Response.Close();
+            return;
+        }
+
+        var image = JTSA.Utility.StreamExpansionOverlayService.GetImage(id);
         if (image is null)
         {
             ctx.Response.StatusCode = 404;

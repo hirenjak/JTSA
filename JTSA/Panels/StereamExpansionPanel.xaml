@@ -274,6 +274,7 @@
                                                     <ColumnDefinition Width="72"/>
                                                     <ColumnDefinition Width="48"/>
                                                     <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="52"/>
                                                 </Grid.ColumnDefinitions>
 
                                                 <CheckBox
@@ -295,6 +296,27 @@
                                                     FontSize="12"
                                                     IsEnabled="{Binding IsImage}"
                                                     Text="{Binding ImageContent, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <Button Grid.Column="3" Content="テスト" Margin="4,0,0,0" Height="20"
+                                                        IsEnabled="{Binding IsImage}" Click="TestImageButton_Click"/>
+                                            </Grid>
+
+                                            <Grid Margin="72,4,0,0" IsEnabled="{Binding IsImage}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="42"/><ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="42"/><ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="28"/><ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="28"/><ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="幅" Foreground="LightGray" VerticalAlignment="Center"/>
+                                                <TextBox Grid.Column="1" Height="20" Text="{Binding ImageWidth, UpdateSourceTrigger=PropertyChanged}" ToolTip="1～1920px"/>
+                                                <TextBlock Grid.Column="2" Text="高さ" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                <TextBox Grid.Column="3" Height="20" Text="{Binding ImageHeight, UpdateSourceTrigger=PropertyChanged}" ToolTip="1～1080px"/>
+                                                <TextBlock Grid.Column="4" Text="X" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                <TextBox Grid.Column="5" Height="20" Text="{Binding ImageX, UpdateSourceTrigger=PropertyChanged}" ToolTip="左上を0としたX座標"/>
+                                                <TextBlock Grid.Column="6" Text="Y" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                <TextBox Grid.Column="7" Height="20" Text="{Binding ImageY, UpdateSourceTrigger=PropertyChanged}" ToolTip="左上を0としたY座標"/>
+                                                <CheckBox Grid.Column="8" Content="ランダム位置" Foreground="White" Margin="10,0,0,0" IsChecked="{Binding IsImageRandomPosition}" ToolTip="表示のたびに1920×1080内の収まる位置をランダムに決めます"/>
                                             </Grid>
 
                                             <Grid
@@ -304,6 +326,7 @@
                                                     <ColumnDefinition Width="48"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="150"/>
+                                                    <ColumnDefinition Width="52"/>
                                                 </Grid.ColumnDefinitions>
 
                                                 <CheckBox
@@ -355,6 +378,8 @@
                                                         d:Text="100%"/>
 
                                                 </StackPanel>
+                                                <Button Grid.Column="4" Content="テスト" Margin="4,0,0,0" Height="20"
+                                                        IsEnabled="{Binding IsAudio}" Click="TestAudioButton_Click"/>
                                             </Grid>
 
                                             <Grid

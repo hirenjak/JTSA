@@ -1,8 +1,10 @@
 using JTSA.Dao;
 using JTSA.Models;
+using JTSA.Utility;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -45,6 +47,11 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     public bool IsAudio { get => isAudio; set { isAudio = value; Changed(); } }
     public bool IsChat { get => isChat; set { isChat = value; Changed(); } }
     public string ImageContent { get; set; } = string.Empty;
+    public int ImageWidth { get; set; } = 1920;
+    public int ImageHeight { get; set; } = 1080;
+    public int ImageX { get; set; }
+    public int ImageY { get; set; }
+    public bool IsImageRandomPosition { get; set; }
     public string AudioContent { get; set; } = string.Empty;
     public string ChatContent { get; set; } = string.Empty;
     public int Weight { get => weight; set { weight = value; Changed(); } }
@@ -86,6 +93,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     private bool isReloading;
     private bool isSwitchingHeader;
     private bool isSaving;
+    private readonly StreamExpansionService streamExpansionService = new();
 
     public ObservableCollection<StreamExpansionHeaderForm> HeaderFormList { get; } = [];
     public ObservableCollection<StreamExpansionItemForm> ItemFormList { get; } = [];
@@ -268,8 +276,14 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                     switch (item.ActionType)
                     {
                         case "Image":
+                            var imageSettings = StreamExpansionImageSettings.Decode(item.Content);
                             form.IsImage = true;
-                            form.ImageContent = item.Content;
+                            form.ImageContent = imageSettings.Path;
+                            form.ImageWidth = imageSettings.Width;
+                            form.ImageHeight = imageSettings.Height;
+                            form.ImageX = imageSettings.X;
+                            form.ImageY = imageSettings.Y;
+                            form.IsImageRandomPosition = imageSettings.RandomPosition;
                             break;
                         case "Chat":
                             form.IsChat = true;
@@ -400,6 +414,43 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }
     }
 
+    private void TestImageButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not StreamExpansionItemForm item) return;
+        if (!File.Exists(item.ImageContent))
+        {
+            MessageBox.Show("テストする画像ファイルを選択してください。", "配信拡張");
+            return;
+        }
+
+        StreamExpansionOverlayService.ShowImage(new StreamExpansionImageSettings(
+            item.ImageContent,
+            item.ImageWidth,
+            item.ImageHeight,
+            item.ImageX,
+            item.ImageY,
+            item.IsImageRandomPosition));
+    }
+
+    private async void TestAudioButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not StreamExpansionItemForm item) return;
+        if (!File.Exists(item.AudioContent))
+        {
+            MessageBox.Show("テストする音声ファイルを選択してください。", "配信拡張");
+            return;
+        }
+
+        try
+        {
+            await streamExpansionService.PlayAudioPreviewAsync(item.AudioContent, item.AudioVolume);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"音声を再生できませんでした。\n{ex.GetBaseException().Message}", "配信拡張");
+        }
+    }
+
 
     /// <summary>
     /// 
@@ -421,7 +472,14 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         for (var groupIndex = 0; groupIndex < ItemFormList.Count; groupIndex++)
         {
             var form = ItemFormList[groupIndex];
-            AddSaveItem(saveItems, form.IsImage, "Image", form.ImageContent, form.Weight, 100, groupIndex);
+            var imageContent = new StreamExpansionImageSettings(
+                form.ImageContent,
+                form.ImageWidth,
+                form.ImageHeight,
+                form.ImageX,
+                form.ImageY,
+                form.IsImageRandomPosition).Normalize().Encode();
+            AddSaveItem(saveItems, form.IsImage && !string.IsNullOrWhiteSpace(form.ImageContent), "Image", imageContent, form.Weight, 100, groupIndex);
             AddSaveItem(saveItems, form.IsAudio, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
             AddSaveItem(saveItems, form.IsChat, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
             foreach (var obsText in form.ObsTextForms)

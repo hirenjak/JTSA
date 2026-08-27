@@ -1008,7 +1008,7 @@ public partial class ObsSettingPanel : UserControl
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.MainObsTwitchAccountId, accountId.ToString());
 
         var mainWindow = (MainWindow)Application.Current.MainWindow;
-        await mainWindow.ConnectObsAsync(forceReconnect: connectionSettingsChanged, showError: true);
+        await mainWindow.ConnectObsAsync(forceReconnect: connectionSettingsChanged);
         mainWindow.RefreshObsControlTarget();
     }
 
@@ -1045,7 +1045,7 @@ public partial class ObsSettingPanel : UserControl
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SubObsTwitchAccountId, accountId.ToString());
 
         var mainWindow = (MainWindow)Application.Current.MainWindow;
-        await mainWindow.ConnectObsAsync(forceReconnect: changed, showError: true, isSub: true);
+        await mainWindow.ConnectObsAsync(forceReconnect: changed, isSub: true);
         UpdateSubObsVisibility();
         mainWindow.RefreshObsControlTarget();
     }
