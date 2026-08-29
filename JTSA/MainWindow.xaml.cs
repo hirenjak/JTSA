@@ -71,6 +71,8 @@ namespace JTSA
         private static readonly TimeSpan SecretPanelClickInterval = TimeSpan.FromSeconds(2);
         private int viewerCountConsecutiveClicks;
         private DateTime lastViewerCountClickUtc;
+        private int twitchStatusConsecutiveClicks;
+        private DateTime lastTwitchStatusClickUtc;
 		private string currentCategoryId = string.Empty;
         private readonly Dictionary<FrameworkElement, ToolPanelWindow> toolPanelWindows = new();
 
@@ -1328,7 +1330,11 @@ namespace JTSA
 
             // 認証URL生成
             var oauthUrl = $"https://x.com/intent/post?text=";
-            var streamUrlText = $"https://www.twitch.tv/" + JTSAHelper.LoginName;
+            var selectedAccount = SelectedTargetAccountId is long accountId
+                ? DAO_TwitchAccount.SelectById(accountId)
+                : null;
+            var streamLoginName = selectedAccount?.UserName ?? JTSAHelper.LoginName;
+            var streamUrlText = $"https://www.twitch.tv/{streamLoginName}";
 
             streamTitleText = streamTitleText.Replace("#", "＃");
 
@@ -1988,6 +1994,37 @@ namespace JTSA
         private void ChatStatisticsPanel_CloseRequested(object sender, RoutedEventArgs e)
         {
             ChatStatisticsTabItem.Visibility = Visibility.Collapsed;
+            MainTabControl.SelectedIndex = 0;
+        }
+
+        private void TwitchSettingStatusTextBlock_MouseLeftButtonDown(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var clickedAtUtc = DateTime.UtcNow;
+            twitchStatusConsecutiveClicks = clickedAtUtc - lastTwitchStatusClickUtc <= SecretPanelClickInterval
+                ? twitchStatusConsecutiveClicks + 1
+                : 1;
+            lastTwitchStatusClickUtc = clickedAtUtc;
+
+            if (twitchStatusConsecutiveClicks < SecretPanelClickCount)
+                return;
+
+            twitchStatusConsecutiveClicks = 0;
+            var account = SelectedTargetAccountId is long accountId
+                ? DAO_TwitchAccount.SelectById(accountId)
+                : null;
+            if (account is not null)
+                TwitchNotificationPanel.SetTargetAccount(account.UserName);
+
+            TwitchNotificationTabItem.Visibility = Visibility.Visible;
+            MainTabControl.SelectedItem = TwitchNotificationTabItem;
+            e.Handled = true;
+        }
+
+        private void TwitchNotificationPanel_CloseRequested(object sender, RoutedEventArgs e)
+        {
+            TwitchNotificationTabItem.Visibility = Visibility.Collapsed;
             MainTabControl.SelectedIndex = 0;
         }
 

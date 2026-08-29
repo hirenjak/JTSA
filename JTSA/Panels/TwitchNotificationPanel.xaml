@@ -1,0 +1,59 @@
+<UserControl x:Class="JTSA.Panels.TwitchNotificationPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#FF404040">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Twitchライブ配信通知（実験機能）"
+                           Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock x:Name="TargetAccountTextBlock" Margin="0,5,0,0"
+                           Foreground="LightGray"/>
+            </StackPanel>
+            <Button Grid.Column="1" Width="26" Height="26"
+                    Background="Transparent" BorderThickness="0"
+                    Foreground="LightGray" FontSize="15" Content="✕"
+                    ToolTip="閉じる" Click="CloseButton_Click"/>
+        </Grid>
+
+        <Border Grid.Row="1" Margin="0,14,0,0" Padding="12"
+                Background="#FF303030" BorderBrush="#FF606060"
+                BorderThickness="1" CornerRadius="6">
+            <StackPanel>
+                <TextBlock Foreground="White" Text="通知文"/>
+                <TextBox x:Name="NotificationTextBox" Margin="0,6,0,0"
+                         MinHeight="76" Padding="8" AcceptsReturn="True"
+                         TextWrapping="Wrap" MaxLength="140"
+                         TextChanged="NotificationTextBox_TextChanged"/>
+                <TextBlock x:Name="CharacterCountTextBlock" Margin="0,4,0,0"
+                           HorizontalAlignment="Right" Foreground="LightGray"
+                           Text="0 / 140"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button x:Name="LoginButton" Width="150" Height="28"
+                            Margin="0,0,8,0" Content="ログイン用Chromeを開く"
+                            Click="LoginButton_Click"/>
+                    <Button x:Name="FillButton" Width="180" Height="28"
+                            Content="Twitch画面へ自動入力"
+                            Click="FillButton_Click"/>
+                    <TextBlock x:Name="StatusTextBlock" Margin="12,0,0,0"
+                               VerticalAlignment="Center" Foreground="LightGray"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="2" Margin="0,14,0,0" Foreground="DarkGray"
+                   TextWrapping="Wrap"
+                   Text="初回は［ログイン用Chromeを開く］からTwitchへログインし、Chromeを閉じてください。その後、自動入力を実行します。通知欄への入力まで自動で行い、保存は行いません。"/>
+    </Grid>
+</UserControl>

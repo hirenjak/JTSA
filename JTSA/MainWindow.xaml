@@ -173,7 +173,9 @@
                                FontSize="11"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                               VerticalAlignment="Center"
+                               ToolTip="Twitchへの反映状態"
+                               MouseLeftButtonDown="TwitchSettingStatusTextBlock_MouseLeftButtonDown"/>
                     <Button Grid.Column="1" x:Name="GetTitleButton" Content="Twitch設定読込"
                         Width="88" Height="22"
                         Margin="6,0,0,0"
@@ -859,6 +861,13 @@
                          Visibility="Collapsed">
                     <panels:ChatStatisticsPanel x:Name="ChatStatisticsPanel"
                                                 CloseRequested="ChatStatisticsPanel_CloseRequested"/>
+                </TabItem>
+
+                <TabItem x:Name="TwitchNotificationTabItem"
+                         Header="Twitch通知"
+                         Visibility="Collapsed">
+                    <panels:TwitchNotificationPanel x:Name="TwitchNotificationPanel"
+                                                    CloseRequested="TwitchNotificationPanel_CloseRequested"/>
                 </TabItem>
 
                 <TabItem Header="レイド">
