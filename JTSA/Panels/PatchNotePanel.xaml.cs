@@ -20,7 +20,7 @@ namespace JTSA.Panels
             {
                 Version = "v1.2.21",
                 ReleaseDate = "2026/08/30",
-                Summary = "予定カレンダーとチャット・配信拡張機能の改善",
+                Summary = "認証の修正および軽微調整",
                 Changes =
                 [
                     "【チャット】",
