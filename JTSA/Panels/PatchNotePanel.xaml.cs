@@ -16,6 +16,23 @@ namespace JTSA.Panels
         {
             CurrentVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString(2) ?? "-";
 
+            PatchNotes.Add(new PatchNoteForm
+            {
+                Version = "v1.2.21",
+                ReleaseDate = "2026/08/30",
+                Summary = "予定カレンダーとチャット・配信拡張機能の改善",
+                Changes =
+                [
+                    "【チャット】",
+                    "・チャット通知音とチャット参加音を個別に変更できる音源変更ボタンを追加",
+                    "【配信拡張】",
+                    "・チャットトリガーを実行できるユーザーを全員、モデレーター、VIP、サブスクから設定できる機能を追加",
+                    "・実行権限が未選択の場合は配信者のみ実行できるように変更",
+                    "【バグ修正】",
+                    "・OAuth認証が頻繁に表示される不具合を修正",
+                ]
+            });
+
 
             PatchNotes.Add(new PatchNoteForm
             {
