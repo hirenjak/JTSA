@@ -1297,6 +1297,8 @@ namespace JTSA
         /// <summary>カレンダー予定を配信概要の送信予定へ反映する。</summary>
         public void ApplyCalendarEntryToOverview(T_CalendarEntry entry)
         {
+            FriendPanel.SelectFriends(entry.SelectedFriendIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
             TitleEditTextBox.Text = entry.Content;
             TitlePlaceholderTextBox.Text = string.IsNullOrWhiteSpace(entry.TitlePlaceholder)
                 ? TitlePlaceholderReplacer.TitlePlaceholder

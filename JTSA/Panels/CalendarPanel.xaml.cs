@@ -212,6 +212,7 @@ public partial class CalendarPanel : UserControl
             existing?.CategoryId ?? string.Empty,
             existing?.CategoryName ?? string.Empty,
             existing?.CategoryBoxArtUrl ?? string.Empty,
+            existing?.SelectedFriendIds ?? string.Empty,
             existing?.StartTime,
             existing?.Id);
         ReloadEntries(date);

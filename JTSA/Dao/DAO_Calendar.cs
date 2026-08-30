@@ -7,11 +7,23 @@ internal static class DAO_Calendar
     public static List<T_CalendarEntry> SelectAll()
     {
         using var db = new AppDbContext();
-        return db.T_CalendarEntry
+        var entries = db.T_CalendarEntry
             .ToList()
             .OrderBy(entry => entry.CalendarDate)
             .ThenBy(entry => entry.StartTime)
             .ToList();
+        var friendNames = db.M_User
+            .ToDictionary(user => user.UserId, user => user.DisplayName);
+
+        foreach (var entry in entries)
+        {
+            entry.SelectedFriendNames = string.Join("、",
+                entry.SelectedFriendIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(id => friendNames.TryGetValue(id, out var name) ? name : id));
+        }
+
+        return entries;
     }
 
     public static void InsertUpdate(
@@ -21,6 +33,7 @@ internal static class DAO_Calendar
         string categoryId = "",
         string categoryName = "",
         string categoryBoxArtUrl = "",
+        string selectedFriendIds = "",
         TimeSpan? startTime = null,
         long? entryId = null)
     {
@@ -42,6 +55,7 @@ internal static class DAO_Calendar
                 CategoryId = categoryId,
                 CategoryName = categoryName,
                 CategoryBoxArtUrl = categoryBoxArtUrl,
+                SelectedFriendIds = selectedFriendIds,
                 SelectedCount = 0,
                 SortNumber = 9999,
                 CreatedDateTime = now,
@@ -57,6 +71,7 @@ internal static class DAO_Calendar
             entry.CategoryId = categoryId;
             entry.CategoryName = categoryName;
             entry.CategoryBoxArtUrl = categoryBoxArtUrl;
+            entry.SelectedFriendIds = selectedFriendIds;
             entry.UpdatedDateTime = now;
             entry.LastUsedDateTime = now;
         }

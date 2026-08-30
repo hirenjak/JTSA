@@ -55,7 +55,7 @@
                                 <Grid Margin="5,5,3,6">
                                     <Grid.ContextMenu><ContextMenu><MenuItem Header="編集" Tag="{Binding}" Click="EditEntryMenuItem_Click"/></ContextMenu></Grid.ContextMenu>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="50"/><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
-                                    <Button Tag="{Binding}" Width="44" Height="26" Content="反映" Padding="0"
+                                    <Button Tag="{Binding}" Width="44" Height="26" Content="読込" Padding="0"
                                             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
                                             ToolTip="この予定を送信予定の情報へ反映" Click="ApplyEntryButton_Click"/>
                                     <Image Grid.Column="1" Source="{Binding CategoryBoxArtUrl}" Width="36" Height="48" Stretch="UniformToFill"/>
@@ -72,6 +72,10 @@
                                         <TextBlock Text="{Binding TitlePlaceholder, StringFormat=テンプレート：{0}}"
                                                    Foreground="LightGray" FontSize="10" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding CategoryName}" Foreground="LightGray" FontSize="10"/>
+                                        <TextBlock Text="{Binding SelectedFriendNames, StringFormat=フレンド：{0}}"
+                                                   Foreground="#FF9EDBD7" FontSize="10" TextWrapping="Wrap">
+                                            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding SelectedFriendNames}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
                                     <Button Grid.Column="4" Tag="{Binding}" Width="22" Height="22" Content="×" Padding="0"
                                             Foreground="#FFFF6F78" Background="Transparent" BorderThickness="0"

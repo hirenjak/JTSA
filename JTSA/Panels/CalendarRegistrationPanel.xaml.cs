@@ -21,6 +21,7 @@ public partial class CalendarRegistrationPanel : UserControl
 
     public ObservableCollection<T_CalendarEntry> Entries { get; } = [];
     public ObservableCollection<CategoryForm> Categories { get; } = [];
+    public ObservableCollection<FriendForm> SelectedFriends { get; } = [];
 
     public event RoutedEventHandler CloseRequested
     {
@@ -44,6 +45,7 @@ public partial class CalendarRegistrationPanel : UserControl
     private void CalendarRegistrationPanel_Loaded(object sender, RoutedEventArgs e)
     {
         RegistrationTitleTagPanel.ReloadTitleTag();
+        RestoreSelectedFriends(string.Join(',', SelectedFriends.Select(friend => friend.BroadcastId)));
     }
 
     public void SetInitialPlaceholder(string placeholder)
@@ -91,6 +93,9 @@ public partial class CalendarRegistrationPanel : UserControl
                 LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm")
             });
         }
+
+
+        ReloadFriends();
     }
 
     private void CategoryListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -116,6 +121,7 @@ public partial class CalendarRegistrationPanel : UserControl
         categoryId = entry.CategoryId;
         categoryName = entry.CategoryName;
         categoryBoxArtUrl = entry.CategoryBoxArtUrl;
+        RestoreSelectedFriends(entry.SelectedFriendIds);
         ShowSelectedCategory();
         StatusTextBlock.Text = string.IsNullOrWhiteSpace(categoryName) ? "予定を編集中" : $"カテゴリ：{categoryName}";
     }
@@ -143,6 +149,7 @@ public partial class CalendarRegistrationPanel : UserControl
             categoryId,
             categoryName,
             categoryBoxArtUrl,
+            string.Join(',', SelectedFriends.Select(friend => friend.BroadcastId)),
             startTime,
             editingEntryId);
         editingEntryId = null;
@@ -189,6 +196,56 @@ public partial class CalendarRegistrationPanel : UserControl
         catch
         {
             SelectedCategoryBoxArt.Source = null;
+        }
+    }
+
+
+    private void SelectFriendsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var selectedIds = SelectedFriends.Select(friend => friend.BroadcastId);
+
+        var dialog = new FriendSelectionWindow(selectedIds)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+            RestoreSelectedFriends(string.Join(',', dialog.SelectedBroadcastIds));
+    }
+
+    private void RemoveSelectedFriendButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is FriendForm friend)
+            SelectedFriends.Remove(friend);
+    }
+
+    private void ReloadFriends()
+    {
+        var selectedIds = SelectedFriends.Select(friend => friend.BroadcastId).ToHashSet(StringComparer.Ordinal);
+        ReplaceSelectedFriends(selectedIds);
+    }
+
+    private void RestoreSelectedFriends(string idsText)
+    {
+        var ids = idsText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.Ordinal);
+        ReplaceSelectedFriends(ids);
+    }
+
+    private void ReplaceSelectedFriends(HashSet<string> selectedIds)
+    {
+        SelectedFriends.Clear();
+        foreach (var item in DAO_User.SelectAllOrderbyLastUser())
+        {
+            if (!selectedIds.Contains(item.UserId)) continue;
+            SelectedFriends.Add(new FriendForm
+            {
+                BroadcastId = item.UserId,
+                UserId = item.LoginId,
+                DisplayName = item.DisplayName,
+                LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm"),
+                ProfileImage = FriendPanel.CreateProfileImage(item.ProfielImageUrl)
+            });
         }
     }
 }

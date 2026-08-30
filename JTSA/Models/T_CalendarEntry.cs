@@ -24,4 +24,10 @@ public class T_CalendarEntry : DBBaseTransaction
     public string CategoryName { get; set; } = string.Empty;
 
     public string CategoryBoxArtUrl { get; set; } = string.Empty;
+
+    /// <summary>予定に紐づけたフレンドのBroadcastId（カンマ区切り）。</summary>
+    public string SelectedFriendIds { get; set; } = string.Empty;
+
+    [NotMapped]
+    public string SelectedFriendNames { get; set; } = string.Empty;
 }

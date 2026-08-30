@@ -18,6 +18,22 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.2.22",
+                ReleaseDate = "2026/08/31",
+                Summary = "カレンダー予定のフレンド連携を追加",
+                Changes =
+                [
+                    "【カレンダー】",
+                    "・予定ごとにフレンドを選択して保存できる機能を追加",
+                    "・フレンド選択を専用ウィンドウから設定できるように変更",
+                    "・登録済み予定と予定履歴に選択したフレンドを表示するように変更",
+                    "・予定の読込時にフレンドパネルの選択状態も反映するように変更",
+                    "・登録済み予定の反映ボタンを読込ボタンへ変更",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.2.21",
                 ReleaseDate = "2026/08/30",
                 Summary = "認証の修正および軽微調整",

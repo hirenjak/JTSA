@@ -180,7 +180,21 @@ namespace JTSA.Panels
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }
 
-        private static ImageSource? CreateProfileImage(string? value)
+        /// <summary>カレンダー予定に保存されたフレンド選択を復元する。</summary>
+        public void SelectFriends(IEnumerable<string> broadcastIds)
+        {
+            ReloadFriend();
+            var ids = broadcastIds.ToHashSet(StringComparer.Ordinal);
+            SelectedFriendFormList.Clear();
+            foreach (var friend in FriendFormList.Where(friend => ids.Contains(friend.BroadcastId)))
+            {
+                SelectedFriendFormList.Add(friend);
+            }
+
+            UpdateTitlePreview();
+        }
+
+        internal static ImageSource? CreateProfileImage(string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return null;
 
