@@ -353,6 +353,29 @@ namespace JTSA
 
                 TwitchHelper.AccessToken = accessToken;
                 SettingPanel.SetAccessTokenStatus(true);
+
+                // ChatPanel はアカウント切替時のアクセストークンを保持しているため、
+                // 定期更新後も古いトークンでチャットを送信しないよう同期する。
+                var primaryAccount = DAO_TwitchAccount.SelectPrimary();
+                if (primaryAccount is not null)
+                {
+                    ChatPanel.UpdateConnectedAccessToken(
+                        primaryAccount.BroadcasterId,
+                        accessToken);
+                }
+
+                // 追加アカウントを選択中の場合、そのアカウントのトークンも更新する。
+                if (SelectedTargetAccountId is long selectedAccountId &&
+                    selectedAccountId != primaryAccount?.Id)
+                {
+                    var selectedAccount = await GetSelectedTargetAccountAsync();
+                    if (selectedAccount is not null)
+                    {
+                        ChatPanel.UpdateConnectedAccessToken(
+                            selectedAccount.Value.Account.BroadcasterId,
+                            selectedAccount.Value.AccessToken);
+                    }
+                }
             }
             catch (Exception ex)
             {

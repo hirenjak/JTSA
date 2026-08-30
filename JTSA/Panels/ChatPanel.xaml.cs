@@ -67,6 +67,21 @@ namespace JTSA.Panels
         internal (string BroadcasterId, string AccessToken) GetConnectedAccountContext()
             => (connectedBroadcasterId, connectedAccessToken);
 
+        /// <summary>
+        /// 接続中アカウントのアクセストークンを更新する。
+        /// 別アカウント向けの更新を誤って適用しないよう、配信者IDが一致する場合だけ差し替える。
+        /// </summary>
+        internal void UpdateConnectedAccessToken(string broadcasterId, string accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken) ||
+                !string.Equals(connectedBroadcasterId, broadcasterId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            connectedAccessToken = accessToken;
+        }
+
         /// <summary>OBSブラウザソース用のチャットデータを返す。</summary>
         public string CreateObsChatJson()
         {
