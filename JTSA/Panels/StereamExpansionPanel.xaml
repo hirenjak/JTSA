@@ -98,7 +98,7 @@
         <!-- 実装内容 -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="134"/>
+                <RowDefinition Height="162"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
@@ -200,6 +200,19 @@
                         <TextBox Grid.Column="3" Height="20" FontSize="12"
                                  Text="{Binding TriggerComment, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
+
+                    <StackPanel Orientation="Horizontal" Height="28" Margin="16,0,0,0">
+                        <Label Content="コメント実行権限：" Padding="0" Foreground="White" VerticalAlignment="Center"
+                               ToolTip="何も選択しない場合は配信者のみ実行できます"/>
+                        <CheckBox Margin="8,0,0,0" Content="全員" Foreground="White" VerticalAlignment="Center"
+                                  IsChecked="{Binding ChatPermissionEveryone}"/>
+                        <CheckBox Margin="16,0,0,0" Content="モデレーター" Foreground="White" VerticalAlignment="Center"
+                                  IsChecked="{Binding ChatPermissionModerator}"/>
+                        <CheckBox Margin="16,0,0,0" Content="VIP" Foreground="White" VerticalAlignment="Center"
+                                  IsChecked="{Binding ChatPermissionVip}"/>
+                        <CheckBox Margin="16,0,0,0" Content="サブスク" Foreground="White" VerticalAlignment="Center"
+                                  IsChecked="{Binding ChatPermissionSubscriber}"/>
+                    </StackPanel>
 
                     </StackPanel>
                 </Grid>

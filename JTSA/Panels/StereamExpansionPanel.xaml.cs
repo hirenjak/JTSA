@@ -29,6 +29,10 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool DoShoutout { get; set; }
     public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
+    public bool ChatPermissionEveryone { get; set; }
+    public bool ChatPermissionModerator { get; set; }
+    public bool ChatPermissionVip { get; set; }
+    public bool ChatPermissionSubscriber { get; set; }
     public string TriggerChannelPointId { get; set; } = string.Empty;
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
@@ -209,6 +213,10 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 DoShoutout = x.DoShoutout,
                 DelaySeconds = x.DelaySeconds,
                 TriggerComment = x.TriggerComment,
+                ChatPermissionEveryone = x.ChatPermissionEveryone,
+                ChatPermissionModerator = x.ChatPermissionModerator,
+                ChatPermissionVip = x.ChatPermissionVip,
+                ChatPermissionSubscriber = x.ChatPermissionSubscriber,
                 TriggerChannelPointId = x.TriggerChannelPointId
             });
         }
@@ -516,6 +524,10 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             DoShoutout = header.DoShoutout,
             DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600),
             TriggerComment = header.TriggerComment?.Trim() ?? "",
+            ChatPermissionEveryone = header.ChatPermissionEveryone,
+            ChatPermissionModerator = header.ChatPermissionModerator,
+            ChatPermissionVip = header.ChatPermissionVip,
+            ChatPermissionSubscriber = header.ChatPermissionSubscriber,
             TriggerChannelPointId = header.TriggerChannelPointId?.Trim() ?? "",
             UpdatedDateTime = DateTime.Now, 
             LastUsedDateTime = DateTime.Now

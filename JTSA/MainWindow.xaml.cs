@@ -71,8 +71,8 @@ namespace JTSA
         private static readonly TimeSpan SecretPanelClickInterval = TimeSpan.FromSeconds(2);
         private int viewerCountConsecutiveClicks;
         private DateTime lastViewerCountClickUtc;
-        private int twitchStatusConsecutiveClicks;
-        private DateTime lastTwitchStatusClickUtc;
+        private readonly DispatcherTimer twitchStatusHoldTimer;
+        private bool isTwitchStatusHeld;
 		private string currentCategoryId = string.Empty;
         private readonly Dictionary<FrameworkElement, ToolPanelWindow> toolPanelWindows = new();
 
@@ -229,6 +229,9 @@ namespace JTSA
             // WPF上の初期化処理
 			InitializeComponent();
             DataContext = this;
+            CalendarPanel.EditRequested += CalendarPanel_EditRequested;
+            twitchStatusHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            twitchStatusHoldTimer.Tick += TwitchStatusHoldTimer_Tick;
             RestoreWindowPosition();
             mainObsController.StreamingStateChanged += isStreaming =>
             {
@@ -417,6 +420,7 @@ namespace JTSA
             try
             {
                 await MainWindowLoadedCoreAsync(sender, e);
+                CalendarRegistrationPanel.SetInitialPlaceholder(OverviewTitlePlaceholder);
             }
             catch (Exception ex)
             {
@@ -1287,6 +1291,22 @@ namespace JTSA
             processLog.EventEndLogWrite();
         }
 
+        /// <summary>配信概要パネルで現在編集中のプレースホルダー。</summary>
+        public string OverviewTitlePlaceholder => TitlePlaceholderTextBox.Text;
+
+        /// <summary>カレンダー予定を配信概要の送信予定へ反映する。</summary>
+        public void ApplyCalendarEntryToOverview(T_CalendarEntry entry)
+        {
+            TitleEditTextBox.Text = entry.Content;
+            TitlePlaceholderTextBox.Text = string.IsNullOrWhiteSpace(entry.TitlePlaceholder)
+                ? TitlePlaceholderReplacer.TitlePlaceholder
+                : entry.TitlePlaceholder;
+            CurrentCategoryId = entry.CategoryId;
+            CurrentCategoryName = entry.CategoryName;
+            CurrentCategoryBoxArtUrl = entry.CategoryBoxArtUrl;
+            CurrentTitleTextUpdate();
+        }
+
 
         /// <summary>
         /// タイトル編集パネル:削除ボタン（クリック）
@@ -2001,31 +2021,84 @@ namespace JTSA
             object sender,
             System.Windows.Input.MouseButtonEventArgs e)
         {
-            var clickedAtUtc = DateTime.UtcNow;
-            twitchStatusConsecutiveClicks = clickedAtUtc - lastTwitchStatusClickUtc <= SecretPanelClickInterval
-                ? twitchStatusConsecutiveClicks + 1
-                : 1;
-            lastTwitchStatusClickUtc = clickedAtUtc;
+            isTwitchStatusHeld = true;
+            TwitchSettingStatusTextBlock.CaptureMouse();
+            twitchStatusHoldTimer.Stop();
+            twitchStatusHoldTimer.Start();
+            e.Handled = true;
+        }
 
-            if (twitchStatusConsecutiveClicks < SecretPanelClickCount)
+        private void TwitchSettingStatusTextBlock_MouseLeftButtonUp(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e)
+        {
+            CancelTwitchStatusHold();
+            e.Handled = true;
+        }
+
+        private void TwitchStatusHoldTimer_Tick(object? sender, EventArgs e)
+        {
+            twitchStatusHoldTimer.Stop();
+            if (!isTwitchStatusHeld || System.Windows.Input.Mouse.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+            {
+                CancelTwitchStatusHold();
                 return;
+            }
 
-            twitchStatusConsecutiveClicks = 0;
+            isTwitchStatusHeld = false;
+            TwitchSettingStatusTextBlock.ReleaseMouseCapture();
             var account = SelectedTargetAccountId is long accountId
                 ? DAO_TwitchAccount.SelectById(accountId)
                 : null;
             if (account is not null)
                 TwitchNotificationPanel.SetTargetAccount(account.UserName);
 
+            SecretToolsTabControl.SelectedIndex = 0;
+            CalendarPanel.RefreshSelectedDate();
+            CalendarRegistrationPanel.Reload();
             TwitchNotificationTabItem.Visibility = Visibility.Visible;
             MainTabControl.SelectedItem = TwitchNotificationTabItem;
-            e.Handled = true;
+        }
+
+        private void CancelTwitchStatusHold()
+        {
+            isTwitchStatusHeld = false;
+            twitchStatusHoldTimer.Stop();
+            if (TwitchSettingStatusTextBlock.IsMouseCaptured)
+                TwitchSettingStatusTextBlock.ReleaseMouseCapture();
         }
 
         private void TwitchNotificationPanel_CloseRequested(object sender, RoutedEventArgs e)
         {
             TwitchNotificationTabItem.Visibility = Visibility.Collapsed;
             MainTabControl.SelectedIndex = 0;
+        }
+
+        private void CalendarPanel_CloseRequested(object sender, RoutedEventArgs e)
+        {
+            TwitchNotificationTabItem.Visibility = Visibility.Collapsed;
+            MainTabControl.SelectedIndex = 0;
+        }
+
+        private void CalendarPanel_EditRequested(long entryId)
+        {
+            TwitchNotificationTabItem.Visibility = Visibility.Visible;
+            MainTabControl.SelectedItem = TwitchNotificationTabItem;
+            SecretToolsTabControl.SelectedIndex = 1;
+            CalendarRegistrationPanel.SelectEntryForEditing(entryId);
+        }
+
+        private void SecretToolsTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(e.Source, SecretToolsTabControl)) return;
+
+            if (SecretToolsTabControl.SelectedIndex == 0)
+                CalendarPanel.RefreshSelectedDate();
+            else if (SecretToolsTabControl.SelectedIndex == 1)
+            {
+                CalendarRegistrationPanel.Reload();
+                CalendarRegistrationPanel.SetScheduleDateFromCalendar(CalendarPanel.SelectedDate);
+            }
         }
 
         private void UpdateDisplayedViewerCount()

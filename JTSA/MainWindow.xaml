@@ -175,7 +175,8 @@
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                ToolTip="Twitchへの反映状態"
-                               MouseLeftButtonDown="TwitchSettingStatusTextBlock_MouseLeftButtonDown"/>
+                               MouseLeftButtonDown="TwitchSettingStatusTextBlock_MouseLeftButtonDown"
+                               MouseLeftButtonUp="TwitchSettingStatusTextBlock_MouseLeftButtonUp"/>
                     <Button Grid.Column="1" x:Name="GetTitleButton" Content="Twitch設定読込"
                         Width="88" Height="22"
                         Margin="6,0,0,0"
@@ -864,10 +865,23 @@
                 </TabItem>
 
                 <TabItem x:Name="TwitchNotificationTabItem"
-                         Header="Twitch通知"
+                         Header="カレンダー"
                          Visibility="Collapsed">
-                    <panels:TwitchNotificationPanel x:Name="TwitchNotificationPanel"
-                                                    CloseRequested="TwitchNotificationPanel_CloseRequested"/>
+                    <TabControl x:Name="SecretToolsTabControl" Background="#FF404040"
+                                SelectionChanged="SecretToolsTabControl_SelectionChanged">
+                        <TabItem Header="カレンダー">
+                            <panels:CalendarPanel x:Name="CalendarPanel"
+                                                  CloseRequested="CalendarPanel_CloseRequested"/>
+                        </TabItem>
+                        <TabItem Header="カレンダー登録">
+                            <panels:CalendarRegistrationPanel x:Name="CalendarRegistrationPanel"
+                                                              CloseRequested="CalendarPanel_CloseRequested"/>
+                        </TabItem>
+                        <TabItem Header="Twitch通知">
+                            <panels:TwitchNotificationPanel x:Name="TwitchNotificationPanel"
+                                                            CloseRequested="TwitchNotificationPanel_CloseRequested"/>
+                        </TabItem>
+                    </TabControl>
                 </TabItem>
 
                 <TabItem Header="レイド">

@@ -1,0 +1,169 @@
+<UserControl x:Class="JTSA.Panels.CalendarPanel" x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Background="#FF404040">
+    <Grid Margin="16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="予定カレンダー" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                <Border Width="1" Height="16" Margin="12,0" Background="#FF606060"/>
+                <TextBlock x:Name="HeaderStatusTextBlock" Text="登録済みの予定を表示"
+                           Foreground="LightGray" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+            <Button Grid.Column="1" Width="26" Height="26" Background="Transparent" BorderThickness="0"
+                    Foreground="LightGray" FontSize="15" Content="✕" ToolTip="閉じる" Click="CloseButton_Click"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" MinWidth="480"/><ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="2*" MinWidth="330"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="12">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid Visibility="Collapsed">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="135"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="予定日" Foreground="LightGray" FontSize="11"/>
+                            <DatePicker x:Name="EntryDatePicker" Height="26" Margin="0,4,0,0"
+                                        SelectedDateChanged="EntryDatePicker_SelectedDateChanged"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <TextBlock Text="タイトル本文" Foreground="LightGray" FontSize="11"/>
+                            <TextBox x:Name="MemoTextBox" Height="58" Margin="0,4,0,0" Padding="7"
+                                     AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Margin="10,19,0,0">
+                            <Button Content="登録・更新" Width="88" Height="27" Click="SaveButton_Click"/>
+                            <Button Content="入力クリア" Width="88" Height="24" Margin="0,6,0,0" Click="ClearInputButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+                    <Grid Grid.Row="1" Margin="0,14,0,6">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="登録済み予定" Foreground="White" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" x:Name="EntryCountTextBlock" Foreground="LightGray" FontSize="11"/>
+                    </Grid>
+                    <ListBox x:Name="CalendarEntryListBox" Grid.Row="2" ItemsSource="{Binding Entries, ElementName=Root}"
+                             Background="#FF303030" BorderThickness="0" HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectionChanged="CalendarEntryListBox_SelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="5,5,3,6">
+                                    <Grid.ContextMenu><ContextMenu><MenuItem Header="編集" Tag="{Binding}" Click="EditEntryMenuItem_Click"/></ContextMenu></Grid.ContextMenu>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="50"/><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                                    <Button Tag="{Binding}" Width="44" Height="26" Content="反映" Padding="0"
+                                            Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
+                                            ToolTip="この予定を送信予定の情報へ反映" Click="ApplyEntryButton_Click"/>
+                                    <Image Grid.Column="1" Source="{Binding CategoryBoxArtUrl}" Width="36" Height="48" Stretch="UniformToFill"/>
+                                    <Border Grid.Column="2" Padding="6,4" Margin="0,0,10,0" Background="#FF285653" CornerRadius="4" VerticalAlignment="Top">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding CalendarDate, StringFormat={}{0:yyyy/MM/dd}}"
+                                                       Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="{Binding StartTimeDisplay}"
+                                                       Foreground="LightGray" FontSize="11" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Content}" Foreground="White" FontSize="13" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding TitlePlaceholder, StringFormat=テンプレート：{0}}"
+                                                   Foreground="LightGray" FontSize="10" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding CategoryName}" Foreground="LightGray" FontSize="10"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="4" Tag="{Binding}" Width="22" Height="22" Content="×" Padding="0"
+                                            Foreground="#FFFF6F78" Background="Transparent" BorderThickness="0"
+                                            ToolTip="この予定を削除" Click="DeleteEntryButton_Click"/>
+                                    <Border Grid.ColumnSpan="5" Height="1" Margin="0,8,-3,-7"
+                                            VerticalAlignment="Bottom" Background="#FF505050"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="SelectedDateTextBlock" Text="日付を選択" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                    <Border Grid.Row="1" Margin="0,6" Padding="5" Background="#FF242424"
+                            BorderBrush="#FF505050" BorderThickness="1" CornerRadius="6">
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <Button Width="24" Height="21" Content="‹" FontSize="14" Background="#FF303030"
+                                        Foreground="White" BorderBrush="#FF505050" Click="PreviousMonthButton_Click"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock x:Name="CalendarMonthTextBlock" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                                    <Button Margin="6,0,0,0" Padding="5,0" Height="21" Content="今日" FontSize="10"
+                                            Background="Transparent" Foreground="LightSeaGreen" BorderBrush="LightSeaGreen"
+                                            Click="TodayButton_Click"/>
+                                </StackPanel>
+                                <Button Grid.Column="2" Width="24" Height="21" Content="›" FontSize="14" Background="#FF303030"
+                                        Foreground="White" BorderBrush="#FF505050" Click="NextMonthButton_Click"/>
+                            </Grid>
+                            <UniformGrid Grid.Row="1" Rows="1" Columns="7" Margin="0,0,0,2">
+                                <TextBlock Text="日" Foreground="#FFFF8585" FontSize="9" TextAlignment="Center"/>
+                                <TextBlock Text="月" Foreground="LightGray" FontSize="9" TextAlignment="Center"/>
+                                <TextBlock Text="火" Foreground="LightGray" FontSize="9" TextAlignment="Center"/>
+                                <TextBlock Text="水" Foreground="LightGray" FontSize="9" TextAlignment="Center"/>
+                                <TextBlock Text="木" Foreground="LightGray" FontSize="9" TextAlignment="Center"/>
+                                <TextBlock Text="金" Foreground="LightGray" FontSize="9" TextAlignment="Center"/>
+                                <TextBlock Text="土" Foreground="#FF7DBBFF" FontSize="9" TextAlignment="Center"/>
+                            </UniformGrid>
+                            <ItemsControl Grid.Row="2" ItemsSource="{Binding CalendarDays, ElementName=Root}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="6" Columns="7"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="DayCell" Margin="1" Padding="3" Background="#FF303030"
+                                                BorderBrush="Transparent" BorderThickness="1" CornerRadius="5"
+                                                Cursor="Hand" MouseLeftButtonUp="DayCell_MouseLeftButtonUp">
+                                            <Border.ContextMenu><ContextMenu><MenuItem Header="編集" Tag="{Binding}" Click="EditDayEntryMenuItem_Click"/></ContextMenu></Border.ContextMenu>
+                                            <Grid>
+                                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                                <TextBlock x:Name="DayNumber" Text="{Binding Day}" FontSize="9" Foreground="#FFE8E8E8" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="ScheduleText" Grid.Row="1" Text="{Binding ContentPreview}"
+                                                           Visibility="Collapsed" Foreground="White" FontSize="8"
+                                                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsCurrentMonth}" Value="False">
+                                                <Setter TargetName="DayCell" Property="Opacity" Value="0.28"/>
+                                                <Setter TargetName="DayCell" Property="Background" Value="Transparent"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
+                                                <Setter TargetName="DayCell" Property="BorderThickness" Value="2"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSunday}" Value="True"><Setter TargetName="DayNumber" Property="Foreground" Value="#FFFF8585"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSaturday}" Value="True"><Setter TargetName="DayNumber" Property="Foreground" Value="#FF7DBBFF"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding HasEntry}" Value="True">
+                                                <Setter TargetName="DayCell" Property="Background" Value="#FF285653"/>
+                                                <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
+                                                <Setter TargetName="ScheduleText" Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                <Setter TargetName="DayCell" Property="BorderBrush" Value="#FFFFC857"/>
+                                                <Setter TargetName="DayCell" Property="BorderThickness" Value="2"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="緑色の日付は予定あり" Foreground="LightGray" FontSize="11"/>
+                        <TextBlock Grid.Column="1" x:Name="CalendarMonthSummaryTextBlock" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

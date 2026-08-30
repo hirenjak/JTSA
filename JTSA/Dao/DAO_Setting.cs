@@ -61,6 +61,9 @@ namespace JTSA.Dao
             MainObsAutoConnect = 38,
             /// <summary>起動時にサブOBSへ自動接続するか</summary>
             SubObsAutoConnect = 39,
+            ChatNotificationAudioPath = 40,
+            JoinChatAudioPath = 41,
+            CalendarMemos = 42,
         }
 
 

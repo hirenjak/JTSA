@@ -8,6 +8,12 @@ namespace JTSA.Utility;
 
 internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart }
 
+internal sealed record StreamExpansionChatUserContext(
+    bool IsBroadcaster,
+    bool IsModerator,
+    bool IsVip,
+    bool IsSubscriber);
+
 internal sealed class StreamExpansionService
 {
     private readonly SemaphoreSlim executionLock = new(1, 1);
@@ -20,7 +26,8 @@ internal sealed class StreamExpansionService
         string triggerObs = "",
         string broadcasterId = "",
         string accessToken = "",
-        string channelPointInput = "")
+        string channelPointInput = "",
+        StreamExpansionChatUserContext? chatUser = null)
     {
         try
         {
@@ -33,7 +40,9 @@ internal sealed class StreamExpansionService
             }
 
             // 発火条件に一致するものだけ取得
-            var rules = DAO_StreamExpansion.SelectAllHeaders().Where(rule => Matches(rule, type, value)).ToList();
+            var rules = DAO_StreamExpansion.SelectAllHeaders()
+                .Where(rule => Matches(rule, type, value) && HasChatPermission(rule, type, chatUser))
+                .ToList();
 
             if (type == StreamExpansionTriggerType.Raid)
             {
@@ -229,6 +238,28 @@ internal sealed class StreamExpansionService
         }
 
         return false;
+    }
+
+    internal static bool HasChatPermission(
+        T_StreamExpansionHeader rule,
+        StreamExpansionTriggerType type,
+        StreamExpansionChatUserContext? user)
+    {
+        if (type != StreamExpansionTriggerType.Chat)
+            return true;
+
+        if (user?.IsBroadcaster == true)
+            return true;
+
+        if (rule.ChatPermissionEveryone)
+            return true;
+
+        if (user == null)
+            return false;
+
+        return (rule.ChatPermissionModerator && user.IsModerator) ||
+               (rule.ChatPermissionVip && user.IsVip) ||
+               (rule.ChatPermissionSubscriber && user.IsSubscriber);
     }
 
     internal static string ResolveChannelPointInput(

@@ -38,6 +38,14 @@ namespace JTSA.Models
 
         public string TriggerComment { get; set; } = string.Empty;
 
+        public bool ChatPermissionEveryone { get; set; }
+
+        public bool ChatPermissionModerator { get; set; }
+
+        public bool ChatPermissionVip { get; set; }
+
+        public bool ChatPermissionSubscriber { get; set; }
+
         public string TriggerChannelPointId { get; set; } = string.Empty;
     }
 }

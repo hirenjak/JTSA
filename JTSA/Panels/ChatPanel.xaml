@@ -30,7 +30,7 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="350"/>
                     <ColumnDefinition Width="280"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
@@ -50,11 +50,13 @@
 
                         <Slider 
                             x:Name="ChatNotificationVolumeSlider"
-                            Width="200"
+                            Width="180"
                             Minimum="0" Maximum="100"
                             TickFrequency="10"
                             IsSnapToTickEnabled="False"
                             ValueChanged="ChatNotificationVolumeSlider_ValueChanged"/>
+                        <Button Content="音源変更" Width="68" Height="24" Margin="6,0,0,0"
+                                Click="ChatNotificationAudioChangeButton_Click"/>
 
                     </StackPanel>
 
@@ -66,11 +68,13 @@
                             Foreground="White" FontSize="14" />
                         <Slider 
                             x:Name="JoinChatVolumeSlider"
-                            Width="200"
+                            Width="180"
                             Minimum="0" Maximum="100"
                             TickFrequency="10"
                             IsSnapToTickEnabled="False"
                             ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
+                        <Button Content="音源変更" Width="68" Height="24" Margin="6,0,0,0"
+                                Click="JoinChatAudioChangeButton_Click"/>
                     </StackPanel>
 
                     <StackPanel

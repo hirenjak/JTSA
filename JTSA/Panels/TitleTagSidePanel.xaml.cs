@@ -12,6 +12,7 @@ namespace JTSA.Panels
     /// </summary>
     public partial class TitleTagSidePanel : UserControl
     {
+        public event Action<string>? InsertRequested;
         /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
@@ -39,7 +40,10 @@ namespace JTSA.Panels
         {
             if (TitleTagListBox.SelectedItem is TitleTagForm selectedItem)
             {
-                mainWindow.InsertTextAtCaret(selectedItem.Placeholder);
+                if (InsertRequested is not null)
+                    InsertRequested(selectedItem.Placeholder);
+                else
+                    mainWindow.InsertTextAtCaret(selectedItem.Placeholder);
                 if (!selectedItem.IsSystem)
                 {
                     DAO_TitleTag.UpdateLastUse(selectedItem.Id);

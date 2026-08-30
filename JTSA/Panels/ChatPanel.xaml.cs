@@ -12,6 +12,7 @@ using System.Windows.Input;
 using NAudio.Wave;
 using TwitchLib.Api;
 using System.Threading;
+using Microsoft.Win32;
 
 namespace JTSA.Panels
 {
@@ -266,11 +267,11 @@ namespace JTSA.Panels
 
         private bool isChatUserListVisible = true;
 
-        private WaveFileReader? ChatNotificationReader = new(Properties.Resources.CommentNotification);
-        private WaveOutEvent? ChatNotificationPlayer = new();
+        private WaveStream? ChatNotificationReader;
+        private WaveOutEvent? ChatNotificationPlayer;
 
-        private WaveFileReader? JoinChatReader = new(Properties.Resources.JoinChat);
-        private WaveOutEvent? JoinChatPlayer = new();
+        private WaveStream? JoinChatReader;
+        private WaveOutEvent? JoinChatPlayer;
 
 
 
@@ -282,8 +283,8 @@ namespace JTSA.Panels
             InitializeComponent();
             DataContext = this;
 
-            ChatNotificationPlayer.Init(ChatNotificationReader);
-            JoinChatPlayer.Init(JoinChatReader);
+            LoadChatNotificationAudio();
+            LoadJoinChatAudio();
 
             sendChatButton.Click += SendChatButton_Click;
             pinedChatButton.Click += PinedChatButton_Click;
@@ -460,7 +461,12 @@ namespace JTSA.Panels
                     _ = streamExpansionService.HandleAsync(
                         StreamExpansionTriggerType.Chat,
                         message.Message,
-                        chatPlaceholders);
+                        chatPlaceholders,
+                        chatUser: new StreamExpansionChatUserContext(
+                            message.UserId == connectedBroadcasterId,
+                            message.UserDetail.IsModerator,
+                            message.UserDetail.IsVip,
+                            message.UserDetail.IsSubscriber));
 
                     if (isFirstEntrance)
                     {
@@ -650,9 +656,12 @@ namespace JTSA.Panels
 
             if (isFirstEntrance)
             {
-                JoinChatReader.Position = 0;
-                JoinChatPlayer.Volume = (float)JoinChatVolumeSlider.Value / 100f;
-                JoinChatPlayer.Play();
+                if (JoinChatReader != null && JoinChatPlayer != null)
+                {
+                    JoinChatReader.Position = 0;
+                    JoinChatPlayer.Volume = (float)JoinChatVolumeSlider.Value / 100f;
+                    JoinChatPlayer.Play();
+                }
 
                 var inserData = new T_ChatUser
                 {
@@ -666,9 +675,12 @@ namespace JTSA.Panels
             }
             else
             {
-                ChatNotificationReader.Position = 0;
-                ChatNotificationPlayer.Volume = (float)ChatNotificationVolumeSlider.Value / 100f;
-                ChatNotificationPlayer.Play();
+                if (ChatNotificationReader != null && ChatNotificationPlayer != null)
+                {
+                    ChatNotificationReader.Position = 0;
+                    ChatNotificationPlayer.Volume = (float)ChatNotificationVolumeSlider.Value / 100f;
+                    ChatNotificationPlayer.Play();
+                }
             }
 
             UpdateChatUserList(form, userData);
@@ -773,6 +785,15 @@ namespace JTSA.Panels
             );
         }
 
+        private void ChatNotificationAudioChangeButton_Click(object sender, RoutedEventArgs e)
+        {
+            var path = SelectAudioFile();
+            if (path == null) return;
+
+            if (TryReplaceAudio(path, ref ChatNotificationReader, ref ChatNotificationPlayer, "チャット通知音"))
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatNotificationAudioPath, path);
+        }
+
 
         /// <summary>
         /// 
@@ -785,6 +806,103 @@ namespace JTSA.Panels
                 DAO_Setting.SettingName.JoinChatVolume,
                 e.NewValue.ToString()
             );
+        }
+
+        private void JoinChatAudioChangeButton_Click(object sender, RoutedEventArgs e)
+        {
+            var path = SelectAudioFile();
+            if (path == null) return;
+
+            if (TryReplaceAudio(path, ref JoinChatReader, ref JoinChatPlayer, "チャット参加音"))
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.JoinChatAudioPath, path);
+        }
+
+        private static string? SelectAudioFile()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "音声ファイルを選択",
+                Filter = "音声ファイル|*.wav;*.mp3;*.aac;*.wma;*.m4a|すべてのファイル|*.*",
+                CheckFileExists = true
+            };
+
+            return dialog.ShowDialog() == true ? dialog.FileName : null;
+        }
+
+        private void LoadChatNotificationAudio()
+        {
+            var path = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.ChatNotificationAudioPath)?.Value;
+
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
+                TryReplaceAudio(path, ref ChatNotificationReader, ref ChatNotificationPlayer, "チャット通知音", false))
+                return;
+
+            ReplaceWithDefaultAudio(
+                new WaveFileReader(Properties.Resources.CommentNotification),
+                ref ChatNotificationReader,
+                ref ChatNotificationPlayer);
+        }
+
+        private void LoadJoinChatAudio()
+        {
+            var path = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.JoinChatAudioPath)?.Value;
+
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
+                TryReplaceAudio(path, ref JoinChatReader, ref JoinChatPlayer, "チャット参加音", false))
+                return;
+
+            ReplaceWithDefaultAudio(
+                new WaveFileReader(Properties.Resources.JoinChat),
+                ref JoinChatReader,
+                ref JoinChatPlayer);
+        }
+
+        private static bool TryReplaceAudio(
+            string path,
+            ref WaveStream? reader,
+            ref WaveOutEvent? player,
+            string audioName,
+            bool showError = true)
+        {
+            AudioFileReader? newReader = null;
+            WaveOutEvent? newPlayer = null;
+            try
+            {
+                newReader = new AudioFileReader(path);
+                newPlayer = new WaveOutEvent();
+                newPlayer.Init(newReader);
+
+                player?.Stop();
+                player?.Dispose();
+                reader?.Dispose();
+                reader = newReader;
+                player = newPlayer;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                newPlayer?.Dispose();
+                newReader?.Dispose();
+                if (showError)
+                    MessageBox.Show($"{audioName}を読み込めませんでした。\n{ex.GetBaseException().Message}", "音声ファイル変更");
+                return false;
+            }
+        }
+
+        private static void ReplaceWithDefaultAudio(
+            WaveStream newReader,
+            ref WaveStream? reader,
+            ref WaveOutEvent? player)
+        {
+            var newPlayer = new WaveOutEvent();
+            newPlayer.Init(newReader);
+            player?.Stop();
+            player?.Dispose();
+            reader?.Dispose();
+            reader = newReader;
+            player = newPlayer;
         }
 
         /// <summary>  </summary>

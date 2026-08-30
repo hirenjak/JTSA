@@ -44,6 +44,10 @@ internal static class DAO_StreamExpansion
             entity.DoShoutout = header.DoShoutout;
             entity.DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600);
             entity.TriggerComment = header.TriggerComment;
+            entity.ChatPermissionEveryone = header.ChatPermissionEveryone;
+            entity.ChatPermissionModerator = header.ChatPermissionModerator;
+            entity.ChatPermissionVip = header.ChatPermissionVip;
+            entity.ChatPermissionSubscriber = header.ChatPermissionSubscriber;
             entity.TriggerChannelPointId = header.TriggerChannelPointId;
             entity.UpdatedDateTime = DateTime.Now;
         }

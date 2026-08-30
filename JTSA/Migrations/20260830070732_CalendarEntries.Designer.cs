@@ -3,6 +3,7 @@ using System;
 using JTSA.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830070732_CalendarEntries")]
+    partial class CalendarEntries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -97,38 +100,13 @@ namespace JTSA.Migrations
                     b.Property<DateTime>("CalendarDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CategoryBoxArtUrl")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CategoryId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CategoryName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreatedDateTime")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastUsedDateTime")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("SelectedCount")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SortNumber")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<TimeSpan>("StartTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TitlePlaceholder")
+                    b.Property<string>("Memo")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -137,7 +115,8 @@ namespace JTSA.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CalendarDate", "StartTime");
+                    b.HasIndex("CalendarDate")
+                        .IsUnique();
 
                     b.ToTable("T_CalendarEntry");
                 });
