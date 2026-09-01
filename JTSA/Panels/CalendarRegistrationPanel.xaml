@@ -22,9 +22,11 @@
 
    <Grid Grid.Row="1"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <!-- 選択中のフレンド -->
-    <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,8">
+    <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8" MinHeight="44" Margin="0,0,0,8">
      <DockPanel>
-      <Button DockPanel.Dock="Left" Content="フレンド選択" Width="96" Height="28" Margin="0,0,8,0" Click="SelectFriendsButton_Click"/>
+      <Button DockPanel.Dock="Left" Content="フレンド選択" Width="96" Height="28" Margin="0,0,8,0"
+              Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
+              Click="SelectFriendsButton_Click"/>
       <ItemsControl ItemsSource="{Binding SelectedFriends, ElementName=Root}" VerticalAlignment="Center">
        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
        <ItemsControl.ItemTemplate><DataTemplate>
@@ -52,10 +54,13 @@
 
    <!-- パネル右側：カテゴリ一覧とタイトルタグ -->
    <Grid Grid.Column="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="82"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-     <TextBlock Text="カテゴリ一覧 ※ダブルクリックで設定" Foreground="White"/>
-     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6"><Image x:Name="SelectedCategoryBoxArt" Width="54" Height="72" Stretch="Uniform"/><TextBlock x:Name="SelectedCategoryTextBlock" Margin="10,0,0,0" Foreground="White" Text="未選択" TextWrapping="Wrap" VerticalAlignment="Center"/></StackPanel>
-     <ListBox x:Name="CategoryListBox" Grid.Row="2" ItemsSource="{Binding Categories, ElementName=Root}" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1" HorizontalContentAlignment="Stretch" MouseDoubleClick="CategoryListBox_MouseDoubleClick">
+    <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="82"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <Button Content="カテゴリを追加" Height="28" Margin="0,0,0,7"
+             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
+             Click="AddCategoryButton_Click"/>
+     <TextBlock Grid.Row="1" Text="カテゴリ一覧 ※ダブルクリックで設定" Foreground="White"/>
+     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,6"><Image x:Name="SelectedCategoryBoxArt" Width="54" Height="72" Stretch="Uniform"/><TextBlock x:Name="SelectedCategoryTextBlock" Margin="10,0,0,0" Foreground="White" Text="未選択" TextWrapping="Wrap" VerticalAlignment="Center"/></StackPanel>
+     <ListBox x:Name="CategoryListBox" Grid.Row="3" ItemsSource="{Binding Categories, ElementName=Root}" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1" HorizontalContentAlignment="Stretch" MouseDoubleClick="CategoryListBox_MouseDoubleClick">
       <ListBox.ItemTemplate><DataTemplate><Grid Margin="4"><Grid.ColumnDefinitions><ColumnDefinition Width="36"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Image Source="{Binding BoxArtUrl}" Width="36" Height="48"/><StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="13" TextWrapping="Wrap"/><TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/></StackPanel></Grid></DataTemplate></ListBox.ItemTemplate>
      </ListBox>
     </Grid></Border>

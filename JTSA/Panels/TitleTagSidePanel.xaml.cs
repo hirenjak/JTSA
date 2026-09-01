@@ -4,6 +4,8 @@ using JTSA.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
 
 namespace JTSA.Panels
 {
@@ -18,6 +20,7 @@ namespace JTSA.Panels
 
         /// <summary>  </summary>
         public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
+        private TextBox TitleTextTagAddTextBox = null!;
 
 
         /// <summary>
@@ -28,6 +31,51 @@ namespace JTSA.Panels
             DataContext = this;
 
             InitializeComponent();
+            TitleTagListBox.ItemsSource = CreateTitleTagItemsSource();
+        }
+
+        private CompositeCollection CreateTitleTagItemsSource()
+        {
+            TitleTextTagAddTextBox = new TextBox
+            {
+                MinWidth = 120,
+                Height = 26,
+                Padding = new Thickness(4, 0, 4, 0),
+                VerticalContentAlignment = VerticalAlignment.Center,
+                ToolTip = "追加したいタイトルタグを入力"
+            };
+
+            var addButton = new Button
+            {
+                Content = "追加",
+                Width = 54,
+                Height = 26,
+                Margin = new Thickness(8, 0, 0, 0),
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.FromRgb(40, 86, 83)),
+                BorderBrush = Brushes.LightSeaGreen,
+                BorderThickness = new Thickness(1)
+            };
+            addButton.Click += TitleTagAddButton_Click;
+
+            var addRow = new Grid { Margin = new Thickness(4) };
+            addRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            addRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            addRow.Children.Add(TitleTextTagAddTextBox);
+            Grid.SetColumn(addButton, 1);
+            addRow.Children.Add(addButton);
+
+            return new CompositeCollection
+            {
+                new ListBoxItem
+                {
+                    Content = addRow,
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                    Padding = new Thickness(2),
+                    IsTabStop = false
+                },
+                new CollectionContainer { Collection = TitleTagFormList }
+            };
         }
 
 

@@ -7,7 +7,9 @@ using System.Security.Policy;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using TwitchLib.Api.Helix.Models.Entitlements;
 using TwitchLib.Api.Helix.Models.Schedule;
 using static JTSA.Dao.DAO_GamePlaylist;
@@ -38,7 +40,8 @@ namespace JTSA.Panels
             set { CurrentGamePlaylistIdTextBlock.Text = value.ToString(); }}
         public string CurrentGamePlaylistName { get { return GamePlayListTitleEdit.Text; } set { GamePlayListTitleEdit.Text = value; } }
 
-        private ObservableCollection<PlaylistItemForm> playlistItemFormList { get; } = new();
+        public ObservableCollection<PlaylistItemForm> PlaylistItemFormList { get; } = new();
+        private ObservableCollection<PlaylistItemForm> playlistItemFormList => PlaylistItemFormList;
 
         /// <summary>  </summary>
         public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
@@ -52,8 +55,8 @@ namespace JTSA.Panels
         public PlayingGamePanel()
         {
             InitializeComponent();
-            ImageItemsControl.ItemsSource = playlistItemFormList;
-            GamePlaylistListBox.ItemsSource = playlistHeaderFormList;
+            ImageItemsControl.ItemsSource = CreatePlaylistItemsSource();
+            GamePlaylistListBox.ItemsSource = CreatePlaylistHeadersSource();
 
             server = new ObsHttpServer(
                 CreateObsHtml,
@@ -62,6 +65,61 @@ namespace JTSA.Panels
                 () => mainWindow.ChatPanel.CreateObsChatJson());
 
             _ = server.StartAsync();
+        }
+
+        private CompositeCollection CreatePlaylistItemsSource()
+        {
+            var addButton = new Button
+            {
+                Width = 230,
+                Height = 107,
+                Margin = new Thickness(8),
+                Content = "＋",
+                FontSize = 34,
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.FromRgb(40, 86, 83)),
+                BorderBrush = Brushes.LightSeaGreen,
+                BorderThickness = new Thickness(1),
+                ToolTip = "カテゴリをプレイリストへ追加"
+            };
+            addButton.Click += AddCategoryCardButton_Click;
+
+            return new CompositeCollection
+            {
+                new CollectionContainer { Collection = playlistItemFormList },
+                addButton
+            };
+        }
+
+        private CompositeCollection CreatePlaylistHeadersSource()
+        {
+            var addButton = new Button
+            {
+                Height = 30,
+                Margin = new Thickness(4),
+                Padding = new Thickness(8, 0, 8, 0),
+                Content = "＋ プレイリストを追加",
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Foreground = Brushes.White,
+                Background = new SolidColorBrush(Color.FromRgb(40, 86, 83)),
+                BorderBrush = Brushes.LightSeaGreen,
+                BorderThickness = new Thickness(1)
+            };
+            addButton.Click += GamePlayListSaveButton_Click;
+
+            var addListItem = new ListBoxItem
+            {
+                Content = addButton,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(0),
+                IsTabStop = false
+            };
+
+            return new CompositeCollection
+            {
+                addListItem,
+                new CollectionContainer { Collection = playlistHeaderFormList }
+            };
         }
 
 
@@ -73,7 +131,7 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void GamePlaylistListBox_DoubleClick(object sender, EventArgs e)
+        private void GamePlaylistListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (GamePlaylistListBox.SelectedItem is PlaylistHeaderForm selectedItem)
             {
@@ -86,25 +144,18 @@ namespace JTSA.Panels
             ReloadGamePlaylistItem();
         }
 
-        /// <summary>
-        /// 登録済みカテゴリを現在のプレイリストへ追加する。
-        /// </summary>
-        private void ExistingCategoryListBox_DoubleClick(object sender, EventArgs e)
+        private void AddCategoryCardButton_Click(object sender, RoutedEventArgs e)
         {
-            if (ExistingCategoryListBox.SelectedItem is not CategoryForm selectedItem) return;
+            var window = new PlaylistCategorySelectionWindow
+            {
+                Owner = Window.GetWindow(this)
+            };
 
-            AddPlaylistItem(selectedItem.CategoryId);
-            ExistingCategoryListBox.SelectedIndex = -1;
+            if (window.ShowDialog() == true && !string.IsNullOrWhiteSpace(window.SelectedCategoryId))
+            {
+                AddPlaylistItem(window.SelectedCategoryId);
+            }
         }
-
-        /// <summary>
-        /// カテゴリ画面と同じ登録済みカテゴリ一覧を表示する。
-        /// </summary>
-        public void BindExistingCategoryList(ObservableCollection<CategoryForm> categoryFormList)
-        {
-            ExistingCategoryListBox.ItemsSource = categoryFormList;
-        }
-
 
         /// <summary>
         /// ゲームプレイリスト新規保存ボタン押下時
@@ -239,13 +290,19 @@ namespace JTSA.Panels
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void GamePlayListTitleEdit_Click(object sender, EventArgs e)
+        private void GamePlayListTitleEdit_LostFocus(object sender, RoutedEventArgs e)
         {
             var currentHeader = FormConvertToPlaylistHeader();
             DAO_GamePlaylist.InsertUpdate(currentHeader);
 
-            // ヘッダー一覧の名前を修正する必要があるので再読み込み
-            ReloadPlaylistHeader();
+            // 一覧を作り直すと、フォーカス移動先への最初のクリックが失われるため、
+            // 表示中の該当項目だけを更新する。
+            var displayedHeader = playlistHeaderFormList
+                .FirstOrDefault(item => item.GamePlayListId == currentHeader.GamePlayListId);
+            if (displayedHeader is not null)
+            {
+                displayedHeader.GamePlayListName = currentHeader.GamePlayListName;
+            }
         }
 
         #endregion

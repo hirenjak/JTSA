@@ -41,6 +41,30 @@ public partial class ObsSettingPanel : UserControl
         RestoreSourceSwitchPresets();
     }
 
+    public void ShowSceneSwitchSettings()
+    {
+        var accountId = ((MainWindow)Application.Current.MainWindow).SelectedTargetAccountId;
+        RefreshSceneSwitchPresetFilter(accountId);
+        ShowStandaloneSwitchSettings(SceneSwitchTab);
+    }
+
+    public void ShowSourceSwitchSettings()
+    {
+        var accountId = ((MainWindow)Application.Current.MainWindow).SelectedTargetAccountId;
+        RefreshSourceSwitchPresetFilter(accountId);
+        ShowStandaloneSwitchSettings(SourceSwitchTab);
+        _ = RefreshSourceVisibilityStatesAsync(accountId);
+    }
+
+    private void ShowStandaloneSwitchSettings(TabItem targetTab)
+    {
+        var targetContent = targetTab.Content;
+        targetTab.Content = null;
+        StandaloneSwitchContentHost.Content = targetContent;
+        ObsSettingsTabControl.Visibility = Visibility.Collapsed;
+        StandaloneSwitchContentHost.Visibility = Visibility.Visible;
+    }
+
     public void ReloadSettings()
     {
         ObsUrlTextBox.Text = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsWebSocketUrl)?.Value
@@ -595,6 +619,7 @@ public partial class ObsSettingPanel : UserControl
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsCurrentScene { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SceneName}";
+        public string ShortcutDisplayName => SceneName;
     }
 
     private sealed class SceneChoice
@@ -613,6 +638,7 @@ public partial class ObsSettingPanel : UserControl
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsVisible { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SourceName}";
+        public string ShortcutDisplayName => SourceName;
         public string DetailText => $"{SceneName} / {SourceName}";
     }
 

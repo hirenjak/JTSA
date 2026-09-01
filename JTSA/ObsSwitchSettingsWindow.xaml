@@ -1,0 +1,9 @@
+<Window x:Class="JTSA.ObsSwitchSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:panels="clr-namespace:JTSA.Panels"
+        Title="OBS切替設定" Icon="Resources/jtsa.ico"
+        Width="1100" Height="720" MinWidth="760" MinHeight="500"
+        WindowStartupLocation="CenterOwner" Background="#FF404040">
+    <panels:ObsSettingPanel x:Name="SwitchSettingsPanel"/>
+</Window>

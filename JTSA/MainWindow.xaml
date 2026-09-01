@@ -535,8 +535,13 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="SCENE&#x0a;シーン選択" Foreground="#FFD0D0D0" VerticalAlignment="Center"
-                       TextAlignment="Center" LineHeight="12" Margin="8,0,9,0" FontSize="10" FontWeight="SemiBold"/>
+            <StackPanel VerticalAlignment="Center" Margin="8,2,9,2">
+                <TextBlock Text="シーン選択" Foreground="#FFD0D0D0"
+                           TextAlignment="Center" FontSize="10" FontWeight="SemiBold"/>
+                <Button Content="設定" Height="19" Margin="0,3,0,0" Padding="7,0"
+                        Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
+                        Click="OpenObsSceneSwitchWindowButton_Click"/>
+            </StackPanel>
             <Grid Grid.Column="1">
                 <TextBlock x:Name="ObsSceneShortcutEmptyTextBlock"
                            Text="OBSタブ ＞ シーン切替タブにてシーンの登録ができます"
@@ -545,11 +550,11 @@
                     <StackPanel>
                         <ItemsControl x:Name="MainObsSceneShortcutItemsControl">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSceneShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSceneShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding ShortcutDisplayName}" Tag="{Binding}" Style="{StaticResource ObsSceneShortcutButtonStyle}" Margin="2,1" MinWidth="96" Height="22" FontSize="10" Click="ObsSceneShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <ItemsControl x:Name="SubObsSceneShortcutItemsControl">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSceneShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSceneShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding ShortcutDisplayName}" Tag="{Binding}" Style="{StaticResource ObsSceneShortcutButtonStyle}" Margin="2,1" MinWidth="96" Height="22" FontSize="10" Click="ObsSceneShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
@@ -558,13 +563,19 @@
 
         <Grid x:Name="ObsSourceShortcutPanel" Grid.Column="1" Margin="6,0,0,0" Background="#FF4C4C4C">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <TextBlock Text="SOURCE&#x0a;ソース表示" Foreground="#FFD0D0D0" VerticalAlignment="Center" TextAlignment="Center" LineHeight="12" Margin="8,0,9,0" FontSize="10" FontWeight="SemiBold"/>
+            <StackPanel VerticalAlignment="Center" Margin="8,2,9,2">
+                <TextBlock Text="ソース表示" Foreground="#FFD0D0D0"
+                           TextAlignment="Center" FontSize="10" FontWeight="SemiBold"/>
+                <Button Content="設定" Height="19" Margin="0,3,0,0" Padding="7,0"
+                        Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
+                        Click="OpenObsSourceSwitchWindowButton_Click"/>
+            </StackPanel>
             <Grid Grid.Column="1">
                 <TextBlock x:Name="ObsSourceShortcutEmptyTextBlock" Text="OBSタブ ＞ ソース切替タブにてソースの登録ができます" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0"/>
                 <ScrollViewer x:Name="ObsSourceShortcutScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <ItemsControl x:Name="MainObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-                        <ItemsControl x:Name="SubObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding DisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        <ItemsControl x:Name="MainObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding ShortcutDisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="2,1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        <ItemsControl x:Name="SubObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding ShortcutDisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="2,1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
@@ -625,7 +636,7 @@
                             <Grid Grid.Row="0" VerticalAlignment="Stretch">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="260" />
+                                    <ColumnDefinition Width="290" />
                                 </Grid.ColumnDefinitions>
 
                                 <!--メインUI-->
@@ -655,7 +666,7 @@
 
                                         <StackPanel Grid.Column="1" Margin="4,0,0,0">
                                             <Label Margin="0" Padding="0"
-                                                   Foreground="White" Content="プレースホルダー配置※右のタイトルタグをクリックでカーソル位置に挿入"/>
+                                                   Foreground="White" Content="プレースホルダー配置※下のタイトルタグをクリックでカーソル位置に挿入"/>
                                             <TextBox x:Name="TitlePlaceholderTextBox"
                                                      Height="48" HorizontalAlignment="Stretch"
                                                      VerticalAlignment="Top" Text="${title}"
@@ -663,6 +674,39 @@
                                                      TextChanged="TitlePlaceholderTextBox_TextChanged"/>
                                         </StackPanel>
                                     </Grid>
+
+                                    <Border DockPanel.Dock="Top" Margin="4,6,0,0" Padding="8"
+                                            MinHeight="44"
+                                            Background="#FF303030" BorderBrush="#FF606060"
+                                            BorderThickness="1" CornerRadius="5">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Left" Content="フレンド選択"
+                                                    Width="96" Height="28" Margin="0,0,8,0"
+                                                    Foreground="White" Background="#FF285653"
+                                                    BorderBrush="LightSeaGreen" BorderThickness="1"
+                                                    Click="OverviewSelectFriendsButton_Click"/>
+                                            <ItemsControl ItemsSource="{Binding SelectedFriendFormList, ElementName=FriendPanel}"
+                                                          VerticalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="#FF505050"
+                                                                CornerRadius="12" Margin="2" Padding="8,3">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding DisplayName}" Foreground="White" VerticalAlignment="Center"/>
+                                                                <Button Tag="{Binding}" Content="×" Width="18" Height="18"
+                                                                        Margin="5,0,0,0" Padding="0"
+                                                                        Foreground="#FFFF8A91" Background="Transparent"
+                                                                        BorderThickness="0" Click="OverviewRemoveFriendButton_Click"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </DockPanel>
+                                    </Border>
 
                                     <Grid 
                                         Margin="0, 4, 0, 0" 
@@ -673,7 +717,7 @@
                                             <ColumnDefinition Width="280"/>
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="24"/>
+                                            <RowDefinition Height="27"/>
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
@@ -689,7 +733,7 @@
                                             x:Name="TitleTextLogListBox" 
                                             ItemsSource="{Binding TitleTextFormList}" 
                                             Background="#FF404040"
-                                            Margin="4,0,4,8"
+                                            Margin="4,3,4,8"
                                             Width="Auto" 
                                             HorizontalAlignment="Stretch" 
                                             HorizontalContentAlignment="Stretch" 
@@ -750,32 +794,59 @@
                                             </ListBox.ItemTemplate>
                                         </ListBox>
 
-                                        <Grid Grid.Row="0" Grid.Column="1" Margin="4,0,0,0">
-                                            <Label Foreground="White"
-                                                   Padding="0"
-                                                   Content="カテゴリ一覧 ※ダブルクリックで送信内容に設定"
-                                                   VerticalAlignment="Center"/>
-                                            <Button Content="設定"
-                                                    Width="44" Height="20"
-                                                    Padding="0"
-                                                    HorizontalAlignment="Right"
-                                                    VerticalAlignment="Center"
-                                                    Background="#FF565656"
-                                                    BorderBrush="#FF777777"
-                                                    BorderThickness="1"
-                                                    Foreground="White"
-                                                    Click="OpenCategorySettingsButton_Click"/>
+                                        <Grid Grid.RowSpan="2" Grid.Column="1" Margin="4,0,0,8">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="27"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="タイトルタグ" Foreground="White" FontSize="12"
+                                                       VerticalAlignment="Bottom"/>
+                                            <panels:TitleTagSidePanel Grid.Row="1"
+                                                                      x:Name="TitleTagSidePanel"
+                                                                      Margin="0,3,0,0"
+                                                                      Visibility="Visible"/>
                                         </Grid>
-                                        
-                                        <ListBox Grid.Row="1" Grid.Column="1"
-                                                 Margin="4,0,0,8"
-                                                 ItemsSource="{Binding CategoryFormList, ElementName=CategoryPanel}"
+                                    </Grid>
+                                </DockPanel>
+
+                                <!-- サイドパネル（カテゴリ一覧） -->
+                                <Grid Grid.Column="1" Margin="8">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="27"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid>
+                                        <Label Foreground="White" Padding="0" Margin="0"
+                                               Content="カテゴリ一覧 ※クリックで設定"
+                                               VerticalAlignment="Bottom"/>
+                                        <Button Content="カテゴリ設定" Width="76" Height="22" Padding="0"
+                                                Margin="0,0,0,3"
+                                                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                Background="#FF565656" BorderBrush="#FF777777"
+                                                BorderThickness="1" Foreground="White"
+                                                Click="OpenCategorySettingsButton_Click"/>
+                                    </Grid>
+
+                                    <ListBox Grid.Row="1" Margin="0,3,0,0"
                                                  x:Name="OverviewCategoryListBox"
                                                  Background="#FF404040"
                                                  HorizontalContentAlignment="Stretch"
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                 MouseDoubleClick="OverviewCategoryListBox_MouseDoubleClick">
+                                                 SelectionChanged="OverviewCategoryListBox_SelectionChanged">
+                                            <ListBox.ItemsSource>
+                                                <CompositeCollection>
+                                                    <ListBoxItem HorizontalContentAlignment="Stretch" Padding="4">
+                                                        <Button Content="＋ カテゴリを追加"
+                                                                Height="30" Padding="8,0"
+                                                                HorizontalContentAlignment="Left"
+                                                                Background="#FF285653" BorderBrush="LightSeaGreen"
+                                                                BorderThickness="1" Foreground="White"
+                                                                Click="OverviewAddCategoryButton_Click"/>
+                                                    </ListBoxItem>
+                                                    <CollectionContainer Collection="{Binding Source={x:Reference CategoryPanel}, Path=CategoryFormList}"/>
+                                                </CompositeCollection>
+                                            </ListBox.ItemsSource>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel>
@@ -795,20 +866,6 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
-                                    </Grid>
-                                </DockPanel>
-                                
-                                <!-- サイドパネル（タイトルテキストタグ／カテゴリ検索） -->
-                                <Grid Grid.Column="1" Margin="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <panels:TitleTagSidePanel Grid.Row="0" x:Name="TitleTagSidePanel" Visibility="Visible"/>
-                                    <panels:CategorySearchPanel Grid.Row="1"
-                                                                x:Name="OverviewCategorySearchPanel"
-                                                                AddToPlaylistOnSelect="False"/>
                                 </Grid>
 
                             </Grid>
@@ -888,7 +945,7 @@
                     <panels:RaidPanel x:Name="RaidPanel"/>
                 </TabItem>
 
-                <TabItem Header="フレンド">
+                <TabItem Header="フレンド" Visibility="Collapsed">
                     <panels:FriendPanel x:Name="FriendPanel"/>
                 </TabItem>
 
@@ -910,6 +967,10 @@
                 
                 <TabItem Header="OBS">
                     <panels:ObsSettingPanel x:Name="ObsSettingPanel"/>
+                </TabItem>
+
+                <TabItem Header="Tips" controls:SplitTabPanel.IsRightAligned="True">
+                    <panels:ObsTipsPanel/>
                 </TabItem>
 
             </TabControl>

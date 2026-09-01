@@ -109,6 +109,17 @@ public partial class CalendarRegistrationPanel : UserControl
         CategoryListBox.SelectedItem = null;
     }
 
+    private void AddCategoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new CategorySearchWindow
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        window.ShowDialog();
+        Reload();
+    }
+
     private void EntryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (EntryListBox.SelectedItem is not T_CalendarEntry entry) return;

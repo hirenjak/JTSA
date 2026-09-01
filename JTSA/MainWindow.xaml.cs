@@ -523,6 +523,24 @@ namespace JTSA
             await ObsSettingPanel.ExecuteSceneSwitchPresetAsync(preset);
         }
 
+        private void OpenObsSceneSwitchWindowButton_Click(object sender, RoutedEventArgs e)
+            => OpenObsSwitchSettingsWindow(showSourceSwitch: false);
+
+        private void OpenObsSourceSwitchWindowButton_Click(object sender, RoutedEventArgs e)
+            => OpenObsSwitchSettingsWindow(showSourceSwitch: true);
+
+        private void OpenObsSwitchSettingsWindow(bool showSourceSwitch)
+        {
+            var window = new ObsSwitchSettingsWindow(showSourceSwitch)
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+            RefreshObsSceneShortcutButtons();
+            RefreshObsSourceShortcutButtons();
+        }
+
         private void ObsSceneShortcutToggleButton_Click(object sender, RoutedEventArgs e)
         {
             var shouldShow = ObsShortcutPanel.Visibility != Visibility.Visible;
@@ -1332,6 +1350,29 @@ namespace JTSA
             CurrentTitleTextUpdate();
         }
 
+        private void OverviewSelectFriendsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new FriendSelectionWindow(
+                FriendPanel.SelectedFriendFormList.Select(friend => friend.BroadcastId))
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                FriendPanel.SelectFriends(dialog.SelectedBroadcastIds);
+            }
+        }
+
+        private void OverviewRemoveFriendButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.Tag is FriendForm friend)
+            {
+                FriendPanel.SelectedFriendFormList.Remove(friend);
+                FriendPanel.UpdateTitlePreview();
+            }
+        }
+
 
         /// <summary>
         /// タイトル編集パネル:削除ボタン（クリック）
@@ -1600,7 +1641,7 @@ namespace JTSA
         /// <summary>
         /// 配信概要パネルのカテゴリ一覧から現在のカテゴリを選択する。
         /// </summary>
-        private void OverviewCategoryListBox_MouseDoubleClick(object sender, EventArgs e)
+        private void OverviewCategoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (OverviewCategoryListBox.SelectedItem is not CategoryForm selectedItem) return;
 
@@ -1716,6 +1757,17 @@ namespace JTSA
         private void OpenCategorySettingsButton_Click(object sender, RoutedEventArgs e)
         {
             var window = new CategoryWindow
+            {
+                Owner = this
+            };
+
+            window.ShowDialog();
+            CategoryPanel.ReloadCategory();
+        }
+
+        private void OverviewAddCategoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CategorySearchWindow
             {
                 Owner = this
             };
@@ -2194,7 +2246,6 @@ namespace JTSA
             }
             isAccountAwarePanelsInitialized = true;
             CategoryPanel.Initialize();
-            PlayingGamePanel.BindExistingCategoryList(CategoryPanel.CategoryFormList);
             await ChannelPointPanel.Initialize();
 
             PlayingGamePanel.ReloadPlaylistHeader();
