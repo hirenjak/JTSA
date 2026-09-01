@@ -83,6 +83,7 @@ jobs:
           --packDir publish
           --mainExe JTSA.exe
           --packTitle JTSA
+          --releaseNotes .github/release-notes.md
           --exclude '(?i)JTSA\.db$'
           --noPortable
 
