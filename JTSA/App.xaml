@@ -4,6 +4,43 @@
              xmlns:local="clr-namespace:JTSA"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <Style x:Key="ModernScrollThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="MinWidth" Value="28"/>
+            <Setter Property="Template">
+                <Setter.Value><ControlTemplate TargetType="{x:Type Thumb}">
+                    <Border x:Name="ThumbBorder" Margin="1" Background="#FF686868" CornerRadius="4"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbBorder" Property="Background" Value="#FF8A8A8A"/></Trigger>
+                        <Trigger Property="IsDragging" Value="True"><Setter TargetName="ThumbBorder" Property="Background" Value="LightSeaGreen"/></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value>
+            </Setter>
+        </Style>
+        <ControlTemplate x:Key="ModernVerticalScrollBarTemplate" TargetType="{x:Type ScrollBar}">
+            <Grid Background="Transparent"><Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True">
+                <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Background="Transparent" Opacity="0"/></Track.DecreaseRepeatButton>
+                <Track.Thumb><Thumb Style="{StaticResource ModernScrollThumbStyle}"/></Track.Thumb>
+                <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Background="Transparent" Opacity="0"/></Track.IncreaseRepeatButton>
+            </Track></Grid>
+        </ControlTemplate>
+        <ControlTemplate x:Key="ModernHorizontalScrollBarTemplate" TargetType="{x:Type ScrollBar}">
+            <Grid Background="Transparent"><Track x:Name="PART_Track" Orientation="Horizontal">
+                <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageLeftCommand" Background="Transparent" Opacity="0"/></Track.DecreaseRepeatButton>
+                <Track.Thumb><Thumb Style="{StaticResource ModernScrollThumbStyle}"/></Track.Thumb>
+                <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageRightCommand" Background="Transparent" Opacity="0"/></Track.IncreaseRepeatButton>
+            </Track></Grid>
+        </ControlTemplate>
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Width" Value="9"/><Setter Property="MinWidth" Value="9"/>
+            <Setter Property="Margin" Value="2,1"/><Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template" Value="{StaticResource ModernVerticalScrollBarTemplate}"/>
+            <Style.Triggers><Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto"/><Setter Property="MinWidth" Value="0"/>
+                <Setter Property="Height" Value="9"/><Setter Property="MinHeight" Value="9"/>
+                <Setter Property="Margin" Value="1,2"/><Setter Property="Template" Value="{StaticResource ModernHorizontalScrollBarTemplate}"/>
+            </Trigger></Style.Triggers>
+        </Style>
         <Style TargetType="{x:Type ListBox}">
             <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
             <Setter Property="ScrollViewer.IsDeferredScrollingEnabled" Value="False" />

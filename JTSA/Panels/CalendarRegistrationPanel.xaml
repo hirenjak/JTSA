@@ -1,73 +1,21 @@
-<UserControl x:Class="JTSA.Panels.CalendarRegistrationPanel" x:Name="Root"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:panels="clr-namespace:JTSA.Panels" Background="#FF404040">
- <Grid Margin="16">
-  <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="380"/><ColumnDefinition Width="10"/><ColumnDefinition Width="550"/></Grid.ColumnDefinitions>
-   <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-   <!-- 配信概要と同じ、タイトル本文とプレースホルダーの横並び編集領域 -->
-   <Grid Margin="4,0,4,12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal">
-     <TextBlock Text="予定日" Foreground="White" VerticalAlignment="Center"/><DatePicker x:Name="ScheduleDatePicker" Width="130" Height="27" Margin="8,0,0,0"/>
-     <TextBlock Text="開始時間" Foreground="White" VerticalAlignment="Center" Margin="16,0,0,0"/>
-     <ComboBox x:Name="StartHourComboBox" Width="52" Height="27" Margin="8,0,0,0" ToolTip="時（00～23）"/>
-     <TextBlock Text=":" Foreground="White" VerticalAlignment="Center" Margin="4,0"/>
-     <ComboBox x:Name="StartMinuteComboBox" Width="52" Height="27" ToolTip="分（5分刻み）"/>
-     <Button Content="予定を保存" Width="92" Height="27" Margin="16,0,0,0" Click="SaveButton_Click"/>
-     <TextBlock x:Name="StatusTextBlock" Margin="12,0,0,0" Foreground="LightGray" VerticalAlignment="Center" TextWrapping="Wrap"/>
-    </StackPanel>
-    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,5,0"><TextBlock Text="タイトル本文編集：${title}の中身" Foreground="White"/><TextBox x:Name="ContentTextBox" Height="48" Margin="0,4,0,0" Padding="6" AcceptsReturn="True" TextWrapping="Wrap"/></StackPanel>
-    <StackPanel Grid.Row="1" Grid.Column="1" Margin="5,8,0,0"><TextBlock Text="プレースホルダー配置 ※右のタイトルタグをクリックでカーソル位置に挿入" Foreground="White"/><TextBox x:Name="TitlePlaceholderTextBox" Height="48" Margin="0,4,0,0" Padding="6" AcceptsReturn="True" TextWrapping="Wrap"/></StackPanel>
-   </Grid>
-
-   <Grid Grid.Row="1"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-    <!-- 選択中のフレンド -->
-    <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8" MinHeight="44" Margin="0,0,0,8">
-     <DockPanel>
-      <Button DockPanel.Dock="Left" Content="フレンド選択" Width="96" Height="28" Margin="0,0,8,0"
-              Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
-              Click="SelectFriendsButton_Click"/>
-      <ItemsControl ItemsSource="{Binding SelectedFriends, ElementName=Root}" VerticalAlignment="Center">
-       <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-       <ItemsControl.ItemTemplate><DataTemplate>
-        <Border Background="#FF505050" CornerRadius="12" Margin="2" Padding="8,3">
-         <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding DisplayName}" Foreground="White" VerticalAlignment="Center"/><Button Tag="{Binding}" Content="×" Width="18" Height="18" Margin="5,0,0,0" Padding="0" Foreground="#FFFF8A91" Background="Transparent" BorderThickness="0" Click="RemoveSelectedFriendButton_Click"/></StackPanel>
-        </Border>
-       </DataTemplate></ItemsControl.ItemTemplate>
-      </ItemsControl>
-     </DockPanel>
-    </Border>
-    <!-- 予定履歴 -->
-    <Border Grid.Row="1" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-     <TextBlock Text="予定履歴 ※クリックで編集" Foreground="White" Margin="4,0,0,5"/>
-     <ListBox x:Name="EntryListBox" Grid.Row="1" ItemsSource="{Binding Entries, ElementName=Root}" Background="#FF404040" BorderThickness="0" HorizontalContentAlignment="Stretch" SelectionChanged="EntryListBox_SelectionChanged">
-      <ListBox.ItemTemplate><DataTemplate><Grid Margin="4"><Grid.ContextMenu><ContextMenu><MenuItem Header="編集" Tag="{Binding}" Click="EditEntryMenuItem_Click"/></ContextMenu></Grid.ContextMenu><Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/><ColumnDefinition Width="26"/></Grid.ColumnDefinitions>
-       <Image Source="{Binding CategoryBoxArtUrl}" Width="36" Height="48"/><StackPanel Grid.Column="1" Margin="8,0,0,0"><TextBlock Text="{Binding Content}" Foreground="White" FontSize="14" TextWrapping="Wrap"/><TextBlock Text="{Binding TitlePlaceholder, StringFormat=テンプレート：{0}}" Foreground="LightGray" FontSize="10"/><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding CategoryName}" Foreground="LightGray" FontSize="10"/><TextBlock Text="{Binding CalendarDate, StringFormat={}　予定日：{0:yyyy/MM/dd}}" Foreground="LightGray" FontSize="10"/><TextBlock Text="{Binding StartTime, StringFormat={} {0:hh\\:mm}}" Foreground="LightGray" FontSize="10"/></StackPanel><TextBlock Text="{Binding SelectedFriendNames, StringFormat=フレンド：{0}}" Foreground="#FF9EDBD7" FontSize="10" TextWrapping="Wrap"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding SelectedFriendNames}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-       <Button Grid.Column="2" Tag="{Binding}" Content="×" Width="22" Height="22" Foreground="#FFFF6F78" Background="Transparent" BorderThickness="0" Click="DeleteButton_Click"/><Border Grid.ColumnSpan="3" Height="1" VerticalAlignment="Bottom" Margin="0,7,0,-5" Background="White"/>
-      </Grid></DataTemplate></ListBox.ItemTemplate>
-     </ListBox>
-    </Grid></Border>
-
-    <!-- 左：カテゴリ一覧 -->
-   </Grid>
-   </Grid>
-
-   <!-- パネル右側：カテゴリ一覧とタイトルタグ -->
-   <Grid Grid.Column="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="82"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-     <Button Content="カテゴリを追加" Height="28" Margin="0,0,0,7"
-             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
-             Click="AddCategoryButton_Click"/>
-     <TextBlock Grid.Row="1" Text="カテゴリ一覧 ※ダブルクリックで設定" Foreground="White"/>
-     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,6"><Image x:Name="SelectedCategoryBoxArt" Width="54" Height="72" Stretch="Uniform"/><TextBlock x:Name="SelectedCategoryTextBlock" Margin="10,0,0,0" Foreground="White" Text="未選択" TextWrapping="Wrap" VerticalAlignment="Center"/></StackPanel>
-     <ListBox x:Name="CategoryListBox" Grid.Row="3" ItemsSource="{Binding Categories, ElementName=Root}" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1" HorizontalContentAlignment="Stretch" MouseDoubleClick="CategoryListBox_MouseDoubleClick">
-      <ListBox.ItemTemplate><DataTemplate><Grid Margin="4"><Grid.ColumnDefinitions><ColumnDefinition Width="36"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Image Source="{Binding BoxArtUrl}" Width="36" Height="48"/><StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="13" TextWrapping="Wrap"/><TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/></StackPanel></Grid></DataTemplate></ListBox.ItemTemplate>
-     </ListBox>
-    </Grid></Border>
-
-    <!-- 右：タイトルタグ -->
-    <Border Grid.Column="2" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="6"><panels:TitleTagSidePanel x:Name="RegistrationTitleTagPanel"/></Border>
-   </Grid>
+<UserControl x:Class="JTSA.Panels.CalendarRegistrationPanel" x:Name="Root" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:panels="clr-namespace:JTSA.Panels" Background="#FF404040">
+ <Grid Margin="16"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <Grid Margin="4,0,4,12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <WrapPanel Grid.ColumnSpan="2"><TextBlock Text="予定日" Foreground="White" VerticalAlignment="Center"/><DatePicker x:Name="ScheduleDatePicker" Width="130" Height="27" Margin="8,0,0,0"/><TextBlock Text="開始時間" Foreground="White" VerticalAlignment="Center" Margin="16,0,0,0"/><ComboBox x:Name="StartHourComboBox" Width="52" Height="27" Margin="8,0,0,0" ToolTip="時（00～23）"/><TextBlock Text=":" Foreground="White" VerticalAlignment="Center" Margin="4,0"/><ComboBox x:Name="StartMinuteComboBox" Width="52" Height="27" ToolTip="分（5分刻み）"/><Button Content="予定を保存" Width="92" Height="27" Margin="16,0,0,0" Click="SaveButton_Click"/><TextBlock x:Name="StatusTextBlock" Margin="12,5,0,0" Foreground="LightGray" VerticalAlignment="Center" TextWrapping="Wrap"/></WrapPanel>
+   <StackPanel Grid.Row="1" Margin="0,8,5,0"><TextBlock Text="タイトル本文編集：${title}の中身" Foreground="White"/><TextBox x:Name="ContentTextBox" Height="48" Margin="0,4,0,0" Padding="6" AcceptsReturn="True" TextWrapping="Wrap"/></StackPanel>
+   <StackPanel Grid.Row="1" Grid.Column="1" Margin="5,8,0,0"><TextBlock Text="プレースホルダー配置 ※下のタイトルタグをクリックでカーソル位置に挿入" Foreground="White"/><TextBox x:Name="TitlePlaceholderTextBox" Height="48" Margin="0,4,0,0" Padding="6" AcceptsReturn="True" TextWrapping="Wrap"/></StackPanel>
+  </Grid>
+  <Border Grid.Row="1" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8" MinHeight="44" Margin="0,0,0,10"><DockPanel>
+   <Button DockPanel.Dock="Left" Content="フレンド選択" Width="96" Height="28" Margin="0,0,8,0" Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen" Click="SelectFriendsButton_Click"/>
+   <ItemsControl ItemsSource="{Binding SelectedFriends, ElementName=Root}" VerticalAlignment="Center"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Border Background="#FF505050" CornerRadius="12" Margin="2" Padding="8,3"><StackPanel Orientation="Horizontal"><TextBlock Text="{Binding DisplayName}" Foreground="White"/><Button Tag="{Binding}" Content="×" Width="18" Height="18" Margin="5,0,0,0" Padding="0" Foreground="#FFFF8A91" Background="Transparent" BorderThickness="0" Click="RemoveSelectedFriendButton_Click"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+  </DockPanel></Border>
+  <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <Border Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="82"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <Button Content="カテゴリを追加" Height="28" Margin="0,0,0,7" Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen" Click="AddCategoryButton_Click"/><TextBlock Grid.Row="1" Text="カテゴリ一覧 ※ダブルクリックで設定" Foreground="White"/>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,6"><Image x:Name="SelectedCategoryBoxArt" Width="54" Height="72" Stretch="Uniform"/><TextBlock x:Name="SelectedCategoryTextBlock" Margin="10,0,0,0" Foreground="White" Text="未選択" TextWrapping="Wrap" VerticalAlignment="Center"/></StackPanel>
+    <ListBox x:Name="CategoryListBox" Grid.Row="3" ItemsSource="{Binding Categories, ElementName=Root}" Background="#FF404040" BorderBrush="#FF606060" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="CategoryListBox_MouseDoubleClick"><ListBox.ItemTemplate><DataTemplate><Grid Margin="4"><Grid.ColumnDefinitions><ColumnDefinition Width="36"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Image Source="{Binding BoxArtUrl}" Width="36" Height="48"/><StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="13" TextWrapping="Wrap"/><TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/></StackPanel></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+   </Grid></Border>
+   <Border Grid.Column="2" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="6" Padding="8"><panels:TitleTagSidePanel x:Name="RegistrationTitleTagPanel"/></Border>
   </Grid>
  </Grid>
 </UserControl>

@@ -501,6 +501,9 @@ namespace JTSA.Panels
                 twitchChatService.SubscriptionReceived += () =>
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
 
+                twitchChatService.HealthCheck += () =>
+                    _ = Dispatcher.InvokeAsync(async () => await PinedChatLoad());
+
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
                     // IRC側の交換メッセージは重複防止で除外しているため、
@@ -701,8 +704,6 @@ namespace JTSA.Panels
             UpdateChatUserList(form, userData);
 
             TwitchChatFormList.Insert(0, form);
-
-            await PinedChatLoad();
         }
 
         /// <summary>発言ユーザーを重複なしで一覧へ追加し、最新発言者を先頭へ移動する。</summary>

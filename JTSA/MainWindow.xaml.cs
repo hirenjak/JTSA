@@ -229,6 +229,7 @@ namespace JTSA
             // WPF上の初期化処理
 			InitializeComponent();
             DataContext = this;
+            CalendarPanel.AddRequested += CalendarPanel_AddRequested;
             CalendarPanel.EditRequested += CalendarPanel_EditRequested;
             twitchStatusHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             twitchStatusHoldTimer.Tick += TwitchStatusHoldTimer_Tick;
@@ -443,7 +444,6 @@ namespace JTSA
             try
             {
                 await MainWindowLoadedCoreAsync(sender, e);
-                CalendarRegistrationPanel.SetInitialPlaceholder(OverviewTitlePlaceholder);
             }
             catch (Exception ex)
             {
@@ -537,6 +537,7 @@ namespace JTSA
             };
 
             window.ShowDialog();
+            ObsSettingPanel.ReloadSwitchPresets();
             RefreshObsSceneShortcutButtons();
             RefreshObsSourceShortcutButtons();
         }
@@ -925,14 +926,15 @@ namespace JTSA
         public async Task ConnectObsAsync(bool forceReconnect, bool isSub = false)
         {
             var connectionLock = isSub ? subObsConnectionLock : mainObsConnectionLock;
+            var controller = isSub ? subObsController : mainObsController;
             ObsSettingPanel.SetConnectionStatus(false, "接続待機中...", isSub);
             await connectionLock.WaitAsync();
             isObsOperationRunning = true;
             ObsSettingPanel.SetConnectionStatus(false, "接続中...", isSub);
-            SetObsButtonState(enabled: false, isObsStreaming);
+            if (IsSelectedObsController(controller))
+                SetObsButtonState(enabled: false, isObsStreaming);
             try
             {
-                var controller = isSub ? subObsController : mainObsController;
                 if (forceReconnect)
                     await controller.DisconnectAsync();
 
@@ -955,6 +957,8 @@ namespace JTSA
                     mainObsHasConnected = true;
                 }
                 ObsSettingPanel.SetConnectionStatus(true, isSub: isSub);
+                await ObsSettingPanel.RefreshSceneShortcutStatesAsync(SelectedTargetAccountId, isSub);
+                await ObsSettingPanel.RefreshSourceVisibilityStatesAsync(SelectedTargetAccountId, isSub);
                 var controlTarget = GetObsControlTarget();
                 if (controlTarget is not null &&
                     ReferenceEquals(controlTarget.Value.Controller, controller))
@@ -964,7 +968,8 @@ namespace JTSA
             }
             catch (Exception ex)
             {
-                SetObsButtonState(enabled: false, isStreaming: false);
+                if (IsSelectedObsController(controller))
+                    SetObsButtonState(enabled: false, isStreaming: false);
                 ObsSettingPanel.SetConnectionStatus(false, "接続失敗", isSub);
                 AppLogPanel.Error(GetType().Name, $"OBS接続失敗 「 {ex.GetBaseException().Message} 」");
             }
@@ -973,6 +978,7 @@ namespace JTSA
                 isObsOperationRunning = false;
                 UpdateObsShortcutButtonStates();
                 connectionLock.Release();
+                await RefreshObsControlTargetAsync();
             }
         }
 
@@ -1092,7 +1098,13 @@ namespace JTSA
             return null;
         }
 
-        public async void RefreshObsControlTarget()
+        private bool IsSelectedObsController(ObsController controller)
+        {
+            var target = GetObsControlTarget();
+            return target is not null && ReferenceEquals(target.Value.Controller, controller);
+        }
+
+        private async Task RefreshObsControlTargetAsync()
         {
             var target = GetObsControlTarget();
             if (target is null || !target.Value.Controller.IsConnected)
@@ -1102,6 +1114,11 @@ namespace JTSA
             }
             try { await RefreshObsStreamStateAsync(target.Value.Controller); }
             catch { SetObsButtonState(enabled: false, isStreaming: false); }
+        }
+
+        public async void RefreshObsControlTarget()
+        {
+            await RefreshObsControlTargetAsync();
         }
 
         private void SetObsButtonState(bool enabled, bool isStreaming)
@@ -1197,7 +1214,7 @@ namespace JTSA
         {
             if (TargetAccountComboBox.SelectedValue is long id)
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
-            RefreshObsControlTarget();
+            await RefreshObsControlTargetAsync();
             RefreshObsSceneShortcutButtons();
             RefreshObsSourceShortcutButtons();
             if (ObsShortcutPanel.Visibility == Visibility.Visible)
@@ -1529,12 +1546,12 @@ namespace JTSA
         /// 配信者情報設定処理
         /// </summary>
         /// <param name="userName"></param>
-        public async Task StreamerDataSet()
+        public async Task StreamerDataSet(string broadcasterId, string accessToken)
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "配信者情報設定処理");
 
             // タイトル取得処理
-            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(TwitchHelper.BroadcasterId);
+            var streamInfo = await TwitchHelper.GetTwitchStreamInfo(broadcasterId, accessToken);
             if (streamInfo == null)
             {
                 processLog.ErrorLogWrite("配信情報の取得に失敗");
@@ -1587,6 +1604,16 @@ namespace JTSA
             ReloadTitleText();
             LoadFirstTitleLogIntoEditor(streamInfo.title);
             TitleTagSidePanel.ReloadTitleTag();
+
+            var titleMatches = string.Equals(
+                CurrentTitleText.Trim(),
+                streamInfo.title.Trim(),
+                StringComparison.Ordinal);
+            var categoryMatches = string.Equals(
+                CurrentCategoryId.Trim(),
+                streamInfo.gameId.Trim(),
+                StringComparison.Ordinal);
+            SetTwitchSettingApplied(titleMatches && categoryMatches);
 
             processLog.SuccessLogWrite();
         }
@@ -2124,17 +2151,8 @@ namespace JTSA
 
             isTwitchStatusHeld = false;
             TwitchSettingStatusTextBlock.ReleaseMouseCapture();
-            var account = SelectedTargetAccountId is long accountId
-                ? DAO_TwitchAccount.SelectById(accountId)
-                : null;
-            if (account is not null)
-                TwitchNotificationPanel.SetTargetAccount(account.UserName);
-
-            SecretToolsTabControl.SelectedIndex = 0;
             CalendarPanel.RefreshSelectedDate();
-            CalendarRegistrationPanel.Reload();
-            TwitchNotificationTabItem.Visibility = Visibility.Visible;
-            MainTabControl.SelectedItem = TwitchNotificationTabItem;
+            MainTabControl.SelectedItem = CalendarTabItem;
         }
 
         private void CancelTwitchStatusHold()
@@ -2145,37 +2163,23 @@ namespace JTSA
                 TwitchSettingStatusTextBlock.ReleaseMouseCapture();
         }
 
-        private void TwitchNotificationPanel_CloseRequested(object sender, RoutedEventArgs e)
-        {
-            TwitchNotificationTabItem.Visibility = Visibility.Collapsed;
-            MainTabControl.SelectedIndex = 0;
-        }
-
-        private void CalendarPanel_CloseRequested(object sender, RoutedEventArgs e)
-        {
-            TwitchNotificationTabItem.Visibility = Visibility.Collapsed;
-            MainTabControl.SelectedIndex = 0;
-        }
+        private void CalendarPanel_AddRequested()
+            => OpenCalendarRegistrationWindow();
 
         private void CalendarPanel_EditRequested(long entryId)
-        {
-            TwitchNotificationTabItem.Visibility = Visibility.Visible;
-            MainTabControl.SelectedItem = TwitchNotificationTabItem;
-            SecretToolsTabControl.SelectedIndex = 1;
-            CalendarRegistrationPanel.SelectEntryForEditing(entryId);
-        }
+            => OpenCalendarRegistrationWindow(entryId);
 
-        private void SecretToolsTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void OpenCalendarRegistrationWindow(long? entryId = null)
         {
-            if (!ReferenceEquals(e.Source, SecretToolsTabControl)) return;
-
-            if (SecretToolsTabControl.SelectedIndex == 0)
-                CalendarPanel.RefreshSelectedDate();
-            else if (SecretToolsTabControl.SelectedIndex == 1)
+            var window = new CalendarRegistrationWindow(
+                CalendarPanel.SelectedDate,
+                OverviewTitlePlaceholder,
+                entryId)
             {
-                CalendarRegistrationPanel.Reload();
-                CalendarRegistrationPanel.SetScheduleDateFromCalendar(CalendarPanel.SelectedDate);
-            }
+                Owner = this
+            };
+            window.ShowDialog();
+            CalendarPanel.RefreshSelectedDate();
         }
 
         private void UpdateDisplayedViewerCount()
@@ -2231,19 +2235,24 @@ namespace JTSA
 
             IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
 
-            // アクセストークンの確認を持って起動時設定を完了
-            await StreamerDataSet();
+            // 右上で選択されているアカウントの配信概要を読み込む。
+            var selectedAccount = await GetSelectedTargetAccountAsync();
+            if (selectedAccount is null)
+            {
+                processLog.ErrorLogWrite("選択アカウントの認証情報を取得できませんでした");
+                return;
+            }
+
+            await StreamerDataSet(
+                selectedAccount.Value.Account.BroadcasterId,
+                selectedAccount.Value.AccessToken);
             await UpdateStreamStatusAsync();
 
             // 各パネルの初期化処理
-            var selectedAccount = await GetSelectedTargetAccountAsync();
-            if (selectedAccount is not null)
-            {
-                await ChatPanel.InitializeAsync(
-                    selectedAccount.Value.Account.UserName,
-                    selectedAccount.Value.Account.BroadcasterId,
-                    selectedAccount.Value.AccessToken);
-            }
+            await ChatPanel.InitializeAsync(
+                selectedAccount.Value.Account.UserName,
+                selectedAccount.Value.Account.BroadcasterId,
+                selectedAccount.Value.AccessToken);
             isAccountAwarePanelsInitialized = true;
             CategoryPanel.Initialize();
             await ChannelPointPanel.Initialize();

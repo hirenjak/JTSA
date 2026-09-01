@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using TwitchLib.Client;
 using TwitchLib.Client.Events;
@@ -9,9 +10,13 @@ public sealed class TwitchChatService
 {
     private readonly TwitchClient client;
     private readonly string channelName;
+    private readonly SemaphoreSlim reconnectLock = new(1, 1);
+    private CancellationTokenSource? healthCheckCancellation;
+    private volatile bool disconnectRequested;
 
     public event Action<ChatMessage>? MessageReceived;
     public event Action? SubscriptionReceived;
+    public event Action? HealthCheck;
 
     public TwitchChatService(string channelName)
     {
@@ -54,6 +59,10 @@ public sealed class TwitchChatService
     private Task Client_OnDisconnected(object? sender, OnDisconnectedArgs e)
     {
         Console.WriteLine("Twitchチャットから切断されました。");
+
+        if (!disconnectRequested)
+            _ = ReconnectWithRetryAsync();
+
         return Task.CompletedTask;
     }
 
@@ -65,7 +74,13 @@ public sealed class TwitchChatService
     {
         if (client.IsConnected) return;
 
+        disconnectRequested = false;
         await client.ConnectAsync();
+
+        healthCheckCancellation?.Cancel();
+        healthCheckCancellation?.Dispose();
+        healthCheckCancellation = new CancellationTokenSource();
+        _ = MonitorConnectionAsync(healthCheckCancellation.Token);
     }
 
 
@@ -75,10 +90,72 @@ public sealed class TwitchChatService
     /// <returns></returns>
     public async Task DisconnectAsync()
     {
+        disconnectRequested = true;
+        healthCheckCancellation?.Cancel();
+
         if (!client.IsConnected)
             return;
 
         await client.DisconnectAsync();
+    }
+
+    private async Task MonitorConnectionAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (!client.IsConnected && !disconnectRequested)
+                {
+                    Console.WriteLine("Twitchチャットの接続停止を検知しました。");
+                    _ = ReconnectWithRetryAsync();
+                }
+
+                HealthCheck?.Invoke();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // 意図的な切断時は監視も終了する。
+        }
+    }
+
+    private async Task ReconnectWithRetryAsync()
+    {
+        if (!await reconnectLock.WaitAsync(0)) return;
+
+        try
+        {
+            var delay = TimeSpan.FromSeconds(2);
+
+            while (!disconnectRequested && !client.IsConnected)
+            {
+                try
+                {
+                    Console.WriteLine("Twitchチャットへ再接続します。");
+                    await client.ReconnectAsync();
+
+                    if (client.IsConnected)
+                    {
+                        Console.WriteLine("Twitchチャットへ再接続しました。");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Twitchチャット再接続エラー: {ex.Message}");
+                }
+
+                await Task.Delay(delay);
+                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
+            }
+        }
+        finally
+        {
+            reconnectLock.Release();
+        }
     }
 
     private async Task Client_OnConnected(object? sender, TwitchLib.Client.Events.OnConnectedEventArgs e)

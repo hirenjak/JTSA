@@ -58,16 +58,12 @@ public partial class CalendarRegistrationPanel : UserControl
         Reload();
         var entry = Entries.FirstOrDefault(item => item.Id == entryId);
         if (entry is null) return;
-
-        EntryListBox.SelectedItem = entry;
-        EntryListBox.ScrollIntoView(entry);
-        EntryListBox.Focus();
+        LoadEntry(entry);
     }
 
     public void SetScheduleDateFromCalendar(DateTime date)
     {
         editingEntryId = null;
-        EntryListBox.SelectedItem = null;
         ScheduleDatePicker.SelectedDate = date.Date;
     }
 
@@ -120,9 +116,8 @@ public partial class CalendarRegistrationPanel : UserControl
         Reload();
     }
 
-    private void EntryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void LoadEntry(T_CalendarEntry entry)
     {
-        if (EntryListBox.SelectedItem is not T_CalendarEntry entry) return;
         editingEntryId = entry.Id;
         ScheduleDatePicker.SelectedDate = entry.CalendarDate;
         ContentTextBox.Text = entry.Content;
@@ -166,22 +161,7 @@ public partial class CalendarRegistrationPanel : UserControl
         editingEntryId = null;
         Reload();
         StatusTextBlock.Text = "予定を保存しました。";
-    }
-
-    private void DeleteButton_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as Button)?.Tag is not T_CalendarEntry entry) return;
-        DAO_Calendar.Delete(entry.Id);
-        Reload();
-        StatusTextBlock.Text = "予定を削除しました。";
-        e.Handled = true;
-    }
-
-    private void EditEntryMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as MenuItem)?.Tag is not T_CalendarEntry entry) return;
-        SelectEntryForEditing(entry.Id);
-        e.Handled = true;
+        RaiseEvent(new RoutedEventArgs(CloseRequestedEvent));
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)

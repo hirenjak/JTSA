@@ -921,24 +921,8 @@
                                                 CloseRequested="ChatStatisticsPanel_CloseRequested"/>
                 </TabItem>
 
-                <TabItem x:Name="TwitchNotificationTabItem"
-                         Header="カレンダー"
-                         Visibility="Collapsed">
-                    <TabControl x:Name="SecretToolsTabControl" Background="#FF404040"
-                                SelectionChanged="SecretToolsTabControl_SelectionChanged">
-                        <TabItem Header="カレンダー">
-                            <panels:CalendarPanel x:Name="CalendarPanel"
-                                                  CloseRequested="CalendarPanel_CloseRequested"/>
-                        </TabItem>
-                        <TabItem Header="カレンダー登録">
-                            <panels:CalendarRegistrationPanel x:Name="CalendarRegistrationPanel"
-                                                              CloseRequested="CalendarPanel_CloseRequested"/>
-                        </TabItem>
-                        <TabItem Header="Twitch通知">
-                            <panels:TwitchNotificationPanel x:Name="TwitchNotificationPanel"
-                                                            CloseRequested="TwitchNotificationPanel_CloseRequested"/>
-                        </TabItem>
-                    </TabControl>
+                <TabItem x:Name="CalendarTabItem" Header="カレンダー">
+                    <panels:CalendarPanel x:Name="CalendarPanel"/>
                 </TabItem>
 
                 <TabItem Header="レイド">

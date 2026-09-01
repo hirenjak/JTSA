@@ -111,7 +111,7 @@ namespace JTSA.Panels
             mainWindow.StatusTextBlock.Text = log;
             mainWindow.StatusTextBlock.Foreground = color;
 
-            AppLogFormList.Add(
+            AppLogFormList.Insert(0,
                 new AppLogForm() { 
                 LogDateTime = DateTime.Now,
                 Content = "【 " + traceClassName + "】 " + log,  
@@ -127,7 +127,7 @@ namespace JTSA.Panels
                 return;
             }
 
-            AppLogFormList.Add(
+            AppLogFormList.Insert(0,
                 new AppLogForm()
                 {
                     LogDateTime = DateTime.Now,

@@ -35,6 +35,7 @@ public partial class CalendarPanel : UserControl
 
     public ObservableCollection<T_CalendarEntry> Entries { get; } = [];
     public ObservableCollection<CalendarScheduleDayForm> CalendarDays { get; } = [];
+    public event Action? AddRequested;
     public event Action<long>? EditRequested;
     public DateTime SelectedDate => selectedDate;
 
@@ -242,28 +243,16 @@ public partial class CalendarPanel : UserControl
         e.Handled = true;
     }
 
-    private void EditEntryMenuItem_Click(object sender, RoutedEventArgs e)
+    private void EditEntryButton_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as MenuItem)?.Tag is not T_CalendarEntry entry) return;
+        if ((sender as Button)?.Tag is not T_CalendarEntry entry) return;
         CalendarEntryListBox.SelectedItem = entry;
         EditRequested?.Invoke(entry.Id);
         e.Handled = true;
     }
 
-    private void EditDayEntryMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as MenuItem)?.Tag is not CalendarScheduleDayForm day) return;
-        var entry = Entries
-            .Where(item => item.CalendarDate.Date == day.Date.Date)
-            .OrderBy(item => item.StartTime)
-            .FirstOrDefault();
-        if (entry is null) return;
-
-        CalendarEntryListBox.SelectedItem = entry;
-        CalendarEntryListBox.ScrollIntoView(entry);
-        EditRequested?.Invoke(entry.Id);
-        e.Handled = true;
-    }
+    private void AddEntryButton_Click(object sender, RoutedEventArgs e)
+        => AddRequested?.Invoke();
 
     private void ClearInputButton_Click(object sender, RoutedEventArgs e)
     {

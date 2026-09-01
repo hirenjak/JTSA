@@ -56,6 +56,19 @@ public partial class ObsSettingPanel : UserControl
         _ = RefreshSourceVisibilityStatesAsync(accountId);
     }
 
+    /// <summary>別ウィンドウで保存されたOBSショートカット設定を再読み込みする。</summary>
+    public void ReloadSwitchPresets()
+    {
+        sceneSwitchPresets.Clear();
+        sourceSwitchPresets.Clear();
+        RestoreSceneSwitchPresets();
+        RestoreSourceSwitchPresets();
+
+        var accountId = ((MainWindow)Application.Current.MainWindow).SelectedTargetAccountId;
+        RefreshSceneSwitchPresetFilter(accountId);
+        RefreshSourceSwitchPresetFilter(accountId);
+    }
+
     private void ShowStandaloneSwitchSettings(TabItem targetTab)
     {
         var targetContent = targetTab.Content;
@@ -470,6 +483,36 @@ public partial class ObsSettingPanel : UserControl
             await SwitchSceneAsync(preset);
     }
 
+    public async Task RefreshSceneShortcutStatesAsync(long? accountId, bool? isSub = null)
+    {
+        var presets = GetSceneSwitchPresets(accountId)
+            .Where(preset => isSub is null || preset.IsSub == isSub.Value)
+            .ToList();
+
+        foreach (var group in presets.GroupBy(preset => preset.IsSub))
+        {
+            try
+            {
+                var controller = await ((MainWindow)Application.Current.MainWindow)
+                    .EnsureObsConnectedAsync(group.Key);
+                if (controller is null) continue;
+
+                var currentScene = await Task.Run(controller.GetCurrentProgramScene);
+                foreach (var preset in group)
+                    preset.IsCurrentScene = string.Equals(
+                        preset.SceneName, currentScene, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                foreach (var preset in group)
+                    preset.IsCurrentScene = false;
+            }
+        }
+
+        RefreshSceneSwitchPresetFilter(accountId);
+        ((MainWindow)Application.Current.MainWindow).RefreshObsSceneShortcutButtons();
+    }
+
     public IReadOnlyList<SourceSwitchPreset> GetSourceSwitchPresets(long? accountId = null)
         => sourceSwitchPresets
             .Where(preset => accountId is null || preset.AccountId == accountId)
@@ -488,9 +531,11 @@ public partial class ObsSettingPanel : UserControl
         SubSourceSwitchPresetPanel.Visibility = subPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    public async Task RefreshSourceVisibilityStatesAsync(long? accountId)
+    public async Task RefreshSourceVisibilityStatesAsync(long? accountId, bool? isSub = null)
     {
-        var presets = GetSourceSwitchPresets(accountId);
+        var presets = GetSourceSwitchPresets(accountId)
+            .Where(preset => isSub is null || preset.IsSub == isSub.Value)
+            .ToList();
         foreach (var group in presets.GroupBy(preset => preset.IsSub))
         {
             try
