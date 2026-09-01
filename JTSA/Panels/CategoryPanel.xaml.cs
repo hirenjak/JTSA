@@ -64,6 +64,17 @@ namespace JTSA.Panels
             CategoryListBox.SelectedIndex = -1;
         }
 
+        private void CategoryAddButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CategorySearchWindow
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            window.ShowDialog();
+            ReloadCategory();
+        }
+
 
         /// <summary>
         /// 削除ボタンクリック時
@@ -79,6 +90,20 @@ namespace JTSA.Panels
             }
 
             ReloadCategory();
+        }
+
+        private void OpenObsCaptureDestinationButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.DataContext is not CategoryForm item) return;
+
+            var window = new ObsCaptureDestinationWindow(
+                item.CategoryId,
+                item.DisplayName,
+                item.BoxArtUrl)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            window.ShowDialog();
         }
 
 

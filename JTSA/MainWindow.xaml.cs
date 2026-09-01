@@ -153,11 +153,17 @@ namespace JTSA
 
 			set
 			{
+				var categoryChanged = !string.Equals(
+					currentCategoryId, value, StringComparison.OrdinalIgnoreCase);
 				currentCategoryId = value;
                 SetTwitchSettingApplied(false);
 
 				// カテゴリ設定をしたら同時にSteamURLを取得して設定
                 SteamUrlTextSet(value);
+
+                // Twitchへの反映を待たず、アプリ上でカテゴリを選択した時点でOBSを切り替える。
+                if (categoryChanged && !string.IsNullOrWhiteSpace(value) && ObsSettingPanel is not null)
+                    _ = ObsSettingPanel.ApplyCaptureRuleForCategoryAsync(value);
             }
 		}
 
@@ -1002,6 +1008,13 @@ namespace JTSA
             if (!controller.IsConnected && CanAutomaticallyConnectObs(isSub))
                 await ConnectObsAsync(forceReconnect: false, isSub);
 
+            return controller.IsConnected ? controller : null;
+        }
+
+        /// <summary>接続処理を行わず、現在接続済みのOBSだけを返す。</summary>
+        public ObsController? GetConnectedObsController(bool isSub)
+        {
+            var controller = isSub ? subObsController : mainObsController;
             return controller.IsConnected ? controller : null;
         }
 

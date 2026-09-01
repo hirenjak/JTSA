@@ -167,6 +167,95 @@
     </Border>
    </Grid>
   </TabItem>
+  <TabItem x:Name="CaptureDestinationTab" Header="キャプチャ先変更" IsVisibleChanged="CaptureDestinationTab_IsVisibleChanged">
+   <Grid Background="#FF404040" Margin="16">
+    <Grid>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <Border Grid.Row="0" Padding="10" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+      <Grid>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="1"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+       <StackPanel Grid.Column="0">
+       <StackPanel Orientation="Horizontal">
+         <Image x:Name="SelectedCaptureCategoryBoxArt" Width="45" Height="60" Stretch="Uniform"/>
+         <TextBlock x:Name="SelectedCaptureCategoryTextBlock" Margin="10,0,0,0" Foreground="White" FontWeight="Bold" Text="未選択" TextWrapping="Wrap" VerticalAlignment="Center"/>
+        </StackPanel>
+       </StackPanel>
+       <Border Grid.Column="1" Background="#FF707070"/>
+       <Grid Grid.Column="3">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+         <TextBlock x:Name="SelectedCaptureSourceTextBlock" Foreground="White" FontWeight="Bold" Text="下の一覧からソースを選択してください"/>
+         <TextBlock x:Name="SelectedCaptureTypeTextBlock" Margin="0,2,0,0" Foreground="LightGray"/>
+         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+          <TextBlock x:Name="SelectedCaptureDestinationTextBlock" Foreground="White" FontWeight="Bold"
+                     Text="キャプチャ先：未設定" VerticalAlignment="Center"/>
+          <Button Content="×" Width="22" Height="22" Margin="8,0,0,0" Padding="0"
+                  ToolTip="設定中のキャプチャ先を解除します" Click="ClearCaptureDestinationButton_Click"/>
+         </StackPanel>
+        </StackPanel>
+        <Button Grid.Column="1" Content="反映して閉じる" Width="120" Height="26" Margin="16,0,0,0"
+                VerticalAlignment="Top" Click="ApplyCaptureDestinationAndCloseButton_Click"/>
+       </Grid>
+      </Grid>
+     </Border>
+     <Grid Grid.Row="2">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="42*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="58*"/></Grid.ColumnDefinitions>
+     <Border Grid.Column="0" Padding="8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+       <TextBlock Text="キャプチャソース一覧" Foreground="White" FontWeight="Bold" Margin="4,2,4,8"/>
+       <Border Grid.Row="1" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1">
+        <DockPanel>
+         <Button DockPanel.Dock="Top" Content="＋ ソース登録" Height="34" Margin="0,0,0,1"
+                 HorizontalContentAlignment="Left" Padding="10,0" Click="RegisterCaptureSourceButton_Click"/>
+         <RadioButton x:Name="NoCaptureSourceRadioButton" DockPanel.Dock="Top" Content="未選択"
+                      Height="34" Padding="10,0" Foreground="White" Background="#FF404040"
+                      GroupName="CaptureSourceSelection" Checked="NoCaptureSourceRadioButton_Checked"/>
+       <ListBox x:Name="CaptureSourcesListBox" Background="#FF404040" BorderThickness="0"
+                HorizontalContentAlignment="Stretch" BorderBrush="#FF606060"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                SelectionChanged="CaptureSourcesListBox_SelectionChanged">
+        <ListBox.ItemTemplate><DataTemplate><StackPanel>
+         <Grid Margin="4"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <RadioButton Grid.Column="0" Margin="2,0,8,0" VerticalAlignment="Center" GroupName="CaptureSourceSelection"
+                       IsChecked="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}, Mode=TwoWay}"/>
+          <StackPanel Grid.Column="1">
+           <TextBlock Text="{Binding Source.InputName, Mode=OneWay}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
+           <TextBlock Foreground="LightGray" FontSize="10"><Run Text="{Binding ObsDisplayName, Mode=OneWay}"/><Run Text=" / "/><Run Text="{Binding Source.TypeName, Mode=OneWay}"/></TextBlock>
+          </StackPanel>
+          <Button Grid.Column="2" Content="削除" Width="50" Height="24" Margin="8,0,0,0"
+                  VerticalAlignment="Center" Tag="{Binding}" Click="DeleteCaptureSourceButton_Click"/>
+         </Grid>
+         <Border Height="1" Background="White"/>
+        </StackPanel></DataTemplate></ListBox.ItemTemplate>
+       </ListBox>
+        </DockPanel>
+       </Border>
+      </Grid>
+     </Border>
+     <Border Grid.Column="2" Padding="8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+       <DockPanel Margin="4,0,4,8">
+        <Button DockPanel.Dock="Right" Content="再取得" Width="70" Height="24" Click="RefreshCaptureDestinationsButton_Click"/>
+        <TextBlock Text="キャプチャ先一覧" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+       </DockPanel>
+       <ListBox x:Name="CaptureDestinationListBox" Grid.Row="1" Background="#FF404040"
+                HorizontalContentAlignment="Stretch" BorderBrush="#FF606060"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                SelectedValuePath="Value" IsEnabled="False"
+                SelectionChanged="CaptureDestinationListBox_SelectionChanged">
+        <ListBox.ItemTemplate><DataTemplate><StackPanel>
+         <Grid Margin="4"><TextBlock Text="{Binding Name, Mode=OneWay}" Foreground="White" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center"/></Grid>
+         <Border Height="1" Background="White"/>
+        </StackPanel></DataTemplate></ListBox.ItemTemplate>
+       </ListBox>
+      </Grid>
+     </Border>
+     </Grid>
+    </Grid>
+   </Grid>
+  </TabItem>
   <TabItem x:Name="ObsSettingsTab" Header="OBS設定"><ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
    <StackPanel x:Name="ObsConnectionSettingsSection">
    <DockPanel Margin="0,0,0,12"><StackPanel DockPanel.Dock="Left"><TextBlock Text="OBS連携設定" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Margin="0,4,0,0" Foreground="LightGray" Text="各PCのOBSにTwitchアカウントを割り当てます。送信先アカウントに応じて右上ボタンの操作OBSが切り替わります。"/></StackPanel></DockPanel>

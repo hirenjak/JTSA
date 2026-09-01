@@ -125,6 +125,86 @@ public sealed class ObsController : IDisposable
             .ToList();
     }
 
+    public IReadOnlyList<ObsCaptureSource> GetCaptureSources()
+    {
+        EnsureConnected();
+        return client.GetInputList(null)
+            .Where(input => TryGetCaptureProperty(input.InputKind, out _, out _))
+            .Select(input =>
+            {
+                TryGetCaptureProperty(input.InputKind, out var propertyName, out var typeName);
+                return new ObsCaptureSource(input.InputName, input.InputKind, propertyName, typeName);
+            })
+            .OrderBy(input => input.InputName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public ObsCaptureSettings GetCaptureSettings(ObsCaptureSource source)
+    {
+        EnsureConnected();
+        var settings = client.GetInputSettings(source.InputName).Settings;
+        var currentValue = settings.Value<string>(source.PropertyName) ?? string.Empty;
+        // obs-websocket-dotnet 5.0.1 のラッパーは propertyItems (JArray) を
+        // JToken.Value<T>() で変換しようとして例外になるため、生レスポンスを読む。
+        var response = client.SendRequest("GetInputPropertiesListPropertyItems", new JObject
+        {
+            ["inputName"] = source.InputName,
+            ["propertyName"] = source.PropertyName
+        });
+        var items = response["propertyItems"] as JArray ?? [];
+        var destinations = items
+            .OfType<JObject>()
+            .Where(item => item.Value<bool?>("itemEnabled") != false)
+            .Select(item =>
+            {
+                var value = item["itemValue"]?.ToString() ?? string.Empty;
+                return new ObsCaptureDestination(item["itemName"]?.ToString() ?? value, value);
+            })
+            .Where(item => !string.IsNullOrEmpty(item.Value))
+            .ToList();
+        return new ObsCaptureSettings(currentValue, destinations);
+    }
+
+    public void SetCaptureDestination(ObsCaptureSource source, string value)
+    {
+        EnsureConnected();
+        client.SetInputSettings(source.InputName, new JObject { [source.PropertyName] = value }, true);
+    }
+
+    public void SetInputVisibleAcrossScenes(string inputName, bool visible)
+    {
+        EnsureConnected();
+        foreach (var sceneName in GetSceneNames())
+        {
+            foreach (var item in client.GetSceneItemList(sceneName).Where(item =>
+                         string.Equals(item.SourceName, inputName, StringComparison.OrdinalIgnoreCase)))
+                client.SetSceneItemEnabled(sceneName, item.ItemId, visible);
+        }
+
+        foreach (var groupName in client.GetGroupList())
+        {
+            foreach (var item in client.GetGroupSceneItemList(groupName).Where(item =>
+                         string.Equals(item.Value<string>("sourceName"), inputName,
+                             StringComparison.OrdinalIgnoreCase)))
+                client.SetSceneItemEnabled(groupName, item.Value<int>("sceneItemId"), visible);
+        }
+    }
+
+    private static bool TryGetCaptureProperty(string inputKind, out string propertyName, out string typeName)
+    {
+        var kind = inputKind.Split('_').TakeWhile(part => !part.StartsWith("v", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var unversionedKind = string.Join('_', kind);
+        (propertyName, typeName) = unversionedKind switch
+        {
+            "window_capture" => ("window", "ウィンドウキャプチャ"),
+            "game_capture" => ("window", "ゲームキャプチャ"),
+            "monitor_capture" => ("monitor", "画面キャプチャ"),
+            "dshow_input" => ("video_device_id", "映像キャプチャデバイス"),
+            _ => (string.Empty, string.Empty)
+        };
+        return propertyName.Length > 0;
+    }
+
     public bool GetSceneSourceEnabled(string sceneName, string sourceName)
     {
         EnsureConnected();
@@ -171,3 +251,6 @@ public sealed class ObsController : IDisposable
 }
 
 public sealed record ObsSceneSource(string SourceName, bool IsEnabled);
+public sealed record ObsCaptureSource(string InputName, string InputKind, string PropertyName, string TypeName);
+public sealed record ObsCaptureDestination(string Name, string Value);
+public sealed record ObsCaptureSettings(string CurrentValue, IReadOnlyList<ObsCaptureDestination> Destinations);

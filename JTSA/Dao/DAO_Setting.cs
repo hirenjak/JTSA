@@ -64,6 +64,12 @@ namespace JTSA.Dao
             ChatNotificationAudioPath = 40,
             JoinChatAudioPath = 41,
             CalendarMemos = 42,
+            /// <summary>キャプチャ先変更タブに登録したOBS入力</summary>
+            ObsCaptureSources = 43,
+            /// <summary>キャプチャ先変更タブで最後に選択したOBS入力</summary>
+            SelectedObsCaptureSource = 44,
+            /// <summary>カテゴリごとのOBSキャプチャソースとキャプチャ先</summary>
+            ObsCategoryCaptureRules = 45,
         }
 
 

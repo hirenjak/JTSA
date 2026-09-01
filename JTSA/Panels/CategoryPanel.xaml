@@ -9,10 +9,6 @@
 
     <DockPanel>
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="300"/>
-            </Grid.ColumnDefinitions>
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -27,7 +23,11 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Label Grid.Row="0" Content="※ダブルクリックすると選択カテゴリを変更" Foreground="White"/>
+                    <DockPanel Grid.Row="0">
+                        <Button DockPanel.Dock="Right" Content="カテゴリ追加" Width="90" Height="22"
+                                Margin="8,0,0,2" Click="CategoryAddButton_Click"/>
+                        <Label Content="※ダブルクリックすると選択カテゴリを変更" Foreground="White"/>
+                    </DockPanel>
 
                     <ListBox ItemsSource="{Binding CategoryFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="1" Background="#FF404040"
                 x:Name="CategoryListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -97,6 +97,10 @@
                                                               SelectedValue="{Binding ChannelPointPresetId, Mode=TwoWay}"
                                                               SelectionChanged="CategoryPresetComboBox_SelectionChanged"
                                                               ToolTip="このカテゴリを設定したときに自動適用するプリセット。「（自動適用しない）」を選ぶと何も変更しません。"/>
+                                                    <Button Content="OBSキャプチャ先" Width="110" Height="20" Margin="8,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip="このカテゴリのOBSキャプチャ先設定を開きます"
+                                                            Click="OpenObsCaptureDestinationButton_Click"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Grid>
@@ -143,9 +147,6 @@
                 </Grid>
             </Grid>
 
-            <panels:CategorySearchPanel 
-                x:Name="CategorySearchPanel"
-                Grid.Column="1"/>
         </Grid>
     </DockPanel>
 </UserControl>

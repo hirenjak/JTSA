@@ -17,6 +17,11 @@ public partial class ObsSettingPanel : UserControl
     private readonly ObservableCollection<ObsTextSourceCard> textSourceCards = [];
     private readonly ObservableCollection<SceneSwitchPreset> sceneSwitchPresets = [];
     private readonly ObservableCollection<SourceSwitchPreset> sourceSwitchPresets = [];
+    private readonly ObservableCollection<CaptureSourceRegistration> captureSourceRegistrations = [];
+    private CaptureSourceRegistration? selectedCaptureSourceRegistration;
+    private string selectedCaptureCategoryId = string.Empty;
+    private string restoreCaptureDestinationValue = string.Empty;
+    private string pendingCaptureDestinationValue = string.Empty;
     private readonly TaskCompletionSource<bool> panelLoaded =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool isRestoringCards;
@@ -27,6 +32,9 @@ public partial class ObsSettingPanel : UserControl
     private Point sourcePresetDragStart;
     private SourceSwitchPreset? draggedSourcePreset;
     private bool isLoadingSources;
+    private bool isLoadingCaptureSources;
+    private bool isLoadingCaptureDestinations;
+    private bool captureCategoryHasRule;
 
     public ObsSettingPanel()
     {
@@ -39,6 +47,9 @@ public partial class ObsSettingPanel : UserControl
         RestoreTextSourceCards();
         RestoreSceneSwitchPresets();
         RestoreSourceSwitchPresets();
+        MigrateLegacyCaptureSettings();
+        RestoreCaptureSourceRegistrations();
+        RestoreSelectedCaptureSource();
     }
 
     public void ShowSceneSwitchSettings()
@@ -54,6 +65,39 @@ public partial class ObsSettingPanel : UserControl
         RefreshSourceSwitchPresetFilter(accountId);
         ShowStandaloneSwitchSettings(SourceSwitchTab);
         _ = RefreshSourceVisibilityStatesAsync(accountId);
+    }
+
+    public void ShowCaptureDestinationSettings(string categoryId, string categoryName, string boxArtUrl)
+    {
+        selectedCaptureCategoryId = categoryId;
+        var rule = LoadCategoryCaptureRules().FirstOrDefault(rule => rule.CategoryId == categoryId);
+        captureCategoryHasRule = rule is not null;
+        if (rule is not null)
+        {
+            NoCaptureSourceRadioButton.IsChecked = false;
+            selectedCaptureSourceRegistration = new CaptureSourceRegistration
+            {
+                IsSub = rule.IsSub,
+                InputName = rule.InputName
+            };
+            restoreCaptureDestinationValue = rule.DestinationValue;
+            pendingCaptureDestinationValue = rule.DestinationValue;
+            SelectedCaptureSourceTextBlock.Text = rule.InputName;
+            SelectedCaptureDestinationTextBlock.Text = string.IsNullOrWhiteSpace(rule.DestinationValue)
+                ? "キャプチャ先：未設定"
+                : $"キャプチャ先：{rule.DestinationValue}";
+        }
+        else
+        {
+            NoCaptureSourceRadioButton.IsChecked = true;
+            pendingCaptureDestinationValue = string.Empty;
+            SelectedCaptureSourceTextBlock.Text = "キャプチャソース：未設定";
+            SelectedCaptureTypeTextBlock.Text = string.Empty;
+            SelectedCaptureDestinationTextBlock.Text = "キャプチャ先：未設定";
+        }
+        ShowStandaloneSwitchSettings(CaptureDestinationTab);
+        ShowSelectedCaptureCategory(categoryId, categoryName, boxArtUrl);
+        _ = RefreshCaptureSourcesAsync();
     }
 
     /// <summary>別ウィンドウで保存されたOBSショートカット設定を再読み込みする。</summary>
@@ -146,6 +190,504 @@ public partial class ObsSettingPanel : UserControl
     private async void RefreshSourcesButton_Click(object sender, RoutedEventArgs e)
         => await RefreshSourceSwitchListAsync();
 
+    private async void CaptureDestinationTab_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (CaptureDestinationTab.IsSelected && CaptureSourcesListBox.Items.Count == 0)
+            await RefreshCaptureSourcesAsync();
+    }
+
+    private async void RefreshCaptureSourcesButton_Click(object sender, RoutedEventArgs e)
+        => await RefreshCaptureSourcesAsync();
+
+    private async Task RefreshCaptureSourcesAsync()
+    {
+        if (isLoadingCaptureSources) return;
+        isLoadingCaptureSources = true;
+        try
+        {
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            var sources = new List<CaptureSourceChoice>();
+            var connectedObsCount = 0;
+            foreach (var isSub in new[] { false, true })
+            {
+                var controller = mainWindow.GetConnectedObsController(isSub);
+                if (controller is null) continue;
+                connectedObsCount++;
+                var inputs = await Task.Run(controller.GetCaptureSources);
+                sources.AddRange(inputs
+                    .Where(input => captureSourceRegistrations.Any(registration =>
+                        registration.IsSub == isSub &&
+                        string.Equals(registration.InputName, input.InputName, StringComparison.OrdinalIgnoreCase)))
+                    .Select(input => new CaptureSourceChoice(isSub, input)));
+            }
+            CaptureSourcesListBox.ItemsSource = sources;
+            var restoredSource = sources.FirstOrDefault(source =>
+                selectedCaptureSourceRegistration is not null &&
+                source.IsSub == selectedCaptureSourceRegistration.IsSub &&
+                string.Equals(source.Source.InputName, selectedCaptureSourceRegistration.InputName,
+                    StringComparison.OrdinalIgnoreCase));
+            CaptureSourcesListBox.SelectedItem = captureCategoryHasRule
+                ? restoredSource
+                : selectedCaptureCategoryId.Length == 0 ? restoredSource ?? sources.FirstOrDefault() : null;
+            LogCaptureStatus(connectedObsCount == 0
+                ? "接続済みのOBSがありません"
+                : sources.Count == 0
+                ? "接続済みOBSにキャプチャソースが見つかりませんでした"
+                : $"{sources.Count}件のキャプチャソースを読み込みました");
+        }
+        catch (Exception ex)
+        {
+            LogCaptureStatus($"読込失敗: {ex.GetBaseException().Message}", isError: true);
+        }
+        finally
+        {
+            isLoadingCaptureSources = false;
+        }
+    }
+
+    private async void RegisterCaptureSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        async Task<IReadOnlyList<ObsCaptureSourceSelectionItem>> LoadCandidatesAsync()
+        {
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            var candidates = new List<ObsCaptureSourceSelectionItem>();
+            foreach (var isSub in new[] { false, true })
+            {
+                var controller = mainWindow.GetConnectedObsController(isSub);
+                if (controller is null) continue;
+                var inputs = await Task.Run(controller.GetCaptureSources);
+                candidates.AddRange(inputs.Select(input => new ObsCaptureSourceSelectionItem(isSub, input)));
+            }
+            return candidates;
+        }
+
+        var window = new ObsCaptureSourceSelectionWindow(LoadCandidatesAsync)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (window.ShowDialog() != true || window.SelectedSource is null) return;
+
+        var selected = window.SelectedSource;
+        if (!captureSourceRegistrations.Any(registration =>
+                registration.IsSub == selected.IsSub &&
+                string.Equals(registration.InputName, selected.Source.InputName, StringComparison.OrdinalIgnoreCase)))
+        {
+            captureSourceRegistrations.Add(new CaptureSourceRegistration
+            {
+                IsSub = selected.IsSub,
+                InputName = selected.Source.InputName
+            });
+            SaveCaptureSourceRegistrations();
+        }
+        await RefreshCaptureSourcesAsync();
+        LogCaptureStatus($"{selected.DisplayName} を登録しました");
+    }
+
+    private async void DeleteCaptureSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not CaptureSourceChoice choice) return;
+
+        var registration = captureSourceRegistrations.FirstOrDefault(item =>
+            item.IsSub == choice.IsSub &&
+            string.Equals(item.InputName, choice.Source.InputName, StringComparison.OrdinalIgnoreCase));
+        if (registration is null) return;
+
+        captureSourceRegistrations.Remove(registration);
+        SaveCaptureSourceRegistrations();
+        await RefreshCaptureSourcesAsync();
+        LogCaptureStatus($"{choice.Source.InputName} の登録を削除しました");
+    }
+
+    private void RestoreCaptureSourceRegistrations()
+    {
+        captureSourceRegistrations.Clear();
+        foreach (var source in DAO_ObsCaptureSetting.SelectSources())
+            captureSourceRegistrations.Add(new CaptureSourceRegistration
+            {
+                IsSub = source.IsSubObs,
+                InputName = source.InputName
+            });
+    }
+
+    private static void MigrateLegacyCaptureSettings()
+    {
+        if (DAO_ObsCaptureSetting.SelectSources().Count == 0)
+        {
+            try
+            {
+                var sourcesJson = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsCaptureSources)?.Value;
+                var selectedJson = DAO_Setting.SelectOneById(DAO_Setting.SettingName.SelectedObsCaptureSource)?.Value;
+                var legacySources = string.IsNullOrWhiteSpace(sourcesJson)
+                    ? []
+                    : JsonSerializer.Deserialize<List<CaptureSourceRegistration>>(sourcesJson) ?? [];
+                var legacySelected = string.IsNullOrWhiteSpace(selectedJson)
+                    ? null
+                    : JsonSerializer.Deserialize<CaptureSourceRegistration>(selectedJson);
+
+                if (legacySources.Count > 0)
+                    DAO_ObsCaptureSetting.ReplaceSources(legacySources.Select(source => new M_ObsCaptureSource
+                    {
+                        UpdatedDateTime = DateTime.Now,
+                        IsSubObs = source.IsSub,
+                        InputName = source.InputName,
+                        IsSelected = legacySelected is not null && source.IsSub == legacySelected.IsSub &&
+                            string.Equals(source.InputName, legacySelected.InputName,
+                                StringComparison.OrdinalIgnoreCase)
+                    }));
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ObsCaptureSources, string.Empty);
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedObsCaptureSource, string.Empty);
+            }
+            catch
+            {
+                // 旧設定が壊れている場合は空の新テーブルから開始する。
+            }
+        }
+
+        if (DAO_ObsCaptureSetting.SelectRules().Count != 0) return;
+        try
+        {
+            var rulesJson = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ObsCategoryCaptureRules)?.Value;
+            var legacyRules = string.IsNullOrWhiteSpace(rulesJson)
+                ? []
+                : JsonSerializer.Deserialize<List<CategoryCaptureRule>>(rulesJson) ?? [];
+            foreach (var rule in legacyRules)
+                DAO_ObsCaptureSetting.UpsertRule(new M_ObsCategoryCaptureRule
+                {
+                    UpdatedDateTime = DateTime.Now,
+                    CategoryId = rule.CategoryId,
+                    IsSubObs = rule.IsSub,
+                    InputName = rule.InputName,
+                    DestinationValue = rule.DestinationValue
+                });
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ObsCategoryCaptureRules, string.Empty);
+        }
+        catch
+        {
+            // 旧設定が壊れている場合は空の新テーブルから開始する。
+        }
+    }
+
+    private void SaveCaptureSourceRegistrations() => DAO_ObsCaptureSetting.ReplaceSources(
+        captureSourceRegistrations.Select(registration => new M_ObsCaptureSource
+        {
+            UpdatedDateTime = DateTime.Now,
+            IsSubObs = registration.IsSub,
+            InputName = registration.InputName,
+            IsSelected = selectedCaptureSourceRegistration is not null &&
+                registration.IsSub == selectedCaptureSourceRegistration.IsSub &&
+                string.Equals(registration.InputName, selectedCaptureSourceRegistration.InputName,
+                    StringComparison.OrdinalIgnoreCase)
+        }));
+
+    private void RestoreSelectedCaptureSource()
+    {
+        var selected = DAO_ObsCaptureSetting.SelectSources().FirstOrDefault(source => source.IsSelected);
+        selectedCaptureSourceRegistration = selected is null
+            ? null
+            : new CaptureSourceRegistration { IsSub = selected.IsSubObs, InputName = selected.InputName };
+    }
+
+    private void SaveSelectedCaptureSource(CaptureSourceChoice choice)
+    {
+        selectedCaptureSourceRegistration = new CaptureSourceRegistration
+        {
+            IsSub = choice.IsSub,
+            InputName = choice.Source.InputName
+        };
+        SaveCaptureSourceRegistrations();
+    }
+
+    private async void CaptureSourcesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CaptureSourcesListBox.SelectedItem is CaptureSourceChoice)
+            NoCaptureSourceRadioButton.IsChecked = false;
+        if (!isLoadingCaptureSources)
+        {
+            pendingCaptureDestinationValue = string.Empty;
+            SelectedCaptureDestinationTextBlock.Text = "キャプチャ先：未選択";
+        }
+        await ReloadCaptureDestinationsAsync();
+    }
+
+    private void NoCaptureSourceRadioButton_Checked(object sender, RoutedEventArgs e)
+    {
+        if (CaptureSourcesListBox is null || CaptureDestinationListBox is null) return;
+        pendingCaptureDestinationValue = string.Empty;
+        CaptureSourcesListBox.SelectedIndex = -1;
+        CaptureDestinationListBox.ItemsSource = null;
+        CaptureDestinationListBox.IsEnabled = false;
+        SelectedCaptureSourceTextBlock.Text = "キャプチャソース：未選択";
+        SelectedCaptureTypeTextBlock.Text = string.Empty;
+        SelectedCaptureDestinationTextBlock.Text = "キャプチャ先：未選択";
+    }
+
+    private async void RefreshCaptureDestinationsButton_Click(object sender, RoutedEventArgs e)
+    {
+        restoreCaptureDestinationValue = CaptureDestinationListBox.SelectedValue as string ?? string.Empty;
+        await ReloadCaptureDestinationsAsync();
+    }
+
+    private async Task ReloadCaptureDestinationsAsync()
+    {
+        if (CaptureSourcesListBox.SelectedItem is not CaptureSourceChoice choice) return;
+        SelectedCaptureSourceTextBlock.Text = choice.Source.InputName;
+        SelectedCaptureTypeTextBlock.Text = $"{choice.ObsDisplayName} / {choice.Source.TypeName}";
+        CaptureDestinationListBox.IsEnabled = false;
+        isLoadingCaptureDestinations = true;
+        try
+        {
+            var controller = ((MainWindow)Application.Current.MainWindow).GetConnectedObsController(choice.IsSub);
+            if (controller is null)
+            {
+                LogCaptureStatus($"{choice.ObsDisplayName}は未接続です", isError: true);
+                return;
+            }
+            var settings = await Task.Run(() => controller.GetCaptureSettings(choice.Source));
+            CaptureDestinationListBox.ItemsSource = settings.Destinations;
+            CaptureDestinationListBox.SelectedIndex = -1;
+            if (!string.IsNullOrWhiteSpace(restoreCaptureDestinationValue))
+            {
+                var savedDestination = settings.Destinations.FirstOrDefault(destination =>
+                    destination.Value == restoreCaptureDestinationValue);
+                SelectedCaptureDestinationTextBlock.Text = savedDestination is null
+                    ? "キャプチャ先：保存済みの対象が見つかりません"
+                    : $"キャプチャ先：{savedDestination.Name}";
+            }
+            CaptureDestinationListBox.IsEnabled = settings.Destinations.Count > 0;
+            LogCaptureStatus(settings.Destinations.Count == 0
+                ? "選択できるキャプチャ先がありません"
+                : $"{settings.Destinations.Count}件のキャプチャ先を取得しました");
+        }
+        catch (Exception ex)
+        {
+            LogCaptureStatus($"キャプチャ先取得失敗: {ex.GetBaseException().Message}", isError: true);
+        }
+        finally
+        {
+            isLoadingCaptureDestinations = false;
+            restoreCaptureDestinationValue = string.Empty;
+        }
+    }
+
+    private void CaptureDestinationListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (isLoadingCaptureDestinations) return;
+        if (CaptureDestinationListBox.SelectedValue is not string value) return;
+        var selectedDestinationName = (CaptureDestinationListBox.SelectedItem as ObsCaptureDestination)?.Name ?? value;
+        pendingCaptureDestinationValue = value;
+        SelectedCaptureDestinationTextBlock.Text = $"キャプチャ先：{selectedDestinationName}";
+    }
+
+    private void ClearCaptureDestinationButton_Click(object sender, RoutedEventArgs e)
+    {
+        pendingCaptureDestinationValue = string.Empty;
+        CaptureDestinationListBox.SelectedIndex = -1;
+        SelectedCaptureDestinationTextBlock.Text = "キャプチャ先：未設定";
+    }
+
+    private async void ApplyCaptureDestinationAndCloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        var captureWindow = Window.GetWindow(this) as ObsCaptureDestinationWindow;
+        if (NoCaptureSourceRadioButton.IsChecked == true)
+        {
+            try
+            {
+                DAO_ObsCaptureSetting.DeleteRule(selectedCaptureCategoryId);
+                selectedCaptureSourceRegistration = null;
+                SaveCaptureSourceRegistrations();
+                await HideAllRegisteredCaptureSourcesAsync();
+                captureCategoryHasRule = false;
+                LogCaptureStatus("キャプチャソースを未選択にしました");
+            }
+            catch (Exception ex)
+            {
+                LogCaptureStatus($"変更失敗: {ex.GetBaseException().Message}", isError: true);
+            }
+            finally
+            {
+                captureWindow?.Close();
+            }
+            return;
+        }
+
+        if (CaptureSourcesListBox.SelectedItem is not CaptureSourceChoice choice)
+        {
+            LogCaptureStatus("キャプチャソースを選択してください", isError: true);
+            captureWindow?.Close();
+            return;
+        }
+
+        try
+        {
+            var controller = ((MainWindow)Application.Current.MainWindow).GetConnectedObsController(choice.IsSub);
+            if (controller is null)
+            {
+                LogCaptureStatus($"{choice.ObsDisplayName}は未接続です", isError: true);
+                return;
+            }
+
+            SaveSelectedCaptureSource(choice);
+            SaveCategoryCaptureRule(choice, pendingCaptureDestinationValue);
+            await ApplyCaptureRuleForCategoryAsync(selectedCaptureCategoryId);
+        }
+        catch (Exception ex)
+        {
+            LogCaptureStatus($"変更失敗: {ex.GetBaseException().Message}", isError: true);
+        }
+        finally
+        {
+            captureWindow?.Close();
+        }
+    }
+
+    private async Task HideAllRegisteredCaptureSourcesAsync()
+    {
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        foreach (var group in captureSourceRegistrations.GroupBy(registration => registration.IsSub))
+        {
+            var controller = mainWindow.GetConnectedObsController(group.Key);
+            if (controller is null) continue;
+            foreach (var registration in group)
+                await Task.Run(() => controller.SetInputVisibleAcrossScenes(registration.InputName, false));
+        }
+    }
+
+    private void SelectCaptureCategoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new PlaylistCategorySelectionWindow(selectionOnly: true)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (window.ShowDialog() != true || string.IsNullOrWhiteSpace(window.SelectedCategoryId))
+            return;
+
+        var category = DAO_Category.SelectOneById(window.SelectedCategoryId);
+        ShowSelectedCaptureCategory(
+            window.SelectedCategoryId,
+            category?.DisplayName ?? "未選択",
+            category?.BoxArtUrl ?? string.Empty);
+    }
+
+    private void ShowSelectedCaptureCategory(string categoryId, string categoryName, string boxArtUrl)
+    {
+        selectedCaptureCategoryId = categoryId;
+        SelectedCaptureCategoryTextBlock.Text = categoryName;
+        SelectedCaptureCategoryBoxArt.Source = null;
+        if (!string.IsNullOrWhiteSpace(boxArtUrl))
+        {
+            try
+            {
+                SelectedCaptureCategoryBoxArt.Source = new System.Windows.Media.Imaging.BitmapImage(
+                    new Uri(boxArtUrl, UriKind.Absolute));
+            }
+            catch (Exception ex)
+            {
+                LogCaptureStatus($"カテゴリBoxArt表示失敗: {ex.GetBaseException().Message}", isError: true);
+            }
+        }
+    }
+
+    private void LogCaptureStatus(string message, bool isError = false)
+    {
+        var appLog = ((MainWindow)Application.Current.MainWindow).AppLogPanel;
+        if (isError)
+            appLog.Error(GetType().Name, $"OBSキャプチャ先変更：{message}");
+        else
+            appLog.Success(GetType().Name, $"OBSキャプチャ先変更：{message}");
+    }
+
+    private void SaveCategoryCaptureRule(CaptureSourceChoice choice, string destinationValue)
+    {
+        if (string.IsNullOrWhiteSpace(selectedCaptureCategoryId))
+            return;
+
+        DAO_ObsCaptureSetting.UpsertRule(new M_ObsCategoryCaptureRule
+        {
+            UpdatedDateTime = DateTime.Now,
+            CategoryId = selectedCaptureCategoryId,
+            IsSubObs = choice.IsSub,
+            InputName = choice.Source.InputName,
+            DestinationValue = destinationValue
+        });
+    }
+
+    public async Task ApplyCaptureRuleForCategoryAsync(string categoryId)
+    {
+        RestoreCaptureSourceRegistrations();
+        var rule = LoadCategoryCaptureRules().FirstOrDefault(rule => rule.CategoryId == categoryId);
+        if (rule is null) return;
+
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        try
+        {
+            var selectedController = mainWindow.GetConnectedObsController(rule.IsSub);
+            if (selectedController is null)
+            {
+                LogCaptureStatus($"カテゴリルール適用対象の{(rule.IsSub ? "サブ" : "メイン")}OBSは未接続です", true);
+                return;
+            }
+
+            var selectedSource = (await Task.Run(selectedController.GetCaptureSources)).FirstOrDefault(source =>
+                string.Equals(source.InputName, rule.InputName, StringComparison.OrdinalIgnoreCase));
+            if (selectedSource is null)
+            {
+                LogCaptureStatus($"カテゴリルールのソース「{rule.InputName}」が見つかりません", true);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(rule.DestinationValue))
+                await Task.Run(() => selectedController.SetCaptureDestination(selectedSource, rule.DestinationValue));
+
+            foreach (var group in captureSourceRegistrations.GroupBy(registration => registration.IsSub))
+            {
+                var controller = mainWindow.GetConnectedObsController(group.Key);
+                if (controller is null) continue;
+                foreach (var registration in group)
+                {
+                    var visible = registration.IsSub == rule.IsSub &&
+                        string.Equals(registration.InputName, rule.InputName, StringComparison.OrdinalIgnoreCase);
+                    await Task.Run(() => controller.SetInputVisibleAcrossScenes(registration.InputName, visible));
+                }
+            }
+            LogCaptureStatus($"カテゴリ「{categoryId}」のキャプチャ設定を適用しました");
+        }
+        catch (Exception ex)
+        {
+            LogCaptureStatus($"カテゴリルール適用失敗: {ex.GetBaseException().Message}", true);
+        }
+    }
+
+    private static List<CategoryCaptureRule> LoadCategoryCaptureRules()
+    {
+        return DAO_ObsCaptureSetting.SelectRules().Select(rule => new CategoryCaptureRule
+        {
+            CategoryId = rule.CategoryId,
+            IsSub = rule.IsSubObs,
+            InputName = rule.InputName,
+            DestinationValue = rule.DestinationValue
+        }).ToList();
+    }
+
+    private sealed record CaptureSourceChoice(bool IsSub, ObsCaptureSource Source)
+    {
+        public string ObsDisplayName => IsSub ? "サブOBS" : "メインOBS";
+        public string DisplayName => $"{ObsDisplayName}｜{Source.InputName}\n{Source.TypeName}";
+    }
+
+    private sealed class CaptureSourceRegistration
+    {
+        public bool IsSub { get; set; }
+        public string InputName { get; set; } = string.Empty;
+    }
+
+    private sealed class CategoryCaptureRule
+    {
+        public string CategoryId { get; set; } = string.Empty;
+        public bool IsSub { get; set; }
+        public string InputName { get; set; } = string.Empty;
+        public string DestinationValue { get; set; } = string.Empty;
+    }
+
     private async Task RefreshSourceSwitchListAsync()
     {
         if (isLoadingSources) return;
@@ -154,24 +696,24 @@ public partial class ObsSettingPanel : UserControl
         try
         {
             var mainWindow = (MainWindow)Application.Current.MainWindow;
-            var targets = new List<bool> { false };
-            if (long.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
-                targets.Add(true);
-
             var choices = new List<SourceSceneChoice>();
-            foreach (var isSub in targets)
+            var connectedObsCount = 0;
+            foreach (var isSub in new[] { false, true })
             {
-                var controller = await mainWindow.EnsureObsConnectedAsync(isSub);
+                var controller = mainWindow.GetConnectedObsController(isSub);
                 if (controller is null) continue;
+                connectedObsCount++;
                 var scenes = await Task.Run(controller.GetSceneNames);
                 choices.AddRange(scenes.Select(scene => new SourceSceneChoice { IsSub = isSub, SceneName = scene }));
             }
             SourceSceneSelectionComboBox.ItemsSource = choices;
             SourceSceneSelectionComboBox.SelectedItem = choices.FirstOrDefault();
             await LoadSourcesForSelectedSceneAsync();
-            await RefreshSourceVisibilityStatesAsync(mainWindow.SelectedTargetAccountId);
-            SourceSwitchStatusTextBlock.Text = choices.Count == 0
-                ? "取得できるシーンがありませんでした"
+            await RefreshSourceVisibilityStatesAsync(mainWindow.SelectedTargetAccountId, onlyConnected: true);
+            SourceSwitchStatusTextBlock.Text = connectedObsCount == 0
+                ? "接続済みのOBSがありません"
+                : choices.Count == 0
+                ? "接続済みOBSにシーンがありませんでした"
                 : $"{choices.Count}件のシーンを読み込みました";
         }
         catch (Exception ex)
@@ -194,7 +736,7 @@ public partial class ObsSettingPanel : UserControl
             SourceSelectionComboBox.ItemsSource = null;
             return;
         }
-        var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(choice.IsSub);
+        var controller = ((MainWindow)Application.Current.MainWindow).GetConnectedObsController(choice.IsSub);
         if (controller is null) return;
         var sources = await Task.Run(() => controller.GetSceneSources(choice.SceneName));
         SourceSelectionComboBox.ItemsSource = sources;
@@ -274,22 +816,21 @@ public partial class ObsSettingPanel : UserControl
     {
         if (isLoadingScenes) return;
         isLoadingScenes = true;
-        SceneSwitchStatusTextBlock.Text = "メイン・サブOBSへ接続しています...";
+        SceneSwitchStatusTextBlock.Text = "接続済みOBSからシーンを読み込んでいます...";
         try
         {
             var mainWindow = (MainWindow)Application.Current.MainWindow;
-            var targets = new List<(bool IsSub, string Name)> { (false, "メイン") };
-            if (long.TryParse(DAO_Setting.SelectOneById(
-                    DAO_Setting.SettingName.SubObsTwitchAccountId)?.Value, out _))
-                targets.Add((true, "サブ"));
+            var targets = new[] { (IsSub: false, Name: "メイン"), (IsSub: true, Name: "サブ") }
+                .Select(target => (target, Controller: mainWindow.GetConnectedObsController(target.IsSub)))
+                .Where(item => item.Controller is not null)
+                .ToList();
 
-            var results = await Task.WhenAll(targets.Select(async target =>
+            var results = await Task.WhenAll(targets.Select(async item =>
             {
+                var target = item.target;
                 try
                 {
-                    var controller = await mainWindow.EnsureObsConnectedAsync(target.IsSub);
-                    if (controller is null)
-                        return (target, Scenes: Array.Empty<string>(), Current: "", Error: "接続失敗");
+                    var controller = item.Controller!;
                     var scenes = await Task.Run(controller.GetSceneNames);
                     var current = await Task.Run(controller.GetCurrentProgramScene);
                     return (target, Scenes: scenes.ToArray(), Current: current, Error: "");
@@ -323,10 +864,12 @@ public partial class ObsSettingPanel : UserControl
             mainWindow.RefreshObsSceneShortcutButtons();
 
             var errors = results.Where(result => !string.IsNullOrEmpty(result.Error)).ToList();
-            SceneSwitchStatusTextBlock.Text = choices.Count == 0
-                ? "取得できるシーンがありませんでした"
+            SceneSwitchStatusTextBlock.Text = targets.Count == 0
+                ? "接続済みのOBSがありません"
+                : choices.Count == 0
+                ? "接続済みOBSにシーンがありませんでした"
                 : errors.Count == 0
-                    ? $"両方のOBSから{choices.Count}件のシーンを読み込みました"
+                    ? $"接続済みOBSから{choices.Count}件のシーンを読み込みました"
                     : $"{choices.Count}件を読み込みました（{string.Join("、", errors.Select(x => x.target.Name + "OBS取得失敗"))}）";
         }
         catch (Exception ex)
@@ -531,7 +1074,10 @@ public partial class ObsSettingPanel : UserControl
         SubSourceSwitchPresetPanel.Visibility = subPresets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    public async Task RefreshSourceVisibilityStatesAsync(long? accountId, bool? isSub = null)
+    public async Task RefreshSourceVisibilityStatesAsync(
+        long? accountId,
+        bool? isSub = null,
+        bool onlyConnected = false)
     {
         var presets = GetSourceSwitchPresets(accountId)
             .Where(preset => isSub is null || preset.IsSub == isSub.Value)
@@ -540,7 +1086,10 @@ public partial class ObsSettingPanel : UserControl
         {
             try
             {
-                var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(group.Key);
+                var mainWindow = (MainWindow)Application.Current.MainWindow;
+                var controller = onlyConnected
+                    ? mainWindow.GetConnectedObsController(group.Key)
+                    : await mainWindow.EnsureObsConnectedAsync(group.Key);
                 if (controller is null) continue;
                 foreach (var preset in group)
                 {
