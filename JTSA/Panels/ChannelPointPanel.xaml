@@ -6,7 +6,7 @@
             mc:Ignorable="d"
             Background="#FF404040">
 
-    <Grid Margin="8">
+    <Grid Margin="8,4,8,8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="300"/>
             <ColumnDefinition Width="8"/>

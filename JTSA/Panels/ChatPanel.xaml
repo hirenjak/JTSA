@@ -7,6 +7,25 @@
              xmlns:local="clr-namespace:JTSA.Panels"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <Style x:Key="OverviewPrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF285653"/>
+            <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style x:Key="OverviewSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF565656"/>
+            <Setter Property="BorderBrush" Value="#FF777777"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style x:Key="OverviewDeleteButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFFF6F78"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </UserControl.Resources>
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static local:ChatPanel.AddFriendCommand}"
                         Executed="AddChatUserToFriendCommand_Executed"/>
@@ -30,32 +49,85 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="390"/>
                     <ColumnDefinition Width="350"/>
-                    <ColumnDefinition Width="280"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
+                <Border Grid.Column="0" Margin="0,0,0,8" Padding="4,2,4,4"
+                        Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
+                    <Grid>
+                        <TextBlock Text="オーバーレイ設定" Foreground="LightGray" FontSize="10"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="136"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <Button x:Name="TransparentWindowOpenButton"
+                                        Content="表示切替" Height="24"
+                                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                                        Click="TransparentWindowOpen_Click"/>
+                                <Button x:Name="TransparentWindowSettingButton"
+                                        Content="位置調整モード切替" Height="24" Margin="0,3,0,0"
+                                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                                        Click="TransparentWindowOpenSetting_Click"/>
+                                <Button x:Name="TransparentWindowRecreateButton"
+                                        Content="ウィンドウ再生成" Height="24" Margin="0,3,0,0"
+                                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                                        ToolTip="停止したチャットオーバーレイのウィンドウを作り直します"
+                                        Click="TransparentWindowRecreate_Click"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="文字サイズ" Foreground="White" FontSize="12"
+                                               Width="58" VerticalAlignment="Center"/>
+                                    <Slider x:Name="ChatOverlayFontSizeSlider" Width="130"
+                                            Minimum="10" Maximum="36" TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            ValueChanged="ChatOverlayFontSizeSlider_ValueChanged"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                    <TextBlock Text="背景透過度" Foreground="White" FontSize="12"
+                                               Width="58" VerticalAlignment="Center"/>
+                                    <Slider x:Name="ChatOverlayBackgroundOpacitySlider" Width="130"
+                                            Minimum="0" Maximum="100" TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            ToolTip="右に動かすほど背景が濃くなります"
+                                            ValueChanged="ChatOverlayBackgroundOpacitySlider_ValueChanged"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ChatOverlayShowIconCheckBox"
+                                          Content="アイコン表示" Foreground="White" Margin="0,5,0,0"
+                                          Checked="ChatOverlayShowIconCheckBox_Changed"
+                                          Unchecked="ChatOverlayShowIconCheckBox_Changed"/>
+                                <CheckBox x:Name="IsStartShowChatOverlayDisp"
+                                          Content="アプリ開始時表示" Foreground="White" Margin="0,7,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
 
-                <StackPanel
-                    Grid.Column="0" 
-                    Margin="0, 0, 0, 0">
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
 
                     <StackPanel 
                         Orientation="Horizontal">
 
                         <TextBlock 
-                            Text="チャット通知音量"
-                            Width="Auto" 
-                            Foreground="White" FontSize="14" />
+                            Text="通知音量"
+                            Width="58"
+                            Foreground="White" FontSize="12"
+                            VerticalAlignment="Center" />
 
                         <Slider 
                             x:Name="ChatNotificationVolumeSlider"
-                            Width="180"
+                            Width="130"
                             Minimum="0" Maximum="100"
                             TickFrequency="10"
                             IsSnapToTickEnabled="False"
                             ValueChanged="ChatNotificationVolumeSlider_ValueChanged"/>
                         <Button Content="音源変更" Width="68" Height="24" Margin="6,0,0,0"
+                                Style="{StaticResource OverviewSecondaryButtonStyle}"
                                 Click="ChatNotificationAudioChangeButton_Click"/>
 
                     </StackPanel>
@@ -63,80 +135,22 @@
                     <StackPanel 
                         Orientation="Horizontal">
                         <TextBlock 
-                            Text="チャット参加音量"
-                            Width="Auto" 
-                            Foreground="White" FontSize="14" />
+                            Text="参加音量"
+                            Width="58"
+                            Foreground="White" FontSize="12"
+                            VerticalAlignment="Center" />
                         <Slider 
                             x:Name="JoinChatVolumeSlider"
-                            Width="180"
+                            Width="130"
                             Minimum="0" Maximum="100"
                             TickFrequency="10"
                             IsSnapToTickEnabled="False"
                             ValueChanged="JoinChatVolumeSlider_ValueChanged"/>
                         <Button Content="音源変更" Width="68" Height="24" Margin="6,0,0,0"
+                                Style="{StaticResource OverviewSecondaryButtonStyle}"
                                 Click="JoinChatAudioChangeButton_Click"/>
                     </StackPanel>
 
-                    <StackPanel
-                        Orientation="Horizontal"
-                        Height="28">
-
-                        <TextBlock 
-                            Text="アプリ開始時表示"
-                            Width="Auto" 
-                            Foreground="White" FontSize="14" 
-                            VerticalAlignment="Center"/>
-                        <CheckBox 
-                            x:Name="IsStartShowChatOverlayDisp" 
-                            Margin="4, 2, 0, 0"
-                            VerticalAlignment="Center"/>
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel
-                    Grid.Column="1" 
-                    Orientation="Vertical"
-                    Margin="8, 0, 0, 0">
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button
-                            x:Name="TransparentWindowOpenButton"
-                            Content="オーバーレイ切替"
-                            Width="136"
-                            Height="28"
-                            Click="TransparentWindowOpen_Click"/>
-
-                        <Button
-                            x:Name="TransparentWindowRecreateButton"
-                            Content="オーバーレイ再生成"
-                            Width="136"
-                            Height="28"
-                            Margin="4,0,0,0"
-                            ToolTip="停止したチャットオーバーレイのウィンドウを作り直します"
-                            Click="TransparentWindowRecreate_Click"/>
-                    </StackPanel>
-
-                    <Button x:Name="TransparentWindowSettingButton" 
-                        Content="位置調整モード切替" 
-                        HorizontalAlignment="Stretch"
-                        Height="28"
-                        Margin="0, 4, 0, 0"
-                        Click="TransparentWindowOpenSetting_Click"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="12,0,150,0">
-                    <StackPanel>
-                        <TextBlock Text="文字サイズ" Foreground="White" FontSize="12"/>
-                        <Slider x:Name="ChatOverlayFontSizeSlider" Width="130"
-                                Minimum="10" Maximum="36" TickFrequency="1"
-                                IsSnapToTickEnabled="True"
-                                ValueChanged="ChatOverlayFontSizeSlider_ValueChanged"/>
-                    </StackPanel>
-                    <CheckBox x:Name="ChatOverlayShowIconCheckBox"
-                              Content="アイコン表示" Foreground="White"
-                              Margin="12,0,0,0" VerticalAlignment="Center"
-                              Checked="ChatOverlayShowIconCheckBox_Changed"
-                              Unchecked="ChatOverlayShowIconCheckBox_Changed"/>
                 </StackPanel>
 
                 <Button Grid.Column="2"
@@ -146,6 +160,7 @@
                         Height="28"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
+                        Style="{StaticResource OverviewSecondaryButtonStyle}"
                         Click="ChatUserListToggleButton_Click"/>
 
             </Grid>
@@ -161,11 +176,13 @@
 
                 <Button 
                     Grid.Column="0" x:Name="sendChatButton" Content="送信" 
+                    Style="{StaticResource OverviewPrimaryButtonStyle}"
                     Margin="2, 0, 0, 0"/>
                 
                 <Button 
                     Grid.Column="1" x:Name="pinedChatButton" Content="ピン留め" 
                     HorizontalAlignment="Stretch"
+                    Style="{StaticResource OverviewPrimaryButtonStyle}"
                     Margin="4, 0, 0, 0"/>
 
                 <TextBox 
@@ -173,7 +190,8 @@
                     x:Name="sendChatTextBox"
                     Margin="8, 0, 0, 0"
                     Foreground="Black" FontSize="14"
-                    Background="LightGray"/>
+                    Background="White"
+                    KeyDown="SendChatTextBox_KeyDown"/>
             </Grid>
 
             <Border Margin="0, 8, 0, 0" Width="Auto" Height="2" Background="White"/>
@@ -375,6 +393,7 @@
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Center"
                     Margin="8, 0, 0, 0"
+                    Style="{StaticResource OverviewDeleteButtonStyle}"
                     Click="PinedChatPurgeButton_Click"/>
                                     </Grid>
                                 </StackPanel>

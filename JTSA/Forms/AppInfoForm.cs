@@ -149,6 +149,20 @@ namespace JTSA.Forms
                 }
             }
         }
+
+        private bool _isAutoStart = true;
+        public bool IsAutoStart
+        {
+            get => _isAutoStart;
+            set
+            {
+                if (_isAutoStart != value)
+                {
+                    _isAutoStart = value;
+                    OnPropertyChanged(nameof(IsAutoStart));
+                }
+            }
+        }
         
 
         public event PropertyChangedEventHandler? PropertyChanged;

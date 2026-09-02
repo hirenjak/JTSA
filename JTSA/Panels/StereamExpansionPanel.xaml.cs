@@ -15,6 +15,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
 {
     private string headerName = string.Empty;
     private bool isActive;
+    private bool doShoutout;
     public long HeaderId { get; set; }
     public string HeaderName { get => headerName; set { headerName = value; Changed(); } }
     public bool IsActive { get => isActive; set { isActive = value; Changed(); } }
@@ -26,7 +27,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsObsStreamStart { get; set; }
     public bool IsObsStreamStartMain { get; set; }
     public bool IsObsStreamStartSub { get; set; }
-    public bool DoShoutout { get; set; }
+    public bool DoShoutout { get => doShoutout; set { doShoutout = value; Changed(); } }
     public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
     public bool ChatPermissionEveryone { get; set; }
@@ -34,6 +35,60 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool ChatPermissionVip { get; set; }
     public bool ChatPermissionSubscriber { get; set; }
     public string TriggerChannelPointId { get; set; } = string.Empty;
+    public string TriggerChannelPointDisplayName { get; private set; } = string.Empty;
+    public IReadOnlyList<string> ExecutionTimingItems
+    {
+        get
+        {
+            var items = new List<string>();
+            if (IsRaid) items.Add("レイド");
+            if (IsSubscribe) items.Add("サブスク");
+            if (IsBits) items.Add("ビッツ");
+            if (IsFirstChat) items.Add("チャット入室");
+            if (IsFollow) items.Add("フォロー");
+            if (IsObsStreamStartMain) items.Add("配信開始：メインOBS");
+            if (IsObsStreamStartSub) items.Add("配信開始：サブOBS");
+            if (!string.IsNullOrWhiteSpace(TriggerChannelPointId)) items.Add("チャンネルポイント");
+            if (!string.IsNullOrWhiteSpace(TriggerComment)) items.Add("トリガーコメント");
+            if (DelaySeconds > 0) items.Add($"遅延：{DelaySeconds}秒");
+            return items;
+        }
+    }
+    public string ExecutionTimingSummary => string.Join(" / ", ExecutionTimingItems);
+    public string TriggerSummary =>
+        !string.IsNullOrWhiteSpace(TriggerChannelPointId)
+            ? $"CP：{(string.IsNullOrWhiteSpace(TriggerChannelPointDisplayName) ? TriggerChannelPointId : TriggerChannelPointDisplayName)}"
+            : !string.IsNullOrWhiteSpace(TriggerComment) ? $"コメント：{TriggerComment}" :
+        "イベント発火";
+
+    public void SetTriggerChannelPointDisplayName(string displayName)
+    {
+        TriggerChannelPointDisplayName = displayName;
+        Changed(nameof(TriggerChannelPointDisplayName));
+        Changed(nameof(TriggerSummary));
+    }
+
+    public IReadOnlyList<string> ExecutionPermissionItems
+    {
+        get
+        {
+            var items = new List<string>();
+            if (ChatPermissionEveryone) items.Add("全員");
+            if (ChatPermissionModerator) items.Add("モデレーター");
+            if (ChatPermissionVip) items.Add("VIP");
+            if (ChatPermissionSubscriber) items.Add("サブスク");
+            if (items.Count == 0) items.Add("配信者のみ");
+            return items;
+        }
+    }
+
+    public void NotifyExecutionTimingSummary()
+    {
+        Changed(nameof(ExecutionTimingItems));
+        Changed(nameof(ExecutionTimingSummary));
+        Changed(nameof(TriggerSummary));
+    }
+    public void NotifyExecutionPermissionItems() => Changed(nameof(ExecutionPermissionItems));
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
@@ -45,22 +100,38 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     private bool isChat;
     private int audioVolume = 100;
     private int weight = 1;
-    private string probabilityText = "（0%）";
+    private string probabilityText = "（000.0%）";
+    private bool isImageSettingsExpanded;
+    private bool isAudioSettingsExpanded;
+    private bool isChatSettingsExpanded;
+    private bool isTwitchSettingsExpanded;
+    private bool isObsSettingsExpanded;
+    private string imageContent = string.Empty;
+    private string audioContent = string.Empty;
+    private string chatContent = string.Empty;
 
     public bool IsImage { get => isImage; set { isImage = value; Changed(); } }
     public bool IsAudio { get => isAudio; set { isAudio = value; Changed(); } }
     public bool IsChat { get => isChat; set { isChat = value; Changed(); } }
-    public string ImageContent { get; set; } = string.Empty;
+    public string ImageContent { get => imageContent; set { imageContent = value ?? string.Empty; Changed(); Changed(nameof(IsImageConfigured)); } }
+    public bool IsImageConfigured => !string.IsNullOrWhiteSpace(ImageContent);
     public int ImageWidth { get; set; } = 1920;
     public int ImageHeight { get; set; } = 1080;
     public int ImageX { get; set; }
     public int ImageY { get; set; }
     public bool IsImageRandomPosition { get; set; }
-    public string AudioContent { get; set; } = string.Empty;
-    public string ChatContent { get; set; } = string.Empty;
+    public string AudioContent { get => audioContent; set { audioContent = value ?? string.Empty; Changed(); Changed(nameof(IsAudioConfigured)); } }
+    public bool IsAudioConfigured => !string.IsNullOrWhiteSpace(AudioContent);
+    public string ChatContent { get => chatContent; set { chatContent = value ?? string.Empty; Changed(); Changed(nameof(IsChatConfigured)); } }
+    public bool IsChatConfigured => !string.IsNullOrWhiteSpace(ChatContent);
     public int Weight { get => weight; set { weight = value; Changed(); } }
     public int AudioVolume { get => audioVolume; set { audioVolume = Math.Clamp(value, 0, 100); Changed(); } }
     public string ProbabilityText { get => probabilityText; set { probabilityText = value; Changed(); } }
+    public bool IsImageSettingsExpanded { get => isImageSettingsExpanded; set { isImageSettingsExpanded = value; Changed(); } }
+    public bool IsAudioSettingsExpanded { get => isAudioSettingsExpanded; set { isAudioSettingsExpanded = value; Changed(); } }
+    public bool IsChatSettingsExpanded { get => isChatSettingsExpanded; set { isChatSettingsExpanded = value; Changed(); } }
+    public bool IsTwitchSettingsExpanded { get => isTwitchSettingsExpanded; set { isTwitchSettingsExpanded = value; Changed(); } }
+    public bool IsObsSettingsExpanded { get => isObsSettingsExpanded; set { isObsSettingsExpanded = value; Changed(); } }
     public ObservableCollection<StreamExpansionObsTextForm> ObsTextForms { get; } = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -98,6 +169,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     private bool isSwitchingHeader;
     private bool isSaving;
     private readonly StreamExpansionService streamExpansionService = new();
+    private StreamExpansionPlaceholderHelpWindow? placeholderHelpWindow;
 
     public ObservableCollection<StreamExpansionHeaderForm> HeaderFormList { get; } = [];
     public ObservableCollection<StreamExpansionItemForm> ItemFormList { get; } = [];
@@ -113,6 +185,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     public StereamExpansionPanel() 
     {
         InitializeComponent();
+        ImplementationTabControl.Items.Remove(PlaceholderHelpTab);
         DataContext = this;
 
 
@@ -175,6 +248,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             {
                 header.TriggerChannelPointId = triggerChannelPointId;
             }
+
+            RefreshTriggerChannelPointDisplayNames();
         }
         finally
         {
@@ -221,6 +296,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             });
         }
 
+        RefreshTriggerChannelPointDisplayNames();
+
         // 選択しているアイテムを格納
         SelectedHeader = HeaderFormList.FirstOrDefault(x => x.HeaderId == selectId) ?? HeaderFormList.FirstOrDefault();
         StreamExpansionListBox.SelectedItem = SelectedHeader;
@@ -244,6 +321,118 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         HeaderFormList.Add(item); SelectedHeader = item; StreamExpansionListBox.SelectedItem = item; ClearItemForms();
         SaveCurrent();
+    }
+
+    private void OpenTriggerSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedHeader is null) return;
+
+        var window = new StreamExpansionTriggerSettingsWindow(SelectedHeader, ChannelPointFormList)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (window.ShowDialog() == true)
+        {
+            RefreshTriggerChannelPointDisplayNames();
+            SaveCurrent();
+        }
+    }
+
+    private void RefreshTriggerChannelPointDisplayNames()
+    {
+        foreach (var header in HeaderFormList)
+        {
+            var displayName = ChannelPointFormList
+                .FirstOrDefault(x => x.RewardId == header.TriggerChannelPointId)?.DisplayName ?? string.Empty;
+            header.SetTriggerChannelPointDisplayName(displayName);
+        }
+    }
+
+    private void OpenExecutionPermissionSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedHeader is null) return;
+
+        var window = new StreamExpansionPermissionSettingsWindow(SelectedHeader)
+        {
+            Owner = Window.GetWindow(this)
+        };
+        if (window.ShowDialog() == true)
+            SaveCurrent();
+    }
+
+    private void OpenPlaceholderHelpButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (placeholderHelpWindow is { IsLoaded: true })
+        {
+            placeholderHelpWindow.Activate();
+            return;
+        }
+
+        placeholderHelpWindow = new StreamExpansionPlaceholderHelpWindow
+        {
+            Owner = Window.GetWindow(this)
+        };
+        placeholderHelpWindow.Closed += (_, _) => placeholderHelpWindow = null;
+        placeholderHelpWindow.Show();
+    }
+
+    private void ImageSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsImageSettingsExpanded));
+    }
+
+    private void AudioSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsAudioSettingsExpanded));
+    }
+
+    private void ChatSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsChatSettingsExpanded));
+    }
+
+    private void TwitchSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsTwitchSettingsExpanded));
+    }
+
+    private void ObsSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsObsSettingsExpanded));
+    }
+
+    private static void ToggleExclusiveSettings(StreamExpansionItemForm item, string targetProperty)
+    {
+        var shouldOpen = targetProperty switch
+        {
+            nameof(item.IsImageSettingsExpanded) => !item.IsImageSettingsExpanded,
+            nameof(item.IsAudioSettingsExpanded) => !item.IsAudioSettingsExpanded,
+            nameof(item.IsChatSettingsExpanded) => !item.IsChatSettingsExpanded,
+            nameof(item.IsTwitchSettingsExpanded) => !item.IsTwitchSettingsExpanded,
+            nameof(item.IsObsSettingsExpanded) => !item.IsObsSettingsExpanded,
+            _ => false
+        };
+
+        item.IsImageSettingsExpanded = false;
+        item.IsAudioSettingsExpanded = false;
+        item.IsChatSettingsExpanded = false;
+        item.IsTwitchSettingsExpanded = false;
+        item.IsObsSettingsExpanded = false;
+
+        if (!shouldOpen) return;
+        switch (targetProperty)
+        {
+            case nameof(item.IsImageSettingsExpanded): item.IsImageSettingsExpanded = true; break;
+            case nameof(item.IsAudioSettingsExpanded): item.IsAudioSettingsExpanded = true; break;
+            case nameof(item.IsChatSettingsExpanded): item.IsChatSettingsExpanded = true; break;
+            case nameof(item.IsTwitchSettingsExpanded): item.IsTwitchSettingsExpanded = true; break;
+            case nameof(item.IsObsSettingsExpanded): item.IsObsSettingsExpanded = true; break;
+        }
     }
 
     /// <summary>
@@ -375,6 +564,20 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }
     }
 
+    private void IncreaseWeightButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not StreamExpansionItemForm item) return;
+        item.Weight++;
+        SaveCurrent();
+    }
+
+    private void DecreaseWeightButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not StreamExpansionItemForm item) return;
+        item.Weight = Math.Max(1, item.Weight - 1);
+        SaveCurrent();
+    }
+
     private void UpdateProbabilities()
     {
         var totalWeight = ItemFormList.Sum(form => Math.Max(1, form.Weight));
@@ -383,7 +586,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             var probability = totalWeight == 0
                 ? 0
                 : Math.Max(1, form.Weight) * 100d / totalWeight;
-            form.ProbabilityText = $"（{probability:0.##}%）";
+            form.ProbabilityText = $"（{probability:000.0}%）";
         }
     }
 
@@ -459,6 +662,31 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }
     }
 
+    private async void TestObsExecutionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not StreamExpansionItemForm item ||
+            Application.Current.MainWindow is not MainWindow mainWindow) return;
+
+        var configuredItems = item.ObsTextForms
+            .Where(x => !string.IsNullOrWhiteSpace(x.SourceName))
+            .ToList();
+        if (configuredItems.Count == 0)
+        {
+            MessageBox.Show("テストするOBS実行設定がありません。", "配信拡張");
+            return;
+        }
+
+        try
+        {
+            foreach (var obsText in configuredItems)
+                await mainWindow.SetObsTextSourceAsync(obsText.IsSubObs, obsText.SourceName, obsText.TextTemplate);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"OBS実行をテストできませんでした。\n{ex.GetBaseException().Message}", "OBS連携");
+        }
+    }
+
 
     /// <summary>
     /// 
@@ -487,9 +715,9 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 form.ImageX,
                 form.ImageY,
                 form.IsImageRandomPosition).Normalize().Encode();
-            AddSaveItem(saveItems, form.IsImage && !string.IsNullOrWhiteSpace(form.ImageContent), "Image", imageContent, form.Weight, 100, groupIndex);
-            AddSaveItem(saveItems, form.IsAudio, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
-            AddSaveItem(saveItems, form.IsChat, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
+            AddSaveItem(saveItems, form.IsImageConfigured, "Image", imageContent, form.Weight, 100, groupIndex);
+            AddSaveItem(saveItems, form.IsAudioConfigured, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
+            AddSaveItem(saveItems, form.IsChatConfigured, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
             foreach (var obsText in form.ObsTextForms)
             {
                 if (string.IsNullOrWhiteSpace(obsText.SourceName)) continue;

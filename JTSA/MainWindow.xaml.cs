@@ -5,6 +5,7 @@ using JTSA.Models;
 using JTSA.Panels;
 using JTSA.Utility;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using NAudio;
 using NAudio.Utils;
 using Newtonsoft.Json.Bson;
@@ -43,6 +44,7 @@ namespace JTSA
         private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim twitchAccountTokenLock = new(1, 1);
+        private bool isSteamGameLaunching;
         private readonly StreamExpansionService streamExpansionService = new();
 		private bool isObsOperationRunning;
         private bool isAccountAwarePanelsInitialized;
@@ -138,7 +140,10 @@ namespace JTSA
 
 			set
 			{
-				SteamUrlTextBlock.Text = value;
+				SteamUrlTextBlock.Text = value ?? string.Empty;
+				if (LaunchSteamGameButton is not null)
+					LaunchSteamGameButton.IsEnabled = !isSteamGameLaunching &&
+						SteamHelper.GetSteamAppId(value ?? string.Empty) is not null;
 				
 			}
 		}
@@ -158,6 +163,10 @@ namespace JTSA
 
 				// カテゴリ設定をしたら同時にSteamURLを取得して設定
                 SteamUrlTextSet(value);
+
+                // Twitchへの反映を待たず、アプリ上でカテゴリを選択した時点でOBSを切り替える。
+                if (!string.IsNullOrWhiteSpace(value) && ObsSettingPanel is not null)
+                    _ = ObsSettingPanel.ApplyCaptureRuleForCategoryAsync(value);
             }
 		}
 
@@ -1005,6 +1014,13 @@ namespace JTSA
             return controller.IsConnected ? controller : null;
         }
 
+        /// <summary>接続処理を行わず、現在接続済みのOBSだけを返す。</summary>
+        public ObsController? GetConnectedObsController(bool isSub)
+        {
+            var controller = isSub ? subObsController : mainObsController;
+            return controller.IsConnected ? controller : null;
+        }
+
         private bool CanAutomaticallyConnectObs(bool isSub)
         {
             if (isSub ? subObsHasConnected : mainObsHasConnected)
@@ -1249,6 +1265,93 @@ namespace JTSA
             {
                 SetAccountSwitchLoading(false);
             }
+        }
+
+        private void OpenCurrentCategoryObsCaptureButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(CurrentCategoryId))
+            {
+                MessageBox.Show(this, "カテゴリが選択されていません。", "OBSキャプチャ設定",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var category = DAO_Category.SelectOneById(CurrentCategoryId);
+            if (category is null)
+            {
+                MessageBox.Show(this, "現在のカテゴリ情報が見つかりません。", "OBSキャプチャ設定",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var window = new ObsCaptureDestinationWindow(
+                category.CategoryId,
+                category.DisplayName,
+                category.BoxArtUrl)
+            {
+                Owner = this
+            };
+            window.ShowDialog();
+            CategoryPanel.ReloadCategory();
+        }
+
+        private async void LaunchSteamGameButton_Click(object sender, RoutedEventArgs e)
+        {
+            var appId = SteamHelper.GetSteamAppId(CurrentCategorySteamUrl);
+            if (appId is null)
+            {
+                LaunchSteamGameButton.IsEnabled = false;
+                return;
+            }
+
+            try
+            {
+                isSteamGameLaunching = true;
+                LaunchSteamGameButton.IsEnabled = false;
+                Process.Start(new ProcessStartInfo($"steam://run/{appId}")
+                {
+                    UseShellExecute = true
+                });
+
+                var detected = false;
+                for (var elapsedSeconds = 0; elapsedSeconds < 10; elapsedSeconds++)
+                {
+                    if (IsSteamGameRunning(appId))
+                    {
+                        detected = true;
+                        break;
+                    }
+
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
+
+                if (detected)
+                    AppLogPanel.Success(GetType().Name, $"Steamゲーム起動完了 App ID: {appId}");
+                else
+                    AppLogPanel.Error(GetType().Name,
+                        $"Steamゲームの起動を10秒以内に確認できませんでした。App ID: {appId}");
+            }
+            catch (Exception ex)
+            {
+                AppLogPanel.Error(GetType().Name,
+                    $"Steamゲームを起動できませんでした。{ex.GetBaseException().Message}");
+                MessageBox.Show(this,
+                    "Steamゲームを起動できませんでした。Steamがインストールされているか確認してください。",
+                    "ゲーム起動", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                isSteamGameLaunching = false;
+                LaunchSteamGameButton.IsEnabled =
+                    SteamHelper.GetSteamAppId(CurrentCategorySteamUrl) is not null;
+            }
+        }
+
+        private static bool IsSteamGameRunning(string appId)
+        {
+            using var appKey = Registry.CurrentUser.OpenSubKey($@"Software\Valve\Steam\Apps\{appId}");
+            var runningValue = appKey?.GetValue("Running");
+            return runningValue is not null && Convert.ToInt32(runningValue, CultureInfo.InvariantCulture) == 1;
         }
 
         private void SetAccountSwitchLoading(bool isLoading, bool isStartup = false)

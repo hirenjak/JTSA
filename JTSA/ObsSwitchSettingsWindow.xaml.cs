@@ -10,11 +10,15 @@ public partial class ObsSwitchSettingsWindow : Window
         if (showSourceSwitch)
         {
             Title = "OBSソース切替設定";
+            Width = MinWidth;
+            Height = MinHeight;
             SwitchSettingsPanel.ShowSourceSwitchSettings();
         }
         else
         {
             Title = "OBSシーン切替設定";
+            Width = MinWidth;
+            Height = MinHeight;
             SwitchSettingsPanel.ShowSceneSwitchSettings();
         }
     }

@@ -5,14 +5,14 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="カテゴリ設定"
         Icon="Resources/jtsa.ico"
-        Width="1000"
-        Height="650"
+        Width="760"
+        Height="480"
         MinWidth="760"
         MinHeight="480"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         ResizeMode="CanResize"
-        Background="#FF404040">
+        Background="#FF303030">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="32"
                             ResizeBorderThickness="6"
@@ -52,7 +52,7 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="#FF666666" BorderThickness="1" Background="#FF404040">
+    <Border BorderBrush="#FF666666" BorderThickness="1" Background="#FF303030">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="32"/>
@@ -78,7 +78,7 @@
                 </StackPanel>
             </Grid>
 
-            <panels:CategoryPanel x:Name="CategorySettingsPanel" Grid.Row="1" Margin="1,0,1,1"/>
+            <panels:CategoryPanel x:Name="CategorySettingsPanel" Grid.Row="1"/>
         </Grid>
     </Border>
 </Window>

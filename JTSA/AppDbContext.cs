@@ -30,6 +30,8 @@ namespace JTSA.Models
         public DbSet<M_Setting> M_Setting { get; set; }
         public DbSet<M_TwitchAccount> M_TwitchAccount { get; set; }
         public DbSet<M_ObsTextSource> M_ObsTextSource { get; set; }
+        public DbSet<M_ObsCaptureSource> M_ObsCaptureSource { get; set; }
+        public DbSet<M_ObsCategoryCaptureRule> M_ObsCategoryCaptureRule { get; set; }
         public DbSet<M_TitleTag> M_TitleTag { get; set; }
         public DbSet<T_GamePlaylistHeader> T_GamePlaylistHeader { get; set; }
         public DbSet<T_GamePlaylistItem> T_GamePlaylistItem { get; set; }
@@ -156,6 +158,10 @@ namespace JTSA.Models
 
             modelBuilder.Entity<T_CalendarEntry>()
                 .HasIndex(c => new { c.CalendarDate, c.StartTime });
+
+            modelBuilder.Entity<M_ObsCaptureSource>()
+                .HasIndex(c => new { c.IsSubObs, c.InputName })
+                .IsUnique();
         }
 
         /// <summary>
