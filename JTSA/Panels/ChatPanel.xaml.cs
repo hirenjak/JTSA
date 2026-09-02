@@ -113,7 +113,10 @@ namespace JTSA.Panels
         }
 
         /// <summary>WPF版チャットオーバーレイと同じ見た目のOBS用HTMLを返す。</summary>
-        public string CreateObsChatHtml() => """
+        public string CreateObsChatHtml()
+        {
+            var backgroundOpacity = ReadOverlayBackgroundOpacity() / 100d;
+            return """
             <!DOCTYPE html>
             <html lang="ja">
             <head>
@@ -139,7 +142,7 @@ namespace JTSA.Panels
                         overflow: hidden;
                         padding: 12px;
                         border-radius: 12px;
-                        background: rgba(0, 0, 0, 0.267);
+                        background: rgba(0, 0, 0, __BACKGROUND_OPACITY__);
                     }
                     #chatList {
                         display: flex;
@@ -278,7 +281,8 @@ namespace JTSA.Panels
                 </script>
             </body>
             </html>
-            """;
+            """.Replace("__BACKGROUND_OPACITY__", backgroundOpacity.ToString("0.##", CultureInfo.InvariantCulture));
+        }
 
         private bool isChatUserListVisible = true;
 
@@ -372,6 +376,14 @@ namespace JTSA.Panels
                 sendChatTextBox.Text = string.Empty;
         }
 
+        private void SendChatTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter) return;
+
+            e.Handled = true;
+            SendChatButton_Click(sendChatButton, new RoutedEventArgs(Button.ClickEvent, sendChatButton));
+        }
+
 
         /// <summary>
         /// コントロール読み込み時
@@ -416,6 +428,7 @@ namespace JTSA.Panels
                double.Parse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.JoinChatVolume)?.Value ?? "50");
 
             ChatOverlayFontSizeSlider.Value = ReadOverlayFontSize();
+            ChatOverlayBackgroundOpacitySlider.Value = ReadOverlayBackgroundOpacity();
             ChatOverlayShowIconCheckBox.IsChecked =
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
             overlayAppearanceInitialized = true;
@@ -932,11 +945,20 @@ namespace JTSA.Panels
                 : 16;
         }
 
+        private double ReadOverlayBackgroundOpacity()
+        {
+            var value = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayBackgroundOpacity)?.Value;
+            return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                ? Math.Clamp(parsed, 0, 100)
+                : 27;
+        }
+
         private void ApplyOverlayAppearance()
         {
             transparentWindow?.ApplyAppearance(
                 ChatOverlayShowIconCheckBox.IsChecked == true,
-                ChatOverlayFontSizeSlider.Value);
+                ChatOverlayFontSizeSlider.Value,
+                ChatOverlayBackgroundOpacitySlider.Value);
         }
 
         private void ChatOverlayFontSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -956,6 +978,16 @@ namespace JTSA.Panels
             DAO_Setting.InsertUpdate(
                 DAO_Setting.SettingName.ChatOverlayShowUserIcon,
                 ChatOverlayShowIconCheckBox.IsChecked == true ? "1" : "0");
+            ApplyOverlayAppearance();
+        }
+
+        private void ChatOverlayBackgroundOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (!overlayAppearanceInitialized) return;
+
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ChatOverlayBackgroundOpacity,
+                e.NewValue.ToString(CultureInfo.InvariantCulture));
             ApplyOverlayAppearance();
         }
 
@@ -1018,8 +1050,8 @@ namespace JTSA.Panels
                     transparentWindow = null;
             };
             transparentWindow = window;
-            ApplyOverlayAppearance();
             window.Show();
+            ApplyOverlayAppearance();
         }
 
 

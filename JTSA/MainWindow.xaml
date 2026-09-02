@@ -8,7 +8,7 @@
         xmlns:local="clr-namespace:JTSA"
         Title="JakTwtchStreamerAssistant"
         Icon="Resources/jtsa.ico"
-        Height="700" Width="1100"
+        Height="700" Width="1120"
         WindowStyle="None"
         ResizeMode="CanResize">
 
@@ -149,9 +149,12 @@
             <Grid Grid.Column="2" >
                 <StackPanel Grid.Column="0" Grid.Row="0"
                         Margin="2,4,8,4"
-                        Background="Black">
+                        Background="Transparent">
                     <Image x:Name="SelectCategoryBoxArt"
-                       HorizontalAlignment="Center"/>
+                       Width="45" Height="60"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Stretch="Uniform"/>
                 </StackPanel>
             </Grid>
 
@@ -327,8 +330,8 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal"
-                        Margin="8,0,0,0"
+            <StackPanel Grid.Column="0" Orientation="Horizontal"
+                        Margin="0"
                         HorizontalAlignment="Left" VerticalAlignment="Center">
                 <TextBlock Text="選択アカウント"
                            Foreground="LightGray"
@@ -443,8 +446,8 @@
             </StackPanel>
 
             <Button x:Name="ObsSceneShortcutToggleButton"
-                    Grid.Column="0" Content="ショートカット ☰"
-                    Width="90" Height="22" Margin="0"
+                    Grid.Column="1" Content="ショートカット ☰"
+                    Width="90" Height="22" Margin="8,0,0,0"
                     Padding="0" FontSize="11" VerticalAlignment="Center"
                     Foreground="White" Background="#FF565656"
                     BorderBrush="#FF777777" BorderThickness="1" Cursor="Hand"
@@ -465,6 +468,13 @@
                     </ControlTemplate>
                 </Button.Template>
             </Button>
+
+            <Button Grid.Column="2" Content="OBSキャプチャ設定" Width="110" Height="22"
+                    Margin="8,0,0,0" Padding="6,0" HorizontalAlignment="Left"
+                    Foreground="White" Background="#FF285653"
+                    BorderBrush="LightSeaGreen" BorderThickness="1"
+                    ToolTip="現在のカテゴリに対するOBSキャプチャ先を設定します"
+                    Click="OpenCurrentCategoryObsCaptureButton_Click"/>
         </Grid>
 
         <!-- 配信中にすぐ押せるOBSシーン・ソースショートカット -->
@@ -486,12 +496,21 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="ShortcutButtonBorder"
+                                    Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}">
                                 <ContentPresenter HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"/>
                             </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="ShortcutButtonBorder" Property="Background" Value="#FF686868"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="ShortcutButtonBorder" Property="Background" Value="#FF303030"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -543,10 +562,10 @@
                         Click="OpenObsSceneSwitchWindowButton_Click"/>
             </StackPanel>
             <Grid Grid.Column="1">
-                <TextBlock x:Name="ObsSceneShortcutEmptyTextBlock"
+                <TextBlock x:Name="ObsSceneShortcutEmptyTextBlock" IsHitTestVisible="False"
                            Text="OBSタブ ＞ シーン切替タブにてシーンの登録ができます"
                            Foreground="LightGray" VerticalAlignment="Center" Margin="6,0"/>
-                <ScrollViewer x:Name="ObsSceneShortcutScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="ObsSceneShortcutScrollViewer" Panel.ZIndex="1" IsHitTestVisible="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                     <StackPanel>
                         <ItemsControl x:Name="MainObsSceneShortcutItemsControl">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -571,8 +590,8 @@
                         Click="OpenObsSourceSwitchWindowButton_Click"/>
             </StackPanel>
             <Grid Grid.Column="1">
-                <TextBlock x:Name="ObsSourceShortcutEmptyTextBlock" Text="OBSタブ ＞ ソース切替タブにてソースの登録ができます" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0"/>
-                <ScrollViewer x:Name="ObsSourceShortcutScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <TextBlock x:Name="ObsSourceShortcutEmptyTextBlock" IsHitTestVisible="False" Text="OBSタブ ＞ ソース切替タブにてソースの登録ができます" Foreground="LightGray" VerticalAlignment="Center" Margin="6,0"/>
+                <ScrollViewer x:Name="ObsSourceShortcutScrollViewer" Panel.ZIndex="1" IsHitTestVisible="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                     <StackPanel>
                         <ItemsControl x:Name="MainObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding ShortcutDisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="2,1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                         <ItemsControl x:Name="SubObsSourceShortcutItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding ShortcutDisplayName}" Tag="{Binding}" Style="{StaticResource ObsSourceShortcutButtonStyle}" Margin="2,1" MinWidth="96" Height="22" FontSize="10" Click="ObsSourceShortcutButton_Click"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
@@ -597,10 +616,42 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <TabControl x:Name="MainTabControl" Grid.Row="1" Width="Auto" Margin="0, 8, 0, 0" Background="#FF404040" Grid.ColumnSpan="2">
+            <TabControl x:Name="MainTabControl" Grid.Row="1" Width="Auto" Margin="8"
+                        Background="#FF404040"
+                        Grid.ColumnSpan="2">
                 <TabControl.ItemContainerStyle>
                     <Style TargetType="TabItem">
                         <Setter Property="Width" Value="64"/>
+                        <Setter Property="Height" Value="23"/>
+                        <Setter Property="Padding" Value="5,0"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Background" Value="#FF565656"/>
+                        <Setter Property="BorderBrush" Value="#FF777777"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="TabItem">
+                                    <Border x:Name="MainTabHeaderBorder"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="0">
+                                        <ContentPresenter ContentSource="Header"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          Margin="{TemplateBinding Padding}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#FF303030"/>
+                                            <Setter Property="BorderBrush" Value="#FF666666"/>
+                                            <Setter Property="BorderThickness" Value="1,1,1,0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </TabControl.ItemContainerStyle>
                 <TabControl.Template>

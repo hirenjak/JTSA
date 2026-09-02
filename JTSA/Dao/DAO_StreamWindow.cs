@@ -31,6 +31,7 @@ internal static class DAO_StreamWindow
             entity.Y = window.Y;
             entity.Width = window.Width;
             entity.Height = window.Height;
+            entity.IsAutoStart = window.IsAutoStart;
             entity.UpdatedDateTime = now;
             entity.LastUsedDateTime = now;
         }

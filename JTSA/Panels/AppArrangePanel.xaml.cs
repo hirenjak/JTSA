@@ -47,7 +47,7 @@ public partial class AppArrangePanel : UserControl
         if (AutoStartCheckBox.IsChecked == true && !hasAttemptedAutoStart)
         {
             hasAttemptedAutoStart = true;
-            StartRegisteredApps();
+            StartRegisteredApps(autoStartOnly: true);
         }
     }
 
@@ -99,7 +99,8 @@ public partial class AppArrangePanel : UserControl
         X = item.X,
         Y = item.Y,
         Width = item.Width,
-        Height = item.Height
+        Height = item.Height,
+        IsAutoStart = item.IsAutoStart
     };
 
     private static Process? FindProcess(AppInfoForm app)
@@ -137,6 +138,7 @@ public partial class AppArrangePanel : UserControl
         Y = app.Y ?? 0,
         Width = app.Width ?? 0,
         Height = app.Height ?? 0,
+        IsAutoStart = app.IsAutoStart,
         CreatedDateTime = DateTime.Now,
         UpdatedDateTime = DateTime.Now,
         LastUsedDateTime = DateTime.Now
@@ -248,13 +250,22 @@ public partial class AppArrangePanel : UserControl
     private void MoveAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Win32Helper.SetAppWindowRect(app); ShowStatus("登録済みアプリを一括配置しました。"); }
     private void StopAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Stop(app); }
 
-    private void StartRegisteredApps()
+    private void StartRegisteredApps(bool autoStartOnly = false)
     {
-        foreach (var app in RegisteredApps)
+        foreach (var app in RegisteredApps.Where(app => !autoStartOnly || app.IsAutoStart))
         {
             using var process = FindProcess(app);
             if (process is null) Start(app);
         }
+    }
+
+    private void AppAutoStartCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as CheckBox)?.DataContext is not AppInfoForm app) return;
+        Save(app);
+        ShowStatus(app.IsAutoStart
+            ? $"自動起動を有効にしました: {app.ProcessName}"
+            : $"自動起動を無効にしました: {app.ProcessName}");
     }
 
     private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)

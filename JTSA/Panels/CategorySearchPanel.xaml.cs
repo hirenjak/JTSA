@@ -81,39 +81,42 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void CategorySearchListBox_DoubleClick(object sender, EventArgs e)
         {
-            if (CategorySearchListBox.SelectedItem is CategoryForm selectedItem)
+            if (await AddSelectedCategoryAsync())
+                Window.GetWindow(this)!.DialogResult = true;
+        }
+
+        public async Task<bool> AddSelectedCategoryAsync()
+        {
+            if (CategorySearchListBox.SelectedItem is not CategoryForm selectedItem) return false;
+
+            var existingCategory = DAO_Category.SelectOneById(selectedItem.CategoryId);
+
+            if (existingCategory == null)
             {
-                var existingCategory = DAO_Category.SelectOneById(selectedItem.CategoryId);
+                // Steamに存在しないカテゴリ（Art等）ではURLが取れないため、空文字として扱う
+                List<string> steamUrls = await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
+                string steamUrl = steamUrls.FirstOrDefault() ?? "";
 
-                if (existingCategory == null)
-                {
-                    // Steamに存在しないカテゴリ（Art等）ではURLが取れないため、空文字として扱う
-                    List<string> steamUrls = await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
-                    string steamUrl = steamUrls.FirstOrDefault() ?? "";
+                // 未登録カテゴリを新規登録
+                var insertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl);
+                if (insertData == null) return false;
 
-                    // 未登録カテゴリを新規登録
-                    var insertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl);
-                    if (insertData == null) return;
-
-                    DAO_Category.Insert(insertData);
-                }
-                else
-                {
-                    // 登録済みカテゴリは最終使用日時を更新し、一覧の先頭へ移動させる
-                    DAO_Category.UpdateLastUsed(selectedItem.CategoryId);
-                }
-
-                if (AddToPlaylistOnSelect)
-                {
-                    mainWindow.PlayingGamePanel.AddPlaylistItem(selectedItem.CategoryId);
-                }
-
-                // カテゴリタブと配信概要パネルの一覧は同じコレクションを参照しているため、
-                // 登録直後に読み直して両方へ反映する。
-                mainWindow.CategoryPanel.ReloadCategory();
-
-                CategorySearchTitleSerchTextBox.Text = "";
+                DAO_Category.Insert(insertData);
             }
+            else
+            {
+                // 登録済みカテゴリは最終使用日時を更新し、一覧の先頭へ移動させる
+                DAO_Category.UpdateLastUsed(selectedItem.CategoryId);
+            }
+
+            if (AddToPlaylistOnSelect)
+                mainWindow.PlayingGamePanel.AddPlaylistItem(selectedItem.CategoryId);
+
+            // カテゴリタブと配信概要パネルの一覧は同じコレクションを参照しているため、
+            // 登録直後に読み直して両方へ反映する。
+            mainWindow.CategoryPanel.ReloadCategory();
+
+            return true;
         }
 
         /// <summary>

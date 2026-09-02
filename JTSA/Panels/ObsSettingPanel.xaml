@@ -1,27 +1,42 @@
 <UserControl x:Class="JTSA.Panels.ObsSettingPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Loaded="ObsSettingPanel_Loaded">
- <Grid Margin="12" Background="#FF404040"><TabControl x:Name="ObsSettingsTabControl" Background="#FF404040" BorderBrush="#FF707070">
-  <TabItem Header="ソース文言変更"><ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
-   <TextBlock Text="OBSテキストソースの文言変更" Foreground="White" FontSize="22" FontWeight="Bold"/>
-   <DockPanel Margin="0,4,0,14"><TextBlock Foreground="LightGray" VerticalAlignment="Center" Text="カードごとに変更するOBSテキストソースを指定します。"/><Button DockPanel.Dock="Right" Content="＋ 変更対象を追加" Width="140" Height="28" Click="AddTextSourceCardButton_Click"/></DockPanel>
+ <UserControl.Resources>
+  <Style x:Key="ObsNavigationTabStyle" TargetType="TabItem">
+   <Setter Property="Width" Value="148"/><Setter Property="Height" Value="42"/><Setter Property="Margin" Value="0,0,0,2"/>
+   <Setter Property="Foreground" Value="#FFD0D0D0"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+   <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Padding" Value="14,0"/><Setter Property="FontSize" Value="13"/><Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem"><Border x:Name="NavBackground" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="3,0,0,0"><ContentPresenter ContentSource="Header" Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavBackground" Property="Background" Value="#FF454B4B"/><Setter Property="Foreground" Value="White"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter TargetName="NavBackground" Property="Background" Value="#FF344D4B"/><Setter TargetName="NavBackground" Property="BorderBrush" Value="LightSeaGreen"/><Setter Property="Foreground" Value="White"/><Setter Property="FontWeight" Value="SemiBold"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="ObsSectionTitleStyle" TargetType="TextBlock"><Setter Property="Foreground" Value="White"/><Setter Property="FontSize" Value="19"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+  <Style x:Key="ObsDescriptionStyle" TargetType="TextBlock"><Setter Property="Foreground" Value="#FFBDBDBD"/><Setter Property="FontSize" Value="11"/><Setter Property="TextWrapping" Value="Wrap"/></Style>
+  <Style x:Key="ObsFieldLabelStyle" TargetType="TextBlock"><Setter Property="Foreground" Value="#FFC8C8C8"/><Setter Property="FontSize" Value="11"/><Setter Property="Margin" Value="0,0,0,3"/></Style>
+  <Style x:Key="ObsCardStyle" TargetType="Border"><Setter Property="Padding" Value="10"/><Setter Property="Background" Value="#FF474747"/><Setter Property="BorderBrush" Value="#FF666666"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="3"/></Style>
+  <Style x:Key="ObsPrimaryButtonStyle" TargetType="Button"><Setter Property="Height" Value="26"/><Setter Property="Padding" Value="10,0"/><Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#FF285653"/><Setter Property="BorderBrush" Value="LightSeaGreen"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Cursor" Value="Hand"/></Style>
+  <Style x:Key="ObsSecondaryButtonStyle" TargetType="Button"><Setter Property="Height" Value="24"/><Setter Property="Padding" Value="8,0"/><Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="#FF565656"/><Setter Property="BorderBrush" Value="#FF777777"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Cursor" Value="Hand"/></Style>
+  <Style x:Key="ObsDangerButtonStyle" TargetType="Button"><Setter Property="Height" Value="24"/><Setter Property="Padding" Value="9,0"/><Setter Property="Foreground" Value="#FFFF9A9F"/><Setter Property="Background" Value="#FF4A3839"/><Setter Property="BorderBrush" Value="#FF815052"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Cursor" Value="Hand"/></Style>
+ </UserControl.Resources>
+ <Grid Margin="8,4,8,8" Background="#FF303030"><TabControl x:Name="ObsSettingsTabControl" TabStripPlacement="Left" ItemContainerStyle="{StaticResource ObsNavigationTabStyle}" Background="#FF383838" BorderBrush="#FF5E5E5E" BorderThickness="1">
+  <TabItem Header="文言変更"><ScrollViewer Background="#FF383838" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="14,12">
+   <TextBlock Text="OBSテキストソースの文言変更" Style="{StaticResource ObsSectionTitleStyle}"/>
+   <DockPanel Margin="0,3,0,10" LastChildFill="True"><Button DockPanel.Dock="Right" Content="＋ 変更対象を追加" Width="132" Style="{StaticResource ObsPrimaryButtonStyle}" Click="AddTextSourceCardButton_Click"/><TextBlock Style="{StaticResource ObsDescriptionStyle}" VerticalAlignment="Center" Text="カードごとに、変更するOBSテキストソースと文言を設定します。"/></DockPanel>
    <ItemsControl x:Name="TextSourceCardsItemsControl">
     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
     <ItemsControl.ItemTemplate><DataTemplate>
-     <Expander Margin="0,0,0,8" IsExpanded="True" Foreground="White">
+     <Expander Margin="0,0,0,7" IsExpanded="True" Foreground="White">
       <Expander.Header>
        <DockPanel MinWidth="360">
         <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" Foreground="White"/>
-        <TextBlock Margin="12,0,0,0" Text="{Binding Status}" Foreground="LightGreen" FontSize="11"/>
+        <TextBlock Margin="10,0,0,0" Text="{Binding Status}" Foreground="#FF8FE3A1" FontSize="11"/>
        </DockPanel>
       </Expander.Header>
-      <Border Padding="9" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
-      <Grid><Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="48"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-       <DockPanel LastChildFill="False"><Button DockPanel.Dock="Right" Content="削除" Width="50" Height="24" Margin="6,0,0,0" Tag="{Binding}" Click="RemoveTextSourceCardButton_Click"/><TextBlock DockPanel.Dock="Left" Text="カード名称" Width="76" Foreground="White" VerticalAlignment="Center"/><TextBox DockPanel.Dock="Left" Width="220" Height="24" Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" LostFocus="CardDisplayName_LostFocus" Tag="{Binding}"/><Button DockPanel.Dock="Left" Content="{Binding ActionButtonText}" Width="96" Height="24" Margin="8,0,0,0" Tag="{Binding}" Click="ApplySourceCardButton_Click"/><TextBlock DockPanel.Dock="Left" Margin="10,0,0,0" Text="{Binding Status}" Foreground="LightGreen" VerticalAlignment="Center" FontSize="11"/></DockPanel>
+      <Border Style="{StaticResource ObsCardStyle}">
+      <Grid><Grid.RowDefinitions><RowDefinition Height="30"/><RowDefinition Height="43"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="220"/><ColumnDefinition Width="8"/><ColumnDefinition Width="96"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="カード名" Foreground="#FFC8C8C8" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBox Grid.Column="1" Height="24" Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" LostFocus="CardDisplayName_LostFocus" Tag="{Binding}"/><Button Grid.Column="3" Content="{Binding ActionButtonText}" Style="{StaticResource ObsPrimaryButtonStyle}" Tag="{Binding}" Click="ApplySourceCardButton_Click"/><TextBlock Grid.Column="4" Margin="10,0" Text="{Binding Status}" Foreground="#FF8FE3A1" VerticalAlignment="Center" FontSize="11" TextTrimming="CharacterEllipsis"/><Button Grid.Column="5" Content="削除" Width="52" Style="{StaticResource ObsDangerButtonStyle}" Tag="{Binding}" Click="RemoveTextSourceCardButton_Click"/></Grid>
        <Grid Grid.Row="1" Margin="0,3,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <StackPanel><TextBlock Text="接続先OBS" Foreground="LightGray" FontSize="11"/><ComboBox Height="24" Margin="0,2,0,0" Padding="3,0" Tag="{Binding}" SelectedIndex="{Binding ObsSelectedIndex}" SelectionChanged="CardObs_SelectionChanged"><ComboBoxItem Content="メインOBS" Tag="main"/><ComboBoxItem Content="サブOBS" Tag="sub"/></ComboBox></StackPanel>
-        <StackPanel Grid.Column="2"><TextBlock Text="選択シーン" Foreground="LightGray" FontSize="11"/><ComboBox Height="24" Margin="0,2,0,0" Padding="3,0" ItemsSource="{Binding Scenes}" SelectedItem="{Binding SelectedScene}" Tag="{Binding}" SelectionChanged="CardScene_SelectionChanged"/></StackPanel>
-        <StackPanel Grid.Column="4"><TextBlock Text="選択ソース" Foreground="LightGray" FontSize="11"/><ComboBox Height="24" Margin="0,2,0,0" Padding="3,0" ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" Tag="{Binding}" SelectionChanged="CardSource_SelectionChanged"/></StackPanel>
+        <StackPanel><TextBlock Text="接続先OBS" Style="{StaticResource ObsFieldLabelStyle}"/><ComboBox Height="24" Padding="3,0" Tag="{Binding}" SelectedIndex="{Binding ObsSelectedIndex}" SelectionChanged="CardObs_SelectionChanged"><ComboBoxItem Content="メインOBS" Tag="main"/><ComboBoxItem Content="サブOBS" Tag="sub"/></ComboBox></StackPanel>
+        <StackPanel Grid.Column="2"><TextBlock Text="シーン" Style="{StaticResource ObsFieldLabelStyle}"/><ComboBox Height="24" Padding="3,0" ItemsSource="{Binding Scenes}" SelectedItem="{Binding SelectedScene}" Tag="{Binding}" SelectionChanged="CardScene_SelectionChanged"/></StackPanel>
+        <StackPanel Grid.Column="4"><TextBlock Text="ソース" Style="{StaticResource ObsFieldLabelStyle}"/><ComboBox Height="24" Padding="3,0" ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" Tag="{Binding}" SelectionChanged="CardSource_SelectionChanged"/></StackPanel>
        </Grid>
-       <StackPanel Grid.Row="2" Margin="0,5,0,4"><TextBlock Text="テキスト内容" Foreground="LightGray" FontSize="11"/><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTextLoaded}" MinHeight="68" MaxHeight="100" Margin="0,2,0,0" Padding="5" Background="#FFE0E0E0" Foreground="Black" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/></StackPanel>
+       <StackPanel Grid.Row="2" Margin="0,6,0,0"><TextBlock Text="テキスト内容" Style="{StaticResource ObsFieldLabelStyle}"/><TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsTextLoaded}" MinHeight="58" MaxHeight="92" Padding="5" Background="#FFE5E5E5" Foreground="Black" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/></StackPanel>
       </Grid>
       </Border>
      </Expander>
@@ -80,51 +95,51 @@
    </ScrollViewer>
   </TabItem>
   <TabItem x:Name="SceneSwitchTab" Header="シーン切替" Visibility="Collapsed" IsVisibleChanged="SceneSwitchTab_IsVisibleChanged">
-   <Grid Background="#FF404040" Margin="16">
+   <Grid Background="#FF303030" Margin="8">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-    <TextBlock Text="OBSシーン切替" Foreground="White" FontSize="22" FontWeight="Bold"/>
-    <DockPanel Grid.Row="1" Margin="0,10,0,12">
+    <TextBlock Text="OBSシーン切替" Foreground="White" FontSize="18" FontWeight="Bold"/>
+    <DockPanel Grid.Row="1" Margin="0,6,0,6">
      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-      <Button Content="両方の一覧を更新" Width="120" Height="26" Click="RefreshScenesButton_Click"/>
-      <ComboBox x:Name="SceneSelectionComboBox" Width="240" Height="26" Margin="12,0,0,0" DisplayMemberPath="DisplayName"/>
-      <Button Content="＋ 切替ボタンを追加" Width="130" Height="26" Margin="8,0,0,0" Click="AddSceneSwitchPresetButton_Click"/>
+      <Button Content="両方の一覧を更新" Width="110" Height="24" Style="{StaticResource ObsSecondaryButtonStyle}" Click="RefreshScenesButton_Click"/>
+      <ComboBox x:Name="SceneSelectionComboBox" Width="190" Height="24" Margin="6,0,0,0" DisplayMemberPath="DisplayName"/>
+      <Button Content="＋ 切替ボタンを追加" Width="128" Height="24" Margin="6,0,6,0" Style="{StaticResource ObsPrimaryButtonStyle}" Click="AddSceneSwitchPresetButton_Click"/>
      </StackPanel>
      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
       <TextBlock Text="現在のシーン：" Foreground="LightGray"/>
       <TextBlock x:Name="CurrentProgramSceneTextBlock" Text="未取得" Foreground="LightGreen" FontWeight="Bold"/>
      </StackPanel>
     </DockPanel>
-    <Border Grid.Row="2" Padding="12" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+    <Border Grid.Row="2" Padding="8" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <TextBlock x:Name="SceneSwitchStatusTextBlock" Text="シーン一覧を読み込んでください" Foreground="LightGray" Margin="0,0,0,10"/>
+      <TextBlock x:Name="SceneSwitchStatusTextBlock" Text="シーン一覧を読み込んでください" Foreground="LightGray" FontSize="11" Margin="0,0,0,5"/>
       <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
        <StackPanel>
-       <StackPanel x:Name="MainSceneSwitchPresetPanel"><TextBlock Text="メインOBS" Foreground="#FFAEDCFA" FontWeight="Bold" Margin="5,4,5,1"/>
+       <StackPanel x:Name="MainSceneSwitchPresetPanel"><TextBlock Text="メインOBS" Foreground="#FFAEDCFA" FontWeight="Bold" FontSize="11" Margin="3,2,3,1"/>
        <ItemsControl x:Name="MainSceneSwitchPresetsItemsControl">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate><DataTemplate>
-         <Border Width="240" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3"
+         <Border Width="220" Margin="3" Padding="4" BorderThickness="1" CornerRadius="3"
                  Tag="{Binding}" AllowDrop="True" Cursor="SizeAll"
                  PreviewMouseLeftButtonDown="ScenePresetCard_PreviewMouseLeftButtonDown"
                  PreviewMouseMove="ScenePresetCard_PreviewMouseMove"
                  Drop="ScenePresetCard_Drop">
           <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsCurrentScene}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-           <TextBlock Text="{Binding ObsDisplayName, StringFormat=操作するOBS：{0}}" Foreground="LightGray" FontWeight="Bold" Margin="3,2,3,5" FontSize="11"/>
-           <Button Grid.Row="1" Content="{Binding SceneName}" Tag="{Binding}" Click="SwitchSceneButton_Click" Height="36" Padding="8" FontSize="13" Cursor="Hand" ToolTip="このシーンへ切り替え"/>
-           <Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSceneSwitchPresetButton_Click" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" ToolTip="登録を削除"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <TextBlock Text="{Binding ObsDisplayName, StringFormat=操作するOBS：{0}}" Foreground="LightGray" FontWeight="Bold" Margin="2,0,2,3" FontSize="10"/>
+           <Button Grid.Row="1" Content="{Binding SceneName}" Tag="{Binding}" Click="SwitchSceneButton_Click" Height="28" Padding="5" FontSize="12" Style="{StaticResource ObsSecondaryButtonStyle}" ToolTip="このシーンへ切り替え"/>
+           <Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSceneSwitchPresetButton_Click" Width="20" Height="20" Padding="0" Background="Transparent" Foreground="#FFFF6F78" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" ToolTip="登録を削除"/>
           </Grid>
          </Border>
         </DataTemplate></ItemsControl.ItemTemplate>
        </ItemsControl></StackPanel>
-       <StackPanel x:Name="SubSceneSwitchPresetPanel"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontWeight="Bold" Margin="5,8,5,1"/>
+       <StackPanel x:Name="SubSceneSwitchPresetPanel"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontWeight="Bold" FontSize="11" Margin="3,4,3,1"/>
        <ItemsControl x:Name="SubSceneSwitchPresetsItemsControl">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate><DataTemplate>
-         <Border Width="240" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="ScenePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="ScenePresetCard_PreviewMouseMove" Drop="ScenePresetCard_Drop">
+         <Border Width="220" Margin="3" Padding="4" BorderThickness="1" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="ScenePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="ScenePresetCard_PreviewMouseMove" Drop="ScenePresetCard_Drop">
           <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsCurrentScene}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-           <TextBlock Text="{Binding ObsDisplayName, StringFormat=操作するOBS：{0}}" Foreground="LightGray" FontWeight="Bold" Margin="3,2,3,5" FontSize="11"/><Button Grid.Row="1" Content="{Binding SceneName}" Tag="{Binding}" Click="SwitchSceneButton_Click" Height="36" Padding="8" FontSize="13" Cursor="Hand" ToolTip="このシーンへ切り替え"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSceneSwitchPresetButton_Click" Width="24" Height="24" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" ToolTip="登録を削除"/>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+           <TextBlock Text="{Binding ObsDisplayName, StringFormat=操作するOBS：{0}}" Foreground="LightGray" FontWeight="Bold" Margin="2,0,2,3" FontSize="10"/><Button Grid.Row="1" Content="{Binding SceneName}" Tag="{Binding}" Click="SwitchSceneButton_Click" Height="28" Padding="5" FontSize="12" Style="{StaticResource ObsSecondaryButtonStyle}" ToolTip="このシーンへ切り替え"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSceneSwitchPresetButton_Click" Width="20" Height="20" Padding="0" Background="Transparent" Foreground="#FFFF6F78" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" ToolTip="登録を削除"/>
           </Grid>
          </Border>
         </DataTemplate></ItemsControl.ItemTemplate>
@@ -136,30 +151,30 @@
    </Grid>
   </TabItem>
   <TabItem x:Name="SourceSwitchTab" Header="ソース切替" Visibility="Collapsed" IsVisibleChanged="SourceSwitchTab_IsVisibleChanged">
-   <Grid Background="#FF404040" Margin="16">
+   <Grid Background="#FF303030" Margin="8">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-    <TextBlock Text="OBSソース表示切替" Foreground="White" FontSize="22" FontWeight="Bold"/>
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,12">
-     <Button Content="両方の一覧を更新" Width="120" Height="26" Click="RefreshSourcesButton_Click"/>
-     <ComboBox x:Name="SourceSceneSelectionComboBox" Width="220" Height="26" Margin="12,0,0,0" DisplayMemberPath="DisplayName" SelectionChanged="SourceSceneSelectionComboBox_SelectionChanged"/>
-     <ComboBox x:Name="SourceSelectionComboBox" Width="220" Height="26" Margin="8,0,0,0" DisplayMemberPath="SourceName"/>
-     <Button Content="＋ 切替ボタンを追加" Width="130" Height="26" Margin="8,0,0,0" Click="AddSourceSwitchPresetButton_Click"/>
+    <TextBlock Text="OBSソース表示切替" Foreground="White" FontSize="18" FontWeight="Bold"/>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,6">
+     <Button Content="両方の一覧を更新" Width="110" Height="24" Style="{StaticResource ObsSecondaryButtonStyle}" Click="RefreshSourcesButton_Click"/>
+     <ComboBox x:Name="SourceSceneSelectionComboBox" Width="190" Height="24" Margin="6,0,0,0" DisplayMemberPath="DisplayName" SelectionChanged="SourceSceneSelectionComboBox_SelectionChanged"/>
+     <ComboBox x:Name="SourceSelectionComboBox" Width="190" Height="24" Margin="6,0,0,0" DisplayMemberPath="DisplayName"/>
+     <Button Content="＋ 切替ボタンを追加" Width="128" Height="24" Margin="6,0,6,0" Style="{StaticResource ObsPrimaryButtonStyle}" Click="AddSourceSwitchPresetButton_Click"/>
     </StackPanel>
-    <Border Grid.Row="2" Padding="12" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+    <Border Grid.Row="2" Padding="8" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <TextBlock x:Name="SourceSwitchStatusTextBlock" Text="シーンとソースの一覧を読み込んでください" Foreground="LightGray" Margin="0,0,0,10"/>
+      <TextBlock x:Name="SourceSwitchStatusTextBlock" Text="シーンとソースの一覧を読み込んでください" Foreground="LightGray" FontSize="11" Margin="0,0,0,5"/>
       <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"><StackPanel>
-       <StackPanel x:Name="MainSourceSwitchPresetPanel"><TextBlock Text="メインOBS" Foreground="#FFAEDCFA" FontWeight="Bold" Margin="5,4,5,1"/>
+       <StackPanel x:Name="MainSourceSwitchPresetPanel"><TextBlock Text="メインOBS" Foreground="#FFAEDCFA" FontWeight="Bold" FontSize="11" Margin="3,2,3,1"/>
         <ItemsControl x:Name="MainSourceSwitchPresetsItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
-         <Border Width="260" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="SourcePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="SourcePresetCard_PreviewMouseMove" Drop="SourcePresetCard_Drop">
+         <Border Width="220" Margin="3" Padding="4" BorderThickness="1" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="SourcePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="SourcePresetCard_PreviewMouseMove" Drop="SourcePresetCard_Drop">
           <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style>
-          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="{Binding SceneName, StringFormat=シーン：{0}}" Foreground="LightGray" FontSize="11" Margin="3,2,3,5"/><Button Grid.Row="1" Content="{Binding SourceName}" Tag="{Binding}" Click="ToggleSourceButton_Click" Height="36" Padding="8"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSourceSwitchPresetButton_Click" Width="24" Height="24"/></Grid>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="{Binding DetailText}" Foreground="LightGray" FontSize="10" Margin="2,0,2,3" TextTrimming="CharacterEllipsis"/><Button Grid.Row="1" Content="{Binding SourceName}" Tag="{Binding}" Click="ToggleSourceButton_Click" Height="28" Padding="5" Style="{StaticResource ObsSecondaryButtonStyle}"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSourceSwitchPresetButton_Click" Width="20" Height="20" Padding="0" Background="Transparent" Foreground="#FFFF6F78" BorderThickness="0"/></Grid>
          </Border>
         </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
        </StackPanel>
-       <StackPanel x:Name="SubSourceSwitchPresetPanel"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontWeight="Bold" Margin="5,8,5,1"/>
+       <StackPanel x:Name="SubSourceSwitchPresetPanel"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontWeight="Bold" FontSize="11" Margin="3,4,3,1"/>
         <ItemsControl x:Name="SubSourceSwitchPresetsItemsControl"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
-         <Border Width="260" Margin="5" Padding="7" BorderThickness="2" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="SourcePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="SourcePresetCard_PreviewMouseMove" Drop="SourcePresetCard_Drop"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="{Binding SceneName, StringFormat=シーン：{0}}" Foreground="LightGray" FontSize="11" Margin="3,2,3,5"/><Button Grid.Row="1" Content="{Binding SourceName}" Tag="{Binding}" Click="ToggleSourceButton_Click" Height="36" Padding="8"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSourceSwitchPresetButton_Click" Width="24" Height="24"/></Grid></Border>
+         <Border Width="220" Margin="3" Padding="4" BorderThickness="1" CornerRadius="3" Tag="{Binding}" AllowDrop="True" Cursor="SizeAll" PreviewMouseLeftButtonDown="SourcePresetCard_PreviewMouseLeftButtonDown" PreviewMouseMove="SourcePresetCard_PreviewMouseMove" Drop="SourcePresetCard_Drop"><Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#FF555555"/><Setter Property="BorderBrush" Value="#FF777777"/><Style.Triggers><DataTrigger Binding="{Binding IsVisible}" Value="True"><Setter Property="Background" Value="#FF315F3B"/><Setter Property="BorderBrush" Value="#FF72D68A"/></DataTrigger></Style.Triggers></Style></Border.Style><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions><TextBlock Text="{Binding DetailText}" Foreground="LightGray" FontSize="10" Margin="2,0,2,3" TextTrimming="CharacterEllipsis"/><Button Grid.Row="1" Content="{Binding SourceName}" Tag="{Binding}" Click="ToggleSourceButton_Click" Height="28" Padding="5" Style="{StaticResource ObsSecondaryButtonStyle}"/><Button Grid.Column="1" Content="×" Tag="{Binding}" Click="RemoveSourceSwitchPresetButton_Click" Width="20" Height="20" Padding="0" Background="Transparent" Foreground="#FFFF6F78" BorderThickness="0"/></Grid></Border>
         </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
        </StackPanel>
       </StackPanel></ScrollViewer>
@@ -167,11 +182,12 @@
     </Border>
    </Grid>
   </TabItem>
-  <TabItem x:Name="CaptureDestinationTab" Header="キャプチャ先変更" IsVisibleChanged="CaptureDestinationTab_IsVisibleChanged">
-   <Grid Background="#FF404040" Margin="16">
+  <TabItem x:Name="CaptureDestinationTab" Header="キャプチャ先変更" Visibility="Collapsed"
+           IsVisibleChanged="CaptureDestinationTab_IsVisibleChanged">
+   <Grid Background="#FF303030">
     <Grid>
      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="8"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-     <Border Grid.Row="0" Padding="10" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+     <Border Grid.Row="0" Padding="10" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
       <Grid>
        <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="1"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
        <StackPanel Grid.Column="0">
@@ -180,7 +196,7 @@
          <TextBlock x:Name="SelectedCaptureCategoryTextBlock" Margin="10,0,0,0" Foreground="White" FontWeight="Bold" Text="未選択" TextWrapping="Wrap" VerticalAlignment="Center"/>
         </StackPanel>
        </StackPanel>
-       <Border Grid.Column="1" Background="#FF707070"/>
+       <Border Grid.Column="1" Background="#FF606060"/>
        <Grid Grid.Column="3">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -190,26 +206,38 @@
           <TextBlock x:Name="SelectedCaptureDestinationTextBlock" Foreground="White" FontWeight="Bold"
                      Text="キャプチャ先：未設定" VerticalAlignment="Center"/>
           <Button Content="×" Width="22" Height="22" Margin="8,0,0,0" Padding="0"
+                  Background="Transparent" Foreground="#FFFF6F78" BorderThickness="0" FontSize="16"
                   ToolTip="設定中のキャプチャ先を解除します" Click="ClearCaptureDestinationButton_Click"/>
          </StackPanel>
         </StackPanel>
         <Button Grid.Column="1" Content="反映して閉じる" Width="120" Height="26" Margin="16,0,0,0"
-                VerticalAlignment="Top" Click="ApplyCaptureDestinationAndCloseButton_Click"/>
+                VerticalAlignment="Top" Foreground="White" Background="#FF285653"
+                BorderBrush="LightSeaGreen" BorderThickness="1"
+                Click="ApplyCaptureDestinationAndCloseButton_Click"/>
        </Grid>
       </Grid>
      </Border>
      <Grid Grid.Row="2">
      <Grid.ColumnDefinitions><ColumnDefinition Width="42*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="58*"/></Grid.ColumnDefinitions>
-     <Border Grid.Column="0" Padding="8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+     <Border Grid.Column="0" Padding="8" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
       <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
        <TextBlock Text="キャプチャソース一覧" Foreground="White" FontWeight="Bold" Margin="4,2,4,8"/>
        <Border Grid.Row="1" Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1">
         <DockPanel>
          <Button DockPanel.Dock="Top" Content="＋ ソース登録" Height="34" Margin="0,0,0,1"
-                 HorizontalContentAlignment="Left" Padding="10,0" Click="RegisterCaptureSourceButton_Click"/>
-         <RadioButton x:Name="NoCaptureSourceRadioButton" DockPanel.Dock="Top" Content="未選択"
-                      Height="34" Padding="10,0" Foreground="White" Background="#FF404040"
-                      GroupName="CaptureSourceSelection" Checked="NoCaptureSourceRadioButton_Checked"/>
+                 HorizontalContentAlignment="Left" Padding="10,0"
+                 Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1" Foreground="White"
+                 Click="RegisterCaptureSourceButton_Click"/>
+         <StackPanel DockPanel.Dock="Top">
+          <Grid Margin="9,4,4,4" Height="36">
+           <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+           <RadioButton x:Name="NoCaptureSourceRadioButton" Grid.Column="0" Margin="2,0,8,0"
+                        VerticalAlignment="Center" GroupName="CaptureSourceSelection"
+                        Checked="NoCaptureSourceRadioButton_Checked"/>
+           <TextBlock Grid.Column="1" Text="未選択" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+          </Grid>
+          <Border Height="1" Background="White"/>
+         </StackPanel>
        <ListBox x:Name="CaptureSourcesListBox" Background="#FF404040" BorderThickness="0"
                 HorizontalContentAlignment="Stretch" BorderBrush="#FF606060"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -223,8 +251,13 @@
            <TextBlock Text="{Binding Source.InputName, Mode=OneWay}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
            <TextBlock Foreground="LightGray" FontSize="10"><Run Text="{Binding ObsDisplayName, Mode=OneWay}"/><Run Text=" / "/><Run Text="{Binding Source.TypeName, Mode=OneWay}"/></TextBlock>
           </StackPanel>
-          <Button Grid.Column="2" Content="削除" Width="50" Height="24" Margin="8,0,0,0"
-                  VerticalAlignment="Center" Tag="{Binding}" Click="DeleteCaptureSourceButton_Click"/>
+          <Button Grid.Column="2" Width="20" Height="20" Margin="8,0,0,0" Padding="0"
+                  VerticalAlignment="Center" Background="Transparent" Foreground="#FFFF6F78"
+                  BorderThickness="0" FontSize="16" ToolTip="登録から削除"
+                  Tag="{Binding}" Click="DeleteCaptureSourceButton_Click">
+           <TextBlock Text="×" Padding="0,0,0,3" TextAlignment="Center" Foreground="#FFFF6F78"
+                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Button>
          </Grid>
          <Border Height="1" Background="White"/>
         </StackPanel></DataTemplate></ListBox.ItemTemplate>
@@ -233,10 +266,12 @@
        </Border>
       </Grid>
      </Border>
-     <Border Grid.Column="2" Padding="8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1" CornerRadius="3">
+     <Border Grid.Column="2" Padding="8" Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
       <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
        <DockPanel Margin="4,0,4,8">
-        <Button DockPanel.Dock="Right" Content="再取得" Width="70" Height="24" Click="RefreshCaptureDestinationsButton_Click"/>
+        <Button DockPanel.Dock="Right" Content="再取得" Width="70" Height="24" Padding="0"
+                Foreground="White" Background="#FF565656" BorderBrush="#FF777777" BorderThickness="1"
+                Click="RefreshCaptureDestinationsButton_Click"/>
         <TextBlock Text="キャプチャ先一覧" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
        </DockPanel>
        <ListBox x:Name="CaptureDestinationListBox" Grid.Row="1" Background="#FF404040"
@@ -256,19 +291,30 @@
     </Grid>
    </Grid>
   </TabItem>
-  <TabItem x:Name="ObsSettingsTab" Header="OBS設定"><ScrollViewer Background="#FF404040" VerticalScrollBarVisibility="Auto"><StackPanel Margin="16">
+  <TabItem x:Name="ObsSettingsTab" Header="接続設定"><ScrollViewer Background="#FF383838" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="14,12">
    <StackPanel x:Name="ObsConnectionSettingsSection">
-   <DockPanel Margin="0,0,0,12"><StackPanel DockPanel.Dock="Left"><TextBlock Text="OBS連携設定" Foreground="White" FontSize="22" FontWeight="Bold"/><TextBlock Margin="0,4,0,0" Foreground="LightGray" Text="各PCのOBSにTwitchアカウントを割り当てます。送信先アカウントに応じて右上ボタンの操作OBSが切り替わります。"/></StackPanel></DockPanel>
-   <Border Padding="10" Margin="0,0,0,8" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1"><Grid>
-    <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="72"/><ColumnDefinition Width="220"/><ColumnDefinition Width="72"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-    <TextBlock Grid.RowSpan="2" Text="メインOBS" TextAlignment="Center" Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="URL" Foreground="LightGray" VerticalAlignment="Center"/><TextBox x:Name="ObsUrlTextBox" Grid.Column="2" Margin="3" Padding="5"/><TextBlock Grid.Column="3" Text="パスワード" Foreground="LightGray" VerticalAlignment="Center"/><PasswordBox x:Name="ObsPasswordBox" Grid.Column="4" Margin="3" Padding="5"/><CheckBox x:Name="MainObsAutoConnectCheckBox" Grid.Column="5" Content="起動時に自動接続" Foreground="White" VerticalAlignment="Center" Margin="8,0" Click="MainObsAutoConnectCheckBox_Click"/>
-    <TextBlock Grid.Row="1" Grid.Column="1" Text="アカウント" Foreground="LightGray" VerticalAlignment="Center"/><ComboBox x:Name="MainTwitchAccountComboBox" Grid.Row="1" Grid.Column="2" Margin="3" Padding="3" DisplayMemberPath="UserName" SelectedValuePath="Id"/><Button Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Content="保存・接続テスト" Margin="3" Width="150" HorizontalAlignment="Left" Click="SaveAndTestButton_Click"/><TextBlock x:Name="ObsConnectionStatusTextBlock" Grid.Row="1" Grid.Column="5" Margin="8,0" Foreground="LightGray" VerticalAlignment="Center" Text="未確認"/>
+   <TextBlock Text="OBS連携設定" Style="{StaticResource ObsSectionTitleStyle}"/>
+   <TextBlock Margin="0,3,0,10" Style="{StaticResource ObsDescriptionStyle}" Text="各PCのOBSにTwitchアカウントを割り当てます。選択アカウントに応じて、メイン画面から操作するOBSが切り替わります。"/>
+   <Border Margin="0,0,0,8" Style="{StaticResource ObsCardStyle}"><Grid>
+    <Grid.RowDefinitions><RowDefinition Height="30"/><RowDefinition Height="45"/><RowDefinition Height="45"/></Grid.RowDefinitions>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
+    <StackPanel Orientation="Horizontal" Grid.ColumnSpan="3" VerticalAlignment="Center"><TextBlock Text="メインOBS" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/><Border Margin="10,0,0,0" Padding="7,2" Background="#FF363636" BorderBrush="#FF5E5E5E" BorderThickness="1" CornerRadius="8"><StackPanel Orientation="Horizontal"><Ellipse x:Name="MainObsStatusIndicator" Width="7" Height="7" Margin="0,0,6,0" Fill="#FF9A9A9A" VerticalAlignment="Center"/><TextBlock x:Name="ObsConnectionStatusTextBlock" Foreground="#FFC8C8C8" FontSize="11" Text="未確認"/></StackPanel></Border></StackPanel>
+    <CheckBox x:Name="MainObsAutoConnectCheckBox" Grid.Column="4" Content="起動時に自動接続" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Right" Click="MainObsAutoConnectCheckBox_Click"/>
+    <StackPanel Grid.Row="1"><TextBlock Text="WebSocket URL" Style="{StaticResource ObsFieldLabelStyle}"/><TextBox x:Name="ObsUrlTextBox" Height="25" Padding="5,2"/></StackPanel>
+    <StackPanel Grid.Row="1" Grid.Column="2"><TextBlock Text="パスワード" Style="{StaticResource ObsFieldLabelStyle}"/><PasswordBox x:Name="ObsPasswordBox" Height="25" Padding="5,2"/></StackPanel>
+    <StackPanel Grid.Row="2"><TextBlock Text="Twitchアカウント" Style="{StaticResource ObsFieldLabelStyle}"/><ComboBox x:Name="MainTwitchAccountComboBox" Height="25" Padding="3,0" DisplayMemberPath="UserName" SelectedValuePath="Id"/></StackPanel>
+    <Button Grid.Row="2" Grid.Column="4" Content="保存・接続テスト" Width="148" HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource ObsPrimaryButtonStyle}" Click="SaveAndTestButton_Click"/>
    </Grid></Border>
-   <Button x:Name="AddSubObsButton" Content="＋ サブOBSを追加" Width="140" Height="28" HorizontalAlignment="Left" Margin="0,0,0,10" Click="AddSubObsButton_Click"/>
-   <Border x:Name="SubObsSettingBorder" Padding="10" Margin="0,0,0,14" Background="#FF4A4747" BorderBrush="#FF707070" BorderThickness="1"><Grid>
-    <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="72"/><ColumnDefinition Width="220"/><ColumnDefinition Width="72"/><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-    <TextBlock Grid.RowSpan="2" Text="サブOBS" TextAlignment="Center" Foreground="White" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="URL" Foreground="LightGray" VerticalAlignment="Center"/><TextBox x:Name="SubObsUrlTextBox" Grid.Column="2" Margin="3" Padding="5"/><TextBlock Grid.Column="3" Text="パスワード" Foreground="LightGray" VerticalAlignment="Center"/><PasswordBox x:Name="SubObsPasswordBox" Grid.Column="4" Margin="3" Padding="5"/><StackPanel Grid.Column="5" Orientation="Horizontal" HorizontalAlignment="Right"><CheckBox x:Name="SubObsAutoConnectCheckBox" Content="起動時に自動接続" Foreground="White" VerticalAlignment="Center" Margin="8,0" Click="SubObsAutoConnectCheckBox_Click"/><Button Content="削除" Width="56" Height="24" Click="RemoveSubObsButton_Click"/></StackPanel>
-    <TextBlock Grid.Row="1" Grid.Column="1" Text="アカウント" Foreground="LightGray" VerticalAlignment="Center"/><ComboBox x:Name="SubTwitchAccountComboBox" Grid.Row="1" Grid.Column="2" Margin="3" Padding="3" DisplayMemberPath="UserName" SelectedValuePath="Id"/><Button Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="2" Content="保存・接続テスト" Margin="3" Width="150" HorizontalAlignment="Left" Click="SaveAndTestSubButton_Click"/><TextBlock x:Name="SubObsConnectionStatusTextBlock" Grid.Row="1" Grid.Column="5" Margin="8,0" Foreground="LightGray" VerticalAlignment="Center" Text="未確認"/>
+   <Button x:Name="AddSubObsButton" Content="＋ サブOBSを追加" Width="132" HorizontalAlignment="Left" Margin="0,0,0,8" Style="{StaticResource ObsPrimaryButtonStyle}" Click="AddSubObsButton_Click"/>
+   <Border x:Name="SubObsSettingBorder" Margin="0,0,0,10" Style="{StaticResource ObsCardStyle}"><Grid>
+    <Grid.RowDefinitions><RowDefinition Height="30"/><RowDefinition Height="45"/><RowDefinition Height="45"/></Grid.RowDefinitions>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
+    <StackPanel Orientation="Horizontal" Grid.ColumnSpan="3" VerticalAlignment="Center"><TextBlock Text="サブOBS" Foreground="#FFE1B5F4" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/><Border Margin="10,0,0,0" Padding="7,2" Background="#FF363636" BorderBrush="#FF5E5E5E" BorderThickness="1" CornerRadius="8"><StackPanel Orientation="Horizontal"><Ellipse x:Name="SubObsStatusIndicator" Width="7" Height="7" Margin="0,0,6,0" Fill="#FF9A9A9A" VerticalAlignment="Center"/><TextBlock x:Name="SubObsConnectionStatusTextBlock" Foreground="#FFC8C8C8" FontSize="11" Text="未確認"/></StackPanel></Border></StackPanel>
+    <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"><CheckBox x:Name="SubObsAutoConnectCheckBox" Content="起動時に自動接続" Foreground="White" VerticalAlignment="Center" Margin="0,0,9,0" Click="SubObsAutoConnectCheckBox_Click"/><Button Content="削除" Width="52" Style="{StaticResource ObsDangerButtonStyle}" Click="RemoveSubObsButton_Click"/></StackPanel>
+    <StackPanel Grid.Row="1"><TextBlock Text="WebSocket URL" Style="{StaticResource ObsFieldLabelStyle}"/><TextBox x:Name="SubObsUrlTextBox" Height="25" Padding="5,2"/></StackPanel>
+    <StackPanel Grid.Row="1" Grid.Column="2"><TextBlock Text="パスワード" Style="{StaticResource ObsFieldLabelStyle}"/><PasswordBox x:Name="SubObsPasswordBox" Height="25" Padding="5,2"/></StackPanel>
+    <StackPanel Grid.Row="2"><TextBlock Text="Twitchアカウント" Style="{StaticResource ObsFieldLabelStyle}"/><ComboBox x:Name="SubTwitchAccountComboBox" Height="25" Padding="3,0" DisplayMemberPath="UserName" SelectedValuePath="Id"/></StackPanel>
+    <Button Grid.Row="2" Grid.Column="4" Content="保存・接続テスト" Width="148" HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource ObsPrimaryButtonStyle}" Click="SaveAndTestSubButton_Click"/>
    </Grid></Border>
    </StackPanel>
   </StackPanel></ScrollViewer></TabItem>

@@ -70,6 +70,8 @@ namespace JTSA.Dao
             SelectedObsCaptureSource = 44,
             /// <summary>カテゴリごとのOBSキャプチャソースとキャプチャ先</summary>
             ObsCategoryCaptureRules = 45,
+            /// <summary>チャットオーバーレイ背景の不透明度（0～100）</summary>
+            ChatOverlayBackgroundOpacity = 46,
         }
 
 

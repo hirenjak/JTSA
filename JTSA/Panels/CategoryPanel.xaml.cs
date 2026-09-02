@@ -104,6 +104,7 @@ namespace JTSA.Panels
                 Owner = Window.GetWindow(this)
             };
             window.ShowDialog();
+            ReloadCategory();
         }
 
 
@@ -121,10 +122,13 @@ namespace JTSA.Panels
 
             // データの取得
             var records = DAO_Category.SelectAllOrderbyLastUser();
+            var captureRules = DAO_ObsCaptureSetting.SelectRules()
+                .ToDictionary(rule => rule.CategoryId, StringComparer.OrdinalIgnoreCase);
 
             // 画面データ入れ換え処理
             foreach (var item in records)
             {
+                captureRules.TryGetValue(item.CategoryId, out var captureRule);
                 CategoryFormList.Add(new()
                 {
                     CategoryId = item.CategoryId,
@@ -134,6 +138,12 @@ namespace JTSA.Panels
                         : item.JapaneseDisplayName,
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = item.SteamUrl ?? "",
+                    ObsCaptureSummary = captureRule is null
+                        ? "未設定"
+                        : $"{(captureRule.IsSubObs ? "サブOBS" : "メインOBS")} / {captureRule.InputName} / " +
+                          (string.IsNullOrWhiteSpace(captureRule.DestinationValue)
+                              ? "キャプチャ先未設定"
+                              : FormatCaptureDestinationValue(captureRule.DestinationValue)),
                     ChannelPointPresetId = item.ChannelPointPresetId ?? PRESET_ID_NONE,
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm")
                 });
@@ -141,6 +151,15 @@ namespace JTSA.Panels
 
             mainWindow.StatusTextBlock.Text = "カテゴリリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+
+        private static string FormatCaptureDestinationValue(string value)
+        {
+            var parts = value.Split(':');
+            if (parts.Length < 3) return value.Replace("#3A", ":").Replace("#23", "#");
+            var title = parts[0].Replace("#3A", ":").Replace("#23", "#");
+            var executable = parts[^1].Replace("#3A", ":").Replace("#23", "#");
+            return string.IsNullOrWhiteSpace(executable) ? title : $"[{executable}]: {title}";
         }
 
 
@@ -211,37 +230,65 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void SteamURLUpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            // ボタンのDataContextから削除対象を取得
-            if ((sender as Button)?.DataContext is CategoryForm item)
+            if (sender is not Button button || button.DataContext is not CategoryForm item) return;
+
+            button.IsEnabled = false;
+            try
             {
-                M_Category? updateCategory = DAO_Category.SelectOneById(item.CategoryId);
+                var steamUrls = await IgdbService.GetSteamUrlsAsync(item.CategoryId);
+                var steamUrl = steamUrls.FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(steamUrl))
+                {
+                    MessageBox.Show($"「{item.DisplayName}」のSteam URLを取得できませんでした。", "Steam URL再取得");
+                    return;
+                }
+
+                var updateCategory = DAO_Category.SelectOneById(item.CategoryId);
                 if (updateCategory == null) return;
+                updateCategory.SteamUrl = steamUrl;
+                updateCategory.UpdatedDateTime = DateTime.Now;
 
-                updateCategory.SteamUrl = item.SteamUrl;
+                var appId = SteamHelper.GetSteamAppId(steamUrl);
+                updateCategory.SteamHeaderArtUrl = appId is null
+                    ? null
+                    : await SteamHelper.GetSteamHeaderImageUrlAsync(appId);
 
-                string? appId = SteamHelper.GetSteamAppId(item.SteamUrl);
-                if (appId == null) return;
+                if (!DAO_Category.Update(updateCategory))
+                {
+                    MessageBox.Show("Steam URLを保存できませんでした。", "Steam URL再取得");
+                    return;
+                }
 
-                updateCategory.SteamHeaderArtUrl = await SteamHelper.GetSteamHeaderImageUrlAsync(appId);
-                DAO_Category.Update(updateCategory);
+                if (mainWindow.CurrentCategoryId == item.CategoryId)
+                    mainWindow.CurrentCategorySteamUrl = steamUrl;
+                ReloadCategory();
             }
-
-            ReloadCategory();
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Steam URLの再取得に失敗しました。\n{ex.GetBaseException().Message}", "Steam URL再取得");
+            }
+            finally
+            {
+                button.IsEnabled = true;
+            }
         }
 
-        /// <summary>手入力された日本語カテゴリ名をフォーカス移動時に保存する。</summary>
-        private void JapaneseNameTextBox_LostKeyboardFocus(
-            object sender,
-            System.Windows.Input.KeyboardFocusChangedEventArgs e)
+        private void JapaneseNameEditButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not TextBox textBox || textBox.DataContext is not CategoryForm item)
-                return;
+            if (sender is not Button button || button.DataContext is not CategoryForm item) return;
 
-            textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            var window = new JapaneseCategoryNameEditWindow(
+                item.DisplayName,
+                item.JapaneseDisplayName ?? string.Empty)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (window.ShowDialog() != true) return;
+
             var category = DAO_Category.SelectOneById(item.CategoryId);
             if (category is null) return;
 
-            var japaneseName = item.JapaneseDisplayName?.Trim() ?? string.Empty;
+            var japaneseName = window.JapaneseName;
             if (category.JapaneseDisplayName == japaneseName) return;
 
             category.JapaneseDisplayName = japaneseName;
@@ -255,6 +302,7 @@ namespace JTSA.Panels
 
             if (saved && mainWindow.CurrentCategoryId == item.CategoryId)
                 mainWindow.CurrentTitleTextUpdate();
+            if (saved) ReloadCategory();
         }
 
         /// <summary>IGDBから日本向けカテゴリ名を再取得して保存する。</summary>

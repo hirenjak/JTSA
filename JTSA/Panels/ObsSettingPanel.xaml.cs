@@ -85,7 +85,7 @@ public partial class ObsSettingPanel : UserControl
             SelectedCaptureSourceTextBlock.Text = rule.InputName;
             SelectedCaptureDestinationTextBlock.Text = string.IsNullOrWhiteSpace(rule.DestinationValue)
                 ? "キャプチャ先：未設定"
-                : $"キャプチャ先：{rule.DestinationValue}";
+                : $"キャプチャ先：{FormatCaptureDestinationValue(rule.DestinationValue)}";
         }
         else
         {
@@ -146,10 +146,18 @@ public partial class ObsSettingPanel : UserControl
     public void SetConnectionStatus(bool connected, string? message = null, bool isSub = false)
     {
         var status = isSub ? SubObsConnectionStatusTextBlock : ObsConnectionStatusTextBlock;
+        var indicator = isSub ? SubObsStatusIndicator : MainObsStatusIndicator;
         status.Text = message ?? (connected ? "接続済み" : "未接続");
-        status.Foreground = connected
-            ? System.Windows.Media.Brushes.LightGreen
-            : System.Windows.Media.Brushes.Orange;
+        var isPending = status.Text.Contains("待機", StringComparison.Ordinal) ||
+                        status.Text.Contains("接続中", StringComparison.Ordinal);
+        var color = connected
+            ? System.Windows.Media.Color.FromRgb(114, 214, 138)
+            : isPending
+                ? System.Windows.Media.Color.FromRgb(111, 196, 232)
+                : System.Windows.Media.Color.FromRgb(255, 154, 159);
+        var brush = new System.Windows.Media.SolidColorBrush(color);
+        status.Foreground = brush;
+        indicator.Fill = brush;
     }
 
     public void MoveConnectionSettingsTo(Panel host)
@@ -450,7 +458,7 @@ public partial class ObsSettingPanel : UserControl
                 var savedDestination = settings.Destinations.FirstOrDefault(destination =>
                     destination.Value == restoreCaptureDestinationValue);
                 SelectedCaptureDestinationTextBlock.Text = savedDestination is null
-                    ? "キャプチャ先：保存済みの対象が見つかりません"
+                    ? $"キャプチャ先：{FormatCaptureDestinationValue(restoreCaptureDestinationValue)}"
                     : $"キャプチャ先：{savedDestination.Name}";
             }
             CaptureDestinationListBox.IsEnabled = settings.Destinations.Count > 0;
@@ -483,6 +491,16 @@ public partial class ObsSettingPanel : UserControl
         pendingCaptureDestinationValue = string.Empty;
         CaptureDestinationListBox.SelectedIndex = -1;
         SelectedCaptureDestinationTextBlock.Text = "キャプチャ先：未設定";
+    }
+
+    private static string FormatCaptureDestinationValue(string value)
+    {
+        var parts = value.Split(':');
+        if (parts.Length < 3) return value.Replace("#3A", ":").Replace("#23", "#");
+
+        var title = parts[0].Replace("#3A", ":").Replace("#23", "#");
+        var executable = parts[^1].Replace("#3A", ":").Replace("#23", "#");
+        return string.IsNullOrWhiteSpace(executable) ? title : $"[{executable}]: {title}";
     }
 
     private async void ApplyCaptureDestinationAndCloseButton_Click(object sender, RoutedEventArgs e)
@@ -756,7 +774,8 @@ public partial class ObsSettingPanel : UserControl
         }
         if (sourceSwitchPresets.Any(x => x.AccountId == accountId && x.IsSub == scene.IsSub &&
             string.Equals(x.SceneName, scene.SceneName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(x.SourceName, source.SourceName, StringComparison.OrdinalIgnoreCase)))
+            string.Equals(x.SourceName, source.SourceName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.ContainerName, source.ContainerName, StringComparison.OrdinalIgnoreCase)))
         {
             SourceSwitchStatusTextBlock.Text = "そのソースはすでに登録されています";
             return;
@@ -767,6 +786,7 @@ public partial class ObsSettingPanel : UserControl
             IsSub = scene.IsSub,
             SceneName = scene.SceneName,
             SourceName = source.SourceName,
+            ContainerName = source.ContainerName,
             IsVisible = source.IsEnabled
         });
         SaveSourceSwitchPresets();
@@ -788,8 +808,10 @@ public partial class ObsSettingPanel : UserControl
         {
             var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(preset.IsSub);
             if (controller is null) throw new InvalidOperationException("OBSに接続できませんでした");
-            var current = await Task.Run(() => controller.GetSceneSourceEnabled(preset.SceneName, preset.SourceName));
-            await Task.Run(() => controller.SetSceneSourceEnabled(preset.SceneName, preset.SourceName, !current));
+            var current = await Task.Run(() => controller.GetSceneSourceEnabled(
+                preset.SceneName, preset.SourceName, preset.ContainerName));
+            await Task.Run(() => controller.SetSceneSourceEnabled(
+                preset.SceneName, preset.SourceName, !current, preset.ContainerName));
             preset.IsVisible = !current;
             var mainWindow = (MainWindow)Application.Current.MainWindow;
             RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
@@ -1096,7 +1118,8 @@ public partial class ObsSettingPanel : UserControl
                     try
                     {
                         preset.IsVisible = await Task.Run(() =>
-                            controller.GetSceneSourceEnabled(preset.SceneName, preset.SourceName));
+                            controller.GetSceneSourceEnabled(
+                                preset.SceneName, preset.SourceName, preset.ContainerName));
                     }
                     catch
                     {
@@ -1229,11 +1252,15 @@ public partial class ObsSettingPanel : UserControl
         public bool IsSub { get; set; }
         public string SceneName { get; set; } = string.Empty;
         public string SourceName { get; set; } = string.Empty;
+        public string ContainerName { get; set; } = string.Empty;
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsVisible { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SourceName}";
         public string ShortcutDisplayName => SourceName;
-        public string DetailText => $"{SceneName} / {SourceName}";
+        public string DetailText => string.IsNullOrWhiteSpace(ContainerName) ||
+                                    string.Equals(ContainerName, SceneName, StringComparison.OrdinalIgnoreCase)
+            ? $"{SceneName} / {SourceName}"
+            : $"{SceneName} / {ContainerName} / {SourceName}";
     }
 
     private sealed class SourceSceneChoice

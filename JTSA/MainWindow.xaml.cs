@@ -153,8 +153,6 @@ namespace JTSA
 
 			set
 			{
-				var categoryChanged = !string.Equals(
-					currentCategoryId, value, StringComparison.OrdinalIgnoreCase);
 				currentCategoryId = value;
                 SetTwitchSettingApplied(false);
 
@@ -162,7 +160,7 @@ namespace JTSA
                 SteamUrlTextSet(value);
 
                 // Twitchへの反映を待たず、アプリ上でカテゴリを選択した時点でOBSを切り替える。
-                if (categoryChanged && !string.IsNullOrWhiteSpace(value) && ObsSettingPanel is not null)
+                if (!string.IsNullOrWhiteSpace(value) && ObsSettingPanel is not null)
                     _ = ObsSettingPanel.ApplyCaptureRuleForCategoryAsync(value);
             }
 		}
@@ -1262,6 +1260,34 @@ namespace JTSA
             {
                 SetAccountSwitchLoading(false);
             }
+        }
+
+        private void OpenCurrentCategoryObsCaptureButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(CurrentCategoryId))
+            {
+                MessageBox.Show(this, "カテゴリが選択されていません。", "OBSキャプチャ設定",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var category = DAO_Category.SelectOneById(CurrentCategoryId);
+            if (category is null)
+            {
+                MessageBox.Show(this, "現在のカテゴリ情報が見つかりません。", "OBSキャプチャ設定",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var window = new ObsCaptureDestinationWindow(
+                category.CategoryId,
+                category.DisplayName,
+                category.BoxArtUrl)
+            {
+                Owner = this
+            };
+            window.ShowDialog();
+            CategoryPanel.ReloadCategory();
         }
 
         private void SetAccountSwitchLoading(bool isLoading, bool isStartup = false)

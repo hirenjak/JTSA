@@ -1,20 +1,27 @@
 using JTSA.Dao;
 using JTSA.Forms;
 using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 
 namespace JTSA;
 
 public partial class PlaylistCategorySelectionWindow : Window
 {
+    private const int DwmWindowCornerPreference = 33;
+    private const int DwmWindowCornerDoNotRound = 1;
+
     public ObservableCollection<CategoryForm> Categories { get; } = [];
     public string SelectedCategoryId { get; private set; } = string.Empty;
 
     public PlaylistCategorySelectionWindow(bool selectionOnly = false)
     {
         InitializeComponent();
+        CategoriesContainer.Collection = Categories;
         DataContext = this;
+        SourceInitialized += PlaylistCategorySelectionWindow_SourceInitialized;
 
         if (selectionOnly)
         {
@@ -67,4 +74,22 @@ public partial class PlaylistCategorySelectionWindow : Window
     }
 
     private void CancelButton_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+
+    private void PlaylistCategorySelectionWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        var preference = DwmWindowCornerDoNotRound;
+        DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, DwmWindowCornerPreference,
+            ref preference, Marshal.SizeOf<int>());
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(
+        IntPtr windowHandle, int attribute, ref int attributeValue, int attributeSize);
 }

@@ -18,6 +18,7 @@ namespace JTSA.Forms
         public required String LastUsedDate { get; set; }
         public required String BoxArtUrl { get; set; }
         public required String SteamUrl { get; set; }
+        public string ObsCaptureSummary { get; set; } = "未設定";
 
         /// <summary>
         /// 紐づくチャンネルポイントプリセットID。

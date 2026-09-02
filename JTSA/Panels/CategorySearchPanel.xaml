@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0, 8, 0, 0">
-            <Label Content="カテゴリ検索※ダブルクリックで一覧に追加" Foreground="White"/>
+            <Label Content="カテゴリ検索" Foreground="White"/>
             <TextBox x:Name="CategorySearchTitleSerchTextBox" ToolTip="検索欄" TextChanged="CategorySearchTextBox_TextChanged"/>
         </StackPanel>
 

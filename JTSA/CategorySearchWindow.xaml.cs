@@ -9,4 +9,11 @@ public partial class CategorySearchWindow : Window
         InitializeComponent();
         SearchPanel.AddToPlaylistOnSelect = addToPlaylistOnSelect;
     }
+
+    private async void AddButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (await SearchPanel.AddSelectedCategoryAsync()) DialogResult = true;
+    }
+
+    private void CancelButton_Click(object sender, RoutedEventArgs e) => DialogResult = false;
 }

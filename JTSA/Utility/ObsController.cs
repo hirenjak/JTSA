@@ -117,12 +117,46 @@ public sealed class ObsController : IDisposable
     public IReadOnlyList<ObsSceneSource> GetSceneSources(string sceneName)
     {
         EnsureConnected();
-        return client.GetSceneItemList(sceneName)
+        var sources = client.GetSceneItemList(sceneName)
             .Select(item => new ObsSceneSource(
                 item.SourceName,
-                client.GetSceneItemEnabled(sceneName, item.ItemId)))
-            .OrderBy(item => item.SourceName, StringComparer.CurrentCultureIgnoreCase)
+                client.GetSceneItemEnabled(sceneName, item.ItemId),
+                string.Empty))
             .ToList();
+
+        var groupResponse = client.SendRequest("GetGroupList");
+        var groupNames = (groupResponse["groups"] as JArray)?.Values<string>()
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+        var visitedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var groupName in sources.Select(source => source.SourceName).Where(groupNames.Contains).ToList())
+            AddGroupSources(groupName, groupNames, visitedGroups, sources);
+
+        return sources
+            .OrderBy(item => item.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private void AddGroupSources(
+        string groupName,
+        IReadOnlySet<string> groupNames,
+        HashSet<string> visitedGroups,
+        ICollection<ObsSceneSource> sources)
+    {
+        if (!visitedGroups.Add(groupName)) return;
+        var response = client.SendRequest("GetGroupSceneItemList", new JObject { ["sceneName"] = groupName });
+        foreach (var item in (response["sceneItems"] as JArray ?? []).OfType<JObject>())
+        {
+            var sourceName = item.Value<string>("sourceName") ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(sourceName)) continue;
+            sources.Add(new ObsSceneSource(
+                sourceName,
+                item.Value<bool?>("sceneItemEnabled") ?? false,
+                groupName));
+            if (groupNames.Contains(sourceName))
+                AddGroupSources(sourceName, groupNames, visitedGroups, sources);
+        }
     }
 
     public IReadOnlyList<ObsCaptureSource> GetCaptureSources()
@@ -181,9 +215,18 @@ public sealed class ObsController : IDisposable
                 client.SetSceneItemEnabled(sceneName, item.ItemId, visible);
         }
 
-        foreach (var groupName in client.GetGroupList())
+        var groupResponse = client.SendRequest("GetGroupList");
+        var groupNames = (groupResponse["groups"] as JArray)?.Values<string>()
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Cast<string>() ?? [];
+        foreach (var groupName in groupNames)
         {
-            foreach (var item in client.GetGroupSceneItemList(groupName).Where(item =>
+            var groupItemsResponse = client.SendRequest("GetGroupSceneItemList", new JObject
+            {
+                ["sceneName"] = groupName
+            });
+            var groupItems = groupItemsResponse["sceneItems"] as JArray ?? [];
+            foreach (var item in groupItems.OfType<JObject>().Where(item =>
                          string.Equals(item.Value<string>("sourceName"), inputName,
                              StringComparison.OrdinalIgnoreCase)))
                 client.SetSceneItemEnabled(groupName, item.Value<int>("sceneItemId"), visible);
@@ -205,24 +248,38 @@ public sealed class ObsController : IDisposable
         return propertyName.Length > 0;
     }
 
-    public bool GetSceneSourceEnabled(string sceneName, string sourceName)
+    public bool GetSceneSourceEnabled(string sceneName, string sourceName, string? containerName = null)
     {
         EnsureConnected();
-        var item = client.GetSceneItemList(sceneName).FirstOrDefault(item =>
-            string.Equals(item.SourceName, sourceName, StringComparison.OrdinalIgnoreCase));
-        if (item is null)
-            throw new InvalidOperationException($"シーン「{sceneName}」にソース「{sourceName}」がありません。");
-        return client.GetSceneItemEnabled(sceneName, item.ItemId);
+        var parentName = string.IsNullOrWhiteSpace(containerName) ? sceneName : containerName;
+        var itemId = FindSceneItemId(parentName, sourceName, !string.IsNullOrWhiteSpace(containerName));
+        if (itemId is null)
+            throw new InvalidOperationException($"シーンまたはグループ「{parentName}」にソース「{sourceName}」がありません。");
+        return client.GetSceneItemEnabled(parentName, itemId.Value);
     }
 
-    public void SetSceneSourceEnabled(string sceneName, string sourceName, bool enabled)
+    public void SetSceneSourceEnabled(string sceneName, string sourceName, bool enabled, string? containerName = null)
     {
         EnsureConnected();
-        var item = client.GetSceneItemList(sceneName).FirstOrDefault(item =>
-            string.Equals(item.SourceName, sourceName, StringComparison.OrdinalIgnoreCase));
-        if (item is null)
-            throw new InvalidOperationException($"シーン「{sceneName}」にソース「{sourceName}」がありません。");
-        client.SetSceneItemEnabled(sceneName, item.ItemId, enabled);
+        var parentName = string.IsNullOrWhiteSpace(containerName) ? sceneName : containerName;
+        var itemId = FindSceneItemId(parentName, sourceName, !string.IsNullOrWhiteSpace(containerName));
+        if (itemId is null)
+            throw new InvalidOperationException($"シーンまたはグループ「{parentName}」にソース「{sourceName}」がありません。");
+        client.SetSceneItemEnabled(parentName, itemId.Value, enabled);
+    }
+
+    private int? FindSceneItemId(string parentName, string sourceName, bool isGroup)
+    {
+        if (!isGroup)
+            return client.GetSceneItemList(parentName).FirstOrDefault(item =>
+                string.Equals(item.SourceName, sourceName, StringComparison.OrdinalIgnoreCase))?.ItemId;
+
+        var response = client.SendRequest("GetGroupSceneItemList", new JObject { ["sceneName"] = parentName });
+        return (response["sceneItems"] as JArray ?? [])
+            .OfType<JObject>()
+            .FirstOrDefault(item => string.Equals(
+                item.Value<string>("sourceName"), sourceName, StringComparison.OrdinalIgnoreCase))
+            ?.Value<int>("sceneItemId");
     }
 
     public string GetTextSourceText(string inputName)
@@ -250,7 +307,12 @@ public sealed class ObsController : IDisposable
     }
 }
 
-public sealed record ObsSceneSource(string SourceName, bool IsEnabled);
+public sealed record ObsSceneSource(string SourceName, bool IsEnabled, string ContainerName)
+{
+    public string DisplayName => string.IsNullOrWhiteSpace(ContainerName)
+        ? SourceName
+        : $"{ContainerName} / {SourceName}";
+}
 public sealed record ObsCaptureSource(string InputName, string InputKind, string PropertyName, string TypeName);
 public sealed record ObsCaptureDestination(string Name, string Value);
 public sealed record ObsCaptureSettings(string CurrentValue, IReadOnlyList<ObsCaptureDestination> Destinations);

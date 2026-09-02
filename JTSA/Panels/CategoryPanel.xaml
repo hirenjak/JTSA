@@ -5,10 +5,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             Background="#FF404040">
+             Background="#FF303030">
 
-    <DockPanel>
-        <Grid>
+    <DockPanel Margin="10">
+        <Grid Margin="8">
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -19,17 +19,19 @@
 
                 <Grid Height="Auto" Grid.Row="2">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="24"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0">
-                        <Button DockPanel.Dock="Right" Content="カテゴリ追加" Width="90" Height="22"
-                                Margin="8,0,0,2" Click="CategoryAddButton_Click"/>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,8" VerticalAlignment="Top">
+                        <Button DockPanel.Dock="Right" Content="＋ カテゴリ追加" Width="110" Height="30"
+                                Margin="8,0,0,0" Padding="8,0" VerticalAlignment="Top"
+                                Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
+                                BorderThickness="1" Click="CategoryAddButton_Click"/>
                         <Label Content="※ダブルクリックすると選択カテゴリを変更" Foreground="White"/>
                     </DockPanel>
 
-                    <ListBox ItemsSource="{Binding CategoryFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="1" Background="#FF404040"
+                    <ListBox ItemsSource="{Binding CategoryFormList}" d:ItemsSource="{d:SampleData ItemCount=3}" Grid.Row="1" Background="#FF404040" BorderBrush="#FF606060"
                 x:Name="CategoryListBox" Height="Auto" Width="Auto" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
                 MouseDoubleClick="CategoryListBox_MouseDoubleClick">
@@ -38,105 +40,117 @@
                             <DataTemplate>
                                 <StackPanel>
                                     <Grid Margin="8,0,8,0">
-                                    <StackPanel Margin="0,0,28,0">
+                                    <StackPanel>
                                         <Grid Margin="0" Height="Auto">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <Image Source="{Binding BoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
+                                            <Grid Grid.Row="0" Grid.ColumnSpan="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Foreground="White" FontSize="16" TextWrapping="Wrap" VerticalAlignment="Center">
+                                                    <Run Text="{Binding DisplayName}"/><Run Text=" ［ "/><Run Text="{Binding JapaneseDisplayName}"/><Run Text=" ］"/>
+                                                </TextBlock>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <Button Content="日本語名再取得" Width="105" Height="20"
+                                                            Margin="8,0,0,0" VerticalAlignment="Center"
+                                                            Background="#FF565656" BorderBrush="#FF777777"
+                                                            BorderThickness="1" Foreground="White"
+                                                            ToolTip="IGDBから日本向けカテゴリ名を再取得します"
+                                                            Click="JapaneseNameFetchButton_Click"/>
+                                                    <Button Content="編集" Width="48" Height="20" Margin="6,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            Background="#FF565656" BorderBrush="#FF777777"
+                                                            BorderThickness="1" Foreground="White"
+                                                            Click="JapaneseNameEditButton_Click"/>
+                                                    <Button Width="20" Height="20" Margin="6,0,0,0" Padding="0"
+                                                            VerticalAlignment="Center" Background="Transparent"
+                                                            Foreground="#FFFF6F78" BorderThickness="0" FontSize="16"
+                                                            ToolTip="カテゴリを削除" Click="CategoryDeleteButton_Click">
+                                                        <TextBlock Text="×" Padding="0,0,0,3" TextAlignment="Center"
+                                                                   Foreground="#FFFF6F78" HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
 
-                                            <Grid Margin="0" Height="Auto" Grid.Column="1" >
+                                            <Image Source="{Binding BoxArtUrl}" Grid.Row="1" Grid.Column="0" Width="48" Height="64" Margin="0,0,8,0"/>
+
+                                            <Grid Margin="0" Height="Auto" Grid.Row="1" Grid.Column="1" >
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
                                                 </Grid.RowDefinitions>
-                                                <TextBlock Grid.Row="0" Text="{Binding DisplayName}" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
+                                                <Border Grid.Row="1" Height="1" Margin="0,3" Background="#FF686868"/>
 
-                                                <Grid Grid.Row="1" Grid.Column="1" Margin="0, 0, 0, 0">
+                                                <Grid Grid.Row="2" Grid.Column="1" Margin="0,0,0,0">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto"/>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
                                                     <Label Grid.Column="0" Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">SteamURL：</Label>
-                                                    <TextBox Grid.Column="1" Width="Auto" Name="SteamURLTextBox" Text="{Binding SteamUrl}"></TextBox>
+                                                    <TextBlock Grid.Column="1" Text="{Binding SteamUrl}" Foreground="LightGray"
+                                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                                                     <Button
-                                                        Grid.Column="2" Grid.Row="1"  Content="URL更新" Width="64" Height="20" Margin="8, 0, 0, 0" VerticalAlignment="Center"
+                                                        Grid.Column="2" Grid.Row="1" Content="URL再取得" Width="76" Height="20" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                        Background="#FF565656" BorderBrush="#FF777777"
+                                                        BorderThickness="1" Foreground="White"
                                                         Click="SteamURLUpdateButton_Click"/>
                                                 </Grid>
 
-                                                <Grid Grid.Row="2" Margin="0,4,0,0">
+                                                <Border Grid.Row="3" Height="1" Margin="0,3" Background="#FF686868"/>
+
+                                                <Grid Grid.Row="4">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto"/>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <Label Grid.Column="0" Margin="0" VerticalAlignment="Center"
-                                                           Foreground="White" FontSize="10" Content="日本語名："/>
-                                                    <TextBox Grid.Column="1"
-                                                             Text="{Binding JapaneseDisplayName, Mode=TwoWay}"
-                                                             ToolTip="編集後、フォーカスを外すと保存されます"
-                                                             LostKeyboardFocus="JapaneseNameTextBox_LostKeyboardFocus"/>
-                                                    <Button Grid.Column="2" Content="取得" Width="64" Height="20"
-                                                            Margin="8,0,0,0" VerticalAlignment="Center"
-                                                            ToolTip="IGDBから日本向けカテゴリ名を再取得します"
-                                                            Click="JapaneseNameFetchButton_Click"/>
+                                                    <Label Grid.Column="0" Margin="0" VerticalAlignment="Center" Foreground="White" FontSize="10">OBS：</Label>
+                                                    <TextBlock Grid.Column="1" Text="{Binding ObsCaptureSummary}" Foreground="LightGray"
+                                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                                               ToolTip="{Binding ObsCaptureSummary}"/>
+                                                    <Button Grid.Column="2" Content="OBSキャプチャ設定" Width="120" Height="20" Margin="8,0,0,0"
+                                                            VerticalAlignment="Center" Foreground="White"
+                                                            Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
+                                                            Click="OpenObsCaptureDestinationButton_Click"/>
                                                 </Grid>
 
+                                                <Border Grid.Row="5" Height="1" Margin="0,3" Background="#FF686868"/>
+
                                                 <!-- カテゴリに紐づくチャンネルポイントプリセット（未設定なら切り替えを行わない） -->
-                                                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0, 4, 0, 0">
-                                                    <Label Margin="0" VerticalAlignment="Center" Foreground="White" FontSize="10">CPプリセット：</Label>
-                                                    <ComboBox Width="180" Height="20" VerticalAlignment="Center"
+                                                <Grid Grid.Row="6" Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                    <Label Grid.Column="0" Margin="0" VerticalAlignment="Center" Foreground="White" FontSize="10">CPプリセット：</Label>
+                                                    <ComboBox Grid.Column="1" Width="180" Height="20" HorizontalAlignment="Left" VerticalAlignment="Center"
                                                               ItemsSource="{Binding DataContext.ChannelPointPresetFormList, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                               DisplayMemberPath="PresetName"
                                                               SelectedValuePath="PresetId"
                                                               SelectedValue="{Binding ChannelPointPresetId, Mode=TwoWay}"
                                                               SelectionChanged="CategoryPresetComboBox_SelectionChanged"
                                                               ToolTip="このカテゴリを設定したときに自動適用するプリセット。「（自動適用しない）」を選ぶと何も変更しません。"/>
-                                                    <Button Content="OBSキャプチャ先" Width="110" Height="20" Margin="8,0,0,0"
-                                                            VerticalAlignment="Center"
-                                                            ToolTip="このカテゴリのOBSキャプチャ先設定を開きます"
-                                                            Click="OpenObsCaptureDestinationButton_Click"/>
-                                                </StackPanel>
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="最終使用日：" Foreground="LightGray" FontSize="10"/>
+                                                        <TextBlock Text="{Binding LastUsedDate}" Foreground="White" FontSize="10"/>
+                                                    </StackPanel>
+                                                </Grid>
                                             </Grid>
                                         </Grid>
-                                        <Grid Margin="0" Height="Auto">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-
-                                            <StackPanel Orientation="Horizontal" Grid.Column="0"  Grid.Row="1" Margin="8, 0, 0, 0" >
-                                                <Label  Margin="0" VerticalAlignment="Bottom" Foreground="White" FontSize="10">最終使用日：</Label>
-                                                <TextBlock Text="{Binding LastUsedDate}"  Name="LastUsedDate" Height="20" VerticalAlignment="Bottom" Margin="0" Foreground="White"></TextBlock>
-                                            </StackPanel>
-                                        </Grid>
                                     </StackPanel>
-                                    <Button Width="20" Height="20"
-                                            Margin="0,2,0,0" Padding="0"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Top"
-                                            Background="Transparent"
-                                            Foreground="#FFFF6F78"
-                                            BorderThickness="0"
-                                            FontSize="16"
-                                            Click="CategoryDeleteButton_Click">
-                                        <TextBlock Text="×"
-                                                   Padding="0,0,0,3"
-                                                   TextAlignment="Center"
-                                                   Foreground="#FFFF6F78"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                    </Button>
                                     </Grid>
 
                                     <Border Width="Auto" Height="2" Background="White"/>

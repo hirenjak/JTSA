@@ -32,6 +32,7 @@ namespace JTSA
         private const double DefaultWidth = 300;
         private const double DefaultHeight = 320;
         private const double DefaultFontSize = 16;
+        private const double DefaultBackgroundOpacity = 27;
         private bool showUserIcons = true;
         private double overlayFontSize = DefaultFontSize;
         private bool scrollToBottomPending;
@@ -98,6 +99,11 @@ namespace JTSA
             Height = ReadDoubleSetting(DAO_Setting.SettingName.ChatOverlayHeight, DefaultHeight, MinHeight);
             OverlayFontSize = ReadDoubleSetting(DAO_Setting.SettingName.ChatOverlayFontSize, DefaultFontSize, 10, 36);
             ShowUserIcons = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
+            ApplyBackgroundOpacity(ReadDoubleSetting(
+                DAO_Setting.SettingName.ChatOverlayBackgroundOpacity,
+                DefaultBackgroundOpacity,
+                0,
+                100));
 
 
             SourceInitialized += ChatOverlayWindow_SourceInitialized;
@@ -155,11 +161,18 @@ namespace JTSA
                 : defaultValue;
         }
 
-        public void ApplyAppearance(bool displayUserIcons, double fontSize)
+        public void ApplyAppearance(bool displayUserIcons, double fontSize, double backgroundOpacity)
         {
             ShowUserIcons = displayUserIcons;
             OverlayFontSize = Math.Clamp(fontSize, 10, 36);
+            ApplyBackgroundOpacity(backgroundOpacity);
             QueueScrollToBottom();
+        }
+
+        private void ApplyBackgroundOpacity(double opacityPercent)
+        {
+            var alpha = (byte)Math.Round(Math.Clamp(opacityPercent, 0, 100) * 255d / 100d);
+            WindowBackgroundBorder.Background = new SolidColorBrush(Color.FromArgb(alpha, 0, 0, 0));
         }
 
 
@@ -170,6 +183,11 @@ namespace JTSA
         /// <param name="e"></param>
         private void ChatOverlayWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            ApplyBackgroundOpacity(ReadDoubleSetting(
+                DAO_Setting.SettingName.ChatOverlayBackgroundOpacity,
+                DefaultBackgroundOpacity,
+                0,
+                100));
             IsSettingEnabled = true;
             SetClickThrough(IsSettingEnabled);
             ResizeMode = ResizeMode.NoResize;

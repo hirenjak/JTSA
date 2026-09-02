@@ -18,4 +18,6 @@ public class T_StreamWindow : DBBase
     public int Width { get; set; }
 
     public int Height { get; set; }
+
+    public bool IsAutoStart { get; set; } = true;
 }

@@ -2,8 +2,16 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:panels="clr-namespace:JTSA.Panels"
+        xmlns:controls="clr-namespace:JTSA.Controls"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="OBS切替設定" Icon="Resources/jtsa.ico"
-        Width="1100" Height="720" MinWidth="760" MinHeight="500"
-        WindowStartupLocation="CenterOwner" Background="#FF404040">
-    <panels:ObsSettingPanel x:Name="SwitchSettingsPanel"/>
+        Width="760" Height="500" MinWidth="760" MinHeight="500"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="CanResize" Background="#FF303030">
+    <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="32" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/></shell:WindowChrome.WindowChrome>
+    <Border BorderBrush="#FF666666" BorderThickness="1" Background="#FF303030">
+     <Grid><Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <controls:CategoryStyleTitleBar/>
+      <panels:ObsSettingPanel x:Name="SwitchSettingsPanel" Grid.Row="1"/>
+     </Grid>
+    </Border>
 </Window>

@@ -30,13 +30,13 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="8">
+    <Grid Margin="8,4,8,8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*"/>
             <ColumnDefinition Width="2*"/>
         </Grid.ColumnDefinitions>
 
-        <Grid Grid.Column="0" Margin="8, 0, 8, 0">
+        <Grid Grid.Column="0" Margin="0,0,8,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -108,7 +108,7 @@
             </ListBox>
         </Grid>
 
-        <Grid Grid.Column="1" Margin="8, 0, 8, 0">
+        <Grid Grid.Column="1" Margin="8,0,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
