@@ -475,6 +475,40 @@
                     BorderBrush="LightSeaGreen" BorderThickness="1"
                     ToolTip="現在のカテゴリに対するOBSキャプチャ先を設定します"
                     Click="OpenCurrentCategoryObsCaptureButton_Click"/>
+            <Button x:Name="LaunchSteamGameButton" Grid.Column="2"
+                    Content="ゲーム起動" Width="88" Height="22"
+                    Padding="6,0" HorizontalAlignment="Right"
+                    IsEnabled="False"
+                    ToolTip="選択中のゲームをSteam経由で起動します"
+                    Click="LaunchSteamGameButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Background" Value="#FF285653"/>
+                        <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="Opacity" Value="1"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#FF565656"/>
+                                <Setter Property="Foreground" Value="#FF303030"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
         </Grid>
 
         <!-- 配信中にすぐ押せるOBSシーン・ソースショートカット -->
