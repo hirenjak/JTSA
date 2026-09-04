@@ -361,30 +361,15 @@ namespace JTSA
                     return;
                 }
 
-                TwitchHelper.AccessToken = accessToken;
                 SettingPanel.SetAccessTokenStatus(true);
 
-                // ChatPanel はアカウント切替時のアクセストークンを保持しているため、
-                // 定期更新後も古いトークンでチャットを送信しないよう同期する。
                 var primaryAccount = DAO_TwitchAccount.SelectPrimary();
-                if (primaryAccount is not null)
-                {
-                    ChatPanel.UpdateConnectedAccessToken(
-                        primaryAccount.BroadcasterId,
-                        accessToken);
-                }
 
                 // 追加アカウントを選択中の場合、そのアカウントのトークンも更新する。
                 if (SelectedTargetAccountId is long selectedAccountId &&
                     selectedAccountId != primaryAccount?.Id)
                 {
-                    var selectedAccount = await GetSelectedTargetAccountAsync();
-                    if (selectedAccount is not null)
-                    {
-                        ChatPanel.UpdateConnectedAccessToken(
-                            selectedAccount.Value.Account.BroadcasterId,
-                            selectedAccount.Value.AccessToken);
-                    }
+                    await GetSelectedTargetAccountAsync();
                 }
             }
             catch (Exception ex)
@@ -625,8 +610,7 @@ namespace JTSA
                 return;
             }
 
-            // メモリに登録
-            TwitchHelper.AccessToken = accessToken;
+            // ResetAccessTokenAsync 内でメモリと接続中サービスへの同期は完了済み。
             SettingPanel.SetAccessTokenStatus(true);
 
             // 認証後の初期化（OAuth認証直後と共通）
@@ -1059,23 +1043,20 @@ namespace JTSA
             var accessToken = string.Empty;
             if (long.TryParse(accountIdText, out var accountId))
             {
-                var account = DAO_TwitchAccount.SelectById(accountId);
-                if (account is not null)
+                try
                 {
-                    broadcasterId = account.BroadcasterId;
-                    try
+                    var refreshed = await GetAccountAccessTokenAsync(accountId, "OBS配信開始");
+                    if (refreshed is not null)
                     {
-                        var token = await TwitchHelper.RefreshAccessTokenAsync(account.RefreshToken);
-                        accessToken = token?.accessToken ?? string.Empty;
-                        if (!string.IsNullOrWhiteSpace(token?.refreshToken))
-                            DAO_TwitchAccount.UpdateRefreshToken(account.Id, token.refreshToken);
+                        broadcasterId = refreshed.Value.Account.BroadcasterId;
+                        accessToken = refreshed.Value.AccessToken;
                     }
-                    catch (Exception ex)
-                    {
-                        _ = Dispatcher.BeginInvoke(() => AppLogPanel.Error(
-                            GetType().Name,
-                            $"OBS配信開始時のTwitch認証更新失敗 「 {ex.GetBaseException().Message} 」"));
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _ = Dispatcher.BeginInvoke(() => AppLogPanel.Error(
+                        GetType().Name,
+                        $"OBS配信開始時のTwitch認証更新失敗 「 {ex.GetBaseException().Message} 」"));
                 }
             }
             await streamExpansionService.HandleAsync(
@@ -1379,6 +1360,12 @@ namespace JTSA
             if (TargetAccountComboBox.SelectedValue is not long selectedAccountId)
                 return null;
 
+            return await GetAccountAccessTokenAsync(selectedAccountId, "選択アカウント更新");
+        }
+
+        private async Task<(M_TwitchAccount Account, string AccessToken)?> GetAccountAccessTokenAsync(
+            long selectedAccountId, string reason)
+        {
             await twitchAccountTokenLock.WaitAsync();
             try
             {
@@ -1403,16 +1390,35 @@ namespace JTSA
                 if (account.IsPrimary)
                 {
                     DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RefreshToken, token.refreshToken);
-                    TwitchHelper.AccessToken = token.accessToken;
                 }
 
                 account.RefreshToken = token.refreshToken;
+                await ApplyAccountAccessTokenAsync(account, token.accessToken, reason);
                 return (account, token.accessToken);
             }
             finally
             {
                 twitchAccountTokenLock.Release();
             }
+        }
+
+        // Refresh Token の読込・更新・配布を同じロック内で完了させる。
+        // EventSub は選択アカウント専用APIなので、Primaryの共有API更新だけでは不十分。
+        private async Task ApplyAccountAccessTokenAsync(M_TwitchAccount? account, string accessToken, string reason)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                if (account is null || account.IsPrimary)
+                    TwitchHelper.AccessToken = accessToken;
+
+                if (account is not null)
+                    ChatPanel.UpdateConnectedAccessToken(account.BroadcasterId, accessToken);
+
+                AppLogPanel.Success(GetType().Name,
+                    $"Twitchトークン更新・同期完了：理由={reason}, " +
+                    $"BroadcasterId={account?.BroadcasterId ?? TwitchHelper.BroadcasterId}, " +
+                    $"Primary={account?.IsPrimary ?? true}");
+            });
         }
 
 
@@ -2427,6 +2433,7 @@ namespace JTSA
                 if (primaryAccount is not null)
                     DAO_TwitchAccount.UpdateRefreshToken(primaryAccount.Id, accessTokenResponse.refreshToken);
 
+                await ApplyAccountAccessTokenAsync(primaryAccount, accessTokenResponse.accessToken, "起動・定期更新");
                 processLog.SuccessLogWrite();
                 return accessTokenResponse.accessToken;
             }

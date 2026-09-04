@@ -21,6 +21,8 @@ namespace JTSA.Panels
         /// <summary>  </summary>
         public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
         private TextBox TitleTextTagAddTextBox = null!;
+        private bool isHandlingSelection;
+        private bool isReloadingTitleTags;
 
 
         /// <summary>
@@ -86,21 +88,35 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void TitleTagListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (TitleTagListBox.SelectedItem is TitleTagForm selectedItem)
+            // Clear/Add と選択解除で同期的に発生するイベントは処理しない。
+            if (isHandlingSelection || isReloadingTitleTags) return;
+
+            isHandlingSelection = true;
+            try
             {
+                if (TitleTagListBox.SelectedItem is not TitleTagForm selectedItem) return;
+                if (!TitleTagFormList.Contains(selectedItem)) return;
+
+                if (!selectedItem.IsSystem && !DAO_TitleTag.UpdateLastUse(selectedItem.Id))
+                {
+                    ReloadTitleTag();
+                    return;
+                }
+
                 if (InsertRequested is not null)
                     InsertRequested(selectedItem.Placeholder);
                 else
                     mainWindow.InsertTextAtCaret(selectedItem.Placeholder);
                 if (!selectedItem.IsSystem)
                 {
-                    DAO_TitleTag.UpdateLastUse(selectedItem.Id);
                     ReloadTitleTag();
                 }
             }
-
-            // 選択状態を解除
-            TitleTagListBox.SelectedItem = null;
+            finally
+            {
+                TitleTagListBox.SelectedItem = null;
+                isHandlingSelection = false;
+            }
         }
 
         /// <summary>
@@ -159,6 +175,22 @@ namespace JTSA.Panels
         /// 読み込み処理：タイトルタグ
         /// </summary>
         public void ReloadTitleTag()
+        {
+            if (isReloadingTitleTags) return;
+
+            isReloadingTitleTags = true;
+            try
+            {
+                TitleTagListBox.SelectedItem = null;
+                ReloadTitleTagCore();
+            }
+            finally
+            {
+                isReloadingTitleTags = false;
+            }
+        }
+
+        private void ReloadTitleTagCore()
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "タイトルタグリスト再読み込み");
 

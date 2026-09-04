@@ -13,19 +13,25 @@ public sealed class TwitchChatService
     private readonly SemaphoreSlim reconnectLock = new(1, 1);
     private CancellationTokenSource? healthCheckCancellation;
     private volatile bool disconnectRequested;
+    private long lastReceivedAt = Environment.TickCount64;
+    private volatile bool channelJoined;
+
+    public event Action<string>? StatusChanged;
 
     public event Action<ChatMessage>? MessageReceived;
     public event Action? SubscriptionReceived;
     public event Action? HealthCheck;
 
-    public TwitchChatService(string channelName)
+    public TwitchChatService(string channelName) : this(channelName, new TwitchClient()) { }
+
+    internal TwitchChatService(string channelName, TwitchClient client)
     {
         this.channelName = channelName;
 
         // 閲覧だけなら匿名接続でOK
         var credentials = new ConnectionCredentials();
 
-        client = new TwitchClient();
+        this.client = client;
         client.Initialize(credentials);
 
         #region イベントハンドラ
@@ -38,6 +44,12 @@ public sealed class TwitchChatService
         client.OnGiftedSubscription += Client_OnGiftedSubscription;
         client.OnDisconnected += Client_OnDisconnected;
         client.OnConnectionError += Client_OnConnectionError;
+        client.OnSendReceiveData += (_, e) =>
+        {
+            if (e.Direction == TwitchLib.Client.Enums.SendReceiveDirection.Received)
+                Interlocked.Exchange(ref lastReceivedAt, Environment.TickCount64);
+            return Task.CompletedTask;
+        };
 
         #endregion
     }
@@ -49,6 +61,8 @@ public sealed class TwitchChatService
     private Task Client_OnJoinedChannel(object? sender, OnJoinedChannelArgs e)
     {
         Console.WriteLine($"チャンネル参加: {e.Channel}");
+        channelJoined = true;
+        StatusChanged?.Invoke("チャットの受信を開始しました。");
         return Task.CompletedTask;
     }
 
@@ -59,9 +73,10 @@ public sealed class TwitchChatService
     private Task Client_OnDisconnected(object? sender, OnDisconnectedArgs e)
     {
         Console.WriteLine("Twitchチャットから切断されました。");
+        channelJoined = false;
 
         if (!disconnectRequested)
-            _ = ReconnectWithRetryAsync();
+            _ = Task.Run(() => ReconnectWithRetryAsync());
 
         return Task.CompletedTask;
     }
@@ -75,12 +90,11 @@ public sealed class TwitchChatService
         if (client.IsConnected) return;
 
         disconnectRequested = false;
-        await client.ConnectAsync();
-
         healthCheckCancellation?.Cancel();
         healthCheckCancellation?.Dispose();
         healthCheckCancellation = new CancellationTokenSource();
         _ = MonitorConnectionAsync(healthCheckCancellation.Token);
+        await client.ConnectAsync();
     }
 
 
@@ -93,10 +107,12 @@ public sealed class TwitchChatService
         disconnectRequested = true;
         healthCheckCancellation?.Cancel();
 
-        if (!client.IsConnected)
-            return;
-
-        await client.DisconnectAsync();
+        await reconnectLock.WaitAsync();
+        try
+        {
+            await client.DisconnectAsync();
+        }
+        finally { reconnectLock.Release(); }
     }
 
     private async Task MonitorConnectionAsync(CancellationToken cancellationToken)
@@ -107,13 +123,26 @@ public sealed class TwitchChatService
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                if (!client.IsConnected && !disconnectRequested)
+                try
                 {
-                    Console.WriteLine("Twitchチャットの接続停止を検知しました。");
-                    _ = ReconnectWithRetryAsync();
+                    var stalled = Environment.TickCount64 - Interlocked.Read(ref lastReceivedAt)
+                        >= TimeSpan.FromMinutes(3).TotalMilliseconds;
+                    if (!disconnectRequested && (!client.IsConnected || stalled || !channelJoined))
+                    {
+                        StatusChanged?.Invoke("チャットの受信停止を検知しました。再接続します。");
+                        await ReconnectWithRetryAsync(stalled || !channelJoined);
+                    }
+                    else if (client.IsConnected)
+                    {
+                        // チャットがない配信でも、サーバーの応答で接続を確認する。
+                        await client.SendRawAsync("PING :jtsa-health");
+                    }
+                    HealthCheck?.Invoke();
                 }
-
-                HealthCheck?.Invoke();
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"チャット接続監視エラー: {ex.Message}");
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -122,7 +151,7 @@ public sealed class TwitchChatService
         }
     }
 
-    private async Task ReconnectWithRetryAsync()
+    private async Task ReconnectWithRetryAsync(bool force = false)
     {
         if (!await reconnectLock.WaitAsync(0)) return;
 
@@ -130,12 +159,18 @@ public sealed class TwitchChatService
         {
             var delay = TimeSpan.FromSeconds(2);
 
-            while (!disconnectRequested && !client.IsConnected)
+            while (!disconnectRequested && (force || !client.IsConnected))
             {
                 try
                 {
                     Console.WriteLine("Twitchチャットへ再接続します。");
-                    await client.ReconnectAsync();
+                    // 古い参加状態をクリアして、新しい接続で確実にJOINする。
+                    channelJoined = false;
+                    await client.DisconnectAsync();
+                    if (disconnectRequested) return;
+                    Interlocked.Exchange(ref lastReceivedAt, Environment.TickCount64);
+                    await client.ConnectAsync();
+                    force = false;
 
                     if (client.IsConnected)
                     {
@@ -148,7 +183,8 @@ public sealed class TwitchChatService
                     Console.WriteLine($"Twitchチャット再接続エラー: {ex.Message}");
                 }
 
-                await Task.Delay(delay);
+                try { await Task.Delay(delay, healthCheckCancellation?.Token ?? CancellationToken.None); }
+                catch (OperationCanceledException) { return; }
                 delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
             }
         }
@@ -160,7 +196,9 @@ public sealed class TwitchChatService
 
     private async Task Client_OnConnected(object? sender, TwitchLib.Client.Events.OnConnectedEventArgs e)
     {
-        await client.JoinChannelAsync(channelName);
+        if (disconnectRequested) return;
+        Interlocked.Exchange(ref lastReceivedAt, Environment.TickCount64);
+        await client.JoinChannelAsync(channelName, overrideCheck: true);
     }
 
 
@@ -168,10 +206,11 @@ public sealed class TwitchChatService
     {
         var message = e.ChatMessage;
 
-        if (message.Bits > 0)
-            JTSA.Utility.StreamSupportTracker.AddBits(message.DisplayName, message.Bits);
-
-        MessageReceived?.Invoke(message);
+        try { MessageReceived?.Invoke(message); }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"チャット処理エラー: {ex.Message}");
+        }
 
         return Task.CompletedTask;
     }
@@ -230,6 +269,8 @@ public sealed class TwitchChatService
     private Task Client_OnConnectionError(object? sender, OnConnectionErrorArgs e)
     {
         Console.WriteLine($"Twitch接続エラー: {e.Error.Message}");
+        if (!disconnectRequested)
+            _ = Task.Run(() => ReconnectWithRetryAsync());
         return Task.CompletedTask;
     }
 }

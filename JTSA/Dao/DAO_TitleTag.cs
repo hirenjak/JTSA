@@ -43,11 +43,11 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static M_TitleTag SelectOneById(long id)
+        public static M_TitleTag? SelectOneById(long id)
         {
             using var db = new AppDbContext();
 
-            return db.M_TitleTag.Single(x => x.Id == id);
+            return db.M_TitleTag.SingleOrDefault(x => x.Id == id);
         }
 
 
@@ -97,6 +97,7 @@ namespace JTSA.Dao
             using var db = new AppDbContext();
 
             var targetRecord = SelectOneById(updateData.Id);
+            if (targetRecord is null) return false;
 
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
@@ -115,6 +116,7 @@ namespace JTSA.Dao
         public static bool UpdateLastUse(long id)
         {
             var targetRecord = SelectOneById(id);
+            if (targetRecord is null) return false;
 
             targetRecord.SelectedCount += 1;
             targetRecord.LastUsedDateTime = DateTime.Now;

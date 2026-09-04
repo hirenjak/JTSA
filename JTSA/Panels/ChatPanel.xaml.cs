@@ -80,6 +80,7 @@ namespace JTSA.Panels
             }
 
             connectedAccessToken = accessToken;
+            twitchEventSubService?.UpdateAccessToken(broadcasterId, accessToken);
         }
 
         /// <summary>OBSブラウザソース用のチャットデータを返す。</summary>
@@ -286,11 +287,11 @@ namespace JTSA.Panels
 
         private bool isChatUserListVisible = true;
 
-        private WaveStream? ChatNotificationReader;
-        private WaveOutEvent? ChatNotificationPlayer;
+        private Func<WaveStream> createChatNotificationReader = () => new WaveFileReader(Properties.Resources.CommentNotification);
+        private readonly NotificationAudioPlayer chatNotificationPlayer = new();
 
-        private WaveStream? JoinChatReader;
-        private WaveOutEvent? JoinChatPlayer;
+        private Func<WaveStream> createJoinChatReader = () => new WaveFileReader(Properties.Resources.JoinChat);
+        private readonly NotificationAudioPlayer joinChatPlayer = new();
 
 
 
@@ -408,7 +409,10 @@ namespace JTSA.Panels
             connectedAccessToken = accessToken;
 
             if (twitchChatService is not null && connectedBroadcasterId == broadcasterId)
+            {
+                UpdateConnectedAccessToken(broadcasterId, accessToken);
                 return;
+            }
 
             if (twitchChatService is not null && connectedBroadcasterId != broadcasterId)
             {
@@ -465,10 +469,10 @@ namespace JTSA.Panels
                         TwitchHelper.CurrentStreamId,
                         message.UserId);
 
-                    Dispatcher.InvokeAsync(() =>
+                    Dispatcher.InvokeAsync(async () =>
                     {
                         // チャット欄に亜チャット追加
-                        ChatAddAsync(new TwitchChatForm
+                        await ChatAddAsync(new TwitchChatForm
                         {
                             Channel = message.Channel,
                             UserId = message.UserId,
@@ -504,11 +508,6 @@ namespace JTSA.Panels
                             chatPlaceholders);
                     }
 
-                    // ビッツの発火条件確認
-                    if (message.Bits > 0)
-                    {
-                        _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Bits, message.Bits.ToString());
-                    }
                 };
 
                 twitchChatService.SubscriptionReceived += () =>
@@ -516,6 +515,16 @@ namespace JTSA.Panels
 
                 twitchChatService.HealthCheck += () =>
                     _ = Dispatcher.InvokeAsync(async () => await PinedChatLoad());
+
+                twitchChatService.StatusChanged += status =>
+                    _ = Dispatcher.InvokeAsync(() =>
+                    {
+                        if (Application.Current.MainWindow is MainWindow mainWindow)
+                            mainWindow.AppLogPanel.Success(nameof(TwitchChatService), status);
+                    });
+
+                twitchEventSubService.BitsReceived += bits =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Bits, bits.ToString());
 
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
@@ -527,13 +536,13 @@ namespace JTSA.Panels
                         TwitchHelper.CurrentStreamId,
                         channelPoint.UserId);
 
-                    Dispatcher.InvokeAsync(() =>
+                    Dispatcher.InvokeAsync(async () =>
                     {
                         var message = ChannelPointChatFormatter.Format(
                             channelPoint.RewardTitle,
                             channelPoint.UserInput);
 
-                        ChatAddAsync(new TwitchChatForm
+                        await ChatAddAsync(new TwitchChatForm
                         {
                             UserId = channelPoint.UserId,
                             UserName = channelPoint.UserLogin,
@@ -633,10 +642,22 @@ namespace JTSA.Panels
         /// <param name="form"></param>
         /// <param name="isChannelPoint"></param>
         /// <param name="isFirstEntrance">現在の配信で最初のチャット入室か。</param>
-        private async void ChatAddAsync(
+        private async Task ChatAddAsync(
             TwitchChatForm form,
             bool isChannelPoint,
             bool isFirstEntrance)
+        {
+            try
+            {
+                await ChatAddCoreAsync(form, isChannelPoint, isFirstEntrance);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"チャット追加処理エラー: {ex}");
+            }
+        }
+
+        private async Task ChatAddCoreAsync(TwitchChatForm form, bool isChannelPoint, bool isFirstEntrance)
         {
             DAO_StreamChatUserCount.Increment(
                 DateTime.Now,
@@ -687,13 +708,6 @@ namespace JTSA.Panels
 
             if (isFirstEntrance)
             {
-                if (JoinChatReader != null && JoinChatPlayer != null)
-                {
-                    JoinChatReader.Position = 0;
-                    JoinChatPlayer.Volume = (float)JoinChatVolumeSlider.Value / 100f;
-                    JoinChatPlayer.Play();
-                }
-
                 var inserData = new T_ChatUser
                 {
                     UserId = form.UserId,
@@ -704,19 +718,16 @@ namespace JTSA.Panels
 
                 DAO_ChatUser.InsertUpdate(inserData);
             }
-            else
-            {
-                if (ChatNotificationReader != null && ChatNotificationPlayer != null)
-                {
-                    ChatNotificationReader.Position = 0;
-                    ChatNotificationPlayer.Volume = (float)ChatNotificationVolumeSlider.Value / 100f;
-                    ChatNotificationPlayer.Play();
-                }
-            }
 
             UpdateChatUserList(form, userData);
 
             TwitchChatFormList.Insert(0, form);
+
+            // 表示を先に確定し、デバイスエラーは通知音サービス内で処理する。
+            if (isFirstEntrance)
+                _ = joinChatPlayer.TryPlayAsync(createJoinChatReader, (float)JoinChatVolumeSlider.Value / 100f);
+            else
+                _ = chatNotificationPlayer.TryPlayAsync(createChatNotificationReader, (float)ChatNotificationVolumeSlider.Value / 100f);
         }
 
         /// <summary>発言ユーザーを重複なしで一覧へ追加し、最新発言者を先頭へ移動する。</summary>
@@ -819,7 +830,7 @@ namespace JTSA.Panels
             var path = SelectAudioFile();
             if (path == null) return;
 
-            if (TryReplaceAudio(path, ref ChatNotificationReader, ref ChatNotificationPlayer, "チャット通知音"))
+            if (TryReplaceAudio(path, ref createChatNotificationReader, "チャット通知音"))
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatNotificationAudioPath, path);
         }
 
@@ -842,7 +853,7 @@ namespace JTSA.Panels
             var path = SelectAudioFile();
             if (path == null) return;
 
-            if (TryReplaceAudio(path, ref JoinChatReader, ref JoinChatPlayer, "チャット参加音"))
+            if (TryReplaceAudio(path, ref createJoinChatReader, "チャット参加音"))
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.JoinChatAudioPath, path);
         }
 
@@ -864,13 +875,10 @@ namespace JTSA.Panels
                 DAO_Setting.SettingName.ChatNotificationAudioPath)?.Value;
 
             if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
-                TryReplaceAudio(path, ref ChatNotificationReader, ref ChatNotificationPlayer, "チャット通知音", false))
+                TryReplaceAudio(path, ref createChatNotificationReader, "チャット通知音", false))
                 return;
 
-            ReplaceWithDefaultAudio(
-                new WaveFileReader(Properties.Resources.CommentNotification),
-                ref ChatNotificationReader,
-                ref ChatNotificationPlayer);
+            createChatNotificationReader = () => new WaveFileReader(Properties.Resources.CommentNotification);
         }
 
         private void LoadJoinChatAudio()
@@ -879,59 +887,31 @@ namespace JTSA.Panels
                 DAO_Setting.SettingName.JoinChatAudioPath)?.Value;
 
             if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
-                TryReplaceAudio(path, ref JoinChatReader, ref JoinChatPlayer, "チャット参加音", false))
+                TryReplaceAudio(path, ref createJoinChatReader, "チャット参加音", false))
                 return;
 
-            ReplaceWithDefaultAudio(
-                new WaveFileReader(Properties.Resources.JoinChat),
-                ref JoinChatReader,
-                ref JoinChatPlayer);
+            createJoinChatReader = () => new WaveFileReader(Properties.Resources.JoinChat);
         }
 
         private static bool TryReplaceAudio(
             string path,
-            ref WaveStream? reader,
-            ref WaveOutEvent? player,
+            ref Func<WaveStream> createReader,
             string audioName,
             bool showError = true)
         {
-            AudioFileReader? newReader = null;
-            WaveOutEvent? newPlayer = null;
             try
             {
-                newReader = new AudioFileReader(path);
-                newPlayer = new WaveOutEvent();
-                newPlayer.Init(newReader);
-
-                player?.Stop();
-                player?.Dispose();
-                reader?.Dispose();
-                reader = newReader;
-                player = newPlayer;
+                // ファイル選択時にはデコードのみ確認し、出力デバイスは開かない。
+                using var reader = new AudioFileReader(path);
+                createReader = () => new AudioFileReader(path);
                 return true;
             }
             catch (Exception ex)
             {
-                newPlayer?.Dispose();
-                newReader?.Dispose();
                 if (showError)
                     MessageBox.Show($"{audioName}を読み込めませんでした。\n{ex.GetBaseException().Message}", "音声ファイル変更");
                 return false;
             }
-        }
-
-        private static void ReplaceWithDefaultAudio(
-            WaveStream newReader,
-            ref WaveStream? reader,
-            ref WaveOutEvent? player)
-        {
-            var newPlayer = new WaveOutEvent();
-            newPlayer.Init(newReader);
-            player?.Stop();
-            player?.Dispose();
-            reader?.Dispose();
-            reader = newReader;
-            player = newPlayer;
         }
 
         /// <summary>  </summary>

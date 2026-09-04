@@ -18,6 +18,9 @@ namespace JTSA.Utility
         private readonly TwitchAPI twitchApi;
 
         private readonly string broadcasterUserId;
+        private readonly object tokenSync = new();
+        private long tokenGeneration;
+        private DateTimeOffset tokenUpdatedAt = DateTimeOffset.UtcNow;
 
         private bool isSubscribed;
         private bool isDisposed;
@@ -25,6 +28,7 @@ namespace JTSA.Utility
         public event Action<ChannelPointForm>? ChannelPointRedeemed;
         public event Action<string>? FollowReceived;
         public event Action<string>? RaidReceived;
+        public event Action<int>? BitsReceived;
 
 
         /// <summary>
@@ -51,6 +55,35 @@ namespace JTSA.Utility
             RegisterEvents();
         }
 
+        public bool UpdateAccessToken(string broadcasterId, string accessToken)
+        {
+            if (isDisposed || string.IsNullOrWhiteSpace(accessToken) ||
+                !string.Equals(broadcasterUserId, broadcasterId, StringComparison.Ordinal))
+                return false;
+
+            lock (tokenSync)
+            {
+                if (string.Equals(twitchApi.Settings.AccessToken, accessToken, StringComparison.Ordinal))
+                    return true;
+                twitchApi.Settings.AccessToken = accessToken;
+                tokenGeneration++;
+                tokenUpdatedAt = DateTimeOffset.UtcNow;
+            }
+            LogSuccess($"EventSubトークン同期：{GetTokenDiagnostics()}");
+            return true;
+        }
+
+        internal string GetTokenDiagnostics()
+        {
+            lock (tokenSync)
+            {
+                // トークン本体やハッシュは記録せず、サービス内の更新世代で追跡する。
+                return $"BroadcasterId={broadcasterUserId}, SessionId={eventSubClient.SessionId}, " +
+                    $"TokenGeneration={tokenGeneration}, TokenUpdatedAt={tokenUpdatedAt:O}, " +
+                    $"HasToken={!string.IsNullOrWhiteSpace(twitchApi.Settings.AccessToken)}";
+            }
+        }
+
 
         /// <summary>
         /// 
@@ -66,6 +99,7 @@ namespace JTSA.Utility
                 OnChannelPointsCustomRewardRedemptionAdd;
             eventSubClient.ChannelFollow += OnChannelFollow;
             eventSubClient.ChannelRaid += OnChannelRaid;
+            eventSubClient.ChannelCheer += OnChannelCheer;
         }
 
         public async Task ConnectAsync()
@@ -96,6 +130,7 @@ namespace JTSA.Utility
         /// <returns></returns>
         private async Task OnWebsocketConnected(object? sender, WebsocketConnectedArgs e)
         {
+            LogSuccess($"EventSub接続：RequestedReconnect={e.IsRequestedReconnect}, {GetTokenDiagnostics()}");
             /*
              * Twitch側からの再接続要求の場合は、
              * 既存の購読が引き継がれるため再購読しない。
@@ -146,6 +181,25 @@ namespace JTSA.Utility
             {
                 ["broadcaster_user_id"] = broadcasterUserId
             };
+
+            LogSuccess($"EventSub購読開始：{GetTokenDiagnostics()}");
+            // 権限不足でもチャネポなどの購読を妨げない。
+            try
+            {
+                var result = await twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    type: "channel.cheer", version: "1", condition: condition,
+                    method: EventSubTransportMethod.Websocket,
+                    websocketSessionId: eventSubClient.SessionId,
+                    accessToken: twitchApi.Settings.AccessToken);
+                if (result.Subscriptions.Any())
+                    LogSuccess("ビッツ受信のEventSub購読が完了しました");
+                else
+                    LogError("ビッツ受信のEventSub購読結果が空でした");
+            }
+            catch (Exception ex)
+            {
+                LogError($"ビッツ受信の購読に失敗しました。権限不足の場合はTwitchを再認証してbits:readを許可してください。詳細: {ex.Message}");
+            }
 
             try
             {
@@ -223,7 +277,7 @@ namespace JTSA.Utility
             {
                 isSubscribed = false;
 
-                LogError($"EventSub購読失敗：{ex.Message}");
+                LogError($"EventSub購読失敗：{ex.Message} / {GetTokenDiagnostics()}");
 
                 Debug.WriteLine(
                     $"EventSub購読失敗: {ex}");
@@ -269,6 +323,15 @@ namespace JTSA.Utility
         {
             StreamSupportTracker.AddFollow(e.Payload.Event.UserName);
             FollowReceived?.Invoke(e.Payload.Event.UserName);
+            return Task.CompletedTask;
+        }
+
+        private Task OnChannelCheer(object? sender, ChannelCheerArgs e)
+        {
+            var cheer = e.Payload.Event;
+            StreamSupportTracker.AddBits(
+                cheer.IsAnonymous ? "匿名ユーザー" : cheer.UserName, cheer.Bits);
+            BitsReceived?.Invoke(cheer.Bits);
             return Task.CompletedTask;
         }
 
@@ -331,6 +394,8 @@ namespace JTSA.Utility
         private async Task OnWebsocketDisconnected(object? sender, WebsocketDisconnectedArgs e)
         {
             Debug.WriteLine("EventSubが切断されました。");
+            // 現バージョンのDisconnectedArgsにはCloseコード・理由が含まれない。
+            LogError($"EventSub切断（切断理由はライブラリから通知されません）：{GetTokenDiagnostics()}");
 
             isSubscribed = false;
 
@@ -342,11 +407,13 @@ namespace JTSA.Utility
             {
                 try
                 {
+                    LogSuccess($"EventSub再接続開始：{GetTokenDiagnostics()}");
                     bool connected =
                         await eventSubClient.ReconnectAsync();
 
                     if (connected)
                     {
+                        LogSuccess($"EventSub再接続成功：{GetTokenDiagnostics()}");
                         Debug.WriteLine(
                             "EventSub再接続完了");
 
@@ -355,6 +422,7 @@ namespace JTSA.Utility
                 }
                 catch (Exception ex)
                 {
+                    LogError($"EventSub再接続失敗：{ex.GetType().Name} / {GetTokenDiagnostics()}");
                     Debug.WriteLine(
                         $"EventSub再接続エラー: {ex.Message}");
                 }
@@ -365,6 +433,7 @@ namespace JTSA.Utility
 
         private Task OnWebsocketReconnected(object? sender, WebsocketReconnectedArgs e)
         {
+            LogSuccess($"EventSubセッション再接続：{GetTokenDiagnostics()}");
             Debug.WriteLine(
                 $"EventSub再接続完了: " +
                 $"{eventSubClient.SessionId}");
@@ -374,6 +443,7 @@ namespace JTSA.Utility
 
         private Task OnErrorOccurred(object? sender, ErrorOccuredArgs e)
         {
+            LogError($"EventSub通信エラー：{e.Exception.GetType().Name} / {GetTokenDiagnostics()}");
             Debug.WriteLine(
                 $"EventSubエラー: {e.Exception}");
 
@@ -405,6 +475,7 @@ namespace JTSA.Utility
                 OnChannelPointsCustomRewardRedemptionAdd;
             eventSubClient.ChannelFollow -= OnChannelFollow;
             eventSubClient.ChannelRaid -= OnChannelRaid;
+            eventSubClient.ChannelCheer -= OnChannelCheer;
 
             try
             {

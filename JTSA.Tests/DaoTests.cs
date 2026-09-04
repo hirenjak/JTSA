@@ -57,6 +57,52 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void TitleTagDao_MissingId_ReturnsNullOrFalse()
+    {
+        Assert.Null(DAO_TitleTag.SelectOneById(long.MaxValue));
+        Assert.False(DAO_TitleTag.UpdateLastUse(long.MaxValue));
+        Assert.False(DAO_TitleTag.Update(new M_TitleTag
+        {
+            Id = long.MaxValue,
+            DisplayName = "Missing",
+            UpdatedDateTime = DateTime.Now
+        }));
+    }
+
+    [Fact]
+    public void TitleTagDao_UpdateThenDelete_RejectsStaleRecord()
+    {
+        var created = new DateTime(2026, 1, 2, 3, 4, 5);
+        var tag = new M_TitleTag
+        {
+            DisplayName = "Test tag",
+            CreatedDateTime = created,
+            LastUsedDateTime = created,
+            UpdatedDateTime = created
+        };
+        Assert.True(DAO_TitleTag.Insert(tag));
+        Assert.True(DAO_TitleTag.UpdateLastUse(tag.Id));
+        var updated = DAO_TitleTag.SelectOneById(tag.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(1, updated.SelectedCount);
+        Assert.True(updated.LastUsedDateTime > created);
+
+        updated.DisplayName = "Updated tag";
+        updated.CreatedDateTime = created.AddDays(1);
+        Assert.True(DAO_TitleTag.Update(updated));
+        var saved = DAO_TitleTag.SelectOneById(tag.Id);
+        Assert.NotNull(saved);
+        Assert.Equal("Updated tag", saved.DisplayName);
+        Assert.Equal(created, saved.CreatedDateTime);
+
+        DAO_TitleTag.Delete(tag.Id);
+        Assert.Null(DAO_TitleTag.SelectOneById(tag.Id));
+        Assert.False(DAO_TitleTag.UpdateLastUse(tag.Id));
+        Assert.False(DAO_TitleTag.Update(updated));
+        Assert.Null(DAO_TitleTag.SelectOneById(tag.Id));
+    }
+
+    [Fact]
     public void SettingDao_InsertUpdate_UsesSingleRowAndPreservesCreatedDate()
     {
         Assert.True(DAO_Setting.InsertUpdate(DAO_Setting.SettingName.UserName, "first"));
