@@ -81,8 +81,8 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void CategorySearchListBox_DoubleClick(object sender, EventArgs e)
         {
-            if (await AddSelectedCategoryAsync())
-                Window.GetWindow(this)!.DialogResult = true;
+            if (Window.GetWindow(this) is CategorySearchWindow window)
+                await window.AddSelectedCategoryAndCloseAsync();
         }
 
         public async Task<bool> AddSelectedCategoryAsync()

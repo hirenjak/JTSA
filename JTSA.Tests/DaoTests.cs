@@ -20,6 +20,93 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void StreamExpansionClip_RoundTripsWithOtherActions()
+    {
+        var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader { Name = "Clips", IsActive = true, UpdatedDateTime = DateTime.Now },
+        [
+            new T_StreamExpansionItem { ActionType = "ObsClip", Content = "{chat_login}", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now },
+            new T_StreamExpansionItem { ActionType = "ObsText", Content = "Hello", ObsSourceName = "title", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now }
+        ]);
+        var items = DAO_StreamExpansion.SelectItems(id);
+        Assert.Equal(2, items.Count);
+        var clip = Assert.Single(items, item => item.ActionType == "ObsClip");
+        Assert.Equal("{chat_login}", clip.Content);
+        Assert.Equal(2, clip.SortNumber);
+        Assert.Equal(3, clip.Weight);
+    }
+
+    [Fact]
+    public void StreamExpansionHourly_RoundTripsAfterMigration()
+    {
+        var header = new T_StreamExpansionHeader
+        {
+            Name = "Hourly", IsActive = true, UpdatedDateTime = DateTime.Now
+        };
+        var id = DAO_StreamExpansion.Save(header, []);
+        var saved = Assert.Single(DAO_StreamExpansion.SelectAllHeaders());
+        Assert.False(saved.IsHourly);
+        saved.IsHourly = true;
+        saved.IsAdStart = true;
+        saved.IsAdEnd = true;
+        saved.IsAdUpcoming = true;
+        saved.AdAdvanceMinutes = 3;
+        saved.IsScheduledTime = true;
+        saved.ScheduledHour = 23;
+        saved.ScheduledMinute = 55;
+        DAO_StreamExpansion.Save(saved, []);
+        Assert.True(Assert.Single(DAO_StreamExpansion.SelectAllHeaders()).IsHourly);
+        var scheduled = Assert.Single(DAO_StreamExpansion.SelectAllHeaders());
+        Assert.True(scheduled.IsAdStart && scheduled.IsAdEnd && scheduled.IsAdUpcoming);
+        Assert.Equal(3, scheduled.AdAdvanceMinutes);
+        Assert.True(scheduled.IsScheduledTime);
+        Assert.Equal(23, scheduled.ScheduledHour);
+        Assert.Equal(55, scheduled.ScheduledMinute);
+        saved.IsHourly = false;
+        DAO_StreamExpansion.Save(saved, []);
+        Assert.False(Assert.Single(DAO_StreamExpansion.SelectAllHeaders()).IsHourly);
+    }
+
+    [Fact]
+    public void ParticipationStore_PersistsAccountsAndClearsWithoutReplayingRedemptions()
+    {
+        var participant = new JTSA.Forms.ParticipationUserForm("user", "参加者", "入力", new DateTime(2026, 9, 4, 12, 0, 0))
+        { ProfileImageUrl = "https://example.test/icon.png", ParticipationCount = 3 };
+        JTSA.Utility.ParticipationStore.Save("account-a", [participant], ["redemption-a"]);
+        JTSA.Utility.ParticipationStore.Save("account-b", [participant with { UserId = "other" }], ["redemption-b"]);
+        Assert.Equal(participant, Assert.Single(JTSA.Utility.ParticipationStore.Load("account-a").Users));
+        Assert.Equal("other", Assert.Single(JTSA.Utility.ParticipationStore.Load("account-b").Users).UserId);
+        JTSA.Utility.ParticipationStore.Save("account-a", [], ["redemption-a"], [participant]);
+        var playing = JTSA.Utility.ParticipationStore.Load("account-a");
+        Assert.Empty(playing.Users);
+        Assert.Equal(participant, Assert.Single(playing.PlayingUsers));
+        JTSA.Utility.ParticipationStore.Save("account-a", [], ["redemption-a"]);
+        var restored = JTSA.Utility.ParticipationStore.Load("account-a");
+        Assert.Empty(restored.Users);
+        Assert.Empty(restored.PlayingUsers);
+        Assert.Equal(3, JTSA.Utility.ParticipationStore.GetParticipationCount("account-a", "user"));
+        Assert.Equal(0, JTSA.Utility.ParticipationStore.GetParticipationCount("account-b", "user"));
+        var returning = participant with
+        {
+            ParticipationCount = JTSA.Utility.ParticipationStore.GetParticipationCount("account-a", "user"),
+            MatchCount = 0
+        };
+        JTSA.Utility.ParticipationStore.Save("account-a", [returning], ["redemption-a"]);
+        Assert.Equal(3, Assert.Single(JTSA.Utility.ParticipationStore.Load("account-a").Users).ParticipationCount);
+        Assert.Equal("redemption-a", Assert.Single(restored.RedemptionIds));
+        Assert.Single(JTSA.Utility.ParticipationStore.Load("account-b").Users);
+        JTSA.Utility.ParticipationStore.Save("account-a", [], ["redemption-a"], [returning], slotCount: 4);
+        JTSA.Utility.ParticipationStore.Clear("account-a");
+        var cleared = JTSA.Utility.ParticipationStore.Load("account-a");
+        Assert.Empty(cleared.Users);
+        Assert.Empty(cleared.PlayingUsers);
+        Assert.Empty(cleared.ParticipationCounts);
+        Assert.Equal(4, cleared.SlotCount);
+        Assert.Equal("redemption-a", Assert.Single(cleared.RedemptionIds));
+        Assert.Equal(0, JTSA.Utility.ParticipationStore.GetParticipationCount("account-a", "user"));
+        Assert.Equal(3, JTSA.Utility.ParticipationStore.GetParticipationCount("account-b", "other"));
+    }
+
+    [Fact]
     public void CategoryDao_InsertSelectUpdateDelete_RoundTripsData()
     {
         var created = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
@@ -54,6 +141,52 @@ public sealed class DaoTests : IDisposable
 
         DAO_Category.Delete(category.CategoryId);
         Assert.Null(DAO_Category.SelectOneById(category.CategoryId));
+    }
+
+    [Fact]
+    public void TitleTagDao_MissingId_ReturnsNullOrFalse()
+    {
+        Assert.Null(DAO_TitleTag.SelectOneById(long.MaxValue));
+        Assert.False(DAO_TitleTag.UpdateLastUse(long.MaxValue));
+        Assert.False(DAO_TitleTag.Update(new M_TitleTag
+        {
+            Id = long.MaxValue,
+            DisplayName = "Missing",
+            UpdatedDateTime = DateTime.Now
+        }));
+    }
+
+    [Fact]
+    public void TitleTagDao_UpdateThenDelete_RejectsStaleRecord()
+    {
+        var created = new DateTime(2026, 1, 2, 3, 4, 5);
+        var tag = new M_TitleTag
+        {
+            DisplayName = "Test tag",
+            CreatedDateTime = created,
+            LastUsedDateTime = created,
+            UpdatedDateTime = created
+        };
+        Assert.True(DAO_TitleTag.Insert(tag));
+        Assert.True(DAO_TitleTag.UpdateLastUse(tag.Id));
+        var updated = DAO_TitleTag.SelectOneById(tag.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(1, updated.SelectedCount);
+        Assert.True(updated.LastUsedDateTime > created);
+
+        updated.DisplayName = "Updated tag";
+        updated.CreatedDateTime = created.AddDays(1);
+        Assert.True(DAO_TitleTag.Update(updated));
+        var saved = DAO_TitleTag.SelectOneById(tag.Id);
+        Assert.NotNull(saved);
+        Assert.Equal("Updated tag", saved.DisplayName);
+        Assert.Equal(created, saved.CreatedDateTime);
+
+        DAO_TitleTag.Delete(tag.Id);
+        Assert.Null(DAO_TitleTag.SelectOneById(tag.Id));
+        Assert.False(DAO_TitleTag.UpdateLastUse(tag.Id));
+        Assert.False(DAO_TitleTag.Update(updated));
+        Assert.Null(DAO_TitleTag.SelectOneById(tag.Id));
     }
 
     [Fact]

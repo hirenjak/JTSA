@@ -25,6 +25,11 @@ namespace JTSA.Utility
             public List<FollowUserForm> FollowUsers { get; set; } = [];
         }
 
+        private sealed class SupportArchive
+        {
+            public Dictionary<string, SupportSnapshot> Streams { get; set; } = new();
+        }
+
         public static event Action? Changed;
 
         public static IReadOnlyList<BitsUserForm> BitsUsers
@@ -244,11 +249,8 @@ namespace JTSA.Utility
         {
             try
             {
-                var json = DAO_Setting.SelectOneById(DAO_Setting.SettingName.StreamSupportSnapshot)?.Value;
-                if (string.IsNullOrWhiteSpace(json)) return;
-
-                var snapshot = JsonSerializer.Deserialize<SupportSnapshot>(json);
-                if (snapshot?.StreamId != streamId) return;
+                var archive = ReadArchive();
+                if (!archive.Streams.TryGetValue(streamId, out var snapshot)) return;
 
                 foreach (var user in snapshot.BitsUsers)
                     bitsUsers[user.UserName] = user;
@@ -270,6 +272,35 @@ namespace JTSA.Utility
             }
         }
 
+        private static SupportArchive ReadArchive()
+        {
+            var json = DAO_Setting.SelectOneById(DAO_Setting.SettingName.StreamSupportSnapshot)?.Value;
+            if (string.IsNullOrWhiteSpace(json)) return new SupportArchive();
+
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                if (document.RootElement.ValueKind != JsonValueKind.Object) return new SupportArchive();
+                if (document.RootElement.TryGetProperty(nameof(SupportArchive.Streams), out _))
+                {
+                    var saved = JsonSerializer.Deserialize<SupportArchive>(json);
+                    return saved?.Streams is not null ? saved : new SupportArchive();
+                }
+
+                // 旧バージョンの1配信分の保存値も引き継ぐ。
+                var legacy = JsonSerializer.Deserialize<SupportSnapshot>(json);
+                var archive = new SupportArchive();
+                if (legacy is not null && !string.IsNullOrWhiteSpace(legacy.StreamId))
+                    archive.Streams[legacy.StreamId] = legacy;
+                return archive;
+            }
+            catch (JsonException)
+            {
+                // 壊れた保存値があっても、新しく受信した集計は保存できるようにする。
+                return new SupportArchive();
+            }
+        }
+
         private static void SaveSnapshot()
         {
             if (string.IsNullOrWhiteSpace(activeStreamId)) return;
@@ -284,9 +315,11 @@ namespace JTSA.Utility
             };
             try
             {
+                var archive = ReadArchive();
+                archive.Streams[activeStreamId] = snapshot;
                 DAO_Setting.InsertUpdate(
                     DAO_Setting.SettingName.StreamSupportSnapshot,
-                    JsonSerializer.Serialize(snapshot));
+                    JsonSerializer.Serialize(archive));
             }
             catch (Exception)
             {

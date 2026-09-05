@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:JTSA.Controls"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="実行タイミング設定" Icon="Resources/jtsa.ico"
-        Width="760" Height="360" MinWidth="680" MinHeight="340"
+        Width="760" Height="520" MinWidth="680" MinHeight="500"
         WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="CanResize"
         Background="#FF303030">
  <shell:WindowChrome.WindowChrome>
@@ -39,6 +39,7 @@
       <CheckBox Content="サブスク起動" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsSubscribe}"/>
       <CheckBox Content="ビッツ起動" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsBits}"/>
       <CheckBox Content="チャット入室時" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsFirstChat}"/>
+      <CheckBox Content="時報（毎時00分）" Foreground="White" Margin="0,0,20,8" IsChecked="{Binding IsHourly}" ToolTip="PCの時刻を基準に、JTSA起動中は配信状態にかかわらず毎時00分に実行します。"/>
       <CheckBox Content="フォロー時" Foreground="White" IsChecked="{Binding IsFollow}"/>
      </WrapPanel>
      <Grid Grid.Row="3" Margin="0,0,0,10">
@@ -56,11 +57,30 @@
                 ItemsSource="{Binding ChannelPoints}" DisplayMemberPath="DisplayName" SelectedValuePath="RewardId"
                 SelectedValue="{Binding TriggerChannelPointId, Mode=TwoWay}"/>
      </Grid>
-     <Grid Grid.Row="5">
+     <StackPanel Grid.Row="5">
+      <WrapPanel Margin="0,0,0,12">
+       <CheckBox Content="CM開始" Foreground="White" Margin="0,0,16,0" IsChecked="{Binding IsAdStart}"/>
+       <CheckBox Content="CM終了予定" Foreground="White" Margin="0,0,16,0" IsChecked="{Binding IsAdEnd}"/>
+       <CheckBox x:Name="AdUpcomingCheck" Content="CM開始前" Foreground="White" Margin="0,0,8,0" IsChecked="{Binding IsAdUpcoming}"/>
+       <ComboBox Width="55" ItemsSource="{Binding AdAdvanceOptions}" SelectedItem="{Binding AdAdvanceMinutes}" IsEnabled="{Binding IsChecked, ElementName=AdUpcomingCheck}"/>
+       <TextBlock Text=" 分前" Foreground="White"/>
+      </WrapPanel>
+      <TextBlock Text="CM通知はTwitch再認証が必要です。終了は推定、予告は自動CMの予定に基づきます。" Foreground="#FFCCCCCC" TextWrapping="Wrap" Margin="0,0,0,10"/>
+      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+       <CheckBox x:Name="ScheduledTimeCheckBox" Content="指定時刻（毎日）" Width="145" Foreground="White" VerticalAlignment="Center" IsChecked="{Binding IsScheduledTime}"/>
+       <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsChecked, ElementName=ScheduledTimeCheckBox}">
+        <ComboBox Width="65" Height="26" ItemsSource="{Binding Hours}" SelectedItem="{Binding ScheduledHour, Mode=TwoWay}" ItemStringFormat="{}{0:00}"/>
+        <TextBlock Text="時" Foreground="White" Margin="6,0,12,0" VerticalAlignment="Center"/>
+        <ComboBox Width="65" Height="26" ItemsSource="{Binding Minutes}" SelectedItem="{Binding ScheduledMinute, Mode=TwoWay}" ItemStringFormat="{}{0:00}"/>
+        <TextBlock Text="分" Foreground="White" Margin="6,0,0,0" VerticalAlignment="Center"/>
+       </StackPanel>
+      </StackPanel>
+     <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
       <TextBlock Text="トリガーコメント" Foreground="White" VerticalAlignment="Center"/>
       <TextBox Grid.Column="1" Height="28" Padding="5,2" Text="{Binding TriggerComment, UpdateSourceTrigger=PropertyChanged}"/>
      </Grid>
+     </StackPanel>
     </Grid>
    </DockPanel>
   </Grid>

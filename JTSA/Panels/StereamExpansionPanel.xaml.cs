@@ -24,6 +24,14 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsHourly { get; set; }
+    public bool IsAdStart { get; set; }
+    public bool IsAdEnd { get; set; }
+    public bool IsAdUpcoming { get; set; }
+    public int AdAdvanceMinutes { get; set; } = 1;
+    public bool IsScheduledTime { get; set; }
+    public int ScheduledHour { get; set; }
+    public int ScheduledMinute { get; set; }
     public bool IsObsStreamStart { get; set; }
     public bool IsObsStreamStartMain { get; set; }
     public bool IsObsStreamStartSub { get; set; }
@@ -46,6 +54,11 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
             if (IsBits) items.Add("ビッツ");
             if (IsFirstChat) items.Add("チャット入室");
             if (IsFollow) items.Add("フォロー");
+            if (IsAdStart) items.Add("CM開始");
+            if (IsAdEnd) items.Add("CM終了予定");
+            if (IsAdUpcoming) items.Add($"CM開始{AdAdvanceMinutes}分前");
+            if (IsHourly) items.Add("時報（毎時00分）");
+            if (IsScheduledTime) items.Add($"指定時刻：{ScheduledHour:00}:{ScheduledMinute:00}");
             if (IsObsStreamStartMain) items.Add("配信開始：メインOBS");
             if (IsObsStreamStartSub) items.Add("配信開始：サブOBS");
             if (!string.IsNullOrWhiteSpace(TriggerChannelPointId)) items.Add("チャンネルポイント");
@@ -109,6 +122,61 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     private string imageContent = string.Empty;
     private string audioContent = string.Empty;
     private string chatContent = string.Empty;
+    private string clipUserName = string.Empty;
+    private string clipTargetMode = "Disabled";
+    public string ClipUserName
+    {
+        get => clipTargetMode switch
+        {
+            "Disabled" => string.Empty,
+            "SelectedAccount" => "{selected_account}",
+            "ChatUser" => StreamExpansionPlaceholderReplacer.ChatLoginPlaceholder,
+            "TriggerUser" => StreamExpansionPlaceholderReplacer.TriggerValuePlaceholder,
+            _ => clipUserName
+        };
+        set
+        {
+            var target = value?.Trim() ?? string.Empty;
+            clipTargetMode = string.IsNullOrWhiteSpace(target) ? "Disabled"
+                : target.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase) ? "SelectedAccount"
+                : target.Equals(StreamExpansionPlaceholderReplacer.ChatLoginPlaceholder, StringComparison.OrdinalIgnoreCase) ? "ChatUser"
+                : target.Equals(StreamExpansionPlaceholderReplacer.TriggerValuePlaceholder, StringComparison.OrdinalIgnoreCase) ? "TriggerUser"
+                : "Specified";
+            clipUserName = clipTargetMode == "Specified" ? target : string.Empty;
+            NotifyClipTargetChanged();
+        }
+    }
+    public string ClipLoginId
+    {
+        get => clipUserName;
+        set { clipUserName = value ?? string.Empty; Changed(); Changed(nameof(ClipUserName)); Changed(nameof(IsClipConfigured)); }
+    }
+    public bool IsClipDisabled { get => clipTargetMode == "Disabled"; set { if (value) SetClipTargetMode("Disabled"); } }
+    public bool IsClipSelectedAccount { get => clipTargetMode == "SelectedAccount"; set { if (value) SetClipTargetMode("SelectedAccount"); } }
+    public bool IsClipChatUser { get => clipTargetMode == "ChatUser"; set { if (value) SetClipTargetMode("ChatUser"); } }
+    public bool IsClipTriggerUser { get => clipTargetMode == "TriggerUser"; set { if (value) SetClipTargetMode("TriggerUser"); } }
+    public bool IsClipSpecified { get => clipTargetMode == "Specified"; set { if (value) SetClipTargetMode("Specified"); } }
+    public bool IsClipConfigured => clipTargetMode != "Disabled"
+        && (clipTargetMode != "Specified" || !string.IsNullOrWhiteSpace(clipUserName));
+
+    private void SetClipTargetMode(string mode)
+    {
+        if (clipTargetMode == mode) return;
+        clipTargetMode = mode;
+        NotifyClipTargetChanged();
+    }
+
+    private void NotifyClipTargetChanged()
+    {
+        Changed(nameof(ClipUserName));
+        Changed(nameof(ClipLoginId));
+        Changed(nameof(IsClipDisabled));
+        Changed(nameof(IsClipSelectedAccount));
+        Changed(nameof(IsClipChatUser));
+        Changed(nameof(IsClipTriggerUser));
+        Changed(nameof(IsClipSpecified));
+        Changed(nameof(IsClipConfigured));
+    }
 
     public bool IsImage { get => isImage; set { isImage = value; Changed(); } }
     public bool IsAudio { get => isAudio; set { isAudio = value; Changed(); } }
@@ -282,6 +350,14 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsBits = x.IsBits,
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
+                IsHourly = x.IsHourly,
+                AdAdvanceMinutes = x.AdAdvanceMinutes,
+                IsAdUpcoming = x.IsAdUpcoming,
+                IsAdEnd = x.IsAdEnd,
+                IsAdStart = x.IsAdStart,
+                ScheduledMinute = x.ScheduledMinute,
+                ScheduledHour = x.ScheduledHour,
+                IsScheduledTime = x.IsScheduledTime,
                 IsObsStreamStart = x.IsObsStreamStart,
                 IsObsStreamStartMain = x.IsObsStreamStartMain,
                 IsObsStreamStartSub = x.IsObsStreamStartSub,
@@ -486,6 +562,9 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                             form.IsChat = true;
                             form.ChatContent = item.Content;
                             break;
+                        case "ObsClip":
+                            form.ClipUserName = item.Content;
+                            break;
                         case "ObsText":
                             form.ObsTextForms.Add(new()
                             {
@@ -670,7 +749,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         var configuredItems = item.ObsTextForms
             .Where(x => !string.IsNullOrWhiteSpace(x.SourceName))
             .ToList();
-        if (configuredItems.Count == 0)
+        if (configuredItems.Count == 0 && !item.IsClipConfigured)
         {
             MessageBox.Show("テストするOBS実行設定がありません。", "配信拡張");
             return;
@@ -678,6 +757,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         try
         {
+            if (item.IsClipConfigured)
+                await streamExpansionService.PlayClipPreviewAsync(item.ClipUserName);
             foreach (var obsText in configuredItems)
                 await mainWindow.SetObsTextSourceAsync(obsText.IsSubObs, obsText.SourceName, obsText.TextTemplate);
         }
@@ -718,6 +799,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             AddSaveItem(saveItems, form.IsImageConfigured, "Image", imageContent, form.Weight, 100, groupIndex);
             AddSaveItem(saveItems, form.IsAudioConfigured, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
             AddSaveItem(saveItems, form.IsChatConfigured, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
+            AddSaveItem(saveItems, form.IsClipConfigured, "ObsClip", form.ClipUserName.Trim(), form.Weight, 100, groupIndex);
             foreach (var obsText in form.ObsTextForms)
             {
                 if (string.IsNullOrWhiteSpace(obsText.SourceName)) continue;
@@ -746,6 +828,14 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsBits = header.IsBits,
             IsFirstChat = header.IsFirstChat,
             IsFollow = header.IsFollow,
+            IsHourly = header.IsHourly,
+            AdAdvanceMinutes = header.AdAdvanceMinutes,
+            IsAdUpcoming = header.IsAdUpcoming,
+            IsAdEnd = header.IsAdEnd,
+            IsAdStart = header.IsAdStart,
+            ScheduledMinute = header.ScheduledMinute,
+            ScheduledHour = header.ScheduledHour,
+            IsScheduledTime = header.IsScheduledTime,
             IsObsStreamStart = header.IsObsStreamStartMain || header.IsObsStreamStartSub,
             IsObsStreamStartMain = header.IsObsStreamStartMain,
             IsObsStreamStartSub = header.IsObsStreamStartSub,

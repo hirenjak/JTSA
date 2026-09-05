@@ -327,6 +327,8 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -475,7 +477,13 @@
                     BorderBrush="LightSeaGreen" BorderThickness="1"
                     ToolTip="現在のカテゴリに対するOBSキャプチャ先を設定します"
                     Click="OpenCurrentCategoryObsCaptureButton_Click"/>
-            <Button x:Name="LaunchSteamGameButton" Grid.Column="2"
+            <Button Grid.Column="3" Content="配信情報を編集 ↗" Height="22"
+                    Margin="8,0,0,0" Padding="6,0" HorizontalAlignment="Left"
+                    Foreground="White" Background="#FF285653"
+                    BorderBrush="LightSeaGreen" BorderThickness="1"
+                    ToolTip="選択中のアカウントの配信情報編集を外部ブラウザで開きます"
+                    Click="OpenStreamInfoEditorButton_Click"/>
+            <Button x:Name="LaunchSteamGameButton" Grid.Column="4"
                     Content="ゲーム起動" Width="88" Height="22"
                     Padding="6,0" HorizontalAlignment="Right"
                     IsEnabled="False"
@@ -1095,6 +1103,10 @@
         </Grid>
 
     </Grid>
+        <Button x:Name="NotificationButton" Grid.Row="1" Panel.ZIndex="100"
+                HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16" Padding="14,9"
+                Background="#FF8A601D" Foreground="White" FontWeight="Bold" Cursor="Hand"
+                Visibility="Collapsed" Content="通知" ToolTip="通知一覧を開く" Click="NotificationButton_Click"/>
     </Grid>
     </Border>
 </Window>

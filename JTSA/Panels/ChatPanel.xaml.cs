@@ -1,4 +1,4 @@
-﻿using JTSA.Dao;
+using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
@@ -34,6 +34,8 @@ namespace JTSA.Panels
     {
         public static readonly RoutedUICommand AddFriendCommand = new(
             "フレンドに追加", nameof(AddFriendCommand), typeof(ChatPanel));
+        public static readonly RoutedUICommand AddParticipationCommand = new(
+            "参加待ちに追加", nameof(AddParticipationCommand), typeof(ChatPanel));
 
         private TwitchChatService? twitchChatService;
 
@@ -63,9 +65,367 @@ namespace JTSA.Panels
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
 
         public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
+        public ObservableCollection<ParticipationUserForm> ParticipationUsers { get; } = new();
+        public ObservableCollection<ParticipationUserForm> PlayingParticipationUsers { get; } = new();
+        private readonly HashSet<string> participationRedemptions = new();
+        private readonly Queue<string> participationRedemptionOrder = new();
+        private string participationRewardId = "";
+        private bool reloadingParticipationRewards;
+
+        private async void ReloadParticipationRewards(object? sender = null, EventArgs? e = null)
+        {
+            if (ParticipationRewardComboBox == null || string.IsNullOrEmpty(connectedBroadcasterId) || reloadingParticipationRewards) return;
+            var accountId = connectedBroadcasterId;
+            reloadingParticipationRewards = true;
+            ParticipationRewardComboBox.IsEnabled = false;
+            try
+            {
+                var saved = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ParticipationRewards)?.Value;
+                Dictionary<string, string> settings;
+                try { settings = JsonSerializer.Deserialize<Dictionary<string, string>>(saved ?? "{}") ?? new(); }
+                catch (JsonException) { settings = new(); }
+                participationRewardId = settings.GetValueOrDefault(accountId, "");
+                var api = new TwitchAPI();
+                api.Settings.ClientId = TwitchHelper.ClientID;
+                api.Settings.AccessToken = connectedAccessToken;
+                var result = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+                    broadcasterId: accountId, onlyManageableRewards: false);
+                if (accountId != connectedBroadcasterId) return;
+                var choices = result.Data.Select(x => new ParticipationRewardChoice(x.Id, x.Title)).ToList();
+                choices.Insert(0, new("", "（参加用チャネポを選択）"));
+                if (participationRewardId.Length > 0 && !choices.Any(x => x.Id == participationRewardId))
+                    choices.Add(new(participationRewardId, "報酬が見つかりません：選び直してください"));
+                ParticipationRewardComboBox.ItemsSource = choices;
+                ParticipationRewardComboBox.SelectedValue = participationRewardId;
+            }
+            catch (Exception ex)
+            {
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"参加チャネポ一覧の取得失敗：{ex.Message}");
+            }
+            finally
+            {
+                reloadingParticipationRewards = false;
+                ParticipationRewardComboBox.IsEnabled = true;
+                if (accountId != connectedBroadcasterId) ReloadParticipationRewards();
+            }
+        }
+        private void ParticipationReward_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (reloadingParticipationRewards || string.IsNullOrEmpty(connectedBroadcasterId)) return;
+            if (ParticipationRewardComboBox.SelectedItem is not ParticipationRewardChoice selected) return;
+            participationRewardId = selected.Id;
+            var saved = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ParticipationRewards)?.Value;
+            Dictionary<string, string> settings;
+            try { settings = JsonSerializer.Deserialize<Dictionary<string, string>>(saved ?? "{}") ?? new(); }
+            catch (JsonException) { settings = new(); }
+            settings[connectedBroadcasterId] = participationRewardId;
+            DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ParticipationRewards, JsonSerializer.Serialize(settings));
+        }
+
+        private void TrackParticipation(ChannelPointForm point)
+        {
+            var selectedRewardId = (ParticipationRewardComboBox.SelectedItem as ParticipationRewardChoice)?.Id
+                ?? participationRewardId;
+            if (point.BroadcasterUserId != connectedBroadcasterId)
+            {
+                return;
+            }
+            if (string.IsNullOrEmpty(selectedRewardId))
+            {
+                return;
+            }
+            if (point.RewardId != selectedRewardId)
+            {
+                return;
+            }
+            if (string.IsNullOrEmpty(point.UserId) || point.Status == "canceled")
+            {
+                return;
+            }
+            if (!string.IsNullOrEmpty(point.RedemptionId))
+            {
+                if (!participationRedemptions.Add(point.RedemptionId))
+                {
+                    return;
+                }
+                participationRedemptionOrder.Enqueue(point.RedemptionId);
+                if (participationRedemptionOrder.Count > 5000)
+                    participationRedemptions.Remove(participationRedemptionOrder.Dequeue());
+            }
+            if (ParticipationUsers.Concat(PlayingParticipationUsers).Any(x => x.UserId == point.UserId))
+            {
+                SaveParticipation();
+                return;
+            }
+            var user = new ParticipationUserForm(point.UserId,
+                string.IsNullOrWhiteSpace(point.UserName) ? point.UserLogin : point.UserName,
+                point.UserInput, point.RedeemedAt.ToLocalTime())
+            {
+                ParticipationCount = ParticipationStore.GetParticipationCount(connectedBroadcasterId, point.UserId)
+            };
+            var index = 0;
+            while (index < ParticipationUsers.Count && ParticipationUsers[index].RedeemedAt <= user.RedeemedAt) index++;
+            ParticipationUsers.Insert(index, user);
+            SaveParticipation();
+            _ = LoadParticipationIconAsync(user, point.UserLogin, connectedAccessToken);
+        }
+
+        private async Task LoadParticipationIconAsync(ParticipationUserForm participant, string login, string accessToken)
+        {
+            try
+            {
+                var imageUrl = DAO_User.SelectOneByUserId(participant.UserId)?.ProfielImageUrl;
+                if (string.IsNullOrWhiteSpace(imageUrl))
+                    imageUrl = (await TwitchHelper.GetBroadcasterIdAsync(login, accessToken))?.ProfileImageUrl;
+                if (string.IsNullOrWhiteSpace(imageUrl)) return;
+
+                // Removed participants and a new account's list must not be restored by a late response.
+                var list = PlayingParticipationUsers.Any(x => x.EntryKey == participant.EntryKey)
+                    ? PlayingParticipationUsers : ParticipationUsers;
+                var index = list.ToList().FindIndex(x => x.EntryKey == participant.EntryKey);
+                if (index >= 0)
+                {
+                    list[index] = list[index] with { ProfileImageUrl = imageUrl };
+                    SaveParticipation();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"参加者アイコン取得失敗：{ex.Message}");
+            }
+        }
+
+        private void RemoveParticipation_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button { DataContext: ParticipationUserForm user } &&
+                (ParticipationUsers.Remove(user) || PlayingParticipationUsers.Remove(user)))
+                SaveParticipation();
+        }
+
+        private void StartParticipation_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { DataContext: ParticipationUserForm user } && ParticipationUsers.Remove(user))
+            {
+                PlayingParticipationUsers.Add(user with { MatchCount = 0 });
+                SaveParticipation();
+            }
+        }
+
+        private Point participationDragStart;
+        private Guid? participationDragKey;
+        private sealed record ParticipationDrag(ChatPanel Owner, string AccountId, Guid EntryKey);
+
+        private void Participation_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            participationDragKey = null;
+            if (sender is not ListBox list || e.OriginalSource is not DependencyObject origin) return;
+            // Buttons retain their normal click behavior rather than initiating a drag.
+            for (var node = origin; node != null && node != list;)
+            {
+                if (node is System.Windows.Controls.Primitives.ButtonBase) return;
+                node = node is System.Windows.Media.Visual
+                    ? System.Windows.Media.VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node);
+            }
+            if (ItemsControl.ContainerFromElement(list, origin) is ListBoxItem { DataContext: ParticipationUserForm user })
+            {
+                participationDragStart = e.GetPosition(list);
+                participationDragKey = user.EntryKey;
+            }
+        }
+
+        private void Participation_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed) { participationDragKey = null; return; }
+            if (sender is not ListBox list || participationDragKey is not { } key) return;
+            var point = e.GetPosition(list);
+            if (Math.Abs(point.X - participationDragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(point.Y - participationDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+            participationDragKey = null;
+            var user = list.Items.OfType<ParticipationUserForm>().FirstOrDefault(x => x.EntryKey == key);
+            var row = user is null ? null : list.ItemContainerGenerator.ContainerFromItem(user) as FrameworkElement;
+            var layer = System.Windows.Documents.AdornerLayer.GetAdornerLayer(this);
+            var preview = row is not null && layer is not null
+                ? new JTSA.Controls.ParticipationDragPreview(this, row) { IsHitTestVisible = false } : null;
+            GiveFeedbackEventHandler feedback = (_, _) => preview?.FollowPointer();
+            try
+            {
+                if (preview is not null)
+                {
+                    layer!.Add(preview);
+                    preview.FollowPointer();
+                    list.GiveFeedback += feedback;
+                }
+                DragDrop.DoDragDrop(list, new DataObject(typeof(ParticipationDrag), new ParticipationDrag(this, connectedBroadcasterId, key)), DragDropEffects.Move);
+            }
+            finally
+            {
+                list.GiveFeedback -= feedback;
+                if (preview is not null) layer!.Remove(preview);
+            }
+            e.Handled = true;
+        }
+
+        private ParticipationDrag? GetParticipationDrag(DragEventArgs e)
+        {
+            var drag = e.Data.GetData(typeof(ParticipationDrag)) as ParticipationDrag;
+            return drag?.Owner == this && drag.AccountId == connectedBroadcasterId &&
+                ParticipationUsers.Concat(PlayingParticipationUsers).Any(x => x.EntryKey == drag.EntryKey) ? drag : null;
+        }
+
+        private void Participation_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = GetParticipationDrag(e) is null ? DragDropEffects.None : DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private void Participation_Drop(object sender, DragEventArgs e)
+        {
+            e.Handled = true;
+            e.Effects = DragDropEffects.None;
+            if (sender is not ListBox list || GetParticipationDrag(e) is not { } drag) return;
+            var toPlaying = ReferenceEquals(list.ItemsSource, PlayingParticipationUsers);
+            var target = toPlaying ? PlayingParticipationUsers : ParticipationUsers;
+            var index = target.Count;
+            if (e.OriginalSource is DependencyObject origin &&
+                ItemsControl.ContainerFromElement(list, origin) is ListBoxItem container)
+            {
+                index = list.ItemContainerGenerator.IndexFromContainer(container);
+                if (e.GetPosition(container).Y >= container.ActualHeight / 2) index++;
+            }
+            if (ParticipationMover.Move(ParticipationUsers, PlayingParticipationUsers, drag.EntryKey, toPlaying, index))
+                SaveParticipation();
+            e.Effects = DragDropEffects.Move;
+        }
+
+        private void AdjustParticipationCount_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button ||
+                !int.TryParse(button.Tag?.ToString(), out var delta)) return;
+            if (PlayingParticipationUsers.Count == 0) return;
+            for (var index = 0; index < PlayingParticipationUsers.Count; index++)
+            {
+                var user = PlayingParticipationUsers[index];
+                PlayingParticipationUsers[index] = user.AdjustMatches(delta);
+            }
+            SaveParticipation();
+        }
+
+        private void AdjustIndividualParticipationCount_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem { DataContext: ParticipationUserForm user } item ||
+                !int.TryParse(item.Tag?.ToString(), out var delta)) return;
+            var index = PlayingParticipationUsers.ToList().FindIndex(x => x.EntryKey == user.EntryKey);
+            if (index < 0) return;
+            var current = PlayingParticipationUsers[index];
+            PlayingParticipationUsers[index] = current.AdjustMatches(delta);
+            SaveParticipation();
+        }
+
+        private void ReturnParticipation_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { DataContext: ParticipationUserForm user } && PlayingParticipationUsers.Remove(user))
+            {
+                var index = 0;
+                while (index < ParticipationUsers.Count && ParticipationUsers[index].RedeemedAt <= user.RedeemedAt) index++;
+                ParticipationUsers.Insert(index, user);
+                SaveParticipation();
+            }
+        }
+
+        private void ClearParticipation_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                ParticipationStore.Clear(connectedBroadcasterId);
+                ParticipationUsers.Clear();
+                PlayingParticipationUsers.Clear();
+            }
+            catch (Exception ex)
+            {
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"参加者一覧のクリア失敗：{ex.Message}");
+            }
+        }
+
+        private int participationSlotCount;
+        private bool isParticipationManagementVisible;
+        private bool restoringParticipationSlots;
+
+        private void ParticipationSlotCount_Changed(object sender, TextChangedEventArgs e)
+        {
+            if (restoringParticipationSlots || string.IsNullOrEmpty(connectedBroadcasterId)) return;
+            var text = ParticipationSlotCountTextBox.Text;
+            if (text.Length == 0) participationSlotCount = 0;
+            else if (text.All(c => c >= '0' && c <= '9') && int.TryParse(text, out var count) && count <= 999)
+                participationSlotCount = count;
+            else
+            {
+                restoringParticipationSlots = true;
+                try { ParticipationSlotCountTextBox.Text = participationSlotCount == 0 ? "" : participationSlotCount.ToString(); }
+                finally { restoringParticipationSlots = false; }
+                return;
+            }
+            SaveParticipation();
+        }
+
+        private void SaveParticipation()
+        {
+            try { ParticipationStore.Save(connectedBroadcasterId, ParticipationUsers, participationRedemptionOrder, PlayingParticipationUsers, participationSlotCount, isParticipationManagementVisible); }
+            catch (Exception ex)
+            {
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"参加者一覧の保存失敗：{ex.Message}");
+            }
+        }
+
+        private void RestoreParticipation()
+        {
+            restoringParticipationSlots = true;
+            participationSlotCount = 0;
+            SetParticipationManagementVisible(false);
+            ParticipationSlotCountTextBox.Text = "";
+            ParticipationUsers.Clear();
+            PlayingParticipationUsers.Clear();
+            participationRedemptions.Clear();
+            participationRedemptionOrder.Clear();
+            try
+            {
+                var saved = ParticipationStore.Load(connectedBroadcasterId);
+                SetParticipationManagementVisible(saved.ObsVisible);
+                participationSlotCount = Math.Clamp(saved.SlotCount, 0, 999);
+                ParticipationSlotCountTextBox.Text = participationSlotCount == 0 ? "" : participationSlotCount.ToString();
+                foreach (var user in saved.Users) ParticipationUsers.Add(user);
+                foreach (var user in saved.PlayingUsers) PlayingParticipationUsers.Add(user);
+                foreach (var id in saved.RedemptionIds)
+                    if (participationRedemptions.Add(id)) participationRedemptionOrder.Enqueue(id);
+            }
+            catch (Exception ex)
+            {
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"参加者一覧の復元失敗：{ex.Message}");
+            }
+            finally { restoringParticipationSlots = false; }
+        }
+        public sealed record ParticipationRewardChoice(string Id, string Title);
 
         internal (string BroadcasterId, string AccessToken) GetConnectedAccountContext()
             => (connectedBroadcasterId, connectedAccessToken);
+
+        public string CreateObsParticipationJson() => Dispatcher.Invoke(() =>
+            JsonSerializer.Serialize(new
+            {
+                slotCount = participationSlotCount,
+                visible = isParticipationManagementVisible,
+                playing = PlayingParticipationUsers.Select(x => new
+                {
+                    name = x.DisplayName, icon = x.ProfileImageUrl, count = x.MatchCount
+                }).ToArray(),
+                waiting = ParticipationUsers.Select(x => new
+                {
+                    name = x.DisplayName, icon = x.ProfileImageUrl, count = x.ParticipationCount
+                }).ToArray()
+            }));
 
         /// <summary>
         /// 接続中アカウントのアクセストークンを更新する。
@@ -80,6 +440,7 @@ namespace JTSA.Panels
             }
 
             connectedAccessToken = accessToken;
+            twitchEventSubService?.UpdateAccessToken(broadcasterId, accessToken);
         }
 
         /// <summary>OBSブラウザソース用のチャットデータを返す。</summary>
@@ -286,11 +647,11 @@ namespace JTSA.Panels
 
         private bool isChatUserListVisible = true;
 
-        private WaveStream? ChatNotificationReader;
-        private WaveOutEvent? ChatNotificationPlayer;
+        private Func<WaveStream> createChatNotificationReader = () => new WaveFileReader(Properties.Resources.CommentNotification);
+        private readonly NotificationAudioPlayer chatNotificationPlayer = new();
 
-        private WaveStream? JoinChatReader;
-        private WaveOutEvent? JoinChatPlayer;
+        private Func<WaveStream> createJoinChatReader = () => new WaveFileReader(Properties.Resources.JoinChat);
+        private readonly NotificationAudioPlayer joinChatPlayer = new();
 
 
 
@@ -301,6 +662,7 @@ namespace JTSA.Panels
         {
             InitializeComponent();
             DataContext = this;
+            Loaded += (_, _) => ReloadParticipationRewards();
 
             LoadChatNotificationAudio();
             LoadJoinChatAudio();
@@ -408,7 +770,10 @@ namespace JTSA.Panels
             connectedAccessToken = accessToken;
 
             if (twitchChatService is not null && connectedBroadcasterId == broadcasterId)
+            {
+                UpdateConnectedAccessToken(broadcasterId, accessToken);
                 return;
+            }
 
             if (twitchChatService is not null && connectedBroadcasterId != broadcasterId)
             {
@@ -451,6 +816,8 @@ namespace JTSA.Panels
                 twitchChatService = new TwitchChatService(channelName);
                 twitchEventSubService = new TwitchEventSubService(accountApi, broadcasterId);
                 connectedBroadcasterId = broadcasterId;
+                RestoreParticipation();
+                ReloadParticipationRewards();
 
                 twitchChatService.MessageReceived += message =>
                 {
@@ -465,10 +832,10 @@ namespace JTSA.Panels
                         TwitchHelper.CurrentStreamId,
                         message.UserId);
 
-                    Dispatcher.InvokeAsync(() =>
+                    Dispatcher.InvokeAsync(async () =>
                     {
                         // チャット欄に亜チャット追加
-                        ChatAddAsync(new TwitchChatForm
+                        await ChatAddAsync(new TwitchChatForm
                         {
                             Channel = message.Channel,
                             UserId = message.UserId,
@@ -504,11 +871,6 @@ namespace JTSA.Panels
                             chatPlaceholders);
                     }
 
-                    // ビッツの発火条件確認
-                    if (message.Bits > 0)
-                    {
-                        _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Bits, message.Bits.ToString());
-                    }
                 };
 
                 twitchChatService.SubscriptionReceived += () =>
@@ -517,8 +879,29 @@ namespace JTSA.Panels
                 twitchChatService.HealthCheck += () =>
                     _ = Dispatcher.InvokeAsync(async () => await PinedChatLoad());
 
+                twitchChatService.StatusChanged += status =>
+                    _ = Dispatcher.InvokeAsync(() =>
+                    {
+                        if (Application.Current.MainWindow is MainWindow mainWindow)
+                            mainWindow.AppLogPanel.Success(nameof(TwitchChatService), status);
+                    });
+
+                twitchEventSubService.BitsReceived += bits =>
+                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Bits, bits.ToString());
+
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
+                    // Register independently of chat rendering and observe UI-thread failures.
+                    Dispatcher.Invoke(() =>
+                    {
+                        try { TrackParticipation(channelPoint); }
+                        catch (Exception ex)
+                        {
+
+                            if (Application.Current.MainWindow is MainWindow window)
+                                window.AppLogPanel.Error(nameof(ChatPanel), $"参加者登録エラー：{ex.Message}");
+                        }
+                    });
                     // IRC側の交換メッセージは重複防止で除外しているため、
                     // ユーザー入力はEventSub側から読み上げへ渡す。
                     SpeakChatMessage(channelPoint.UserInput);
@@ -527,13 +910,13 @@ namespace JTSA.Panels
                         TwitchHelper.CurrentStreamId,
                         channelPoint.UserId);
 
-                    Dispatcher.InvokeAsync(() =>
+                    Dispatcher.InvokeAsync(async () =>
                     {
                         var message = ChannelPointChatFormatter.Format(
                             channelPoint.RewardTitle,
                             channelPoint.UserInput);
 
-                        ChatAddAsync(new TwitchChatForm
+                        await ChatAddAsync(new TwitchChatForm
                         {
                             UserId = channelPoint.UserId,
                             UserName = channelPoint.UserLogin,
@@ -567,6 +950,8 @@ namespace JTSA.Panels
                 twitchEventSubService.RaidReceived += userName =>
                     _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Raid, userName);
 
+                twitchEventSubService.AdTriggered += (type, value) =>
+                    _ = streamExpansionService.HandleAsync(type, value);
                 await twitchChatService.ConnectAsync();
                 await twitchEventSubService.ConnectAsync();
             }
@@ -633,10 +1018,22 @@ namespace JTSA.Panels
         /// <param name="form"></param>
         /// <param name="isChannelPoint"></param>
         /// <param name="isFirstEntrance">現在の配信で最初のチャット入室か。</param>
-        private async void ChatAddAsync(
+        private async Task ChatAddAsync(
             TwitchChatForm form,
             bool isChannelPoint,
             bool isFirstEntrance)
+        {
+            try
+            {
+                await ChatAddCoreAsync(form, isChannelPoint, isFirstEntrance);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"チャット追加処理エラー: {ex}");
+            }
+        }
+
+        private async Task ChatAddCoreAsync(TwitchChatForm form, bool isChannelPoint, bool isFirstEntrance)
         {
             DAO_StreamChatUserCount.Increment(
                 DateTime.Now,
@@ -687,13 +1084,6 @@ namespace JTSA.Panels
 
             if (isFirstEntrance)
             {
-                if (JoinChatReader != null && JoinChatPlayer != null)
-                {
-                    JoinChatReader.Position = 0;
-                    JoinChatPlayer.Volume = (float)JoinChatVolumeSlider.Value / 100f;
-                    JoinChatPlayer.Play();
-                }
-
                 var inserData = new T_ChatUser
                 {
                     UserId = form.UserId,
@@ -704,19 +1094,16 @@ namespace JTSA.Panels
 
                 DAO_ChatUser.InsertUpdate(inserData);
             }
-            else
-            {
-                if (ChatNotificationReader != null && ChatNotificationPlayer != null)
-                {
-                    ChatNotificationReader.Position = 0;
-                    ChatNotificationPlayer.Volume = (float)ChatNotificationVolumeSlider.Value / 100f;
-                    ChatNotificationPlayer.Play();
-                }
-            }
 
             UpdateChatUserList(form, userData);
 
             TwitchChatFormList.Insert(0, form);
+
+            // 表示を先に確定し、デバイスエラーは通知音サービス内で処理する。
+            if (isFirstEntrance)
+                _ = joinChatPlayer.TryPlayAsync(createJoinChatReader, (float)JoinChatVolumeSlider.Value / 100f);
+            else
+                _ = chatNotificationPlayer.TryPlayAsync(createChatNotificationReader, (float)ChatNotificationVolumeSlider.Value / 100f);
         }
 
         /// <summary>発言ユーザーを重複なしで一覧へ追加し、最新発言者を先頭へ移動する。</summary>
@@ -741,6 +1128,25 @@ namespace JTSA.Panels
             });
         }
 
+        /// <summary>参加管理エリアとOBSの参加一覧の表示・非表示を切り替える。</summary>
+        private void ParticipationManagementToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetParticipationManagementVisible(!isParticipationManagementVisible);
+            if (!restoringParticipationSlots && !string.IsNullOrEmpty(connectedBroadcasterId)) SaveParticipation();
+        }
+
+        private void SetParticipationManagementVisible(bool isVisible)
+        {
+            isParticipationManagementVisible = isVisible;
+            ParticipationManagementPanel.Visibility = isVisible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ParticipationManagementColumn.Width = new GridLength(isVisible ? 230 : 0);
+            ParticipationManagementToggleButton.Visibility = isVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
         /// <summary>チャットユーザー一覧の表示・非表示を切り替える。</summary>
         private void ChatUserListToggleButton_Click(object sender, RoutedEventArgs e)
         {
@@ -750,11 +1156,11 @@ namespace JTSA.Panels
                 ? Visibility.Visible
                 : Visibility.Collapsed;
             ChatUserListColumn.Width = isChatUserListVisible
-                ? new GridLength(260)
+                ? new GridLength(210)
                 : new GridLength(0);
-            ChatUserListToggleButton.Content = isChatUserListVisible
-                ? "ユーザー一覧を隠す"
-                : "ユーザー一覧を表示";
+            ChatUserListToggleButton.Visibility = isChatUserListVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
 
         /// <summary>チャットユーザー一覧の右クリックメニューからフレンドへ追加する。</summary>
@@ -784,6 +1190,31 @@ namespace JTSA.Panels
             }
 
             e.Handled = true;
+        }
+
+        private void AddChatUserToParticipation_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            e.Handled = true;
+            if (e.Parameter is not ChatUserForm user || string.IsNullOrWhiteSpace(user.UserId) ||
+                string.IsNullOrWhiteSpace(connectedBroadcasterId) ||
+                ParticipationUsers.Concat(PlayingParticipationUsers).Any(x => x.UserId == user.UserId)) return;
+            try
+            {
+                var participant = new ParticipationUserForm(user.UserId, user.DisplayName, "", DateTime.Now)
+                {
+                    ProfileImageUrl = user.ProfileImageUrl,
+                    ParticipationCount = ParticipationStore.GetParticipationCount(connectedBroadcasterId, user.UserId)
+                };
+                ParticipationUsers.Add(participant);
+                SaveParticipation();
+                if (string.IsNullOrWhiteSpace(participant.ProfileImageUrl))
+                    _ = LoadParticipationIconAsync(participant, user.UserName, connectedAccessToken);
+            }
+            catch (Exception ex)
+            {
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"参加待ちへの追加失敗：{ex.Message}");
+            }
         }
 
         private async Task PinedChatLoad()
@@ -819,7 +1250,7 @@ namespace JTSA.Panels
             var path = SelectAudioFile();
             if (path == null) return;
 
-            if (TryReplaceAudio(path, ref ChatNotificationReader, ref ChatNotificationPlayer, "チャット通知音"))
+            if (TryReplaceAudio(path, ref createChatNotificationReader, "チャット通知音"))
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatNotificationAudioPath, path);
         }
 
@@ -842,7 +1273,7 @@ namespace JTSA.Panels
             var path = SelectAudioFile();
             if (path == null) return;
 
-            if (TryReplaceAudio(path, ref JoinChatReader, ref JoinChatPlayer, "チャット参加音"))
+            if (TryReplaceAudio(path, ref createJoinChatReader, "チャット参加音"))
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.JoinChatAudioPath, path);
         }
 
@@ -864,13 +1295,10 @@ namespace JTSA.Panels
                 DAO_Setting.SettingName.ChatNotificationAudioPath)?.Value;
 
             if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
-                TryReplaceAudio(path, ref ChatNotificationReader, ref ChatNotificationPlayer, "チャット通知音", false))
+                TryReplaceAudio(path, ref createChatNotificationReader, "チャット通知音", false))
                 return;
 
-            ReplaceWithDefaultAudio(
-                new WaveFileReader(Properties.Resources.CommentNotification),
-                ref ChatNotificationReader,
-                ref ChatNotificationPlayer);
+            createChatNotificationReader = () => new WaveFileReader(Properties.Resources.CommentNotification);
         }
 
         private void LoadJoinChatAudio()
@@ -879,59 +1307,31 @@ namespace JTSA.Panels
                 DAO_Setting.SettingName.JoinChatAudioPath)?.Value;
 
             if (!string.IsNullOrWhiteSpace(path) && File.Exists(path) &&
-                TryReplaceAudio(path, ref JoinChatReader, ref JoinChatPlayer, "チャット参加音", false))
+                TryReplaceAudio(path, ref createJoinChatReader, "チャット参加音", false))
                 return;
 
-            ReplaceWithDefaultAudio(
-                new WaveFileReader(Properties.Resources.JoinChat),
-                ref JoinChatReader,
-                ref JoinChatPlayer);
+            createJoinChatReader = () => new WaveFileReader(Properties.Resources.JoinChat);
         }
 
         private static bool TryReplaceAudio(
             string path,
-            ref WaveStream? reader,
-            ref WaveOutEvent? player,
+            ref Func<WaveStream> createReader,
             string audioName,
             bool showError = true)
         {
-            AudioFileReader? newReader = null;
-            WaveOutEvent? newPlayer = null;
             try
             {
-                newReader = new AudioFileReader(path);
-                newPlayer = new WaveOutEvent();
-                newPlayer.Init(newReader);
-
-                player?.Stop();
-                player?.Dispose();
-                reader?.Dispose();
-                reader = newReader;
-                player = newPlayer;
+                // ファイル選択時にはデコードのみ確認し、出力デバイスは開かない。
+                using var reader = new AudioFileReader(path);
+                createReader = () => new AudioFileReader(path);
                 return true;
             }
             catch (Exception ex)
             {
-                newPlayer?.Dispose();
-                newReader?.Dispose();
                 if (showError)
                     MessageBox.Show($"{audioName}を読み込めませんでした。\n{ex.GetBaseException().Message}", "音声ファイル変更");
                 return false;
             }
-        }
-
-        private static void ReplaceWithDefaultAudio(
-            WaveStream newReader,
-            ref WaveStream? reader,
-            ref WaveOutEvent? player)
-        {
-            var newPlayer = new WaveOutEvent();
-            newPlayer.Init(newReader);
-            player?.Stop();
-            player?.Dispose();
-            reader?.Dispose();
-            reader = newReader;
-            player = newPlayer;
         }
 
         /// <summary>  </summary>

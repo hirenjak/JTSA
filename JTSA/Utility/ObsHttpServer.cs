@@ -9,17 +9,20 @@ public class ObsHttpServer
     private readonly Func<string> jsonProvider;
     private readonly Func<string> chatHtmlProvider;
     private readonly Func<string> chatJsonProvider;
+    private readonly Func<string> participationJsonProvider;
 
     public ObsHttpServer(
         Func<string> htmlProvider,
         Func<string> jsonProvider,
         Func<string> chatHtmlProvider,
-        Func<string> chatJsonProvider)
+        Func<string> chatJsonProvider,
+        Func<string>? participationJsonProvider = null)
     {
         this.htmlProvider = htmlProvider;
         this.jsonProvider = jsonProvider;
         this.chatHtmlProvider = chatHtmlProvider;
         this.chatJsonProvider = chatJsonProvider;
+        this.participationJsonProvider = participationJsonProvider ?? (() => "{\"playing\":[],\"waiting\":[]}");
 
         listener.Prefixes.Add("http://localhost:8026/");
     }
@@ -46,11 +49,26 @@ public class ObsHttpServer
             return;
         }
 
+        if (path == "/expansion-clips-ready")
+        {
+            StartExpansionClip(ctx);
+            return;
+        }
+
         string text;
         string contentType;
 
         switch (path)
         {
+            case "/participants":
+                text = JTSA.Utility.ParticipationOverlay.CreateHtml();
+                contentType = "text/html";
+                break;
+            case "/participants-data":
+                text = participationJsonProvider();
+                contentType = "application/json";
+                ctx.Response.AddHeader("Cache-Control", "no-store");
+                break;
             case "/":
             case "/chat":
                 text = chatHtmlProvider();
@@ -70,6 +88,19 @@ public class ObsHttpServer
             case "/data":
                 text = jsonProvider();
                 contentType = "application/json";
+                break;
+
+            case "/expansion-clips":
+                text = JTSA.Utility.StreamExpansionClipOverlay.CreateHtml();
+                contentType = "text/html";
+                ctx.Response.AddHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+                ctx.Response.AddHeader("Pragma", "no-cache");
+                break;
+
+            case "/expansion-clips-data":
+                text = JTSA.Utility.StreamExpansionClipOverlay.CreateJson();
+                contentType = "application/json";
+                ctx.Response.AddHeader("Cache-Control", "no-store");
                 break;
 
             case "/expansion":
@@ -95,6 +126,31 @@ public class ObsHttpServer
 
         ctx.Response.OutputStream.Write(bytes);
         ctx.Response.Close();
+    }
+
+    private static void StartExpansionClip(HttpListenerContext ctx)
+    {
+        try
+        {
+            var id = ctx.Request.QueryString["id"] ?? string.Empty;
+            if (!JTSA.Utility.StreamExpansionClipOverlay.TryStart(id))
+            {
+                ctx.Response.StatusCode = 404;
+            }
+            else
+            {
+                JTSA.Utility.StreamExpansionClipAudioPlayer.StartPrepared();
+                ctx.Response.StatusCode = 204;
+            }
+        }
+        catch
+        {
+            ctx.Response.StatusCode = 500;
+        }
+        finally
+        {
+            ctx.Response.Close();
+        }
     }
 
     private static void WriteExpansionImage(HttpListenerContext ctx)

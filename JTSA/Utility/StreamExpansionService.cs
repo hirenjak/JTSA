@@ -6,7 +6,7 @@ using System.Windows;
 
 namespace JTSA.Utility;
 
-internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart }
+internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart, Hourly, ScheduledTime, AdStart, AdEnd, AdUpcoming }
 
 internal sealed record StreamExpansionChatUserContext(
     bool IsBroadcaster,
@@ -222,6 +222,21 @@ internal sealed class StreamExpansionService
             case StreamExpansionTriggerType.FirstChat:
                 return rule.IsFirstChat;
 
+            case StreamExpansionTriggerType.ScheduledTime:
+                return rule.IsScheduledTime &&
+                    rule.ScheduledHour is >= 0 and <= 23 &&
+                    rule.ScheduledMinute is >= 0 and <= 55 && rule.ScheduledMinute % 5 == 0 &&
+                    value == FormattableString.Invariant($"{rule.ScheduledHour:00}:{rule.ScheduledMinute:00}");
+
+            case StreamExpansionTriggerType.AdStart:
+                return rule.IsAdStart;
+            case StreamExpansionTriggerType.AdEnd:
+                return rule.IsAdEnd;
+            case StreamExpansionTriggerType.AdUpcoming:
+                return rule.IsAdUpcoming && int.TryParse(value, out var minutes) && rule.AdAdvanceMinutes == minutes;
+            case StreamExpansionTriggerType.Hourly:
+                return rule.IsHourly;
+
             case StreamExpansionTriggerType.Follow:
                 return rule.IsFollow;
 
@@ -321,6 +336,21 @@ internal sealed class StreamExpansionService
                     accessToken);
                 break;
 
+            case "ObsClip":
+                try
+                {
+                    var login = item.Content.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)
+                        ? GetSelectedAccountContext().Login
+                        : StreamExpansionPlaceholderReplacer.Replace(
+                            item.Content, raidPlaceholders, chatPlaceholders, triggerValues);
+                    await StreamExpansionClipService.PlayAsync(login, accessToken);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"クリップ再生失敗：{ex.GetBaseException().Message}");
+                }
+                break;
+
             case "ObsText":
                 try
                 {
@@ -356,16 +386,22 @@ internal sealed class StreamExpansionService
         }).Task.Unwrap();
     }
 
-    private static (string BroadcasterId, string AccessToken) GetSelectedAccountContext()
+    private static (string BroadcasterId, string AccessToken, string Login) GetSelectedAccountContext()
     {
         var application = Application.Current;
         if (application?.Dispatcher == null)
-            return (string.Empty, string.Empty);
+            return (string.Empty, string.Empty, string.Empty);
 
         return application.Dispatcher.Invoke(() =>
-            application.MainWindow is MainWindow mainWindow
-                ? mainWindow.ChatPanel.GetConnectedAccountContext()
-                : (string.Empty, string.Empty));
+        {
+            if (application.MainWindow is not MainWindow mainWindow)
+                return (string.Empty, string.Empty, string.Empty);
+            var connected = mainWindow.ChatPanel.GetConnectedAccountContext();
+            var account = mainWindow.SelectedTargetAccountId is long accountId
+                ? DAO_TwitchAccount.SelectById(accountId)
+                : DAO_TwitchAccount.SelectPrimary();
+            return (connected.BroadcasterId, connected.AccessToken, account?.UserName ?? JTSAHelper.LoginName);
+        });
     }
 
 
@@ -420,6 +456,7 @@ internal sealed class StreamExpansionService
 
     private static string ToTriggerName(StreamExpansionTriggerType type) => type switch
     {
+        StreamExpansionTriggerType.ScheduledTime => "scheduled_time",
         StreamExpansionTriggerType.FirstChat => "first_chat",
         StreamExpansionTriggerType.ChannelPoint => "channel_point",
         StreamExpansionTriggerType.ObsStreamStart => "obs_stream_start",
@@ -450,4 +487,11 @@ internal sealed class StreamExpansionService
     }
 
     internal Task PlayAudioPreviewAsync(string path, int volume) => PlayAudioAsync(path, volume);
+
+    internal Task PlayClipPreviewAsync(string login)
+    {
+        var account = GetSelectedAccountContext();
+        if (login.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)) login = account.Login;
+        return StreamExpansionClipService.PlayAsync(login, account.AccessToken);
+    }
 }

@@ -1,4 +1,5 @@
-﻿using JTSA.Models;
+using JTSA.Models;
+using System.Windows;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace JTSA.Forms
 {
     public class PlaylistHeaderForm : INotifyPropertyChanged
     {
+        public bool IsReadOnly { get; set; }
+        public Visibility DeleteVisibility => IsReadOnly ? Visibility.Collapsed : Visibility.Visible;
         private string gamePlayListName = string.Empty;
 
         public required long GamePlayListId { get; set; }

@@ -17,6 +17,7 @@ public sealed record StreamExpansionTriggerValues(
 
 public static class StreamExpansionPlaceholderReplacer
 {
+    public const string CurrentTimePlaceholder = "{current_time}";
     public const string RaidUserPlaceholder = "{raid_user}";
     public const string RaidTitlePlaceholder = "{raid_title}";
     public const string RaidCategoryPlaceholder = "{raid_category}";
@@ -40,7 +41,10 @@ public static class StreamExpansionPlaceholderReplacer
         ChatPlaceholderValues? chat = null,
         StreamExpansionTriggerValues? trigger = null)
     {
+        // Use the PC's local time when the action executes (after any configured delay).
+        var currentTime = DateTime.Now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
         content = content
+            .Replace(CurrentTimePlaceholder, currentTime, StringComparison.OrdinalIgnoreCase)
             .Replace(RaidUserPlaceholder, raid?.UserName ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(RaidTitlePlaceholder, raid?.Title ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(RaidCategoryPlaceholder, raid?.Category ?? string.Empty, StringComparison.OrdinalIgnoreCase);

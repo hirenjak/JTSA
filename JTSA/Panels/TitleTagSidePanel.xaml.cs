@@ -21,6 +21,8 @@ namespace JTSA.Panels
         /// <summary>  </summary>
         public ObservableCollection<TitleTagForm> TitleTagFormList { get; } = new();
         private TextBox TitleTextTagAddTextBox = null!;
+        private bool isHandlingSelection;
+        private bool isReloadingTitleTags;
 
 
         /// <summary>
@@ -86,21 +88,35 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void TitleTagListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (TitleTagListBox.SelectedItem is TitleTagForm selectedItem)
+            // Clear/Add と選択解除で同期的に発生するイベントは処理しない。
+            if (isHandlingSelection || isReloadingTitleTags) return;
+
+            isHandlingSelection = true;
+            try
             {
+                if (TitleTagListBox.SelectedItem is not TitleTagForm selectedItem) return;
+                if (!TitleTagFormList.Contains(selectedItem)) return;
+
+                if (!selectedItem.IsSystem && !DAO_TitleTag.UpdateLastUse(selectedItem.Id))
+                {
+                    ReloadTitleTag();
+                    return;
+                }
+
                 if (InsertRequested is not null)
                     InsertRequested(selectedItem.Placeholder);
                 else
                     mainWindow.InsertTextAtCaret(selectedItem.Placeholder);
                 if (!selectedItem.IsSystem)
                 {
-                    DAO_TitleTag.UpdateLastUse(selectedItem.Id);
                     ReloadTitleTag();
                 }
             }
-
-            // 選択状態を解除
-            TitleTagListBox.SelectedItem = null;
+            finally
+            {
+                TitleTagListBox.SelectedItem = null;
+                isHandlingSelection = false;
+            }
         }
 
         /// <summary>
@@ -138,7 +154,15 @@ namespace JTSA.Panels
                 DAO_TitleTag.Delete(item.Id);
             }
 
+            ReloadTitleTagsAfterChange();
+        }
+
+        private void ReloadTitleTagsAfterChange()
+        {
             ReloadTitleTag();
+            // Calendar registration has its own list, but edits affect the shared tag database.
+            if (!ReferenceEquals(this, mainWindow.TitleTagSidePanel))
+                mainWindow.TitleTagSidePanel.ReloadTitleTag();
         }
 
 
@@ -160,6 +184,22 @@ namespace JTSA.Panels
         /// </summary>
         public void ReloadTitleTag()
         {
+            if (isReloadingTitleTags) return;
+
+            isReloadingTitleTags = true;
+            try
+            {
+                TitleTagListBox.SelectedItem = null;
+                ReloadTitleTagCore();
+            }
+            finally
+            {
+                isReloadingTitleTags = false;
+            }
+        }
+
+        private void ReloadTitleTagCore()
+        {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "タイトルタグリスト再読み込み");
 
             // DB接続と初期化処理
@@ -178,6 +218,13 @@ namespace JTSA.Panels
                 Placeholder = "${date}",
                 IsSystem = true,
                 DisplayName = "今日の日付（yyyy/MM/dd）",
+                LastUsedDate = string.Empty
+            });
+            TitleTagFormList.Add(new()
+            {
+                Placeholder = "${date, yyyy年mm月dd日}",
+                IsSystem = true,
+                DisplayName = "今日の日付（形式指定可：yyyy年mm月dd日）",
                 LastUsedDate = string.Empty
             });
             TitleTagFormList.Add(new()
@@ -247,7 +294,7 @@ namespace JTSA.Panels
             );
 
             // 再読み込み処理
-            ReloadTitleTag();
+            ReloadTitleTagsAfterChange();
 
             mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }

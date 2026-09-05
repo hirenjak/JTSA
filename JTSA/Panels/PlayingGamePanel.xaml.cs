@@ -1,4 +1,4 @@
-﻿using JTSA.Dao;
+using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
@@ -47,6 +47,16 @@ namespace JTSA.Panels
         public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
 
         private ObsHttpServer? server;
+        private const long RecentPlaylistId = -1;
+        private bool IsRecentPlaylist => CurrentGamePlaylistId == RecentPlaylistId;
+        private readonly PlaylistHeaderForm recentHeader = new()
+        {
+            GamePlayListId = RecentPlaylistId, GamePlayListName = "現在のゲーム・最近の履歴",
+            LastUsedDate = "自動更新・過去5件", ImageUrl = "", IsLoaded = true, IsReadOnly = true
+        };
+        private readonly System.Windows.Threading.DispatcherTimer recentTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+        private string recentSignature = "";
+        private int itemReloadVersion;
 
 
         /// <summary>
@@ -62,9 +72,13 @@ namespace JTSA.Panels
                 CreateObsHtml,
                 CreateObsJson,
                 () => mainWindow.ChatPanel.CreateObsChatHtml(),
-                () => mainWindow.ChatPanel.CreateObsChatJson());
+                () => mainWindow.ChatPanel.CreateObsChatJson(),
+                () => mainWindow.ChatPanel.CreateObsParticipationJson());
 
             _ = server.StartAsync();
+            recentTimer.Tick += (_, _) => { if (IsRecentPlaylist) RefreshRecentPlaylist(); };
+            recentTimer.Start();
+            mainWindow.Closed += (_, _) => recentTimer.Stop();
         }
 
         private CompositeCollection CreatePlaylistItemsSource()
@@ -117,6 +131,7 @@ namespace JTSA.Panels
 
             return new CompositeCollection
             {
+                recentHeader,
                 addListItem,
                 new CollectionContainer { Collection = playlistHeaderFormList }
             };
@@ -146,6 +161,7 @@ namespace JTSA.Panels
 
         private void AddCategoryCardButton_Click(object sender, RoutedEventArgs e)
         {
+            if (IsRecentPlaylist) return;
             var window = new PlaylistCategorySelectionWindow
             {
                 Owner = Window.GetWindow(this)
@@ -183,6 +199,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void ImageItem_Click(object sender, MouseButtonEventArgs e)
         {
+            if (IsRecentPlaylist) return;
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
             {
                 item.Status =
@@ -204,6 +221,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
+            if (IsRecentPlaylist) return;
             e.Handled = true;
 
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
@@ -223,6 +241,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private async void ImageItem_RightClick(object sender, MouseButtonEventArgs e)
         {
+            if (IsRecentPlaylist) return;
             e.Handled = true;
 
             if (((FrameworkElement)sender).DataContext is PlaylistItemForm item)
@@ -274,7 +293,7 @@ namespace JTSA.Panels
         private void GamePlaylistDeleteButton_Click(object sender, RoutedEventArgs e)
         {
             // ボタンのDataContextから削除対象を取得
-            if ((sender as Button)?.DataContext is PlaylistHeaderForm item)
+            if ((sender as Button)?.DataContext is PlaylistHeaderForm { IsReadOnly: false } item)
             {
                 DAO_GamePlaylist.DeleteGamePlayList(item.GamePlayListId);
             }
@@ -292,6 +311,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void GamePlayListTitleEdit_LostFocus(object sender, RoutedEventArgs e)
         {
+            if (IsRecentPlaylist) return;
             var currentHeader = FormConvertToPlaylistHeader();
             DAO_GamePlaylist.InsertUpdate(currentHeader);
 
@@ -375,6 +395,7 @@ namespace JTSA.Panels
         /// </summary>
         public void UpdatePlaylistData()
         {
+            if (IsRecentPlaylist) return;
             // データ作成
             var insertPlaylistHeader = FormConvertToPlaylistHeader();
             var insertPlaylistItemList = FormConvertToPlalistItemList(insertPlaylistHeader.GamePlayListId);
@@ -481,6 +502,8 @@ namespace JTSA.Panels
                 });
             }
 
+            if (IsRecentPlaylist) return;
+
             // 画面に何も設定されていないかの確認
             if (CurrentGamePlaylistId == 0)
             {
@@ -507,6 +530,15 @@ namespace JTSA.Panels
         /// <returns></returns>
         public async void ReloadGamePlaylistItem()
         {
+            var version = ++itemReloadVersion;
+            GamePlayListTitleEdit.IsReadOnly = IsRecentPlaylist;
+            ImageItemsControl.ItemsSource = IsRecentPlaylist ? playlistItemFormList : CreatePlaylistItemsSource();
+            if (IsRecentPlaylist)
+            {
+                recentSignature = "";
+                RefreshRecentPlaylist();
+                return;
+            }
             //　リストの初期化
             playlistItemFormList.Clear();
 
@@ -516,10 +548,12 @@ namespace JTSA.Panels
             //
             foreach (var game in gamePlayListItems)
             {
+                var imageUrl = await ResolveThumbnailUrlByCategoryIdAsync(game.CategoryId);
+                if (version != itemReloadVersion) return;
                 playlistItemFormList.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
-                    ImageUrl = await ResolveThumbnailUrlByCategoryIdAsync(game.CategoryId),
+                    ImageUrl = imageUrl,
                     Status = (GameStatus)game.Status
                 });
             }
@@ -531,6 +565,40 @@ namespace JTSA.Panels
         /// サムネイルは再読み込み時にカテゴリから解決するため、ここでは受け取らない。
         /// </summary>
         /// <param name="categoryId">追加するカテゴリID</param>
+        private void RefreshRecentPlaylist()
+        {
+            try
+            {
+                using var db = new AppDbContext();
+                var currentId = mainWindow.CurrentCategoryId;
+                var history = db.T_TitleText.OrderByDescending(x => x.Id)
+                    .Select(x => new { x.CategoryId, x.CategoryName, x.CategoryBoxArtUrl }).ToList();
+                var ids = RecentGamePlaylist.SelectCategoryIds(currentId, history.Select(x => x.CategoryId));
+                var items = ids.Select(id =>
+                {
+                    var category = DAO_Category.SelectOneById(id);
+                    var entry = history.FirstOrDefault(x => x.CategoryId == id);
+                    return new PlaylistItemForm
+                    {
+                        CategoryId = id, IsReadOnly = true,
+                        DisplayLabel = id == currentId ? "現在：" + mainWindow.CurrentCategoryName : entry?.CategoryName ?? category?.DisplayName ?? id,
+                        ImageUrl = ResolveThumbnailUrl(category?.SteamHeaderArtUrl,
+                            category?.BoxArtUrl ?? entry?.CategoryBoxArtUrl ?? ""),
+                        Status = id == currentId ? GameStatus.Playing : GameStatus.None
+                    };
+                }).ToList();
+                var signature = JsonSerializer.Serialize(items.Select(x => new { x.CategoryId, x.ImageUrl, x.DisplayLabel, x.Status }));
+                if (signature == recentSignature) return;
+                recentSignature = signature;
+                playlistItemFormList.Clear();
+                foreach (var item in items) playlistItemFormList.Add(item);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"最近のゲーム一覧取得失敗：{ex.Message}");
+            }
+        }
+
         public void AddPlaylistItem(string categoryId)
         {
             AddGamePlaylistItem(categoryId);
@@ -540,6 +608,7 @@ namespace JTSA.Panels
 
         public void AddGamePlaylistItem(string categoryId)
         {
+            if (IsRecentPlaylist) return;
             var insertList = new List<T_GamePlaylistItem>();
             insertList.Add(new T_GamePlaylistItem()
             {
@@ -562,29 +631,18 @@ namespace JTSA.Panels
         /// <returns></returns>
         private string CreateObsJson()
         {
-            string title = "";
-            bool showTitle = false;
-
-            Dispatcher.Invoke(() =>
+            // Snapshot on the UI thread: the automatic list can refresh during an OBS request.
+            return Dispatcher.Invoke(() => JsonSerializer.Serialize(new
             {
-                title = CurrentGamePlaylistName;
-                showTitle =  true;
-            });
-
-            var obj = new
-            {
-                showTitle,
-                title,
+                showTitle = true,
+                title = CurrentGamePlaylistName,
                 items = playlistItemFormList.Select(x => new
                 {
                     imageUrl = x.ImageUrl,
-                    status = x.Status.ToString(),
+                    status = x.Status.ToString()
                 }).ToList()
-            };
-
-            return JsonSerializer.Serialize(obj);
+            }));
         }
-
 
         /// <summary>
         /// OBS用HTML作成
@@ -635,16 +693,18 @@ namespace JTSA.Panels
                 .imageItem {
                     position: relative;
                     display: inline-block;
+                    width: 230px;
+                    height: 107px;
                     overflow: hidden;
                     flex-shrink: 0;
                 }
 
                 .imageItem img {
                     display: block;
-                    width: auto;
-                    height: auto;
-                    max-width: 230px;
-                    max-height: 107px;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    object-position: center;
                 }
 
                 .completeText {

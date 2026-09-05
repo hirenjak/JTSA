@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="JTSA.Panels.ChatPanel"
+<UserControl x:Class="JTSA.Panels.ChatPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -8,6 +8,20 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
+        <Style x:Key="ParticipationInputStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="LightGray"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding UserInput}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UserInput}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <BooleanToVisibilityConverter x:Key="OverlaySettingsVisibilityConverter"/>
         <Style x:Key="OverviewPrimaryButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#FF285653"/>
@@ -29,12 +43,14 @@
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static local:ChatPanel.AddFriendCommand}"
                         Executed="AddChatUserToFriendCommand_Executed"/>
+        <CommandBinding Command="{x:Static local:ChatPanel.AddParticipationCommand}"
+                        Executed="AddChatUserToParticipation_Executed"/>
     </UserControl.CommandBindings>
     <Grid
         Margin="8, 4, 8, 0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition x:Name="ChatUserListColumn" Width="260"/>
+            <ColumnDefinition x:Name="ParticipationManagementColumn" Width="0"/><ColumnDefinition x:Name="ChatUserListColumn" Width="210"/>
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -45,21 +61,68 @@
 
         <StackPanel 
             Grid.Row="0"
-            Grid.ColumnSpan="2">
+            Grid.Column="0">
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="390"/>
-                    <ColumnDefinition Width="350"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <Border Grid.Column="0" Margin="0,0,0,8" Padding="4,2,4,4"
-                        Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1" CornerRadius="0">
-                    <Grid>
-                        <TextBlock Text="オーバーレイ設定" Foreground="LightGray" FontSize="10"
-                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                        <Grid Margin="0,14,0,0">
+<StackPanel>
+<Grid Margin="0,0,0,8">
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <StackPanel Grid.Column="0" Orientation="Horizontal"><ToggleButton x:Name="OverlaySettingsToggleButton"
+                                      Content="オーバーレイ設定 ☰" IsChecked="False"
+                                      Height="22" Padding="8,0" FontSize="11"
+                                      HorizontalAlignment="Left" Cursor="Hand"
+                                      Foreground="White" Background="#FF565656"
+                                      BorderBrush="#FF777777" BorderThickness="1"
+                                      ToolTip="オーバーレイ設定を表示／非表示にします">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="HeaderBorder" Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="0" SnapsToDevicePixels="True">
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="HeaderBorder" Property="Background" Value="#FF464646"/>
+                                            <Setter TargetName="HeaderBorder" Property="BorderBrush" Value="#FF555555"/>
+                                            <Setter TargetName="HeaderBorder" Property="BorderThickness" Value="1,1,1,0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton><ToggleButton x:Name="NotificationSettingsToggleButton"
+                                      Content="通知音設定 ☰" IsChecked="False"
+                                      Height="22" Margin="8,0,0,0" Padding="8,0" FontSize="11"
+                                      HorizontalAlignment="Left" Cursor="Hand"
+                                      Foreground="White" Background="#FF565656"
+                                      BorderBrush="#FF777777" BorderThickness="1"
+                                      Template="{Binding Template, ElementName=OverlaySettingsToggleButton}"
+                                      ToolTip="通知音量・参加音量の設定を表示／非表示にします"/>
+    </StackPanel>
+    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="ParticipationManagementToggleButton"
+                                Content="参加型管理 ＞" Margin="8,0,0,0" Padding="8,0"
+                                Height="22" VerticalAlignment="Top"
+                                Style="{StaticResource OverviewSecondaryButtonStyle}"
+                                ToolTip="参加管理エリアとOBSの参加一覧を表示／非表示にします"
+                                Click="ParticipationManagementToggleButton_Click"/>
+                        <Button Margin="8,0,0,0"
+                        x:Name="ChatUserListToggleButton"
+                        Visibility="Collapsed"
+                        Content="ユーザー一覧 ＞"
+                        ToolTip="ユーザー一覧を表示／非表示にします"
+                        Padding="8,0"
+                        Height="22"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                        Click="ChatUserListToggleButton_Click"/></StackPanel>
+</Grid>
+<WrapPanel Margin="0,0,0,8"><Grid Width="380" Margin="0,6,0,0"
+                              Visibility="{Binding IsChecked, ElementName=OverlaySettingsToggleButton, Converter={StaticResource OverlaySettingsVisibilityConverter}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="136"/>
                                 <ColumnDefinition Width="*"/>
@@ -104,11 +167,8 @@
                                 <CheckBox x:Name="IsStartShowChatOverlayDisp"
                                           Content="アプリ開始時表示" Foreground="White" Margin="0,7,0,0"/>
                             </StackPanel>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        </Grid><StackPanel Width="332" Margin="0,6,0,0"
+                                    Visibility="{Binding IsChecked, ElementName=NotificationSettingsToggleButton, Converter={StaticResource OverlaySettingsVisibilityConverter}}">
 
                     <StackPanel 
                         Orientation="Horizontal">
@@ -151,19 +211,8 @@
                                 Click="JoinChatAudioChangeButton_Click"/>
                     </StackPanel>
 
-                </StackPanel>
-
-                <Button Grid.Column="2"
-                        x:Name="ChatUserListToggleButton"
-                        Content="ユーザー一覧を隠す"
-                        Width="136"
-                        Height="28"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Style="{StaticResource OverviewSecondaryButtonStyle}"
-                        Click="ChatUserListToggleButton_Click"/>
-
-            </Grid>
+                </StackPanel></WrapPanel>
+</StackPanel>
             
             <!-- チャット送信部 -->
             <Grid
@@ -406,10 +455,122 @@
 
         </StackPanel>
 
+        <Border x:Name="ParticipationManagementPanel" Visibility="Collapsed" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Margin="8,0,0,0"
+                Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1">
+            <DockPanel Margin="8">
+                <StackPanel DockPanel.Dock="Top">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="1" Content="更新" Click="ReloadParticipationRewards" Width="44" Margin="5,0,0,0"
+                                ToolTip="チャネポ一覧を更新" Style="{StaticResource OverviewSecondaryButtonStyle}"/>
+                        <Button Grid.Column="2" Content="×" Width="24" Height="22" Margin="4,0,0,0"
+                                VerticalAlignment="Center"
+                                ToolTip="参加型管理を閉じる" AutomationProperties.Name="参加型管理を閉じる"
+                                Style="{StaticResource OverviewDeleteButtonStyle}"
+                                Click="ParticipationManagementToggleButton_Click"/>
+                        <ComboBox Grid.Column="0" x:Name="ParticipationRewardComboBox" DisplayMemberPath="Title" SelectedValuePath="Id"
+                                  SelectionChanged="ParticipationReward_Changed"/>
+                    </Grid>
+                    <Grid Margin="0,4,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Content="試合－" Tag="-1" Click="AdjustParticipationCount_Click" Padding="4,0"
+                                ToolTip="現在一緒にやっている人全員の試合数を1減らす" Style="{StaticResource OverviewSecondaryButtonStyle}"/>
+                        <Button Grid.Column="1" Content="試合＋" Tag="1" Click="AdjustParticipationCount_Click" Margin="4,0" Padding="4,0"
+                                ToolTip="現在一緒にやっている人全員の試合数を1増やす" Style="{StaticResource OverviewSecondaryButtonStyle}"/>
+                        <Button Grid.Column="2" Content="一覧リセット" ToolTip="参加者一覧と保存済みの参加回数を全員リセット" Click="ClearParticipation_Click" Style="{StaticResource OverviewSecondaryButtonStyle}"/>
+                    </Grid>
+                </StackPanel>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Margin="0,4,0,6">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                            <TextBox x:Name="ParticipationSlotCountTextBox" Width="36" MaxLength="3" VerticalContentAlignment="Center"
+                                     TextAlignment="Right" ToolTip="枠数（0～999）。空欄は未設定" TextChanged="ParticipationSlotCount_Changed"/>
+                            <TextBlock Text="枠" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding PlayingParticipationUsers.Count, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}, StringFormat=プレイ中 ({0})}"
+                                   Foreground="LightCoral" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    </DockPanel>
+                <ListBox AllowDrop="True" PreviewMouseLeftButtonDown="Participation_PreviewMouseLeftButtonDown" PreviewMouseMove="Participation_PreviewMouseMove" PreviewDragOver="Participation_DragOver" Drop="Participation_Drop" ToolTip="ドラッグで移動・並べ替え" Grid.Row="1" ItemsSource="{Binding PlayingParticipationUsers, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}}" Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,1">
+                                <DockPanel.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="参加待ちに戻す" Click="ReturnParticipation_Click"/><Separator/>
+                                        <MenuItem Header="試合数を1増やす" Tag="1" Click="AdjustIndividualParticipationCount_Click"/>
+                                        <MenuItem Header="試合数を1減らす" Tag="-1" Click="AdjustIndividualParticipationCount_Click"/>
+                                    </ContextMenu>
+                                </DockPanel.ContextMenu>
+                                <Button DockPanel.Dock="Right" Content="×" ToolTip="参加者から外す" Click="RemoveParticipation_Click"
+                                        Style="{StaticResource OverviewDeleteButtonStyle}" Width="24"/>
+                                <Ellipse DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Top">
+                                    <Ellipse.Fill>
+                                        <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding RedeemedAt, StringFormat={}{0:HH:mm}}" Foreground="LightSeaGreen" FontSize="11"/>
+                                        <TextBlock Text="{Binding MatchCount, StringFormat={}{0}試合参加済み}" Foreground="LightSeaGreen" FontSize="11" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding UserInput}" Style="{StaticResource ParticipationInputStyle}"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                    <TextBlock Grid.Row="2" Text="{Binding ParticipationUsers.Count, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}, StringFormat=参加待ち ({0})}"
+                               Foreground="White" FontWeight="SemiBold" Margin="0,8,0,6"/>
+                <ListBox AllowDrop="True" PreviewMouseLeftButtonDown="Participation_PreviewMouseLeftButtonDown" PreviewMouseMove="Participation_PreviewMouseMove" PreviewDragOver="Participation_DragOver" Drop="Participation_Drop" ToolTip="ドラッグで移動・並べ替え" Grid.Row="3" ItemsSource="{Binding ParticipationUsers, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}}" Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,1"><DockPanel.ContextMenu>
+<ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+<MenuItem Header="一緒にプレイする" Click="StartParticipation_Click"/>
+</ContextMenu>
+</DockPanel.ContextMenu>
+                                <Button DockPanel.Dock="Right" Content="×" ToolTip="参加者から外す" Click="RemoveParticipation_Click"
+                                        Style="{StaticResource OverviewDeleteButtonStyle}" Width="24"/>
+                                <Ellipse DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Top">
+                                    <Ellipse.Fill>
+                                        <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding RedeemedAt, StringFormat={}{0:HH:mm}}" Foreground="LightSeaGreen" FontSize="11"/>
+                                        <TextBlock Text="{Binding ParticipationCount, StringFormat=参加 {0}回}" Foreground="LightSeaGreen" FontSize="11" Margin="8,0,0,0"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding UserInput}" Style="{StaticResource ParticipationInputStyle}"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                </Grid>
+            </DockPanel>
+        </Border>
+
         <!-- この配信中に発言したユーザー。最新発言者を先頭に表示する。 -->
-        <Border Grid.Row="1"
-                Grid.RowSpan="2"
-                Grid.Column="1"
+        <Border Grid.Row="0"
+                Grid.RowSpan="3"
+                Grid.Column="2"
                 x:Name="ChatUserListPanel"
                 Margin="8,0,0,0"
                 Background="#FF303030"
@@ -421,13 +582,20 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0"
+                <DockPanel Grid.Row="0" Margin="10,0,6,0">
+                    <Button DockPanel.Dock="Right" Content="×" Width="24" Height="22"
+                            VerticalAlignment="Center" Margin="4,0,0,0"
+                            ToolTip="ユーザー一覧を閉じる" AutomationProperties.Name="ユーザー一覧を閉じる"
+                            Style="{StaticResource OverviewDeleteButtonStyle}"
+                            Click="ChatUserListToggleButton_Click"/>
+                <TextBlock
                            Text="{Binding ChatUserFormList.Count, StringFormat=チャットユーザー ({0})}"
                            Foreground="White"
                            FontSize="14"
                            FontWeight="SemiBold"
-                           Margin="10,0"
+                           TextTrimming="CharacterEllipsis"
                            VerticalAlignment="Center"/>
+                </DockPanel>
 
                 <ListBox Grid.Row="1"
                          ItemsSource="{Binding ChatUserFormList}"
@@ -445,6 +613,8 @@
                             <StackPanel>
                                 <StackPanel.ContextMenu>
                                     <ContextMenu Opened="ChatUserContextMenu_Opened">
+                                        <MenuItem Header="参加待ちに追加"
+                                                  Command="{x:Static local:ChatPanel.AddParticipationCommand}"/>
                                         <MenuItem Header="フレンドに追加"
                                                   Command="{x:Static local:ChatPanel.AddFriendCommand}"/>
                                     </ContextMenu>
