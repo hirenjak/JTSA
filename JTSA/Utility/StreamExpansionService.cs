@@ -336,6 +336,21 @@ internal sealed class StreamExpansionService
                     accessToken);
                 break;
 
+            case "ObsClip":
+                try
+                {
+                    var login = item.Content.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)
+                        ? GetSelectedAccountContext().Login
+                        : StreamExpansionPlaceholderReplacer.Replace(
+                            item.Content, raidPlaceholders, chatPlaceholders, triggerValues);
+                    await StreamExpansionClipService.PlayAsync(login, accessToken);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"クリップ再生失敗：{ex.GetBaseException().Message}");
+                }
+                break;
+
             case "ObsText":
                 try
                 {
@@ -371,16 +386,22 @@ internal sealed class StreamExpansionService
         }).Task.Unwrap();
     }
 
-    private static (string BroadcasterId, string AccessToken) GetSelectedAccountContext()
+    private static (string BroadcasterId, string AccessToken, string Login) GetSelectedAccountContext()
     {
         var application = Application.Current;
         if (application?.Dispatcher == null)
-            return (string.Empty, string.Empty);
+            return (string.Empty, string.Empty, string.Empty);
 
         return application.Dispatcher.Invoke(() =>
-            application.MainWindow is MainWindow mainWindow
-                ? mainWindow.ChatPanel.GetConnectedAccountContext()
-                : (string.Empty, string.Empty));
+        {
+            if (application.MainWindow is not MainWindow mainWindow)
+                return (string.Empty, string.Empty, string.Empty);
+            var connected = mainWindow.ChatPanel.GetConnectedAccountContext();
+            var account = mainWindow.SelectedTargetAccountId is long accountId
+                ? DAO_TwitchAccount.SelectById(accountId)
+                : DAO_TwitchAccount.SelectPrimary();
+            return (connected.BroadcasterId, connected.AccessToken, account?.UserName ?? JTSAHelper.LoginName);
+        });
     }
 
 
@@ -466,4 +487,11 @@ internal sealed class StreamExpansionService
     }
 
     internal Task PlayAudioPreviewAsync(string path, int volume) => PlayAudioAsync(path, volume);
+
+    internal Task PlayClipPreviewAsync(string login)
+    {
+        var account = GetSelectedAccountContext();
+        if (login.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)) login = account.Login;
+        return StreamExpansionClipService.PlayAsync(login, account.AccessToken);
+    }
 }

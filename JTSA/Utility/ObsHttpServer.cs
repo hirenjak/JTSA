@@ -49,6 +49,12 @@ public class ObsHttpServer
             return;
         }
 
+        if (path == "/expansion-clips-ready")
+        {
+            StartExpansionClip(ctx);
+            return;
+        }
+
         string text;
         string contentType;
 
@@ -84,6 +90,19 @@ public class ObsHttpServer
                 contentType = "application/json";
                 break;
 
+            case "/expansion-clips":
+                text = JTSA.Utility.StreamExpansionClipOverlay.CreateHtml();
+                contentType = "text/html";
+                ctx.Response.AddHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+                ctx.Response.AddHeader("Pragma", "no-cache");
+                break;
+
+            case "/expansion-clips-data":
+                text = JTSA.Utility.StreamExpansionClipOverlay.CreateJson();
+                contentType = "application/json";
+                ctx.Response.AddHeader("Cache-Control", "no-store");
+                break;
+
             case "/expansion":
                 text = JTSA.Utility.StreamExpansionOverlayService.CreateHtml();
                 contentType = "text/html";
@@ -107,6 +126,31 @@ public class ObsHttpServer
 
         ctx.Response.OutputStream.Write(bytes);
         ctx.Response.Close();
+    }
+
+    private static void StartExpansionClip(HttpListenerContext ctx)
+    {
+        try
+        {
+            var id = ctx.Request.QueryString["id"] ?? string.Empty;
+            if (!JTSA.Utility.StreamExpansionClipOverlay.TryStart(id))
+            {
+                ctx.Response.StatusCode = 404;
+            }
+            else
+            {
+                JTSA.Utility.StreamExpansionClipAudioPlayer.StartPrepared();
+                ctx.Response.StatusCode = 204;
+            }
+        }
+        catch
+        {
+            ctx.Response.StatusCode = 500;
+        }
+        finally
+        {
+            ctx.Response.Close();
+        }
     }
 
     private static void WriteExpansionImage(HttpListenerContext ctx)

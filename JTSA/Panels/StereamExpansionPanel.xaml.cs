@@ -122,6 +122,61 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     private string imageContent = string.Empty;
     private string audioContent = string.Empty;
     private string chatContent = string.Empty;
+    private string clipUserName = string.Empty;
+    private string clipTargetMode = "Disabled";
+    public string ClipUserName
+    {
+        get => clipTargetMode switch
+        {
+            "Disabled" => string.Empty,
+            "SelectedAccount" => "{selected_account}",
+            "ChatUser" => StreamExpansionPlaceholderReplacer.ChatLoginPlaceholder,
+            "TriggerUser" => StreamExpansionPlaceholderReplacer.TriggerValuePlaceholder,
+            _ => clipUserName
+        };
+        set
+        {
+            var target = value?.Trim() ?? string.Empty;
+            clipTargetMode = string.IsNullOrWhiteSpace(target) ? "Disabled"
+                : target.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase) ? "SelectedAccount"
+                : target.Equals(StreamExpansionPlaceholderReplacer.ChatLoginPlaceholder, StringComparison.OrdinalIgnoreCase) ? "ChatUser"
+                : target.Equals(StreamExpansionPlaceholderReplacer.TriggerValuePlaceholder, StringComparison.OrdinalIgnoreCase) ? "TriggerUser"
+                : "Specified";
+            clipUserName = clipTargetMode == "Specified" ? target : string.Empty;
+            NotifyClipTargetChanged();
+        }
+    }
+    public string ClipLoginId
+    {
+        get => clipUserName;
+        set { clipUserName = value ?? string.Empty; Changed(); Changed(nameof(ClipUserName)); Changed(nameof(IsClipConfigured)); }
+    }
+    public bool IsClipDisabled { get => clipTargetMode == "Disabled"; set { if (value) SetClipTargetMode("Disabled"); } }
+    public bool IsClipSelectedAccount { get => clipTargetMode == "SelectedAccount"; set { if (value) SetClipTargetMode("SelectedAccount"); } }
+    public bool IsClipChatUser { get => clipTargetMode == "ChatUser"; set { if (value) SetClipTargetMode("ChatUser"); } }
+    public bool IsClipTriggerUser { get => clipTargetMode == "TriggerUser"; set { if (value) SetClipTargetMode("TriggerUser"); } }
+    public bool IsClipSpecified { get => clipTargetMode == "Specified"; set { if (value) SetClipTargetMode("Specified"); } }
+    public bool IsClipConfigured => clipTargetMode != "Disabled"
+        && (clipTargetMode != "Specified" || !string.IsNullOrWhiteSpace(clipUserName));
+
+    private void SetClipTargetMode(string mode)
+    {
+        if (clipTargetMode == mode) return;
+        clipTargetMode = mode;
+        NotifyClipTargetChanged();
+    }
+
+    private void NotifyClipTargetChanged()
+    {
+        Changed(nameof(ClipUserName));
+        Changed(nameof(ClipLoginId));
+        Changed(nameof(IsClipDisabled));
+        Changed(nameof(IsClipSelectedAccount));
+        Changed(nameof(IsClipChatUser));
+        Changed(nameof(IsClipTriggerUser));
+        Changed(nameof(IsClipSpecified));
+        Changed(nameof(IsClipConfigured));
+    }
 
     public bool IsImage { get => isImage; set { isImage = value; Changed(); } }
     public bool IsAudio { get => isAudio; set { isAudio = value; Changed(); } }
@@ -507,6 +562,9 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                             form.IsChat = true;
                             form.ChatContent = item.Content;
                             break;
+                        case "ObsClip":
+                            form.ClipUserName = item.Content;
+                            break;
                         case "ObsText":
                             form.ObsTextForms.Add(new()
                             {
@@ -691,7 +749,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         var configuredItems = item.ObsTextForms
             .Where(x => !string.IsNullOrWhiteSpace(x.SourceName))
             .ToList();
-        if (configuredItems.Count == 0)
+        if (configuredItems.Count == 0 && !item.IsClipConfigured)
         {
             MessageBox.Show("テストするOBS実行設定がありません。", "配信拡張");
             return;
@@ -699,6 +757,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         try
         {
+            if (item.IsClipConfigured)
+                await streamExpansionService.PlayClipPreviewAsync(item.ClipUserName);
             foreach (var obsText in configuredItems)
                 await mainWindow.SetObsTextSourceAsync(obsText.IsSubObs, obsText.SourceName, obsText.TextTemplate);
         }
@@ -739,6 +799,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             AddSaveItem(saveItems, form.IsImageConfigured, "Image", imageContent, form.Weight, 100, groupIndex);
             AddSaveItem(saveItems, form.IsAudioConfigured, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
             AddSaveItem(saveItems, form.IsChatConfigured, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
+            AddSaveItem(saveItems, form.IsClipConfigured, "ObsClip", form.ClipUserName.Trim(), form.Weight, 100, groupIndex);
             foreach (var obsText in form.ObsTextForms)
             {
                 if (string.IsNullOrWhiteSpace(obsText.SourceName)) continue;

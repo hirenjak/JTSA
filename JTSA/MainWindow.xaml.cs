@@ -1299,6 +1299,34 @@ namespace JTSA
             CategoryPanel.ReloadCategory();
         }
 
+        private void OpenStreamInfoEditorButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var selectedAccount = SelectedTargetAccountId is long accountId
+                    ? DAO_TwitchAccount.SelectById(accountId)
+                    : null;
+                var userName = selectedAccount?.UserName ?? JTSAHelper.LoginName;
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    MessageBox.Show(this, "Twitchアカウントを選択してください。", "配信情報を編集",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo(
+                    $"https://dashboard.twitch.tv/popout/u/{Uri.EscapeDataString(userName)}/stream-manager/edit-stream-info")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                    "配信情報を編集", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private async void LaunchSteamGameButton_Click(object sender, RoutedEventArgs e)
         {
             var appId = SteamHelper.GetSteamAppId(CurrentCategorySteamUrl);

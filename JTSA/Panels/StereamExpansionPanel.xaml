@@ -73,6 +73,42 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ExpansionObsNavigationTabStyle" TargetType="TabItem">
+            <Setter Property="Width" Value="112"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="NavBackground" Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent" BorderThickness="3,0,0,0">
+                            <ContentPresenter ContentSource="Header" Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBackground" Property="Background" Value="#FF454B4B"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="NavBackground" Property="Background" Value="#FF344D4B"/>
+                                <Setter TargetName="NavBackground" Property="BorderBrush" Value="LightSeaGreen"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <!-- メインレイアウト -->
@@ -324,9 +360,7 @@
                                                             <Style TargetType="Button" BasedOn="{StaticResource ExpansionTestButtonStyle}">
                                                                 <Setter Property="IsEnabled" Value="True"/>
                                                                 <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding ObsTextForms.Count}" Value="0">
-                                                                        <Setter Property="IsEnabled" Value="False"/>
-                                                                    </DataTrigger>
+                                                                    <MultiDataTrigger><MultiDataTrigger.Conditions><Condition Binding="{Binding ObsTextForms.Count}" Value="0"/><Condition Binding="{Binding IsClipConfigured}" Value="False"/></MultiDataTrigger.Conditions><Setter Property="IsEnabled" Value="False"/></MultiDataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </Button.Style>
@@ -425,7 +459,7 @@
                                             <Button Content="OBS実行 ☰" Width="90" Height="22" Margin="4,0,0,0"
                                                     Padding="0" FontSize="11" Foreground="White" BorderThickness="1" Cursor="Hand"
                                                     Click="ObsSettingsToggleButton_Click">
-                                                <Button.Style><Style TargetType="Button"><Setter Property="Background" Value="#FF565656"/><Setter Property="BorderBrush" Value="#FF00B7C3"/><Style.Triggers><DataTrigger Binding="{Binding ObsTextForms.Count}" Value="0"><Setter Property="BorderBrush" Value="#FF777777"/></DataTrigger><DataTrigger Binding="{Binding IsObsSettingsExpanded}" Value="True"><Setter Property="Background" Value="#FF353535"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                                                <Button.Style><Style TargetType="Button"><Setter Property="Background" Value="#FF565656"/><Setter Property="BorderBrush" Value="#FF00B7C3"/><Style.Triggers><MultiDataTrigger><MultiDataTrigger.Conditions><Condition Binding="{Binding ObsTextForms.Count}" Value="0"/><Condition Binding="{Binding IsClipConfigured}" Value="False"/></MultiDataTrigger.Conditions><Setter Property="BorderBrush" Value="#FF777777"/></MultiDataTrigger><DataTrigger Binding="{Binding IsObsSettingsExpanded}" Value="True"><Setter Property="Background" Value="#FF353535"/></DataTrigger></Style.Triggers></Style></Button.Style>
                                                 <Button.Template><ControlTemplate TargetType="Button"><Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="0"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border></ControlTemplate></Button.Template>
                                             </Button>
                                             </StackPanel>
@@ -555,24 +589,62 @@
 
                                             <Border Padding="8,7" Background="#FF464646" BorderBrush="#FF555555" BorderThickness="1">
                                                 <Border.Style><Style TargetType="Border"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding IsObsSettingsExpanded}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></Border.Style>
-                                                <StackPanel>
-                                                    <Button Content="＋ ソース変更" Width="112" Height="24" HorizontalAlignment="Left" Tag="{Binding}" Click="AddObsTextButton_Click"/>
-                                                    <ItemsControl ItemsSource="{Binding ObsTextForms}">
-                                                        <ItemsControl.ItemTemplate><DataTemplate>
-                                                            <Border BorderBrush="#FF666666" BorderThickness="1" Padding="8" Margin="0,4,0,0">
-                                                                <StackPanel>
-                                                                    <DockPanel Margin="0,0,0,4"><Button Content="一覧取得" Width="72" Height="22" Click="ReloadObsCandidatesButton_Click"/><Button DockPanel.Dock="Right" Content="削除" Width="52" Height="22" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Click="DeleteObsTextButton_Click"/></DockPanel>
-                                                                    <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                                        <ComboBox SelectedIndex="{Binding ObsSelectedIndex}" SelectionChanged="ObsTargetSelectionChanged"><ComboBoxItem Content="メインOBS"/><ComboBoxItem Content="サブOBS"/></ComboBox>
-                                                                        <ComboBox Grid.Column="2" IsEditable="True" ItemsSource="{Binding SceneNames}" Text="{Binding SceneName, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ObsSceneSelectionChanged"/>
-                                                                        <ComboBox Grid.Column="4" IsEditable="True" ItemsSource="{Binding SourceNames}" Text="{Binding SourceName, UpdateSourceTrigger=PropertyChanged}"/>
-                                                                    </Grid>
-                                                                    <TextBox MinHeight="42" AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding TextTemplate, UpdateSourceTrigger=PropertyChanged}"/>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DataTemplate></ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </StackPanel>
+                                                <TabControl TabStripPlacement="Left"
+                                                            ItemContainerStyle="{StaticResource ExpansionObsNavigationTabStyle}"
+                                                            Background="#FF383838" BorderBrush="#FF5E5E5E" BorderThickness="1">
+                                                    <TabItem Header="クリップ再生">
+                                                        <StackPanel Margin="10,8">
+                                                            <DockPanel Margin="0,0,0,4">
+                                                                <TextBlock Text="クリップ対象ユーザー" Foreground="White" VerticalAlignment="Center"/>
+                                                            </DockPanel>
+                                                            <WrapPanel Margin="0,2,0,4">
+                                                                <RadioButton Content="無効" Foreground="White" Margin="0,0,12,0"
+                                                                             IsChecked="{Binding IsClipDisabled, Mode=TwoWay}"/>
+                                                                <RadioButton Content="JTSA選択アカウント" Foreground="White" Margin="0,0,12,0"
+                                                                             IsChecked="{Binding IsClipSelectedAccount, Mode=TwoWay}"/>
+                                                                <RadioButton Content="チャットユーザー" Foreground="White" Margin="0,0,12,0"
+                                                                             IsChecked="{Binding IsClipChatUser, Mode=TwoWay}"/>
+                                                                <RadioButton Content="トリガーユーザー" Foreground="White" Margin="0,0,12,0"
+                                                                             IsChecked="{Binding IsClipTriggerUser, Mode=TwoWay}"/>
+                                                                <RadioButton Content="ログインID指定" Foreground="White"
+                                                                             IsChecked="{Binding IsClipSpecified, Mode=TwoWay}"/>
+                                                            </WrapPanel>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="74"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="ログインID" Foreground="White" VerticalAlignment="Center"/>
+                                                                <TextBox Grid.Column="1"
+                                                                         Text="{Binding ClipLoginId, UpdateSourceTrigger=PropertyChanged}"
+                                                                         IsEnabled="{Binding IsClipSpecified}"
+                                                                         ToolTip="TwitchログインID（英数字・_）"/>
+                                                            </Grid>
+                                                            <TextBlock Text="※OBS側の設定方法はヘルプ参照"
+                                                                       Foreground="LightGray" FontSize="11" Margin="74,4,0,0"/>
+                                                        </StackPanel>
+                                                    </TabItem>
+                                                    <TabItem Header="ソース変更">
+                                                        <StackPanel Margin="10,8">
+                                                            <Button Content="＋ 変更対象を追加" Width="122" Height="24" HorizontalAlignment="Left" Tag="{Binding}" Click="AddObsTextButton_Click"/>
+                                                            <ItemsControl ItemsSource="{Binding ObsTextForms}">
+                                                                <ItemsControl.ItemTemplate><DataTemplate>
+                                                                    <Border BorderBrush="#FF666666" BorderThickness="1" Padding="8" Margin="0,4,0,0">
+                                                                        <StackPanel>
+                                                                            <DockPanel Margin="0,0,0,4"><Button Content="一覧取得" Width="72" Height="22" Click="ReloadObsCandidatesButton_Click"/><Button DockPanel.Dock="Right" Content="削除" Width="52" Height="22" Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Click="DeleteObsTextButton_Click"/></DockPanel>
+                                                                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                                                <ComboBox SelectedIndex="{Binding ObsSelectedIndex}" SelectionChanged="ObsTargetSelectionChanged"><ComboBoxItem Content="メインOBS"/><ComboBoxItem Content="サブOBS"/></ComboBox>
+                                                                                <ComboBox Grid.Column="2" IsEditable="True" ItemsSource="{Binding SceneNames}" Text="{Binding SceneName, UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ObsSceneSelectionChanged"/>
+                                                                                <ComboBox Grid.Column="4" IsEditable="True" ItemsSource="{Binding SourceNames}" Text="{Binding SourceName, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                            </Grid>
+                                                                            <TextBox MinHeight="42" AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding TextTemplate, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate></ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </TabItem>
+                                                </TabControl>
                                             </Border>
 
                                             <Border Padding="8,7" Background="#FF464646"
