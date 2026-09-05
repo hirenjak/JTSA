@@ -24,6 +24,16 @@
                                Foreground="DeepSkyBlue">CEDB</Hyperlink>
                 </TextBlock>
             </Border>
+            <Border Margin="0,8,0,0" Padding="14"
+                    Background="#FF4A4747" BorderBrush="#FF707070"
+                    BorderThickness="1" CornerRadius="3">
+                <TextBlock Foreground="LightGray" TextWrapping="Wrap">
+                    <Hyperlink NavigateUri="https://xipher.booth.pm/items/6573903"
+                               RequestNavigate="TipsLink_RequestNavigate"
+                               Foreground="DeepSkyBlue">画像サイズ調整ツール</Hyperlink>
+                    <Run Text=" ：Twitchのチャンネルポイント報酬用画像を調整するツール"/>
+                </TextBlock>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

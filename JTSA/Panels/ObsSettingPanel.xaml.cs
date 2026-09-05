@@ -806,6 +806,7 @@ public partial class ObsSettingPanel : UserControl
             IsSub = scene.IsSub,
             SceneName = scene.SceneName,
             SourceName = source.SourceName,
+            ButtonDisplayName = source.SourceName,
             ContainerName = source.ContainerName,
             IsVisible = source.IsEnabled
         });
@@ -992,7 +993,8 @@ public partial class ObsSettingPanel : UserControl
             AccountId = accountId.Value,
             AccountDisplayName = DAO_TwitchAccount.SelectById(accountId.Value)?.UserName ?? $"ID: {accountId.Value}",
             IsSub = isSub,
-            SceneName = sceneName
+            SceneName = sceneName,
+            ButtonDisplayName = sceneName
         });
         SaveSceneSwitchPresets();
         RefreshSceneSwitchPresetFilter(accountId.Value);
@@ -1012,6 +1014,11 @@ public partial class ObsSettingPanel : UserControl
 
     private void ScenePresetCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (IsInsideTextBox(e.OriginalSource as DependencyObject))
+        {
+            draggedScenePreset = null;
+            return;
+        }
         scenePresetDragStart = e.GetPosition(this);
         draggedScenePreset = (sender as FrameworkElement)?.Tag as SceneSwitchPreset;
     }
@@ -1161,6 +1168,11 @@ public partial class ObsSettingPanel : UserControl
 
     private void SourcePresetCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (IsInsideTextBox(e.OriginalSource as DependencyObject))
+        {
+            draggedSourcePreset = null;
+            return;
+        }
         sourcePresetDragStart = e.GetPosition(this);
         draggedSourcePreset = (sender as FrameworkElement)?.Tag as SourceSwitchPreset;
     }
@@ -1244,6 +1256,32 @@ public partial class ObsSettingPanel : UserControl
             JsonSerializer.Serialize(sceneSwitchPresets));
     }
 
+    private void SceneSwitchDisplayNameTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if ((sender as TextBox)?.Tag is not SceneSwitchPreset preset) return;
+        preset.ButtonDisplayName = preset.ButtonDisplayName?.Trim() ?? string.Empty;
+        SaveSceneSwitchPresets();
+        ((MainWindow)Application.Current.MainWindow).RefreshObsSceneShortcutButtons();
+    }
+
+    private void SourceSwitchDisplayNameTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if ((sender as TextBox)?.Tag is not SourceSwitchPreset preset) return;
+        preset.ButtonDisplayName = preset.ButtonDisplayName?.Trim() ?? string.Empty;
+        SaveSourceSwitchPresets();
+        ((MainWindow)Application.Current.MainWindow).RefreshObsSourceShortcutButtons();
+    }
+
+    private static bool IsInsideTextBox(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is TextBox) return true;
+            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+        }
+        return false;
+    }
+
     public sealed class SceneSwitchPreset
     {
         public long AccountId { get; set; }
@@ -1251,12 +1289,15 @@ public partial class ObsSettingPanel : UserControl
         public string AccountDisplayName { get; set; } = string.Empty;
         public bool IsSub { get; set; }
         public string SceneName { get; set; } = string.Empty;
+        public string ButtonDisplayName { get; set; } = string.Empty;
         [System.Text.Json.Serialization.JsonIgnore]
         public string ObsDisplayName => IsSub ? "サブOBS" : "メインOBS";
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsCurrentScene { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SceneName}";
-        public string ShortcutDisplayName => SceneName;
+        public string ShortcutDisplayName => string.IsNullOrWhiteSpace(ButtonDisplayName)
+            ? SceneName
+            : ButtonDisplayName.Trim();
     }
 
     private sealed class SceneChoice
@@ -1272,11 +1313,14 @@ public partial class ObsSettingPanel : UserControl
         public bool IsSub { get; set; }
         public string SceneName { get; set; } = string.Empty;
         public string SourceName { get; set; } = string.Empty;
+        public string ButtonDisplayName { get; set; } = string.Empty;
         public string ContainerName { get; set; } = string.Empty;
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsVisible { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SourceName}";
-        public string ShortcutDisplayName => SourceName;
+        public string ShortcutDisplayName => string.IsNullOrWhiteSpace(ButtonDisplayName)
+            ? SourceName
+            : ButtonDisplayName.Trim();
         public string DetailText => string.IsNullOrWhiteSpace(ContainerName) ||
                                     string.Equals(ContainerName, SceneName, StringComparison.OrdinalIgnoreCase)
             ? $"{SceneName} / {SourceName}"
@@ -1382,14 +1426,19 @@ public partial class ObsSettingPanel : UserControl
 
     private void AddTextSourceCardButton_Click(object sender, RoutedEventArgs e)
     {
-        textSourceCards.Add(new ObsTextSourceCard());
+        var card = new ObsTextSourceCard();
+        textSourceCards.Add(card);
+        TextSourceCardsItemsControl.SelectedItem = card;
     }
 
     private void RemoveTextSourceCardButton_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.Tag is ObsTextSourceCard card)
         {
+            var removedIndex = textSourceCards.IndexOf(card);
             textSourceCards.Remove(card);
+            if (textSourceCards.Count > 0)
+                TextSourceCardsItemsControl.SelectedIndex = Math.Min(removedIndex, textSourceCards.Count - 1);
             SaveTextSourceCards();
         }
     }
@@ -1554,6 +1603,8 @@ public partial class ObsSettingPanel : UserControl
         finally
         {
             isRestoringCards = false;
+            if (textSourceCards.Count > 0 && TextSourceCardsItemsControl.SelectedItem is null)
+                TextSourceCardsItemsControl.SelectedIndex = 0;
         }
     }
 

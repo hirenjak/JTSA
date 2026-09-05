@@ -52,5 +52,6 @@ public partial class ObsCaptureSourceSelectionWindow : Window
 
 public sealed record ObsCaptureSourceSelectionItem(bool IsSub, ObsCaptureSource Source)
 {
+    public string ObsDisplayName => IsSub ? "サブOBS" : "メインOBS";
     public string DisplayName => $"{(IsSub ? "サブOBS" : "メインOBS")}｜{Source.InputName} / {Source.TypeName}";
 }

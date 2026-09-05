@@ -19,6 +19,9 @@ namespace JTSA.Forms
         /// <summary> 最終適用日時 </summary>
         public string LastUsedDate { get; set; } = "";
 
+        /// <summary>現在適用されているプリセットか</summary>
+        public bool IsApplied { get; set; }
+
         /// <summary> 一覧に出す表示名 </summary>
         public string DisplayText => $"{PresetName}（{ItemCount}件）";
     }
@@ -48,10 +51,56 @@ namespace JTSA.Forms
             set
             {
                 isEnabled = value;
-                OnPropertyChanged(nameof(IsEnabled));
+                NotifyStateProperties();
             }
         }
         private bool isEnabled;
+
+        /// <summary> 適用時の一時停止状態 </summary>
+        public bool IsPaused
+        {
+            get => isPaused;
+            set
+            {
+                isPaused = value;
+                NotifyStateProperties();
+            }
+        }
+        private bool isPaused;
+
+        public bool IsActiveState
+        {
+            get => IsEnabled && !IsPaused;
+            set { if (value) SetState(true, false); }
+        }
+
+        public bool IsPausedState
+        {
+            get => IsEnabled && IsPaused;
+            set { if (value) SetState(true, true); }
+        }
+
+        public bool IsDisabledState
+        {
+            get => !IsEnabled;
+            set { if (value) SetState(false, false); }
+        }
+
+        private void SetState(bool enabled, bool paused)
+        {
+            isEnabled = enabled;
+            isPaused = paused;
+            NotifyStateProperties();
+        }
+
+        private void NotifyStateProperties()
+        {
+            OnPropertyChanged(nameof(IsEnabled));
+            OnPropertyChanged(nameof(IsPaused));
+            OnPropertyChanged(nameof(IsActiveState));
+            OnPropertyChanged(nameof(IsPausedState));
+            OnPropertyChanged(nameof(IsDisabledState));
+        }
 
         /// <summary> 存在しない報酬であることを示す注記 </summary>
         public string StatusText => IsExisting ? "" : "（削除済み）";

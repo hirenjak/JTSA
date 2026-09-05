@@ -253,6 +253,9 @@ namespace JTSA.Migrations
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastUsedDateTime")
                         .HasColumnType("TEXT");
 
@@ -444,6 +447,9 @@ namespace JTSA.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("DoShoutout")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("DoGrantVip")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
@@ -851,6 +857,10 @@ namespace JTSA.Migrations
 
                     b.Property<int>("SelectedCount")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SelectedFriendIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SortNumber")
                         .HasColumnType("INTEGER");

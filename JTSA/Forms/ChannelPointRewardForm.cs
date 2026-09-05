@@ -57,6 +57,7 @@ namespace JTSA.Forms
                 OnPropertyChanged(nameof(ManageableToolTip));
                 OnPropertyChanged(nameof(CanCopy));
                 OnPropertyChanged(nameof(CopyButtonVisibility));
+                OnPropertyChanged(nameof(EditButtonVisibility));
                 OnPropertyChanged(nameof(DeleteButtonVisibility));
             }
         }
@@ -115,6 +116,9 @@ namespace JTSA.Forms
         /// <summary> コピーボタンは操作不可の報酬にだけ出す </summary>
         public Visibility CopyButtonVisibility =>
             IsManageable ? Visibility.Collapsed : Visibility.Visible;
+
+        public Visibility EditButtonVisibility =>
+            IsManageable ? Visibility.Visible : Visibility.Collapsed;
 
         /// <summary>
         /// 削除ボタンは操作可能な報酬にだけ出す。

@@ -42,6 +42,8 @@ namespace JTSA.Models
 
         public bool DoShoutout { get; set; }
 
+        public bool DoGrantVip { get; set; }
+
         public int DelaySeconds { get; set; }
 
         public string TriggerComment { get; set; } = string.Empty;

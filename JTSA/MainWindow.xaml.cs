@@ -568,10 +568,12 @@ namespace JTSA
 
         private void ApplyObsSceneShortcutPanelVisibility(bool shouldShow)
         {
+            if (shouldShow)
+                ApplyUrlLinkPanelVisibility(false);
             ObsShortcutPanel.Visibility = shouldShow
                 ? Visibility.Visible
                 : Visibility.Collapsed;
-            ObsSceneShortcutToggleButton.Content = "ショートカット ☰";
+            ObsSceneShortcutToggleButton.Content = "OBS ☰";
             ObsSceneShortcutToggleButton.Background = shouldShow
                 ? new SolidColorBrush(Color.FromRgb(70, 70, 70))
                 : new SolidColorBrush(Color.FromRgb(86, 86, 86));
@@ -587,6 +589,29 @@ namespace JTSA
                 : new Thickness(1);
             if (shouldShow)
                 _ = ObsSettingPanel.RefreshSourceVisibilityStatesAsync(SelectedTargetAccountId);
+        }
+
+        private void UrlLinkToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            var shouldShow = UrlLinkPanel.Visibility != Visibility.Visible;
+            if (shouldShow)
+                ApplyObsSceneShortcutPanelVisibility(false);
+            ApplyUrlLinkPanelVisibility(shouldShow);
+        }
+
+        private void ApplyUrlLinkPanelVisibility(bool shouldShow)
+        {
+            UrlLinkPanel.Visibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
+            UrlLinkToggleButton.Background = shouldShow
+                ? new SolidColorBrush(Color.FromRgb(70, 70, 70))
+                : new SolidColorBrush(Color.FromRgb(86, 86, 86));
+            UrlLinkToggleButton.Foreground = Brushes.White;
+            UrlLinkToggleButton.BorderBrush = shouldShow
+                ? new SolidColorBrush(Color.FromRgb(85, 85, 85))
+                : new SolidColorBrush(Color.FromRgb(119, 119, 119));
+            UrlLinkToggleButton.BorderThickness = shouldShow
+                ? new Thickness(1, 1, 1, 0)
+                : new Thickness(1);
         }
 
         private async Task MainWindowLoadedCoreAsync(object sender, RoutedEventArgs e)
@@ -832,7 +857,8 @@ namespace JTSA
                     TitlePlaceholderTextBox.Text,
                     categoryId,
                     categoryName,
-                    categoryBoxArtUrl);
+                    categoryBoxArtUrl,
+                    string.Join(',', FriendPanel.SelectedFriendFormList.Select(friend => friend.BroadcastId)));
             }
             else
             {
@@ -1327,6 +1353,99 @@ namespace JTSA
             }
         }
 
+        private void OpenTwitchRewardSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var selectedAccount = SelectedTargetAccountId is long accountId
+                    ? DAO_TwitchAccount.SelectById(accountId)
+                    : null;
+                var userName = selectedAccount?.UserName ?? JTSAHelper.LoginName;
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    MessageBox.Show(this, "Twitchアカウントを選択してください。", "報酬設定",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo(
+                    $"https://dashboard.twitch.tv/u/{Uri.EscapeDataString(userName)}/viewer-rewards/channel-points/rewards")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                    "報酬設定", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void OpenTwitchVideoProducerButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenSelectedTwitchAccountUrl(
+                userName => $"https://dashboard.twitch.tv/u/{Uri.EscapeDataString(userName)}/content/video-producer",
+                "ビデオプロデューサー");
+        }
+
+        private void OpenTwitchEmoteManagerButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenSelectedTwitchAccountUrl(
+                userName => $"https://dashboard.twitch.tv/u/{Uri.EscapeDataString(userName)}/viewer-rewards/emotes",
+                "スタンプ管理");
+        }
+
+        private void OpenSelectedTwitchChannelButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenSelectedTwitchAccountUrl(
+                userName => $"https://www.twitch.tv/{Uri.EscapeDataString(userName)}",
+                "配信ページ");
+        }
+
+        private void OpenSelectedTwitchAccountUrl(Func<string, string> createUrl, string linkName)
+        {
+            try
+            {
+                var selectedAccount = SelectedTargetAccountId is long accountId
+                    ? DAO_TwitchAccount.SelectById(accountId)
+                    : null;
+                var userName = selectedAccount?.UserName ?? JTSAHelper.LoginName;
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    MessageBox.Show(this, "Twitchアカウントを選択してください。", linkName,
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo(createUrl(userName.Trim()))
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                    linkName, MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private void OpenGuestStarButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(
+                    "https://www.twitch.tv/popout/hiren_jak/guest-star")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                    "StreamTogether", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
         private async void LaunchSteamGameButton_Click(object sender, RoutedEventArgs e)
         {
             var appId = SteamHelper.GetSteamAppId(CurrentCategorySteamUrl);
@@ -1497,6 +1616,8 @@ namespace JTSA
                     : selectedItem.TitlePlaceholder;
 
                 CurrentCategoryId = selectedItem.CategoryId;
+                FriendPanel.SelectFriends(selectedItem.SelectedFriendIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
                 SelectCategoryNameTextBlock.Text = selectedItem.CategoryName;
                 if (!string.IsNullOrEmpty(selectedItem.CategoryBoxArtUrl))
                 {
@@ -1798,6 +1919,8 @@ namespace JTSA
 
             // データの取得
             var records = DAO_TitleText.SelectAllOrderbyLastUser(db);
+            var friendNames = DAO_User.SelectAllOrderbyBroadcastId(db)
+                .ToDictionary(friend => friend.UserId, friend => friend.DisplayName, StringComparer.Ordinal);
 
             // 画面データ入れ換え処理
             foreach (var item in records)
@@ -1810,6 +1933,10 @@ namespace JTSA
                     CategoryId = item.CategoryId,
                     CategoryName = item.CategoryName,
                     CategoryBoxArtUrl = item.CategoryBoxArtUrl,
+                    SelectedFriendIds = item.SelectedFriendIds,
+                    SelectedFriendNames = string.Join("、", item.SelectedFriendIds
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(id => friendNames.TryGetValue(id, out var name) ? name : id)),
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm")
                 });
             }
@@ -1876,6 +2003,7 @@ namespace JTSA
 
             // 適用によって有効/無効が変わっているのでCPタブの一覧を作り直す
             await ChannelPointPanel.ReloadChannnelPoint();
+            ChannelPointPanel.ReloadPreset();
 
             processLog.SuccessLogWrite();
         }
@@ -2049,7 +2177,8 @@ namespace JTSA
             string titlePlaceholder,
             string categoryId,
             string categoryName,
-            string categoryBoxArtUrl)
+            string categoryBoxArtUrl,
+            string selectedFriendIds)
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "タイトルログ追加処理");
 
@@ -2071,6 +2200,7 @@ namespace JTSA
 				CategoryId = categoryId,
 				CategoryName = categoryName,
 				CategoryBoxArtUrl = categoryBoxArtUrl,
+                SelectedFriendIds = selectedFriendIds,
                 SelectedCount = 0,
 				SortNumber = 9999,
 				LastUsedDateTime = DateTime.Now,

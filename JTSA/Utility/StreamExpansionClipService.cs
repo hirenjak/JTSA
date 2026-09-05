@@ -6,6 +6,42 @@ using System.Text.RegularExpressions;
 
 namespace JTSA.Utility;
 
+internal sealed record StreamExpansionClipSettings(string Login, int RankingLimit)
+{
+    public const int DefaultRankingLimit = 100;
+
+    public string Encode() => JsonSerializer.Serialize(new
+    {
+        login = Login,
+        rankingLimit = Math.Clamp(RankingLimit, 1, 100)
+    });
+
+    public static StreamExpansionClipSettings Decode(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return new(string.Empty, DefaultRankingLimit);
+
+        try
+        {
+            using var json = JsonDocument.Parse(content);
+            var root = json.RootElement;
+            var login = root.TryGetProperty("login", out var loginElement)
+                ? loginElement.GetString() ?? string.Empty
+                : string.Empty;
+            var rankingLimit = root.TryGetProperty("rankingLimit", out var rankingElement)
+                && rankingElement.TryGetInt32(out var parsedLimit)
+                ? parsedLimit
+                : DefaultRankingLimit;
+            return new(login, Math.Clamp(rankingLimit, 1, 100));
+        }
+        catch (JsonException)
+        {
+            // 旧バージョンではログイン名・プレースホルダーをそのまま保存していた。
+            return new(content.Trim(), DefaultRankingLimit);
+        }
+    }
+}
+
 internal static class StreamExpansionClipService
 {
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(20) };
@@ -23,9 +59,10 @@ internal static class StreamExpansionClipService
         return login.ToLowerInvariant();
     }
 
-    public static async Task PlayAsync(string login, string accessToken)
+    public static async Task PlayAsync(string login, string accessToken, int rankingLimit = StreamExpansionClipSettings.DefaultRankingLimit)
     {
         login = NormalizeLogin(login);
+        rankingLimit = Math.Clamp(rankingLimit, 1, 100);
         if (string.IsNullOrWhiteSpace(accessToken))
             throw new InvalidOperationException("Twitchアカウントを選択してログインしてください。");
 
@@ -34,7 +71,8 @@ internal static class StreamExpansionClipService
         if (userData.GetArrayLength() == 0)
             throw new InvalidOperationException($"Twitchユーザーが見つかりません：{login}");
         var broadcasterId = userData[0].GetProperty("id").GetString()!;
-        using var clips = await GetAsync("clips?broadcaster_id=" + Uri.EscapeDataString(broadcasterId) + "&first=100", accessToken);
+        using var clips = await GetAsync("clips?broadcaster_id=" + Uri.EscapeDataString(broadcasterId)
+            + "&first=" + rankingLimit, accessToken);
         var candidates = clips.RootElement.GetProperty("data").EnumerateArray()
             .Where(clip => !string.IsNullOrWhiteSpace(clip.GetProperty("id").GetString())
                 && clip.GetProperty("duration").GetDouble() > 0).ToArray();

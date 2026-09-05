@@ -11,7 +11,7 @@ namespace JTSA.Dao
 
         /// <summary>
         /// プリセットヘッダの一覧取得
-        /// SELECT * FROM T_ChannelPointPresetHeader ORDER BY LastUsedDateTime DESC
+        /// 作成順で固定して取得する。適用による最終使用日時の更新では並び替えない。
         /// </summary>
         /// <returns>検索結果</returns>
         public static List<T_ChannelPointPresetHeader> SelectAllHeader()
@@ -19,7 +19,8 @@ namespace JTSA.Dao
             using var db = new AppDbContext();
 
             return db.T_ChannelPointPresetHeader
-                     .OrderByDescending(x => x.LastUsedDateTime)
+                     .OrderBy(x => x.CreatedDateTime)
+                     .ThenBy(x => x.PresetId)
                      .ToList();
         }
 
@@ -155,6 +156,49 @@ namespace JTSA.Dao
             // コミット処理
             db.SaveChanges();
 
+            return true;
+        }
+
+        public static bool UpdateItemState(long presetId, string rewardId, bool isEnabled, bool isPaused)
+        {
+            using var db = new AppDbContext();
+            var item = db.T_ChannelPointPresetItem.SingleOrDefault(
+                x => x.PresetId == presetId && x.RewardId == rewardId);
+            if (item == null) return false;
+
+            item.IsEnabled = isEnabled;
+            item.IsPaused = isEnabled && isPaused;
+            item.UpdatedDateTime = DateTime.Now;
+            db.SaveChanges();
+            return true;
+        }
+
+        public static int AddItems(long presetId, IEnumerable<T_ChannelPointPresetItem> items)
+        {
+            using var db = new AppDbContext();
+            if (!db.T_ChannelPointPresetHeader.Any(x => x.PresetId == presetId)) return 0;
+
+            var existingIds = db.T_ChannelPointPresetItem
+                .Where(x => x.PresetId == presetId)
+                .Select(x => x.RewardId)
+                .ToHashSet();
+            var additions = items.Where(x => !existingIds.Contains(x.RewardId)).ToList();
+            if (additions.Count == 0) return 0;
+
+            db.T_ChannelPointPresetItem.AddRange(additions);
+            db.SaveChanges();
+            return additions.Count;
+        }
+
+        public static bool DeleteItem(long presetId, string rewardId)
+        {
+            using var db = new AppDbContext();
+            var item = db.T_ChannelPointPresetItem.SingleOrDefault(
+                x => x.PresetId == presetId && x.RewardId == rewardId);
+            if (item == null) return false;
+
+            db.T_ChannelPointPresetItem.Remove(item);
+            db.SaveChanges();
             return true;
         }
 

@@ -104,6 +104,12 @@ internal sealed class StreamExpansionService
             tasks.Add(SendRaidShoutoutAsync(value, broadcasterId, accessToken));
         }
 
+        if (type == StreamExpansionTriggerType.Chat && rule.DoGrantVip &&
+            !string.IsNullOrWhiteSpace(chatPlaceholders?.UserLogin))
+        {
+            tasks.Add(GrantChatUserVipAsync(chatPlaceholders.UserLogin, broadcasterId, accessToken));
+        }
+
         await Task.WhenAll(tasks);
     }
 
@@ -339,11 +345,12 @@ internal sealed class StreamExpansionService
             case "ObsClip":
                 try
                 {
-                    var login = item.Content.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)
+                    var clipSettings = StreamExpansionClipSettings.Decode(item.Content);
+                    var login = clipSettings.Login.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)
                         ? GetSelectedAccountContext().Login
                         : StreamExpansionPlaceholderReplacer.Replace(
-                            item.Content, raidPlaceholders, chatPlaceholders, triggerValues);
-                    await StreamExpansionClipService.PlayAsync(login, accessToken);
+                            clipSettings.Login, raidPlaceholders, chatPlaceholders, triggerValues);
+                    await StreamExpansionClipService.PlayAsync(login, accessToken, clipSettings.RankingLimit);
                 }
                 catch (Exception ex)
                 {
@@ -488,10 +495,30 @@ internal sealed class StreamExpansionService
 
     internal Task PlayAudioPreviewAsync(string path, int volume) => PlayAudioAsync(path, volume);
 
-    internal Task PlayClipPreviewAsync(string login)
+    internal Task PlayClipPreviewAsync(string login, int rankingLimit)
     {
         var account = GetSelectedAccountContext();
         if (login.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)) login = account.Login;
-        return StreamExpansionClipService.PlayAsync(login, account.AccessToken);
+        return StreamExpansionClipService.PlayAsync(login, account.AccessToken, rankingLimit);
+    }
+
+    private static async Task GrantChatUserVipAsync(
+        string userLogin,
+        string broadcasterId,
+        string accessToken)
+    {
+        LogSuccess($"VIP付与対象ユーザーを検索：{userLogin}");
+        var user = await TwitchHelper.GetBroadcasterIdAsync(userLogin, accessToken);
+        if (string.IsNullOrWhiteSpace(user?.UserId))
+        {
+            LogError($"VIP付与中断：Twitchユーザーを特定できませんでした（{userLogin}）");
+            return;
+        }
+
+        var succeeded = await TwitchHelper.AddChannelVipAsync(user.UserId, broadcasterId, accessToken);
+        if (!succeeded)
+        {
+            LogError($"VIP付与失敗：{user.DisplayName}。直前のVIP付与失敗ログを確認してください");
+        }
     }
 }

@@ -1,0 +1,63 @@
+<Window x:Class="JTSA.ChannelPointRewardCreateWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="チャンネルポイント報酬を新規作成" Icon="Resources/jtsa.ico"
+        Width="500" Height="390" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Background="#FF303030">
+    <Border Padding="20" Background="#FF383838" BorderBrush="#FF666666" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="WindowHeadingTextBlock" Text="チャンネルポイント報酬を新規作成" Foreground="White"
+                       FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/>
+
+            <Grid Grid.Row="1" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="名前" Foreground="White" VerticalAlignment="Center"/>
+                <TextBox x:Name="RewardNameTextBox" Grid.Column="1" Height="28"
+                         VerticalContentAlignment="Center" MaxLength="45"/>
+            </Grid>
+
+            <Grid Grid.Row="2" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="130"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="コスト" Foreground="White" VerticalAlignment="Center"/>
+                <TextBox x:Name="RewardCostTextBox" Grid.Column="1" Height="28"
+                         VerticalContentAlignment="Center" PreviewTextInput="RewardCostTextBox_PreviewTextInput"/>
+                <TextBlock Grid.Column="2" Text="ポイント" Foreground="#FFCCCCCC"
+                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </Grid>
+
+            <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="80"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <TextBlock Text="説明" Foreground="White" VerticalAlignment="Top"/>
+                <TextBox x:Name="RewardPromptTextBox" Grid.Column="1" Height="100"
+                         Padding="5" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="200"/>
+            </Grid>
+
+            <TextBlock Grid.Row="3" Foreground="#FFBBBBBB" TextWrapping="Wrap"
+                       Margin="80,108,0,0"
+                       Text="※ 画像はTwitchの報酬設定画面から設定してください。"/>
+
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="キャンセル" Width="90" Height="30" Margin="0,0,8,0"
+                        IsCancel="True"/>
+                <Button x:Name="CreateButton" Content="作成" Width="90" Height="30"
+                        IsDefault="True" Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" Click="CreateButton_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

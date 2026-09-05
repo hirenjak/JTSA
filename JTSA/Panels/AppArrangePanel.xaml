@@ -38,7 +38,7 @@
                       Margin="0,0,16,0"
                       Checked="AutoStartCheckBox_Changed"
                       Unchecked="AutoStartCheckBox_Changed"/>
-            <TextBlock Text="起動中のウィンドウを右側から登録できます" Foreground="LightGray" VerticalAlignment="Center"/>
+            <TextBlock Text="「アプリを登録」から起動中のウィンドウを選択できます" Foreground="LightGray" VerticalAlignment="Center"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -48,12 +48,16 @@
                 <ColumnDefinition Width="2*"/>
             </Grid.ColumnDefinitions>
 
-            <Grid Grid.Column="0">
+            <Grid Grid.Column="0" Grid.ColumnSpan="3">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Text="登録済みアプリ" Foreground="White" FontSize="15" Margin="0,0,0,6"/>
+                <DockPanel Margin="0,0,0,6">
+                    <Button Content="アプリを登録" DockPanel.Dock="Right" Width="112" Height="26"
+                            Style="{StaticResource OverviewPrimaryButtonStyle}" Click="OpenAppRegistrationButton_Click"/>
+                    <TextBlock Text="登録済みアプリ" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
+                </DockPanel>
                 <ListBox Grid.Row="1" ItemsSource="{Binding RegisteredApps}" Background="#FF404040"
                          BorderBrush="DimGray" HorizontalContentAlignment="Stretch"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -97,33 +101,6 @@
                 </ListBox>
             </Grid>
 
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <DockPanel Margin="0,0,0,6">
-                    <Button Content="再読込" DockPanel.Dock="Right" Padding="10,2" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="ReloadRunningButton_Click"/>
-                    <TextBlock Text="起動中アプリ" Foreground="White" FontSize="15" VerticalAlignment="Center"/>
-                </DockPanel>
-                <ListBox Grid.Row="1" ItemsSource="{Binding RunningApps}" Background="#FF404040"
-                         BorderBrush="DimGray" HorizontalContentAlignment="Stretch"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="6">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding ProcessName}" Foreground="White" FontSize="14"/>
-                                    <TextBlock Text="{Binding WindowTitle}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                                <Button Grid.Column="1" Content="登録" Padding="10,3" Margin="6,0,0,0" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="RegisterButton_Click"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </Grid>
         </Grid>
     </Grid>
 </UserControl>

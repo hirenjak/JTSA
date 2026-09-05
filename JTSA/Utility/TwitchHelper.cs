@@ -430,7 +430,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts")
+                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts channel:manage:vips")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -913,6 +913,45 @@ namespace JTSA.Utility
             }
 
             return null;
+        }
+
+        public static async Task<bool> AddChannelVipAsync(
+            string userId,
+            string broadcasterId,
+            string accessToken)
+        {
+            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "VIP付与処理");
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+
+                using var response = await client.PostAsync(
+                    $"https://api.twitch.tv/helix/channels/vips" +
+                    $"?broadcaster_id={broadcasterId}" +
+                    $"&user_id={userId}", null);
+
+                await TwitchPermissionNotifier.NotifyIfRequiredAsync(
+                    response, "VIP付与", "channel:manage:vips");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseDetail = await response.Content.ReadAsStringAsync();
+                    mainWindow.AppLogPanel.Error(
+                        nameof(TwitchHelper),
+                        $"VIP付与失敗 ({(int)response.StatusCode} {response.StatusCode})：{responseDetail}");
+                    return false;
+                }
+
+                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "VIP付与失敗：" + ex.Message);
+                return false;
+            }
         }
 
         private sealed class SendChatRequest

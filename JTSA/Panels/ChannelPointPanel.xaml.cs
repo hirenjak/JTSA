@@ -3,11 +3,9 @@ using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using TwitchLib.Api.Helix.Models.ChannelPoints.CreateCustomReward;
+using System.Windows.Input;
 
 namespace JTSA.Panels
 {
@@ -21,18 +19,17 @@ namespace JTSA.Panels
         /// <summary> 画面に表示している報酬一覧 </summary>
         public ObservableCollection<ChannelPointRewardForm> ChannelPointRewardFormList { get; } = [];
 
+        public ObservableCollection<ChannelPointRewardForm> EnabledChannelPointRewardFormList { get; } = [];
+        public ObservableCollection<ChannelPointRewardForm> PausedChannelPointRewardFormList { get; } = [];
+        public ObservableCollection<ChannelPointRewardForm> DisabledChannelPointRewardFormList { get; } = [];
+
+        private Point _dragStartPoint;
+
         /// <summary> プリセット一覧 </summary>
         public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = [];
 
         /// <summary> 選択中プリセットの内訳 </summary>
         public ObservableCollection<ChannelPointPresetItemForm> ChannelPointPresetItemFormList { get; } = [];
-
-        /// <summary> 一覧の下に常時出す注意書き </summary>
-        private const string INFO_TEXT = "※画像追加はTwitch公式UIのみ対応です。画像サイズ調整ツール: https://xipher.booth.pm/items/6573903";
-
-        /// <summary> 最後にソートした列と方向 </summary>
-        private GridViewColumnHeader? _lastHeaderClicked = null;
-        private ListSortDirection _lastDirection = ListSortDirection.Ascending;
 
         /// <summary>
         /// 報酬一覧の取得に成功しているか。
@@ -67,66 +64,6 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// ヘッダークリック時（列ソート）
-        /// </summary>
-        private void GridViewColumnHeader_Click(object sender, RoutedEventArgs e)
-        {
-            if (e.OriginalSource is GridViewColumnHeader headerClicked)
-            {
-                // ヘッダーに対応するプロパティ名を取得
-                string sortBy = "";
-                if (headerClicked.Column?.DisplayMemberBinding is Binding binding)
-                {
-                    sortBy = binding.Path.Path;
-                }
-                // 画像など、DisplayMemberBinding以外を使っている列の場合の対応
-                else if (headerClicked.Column?.Header?.ToString() == "有効")
-                {
-                    sortBy = nameof(ChannelPointRewardForm.IsEnabled);
-                }
-                else if (headerClicked.Column?.Header?.ToString() == "一時停止")
-                {
-                    sortBy = nameof(ChannelPointRewardForm.IsPaused);
-                }
-                else if (headerClicked.Column?.Header?.ToString() == "操作可能")
-                {
-                    sortBy = nameof(ChannelPointRewardForm.IsManageable);
-                }
-
-                if (string.IsNullOrEmpty(sortBy)) return;
-
-                // ソート方向を決定
-                ListSortDirection direction;
-                if (headerClicked != _lastHeaderClicked)
-                {
-                    // 真偽値の列は初回降順、それ以外は昇順
-                    if (sortBy == nameof(ChannelPointRewardForm.IsEnabled)
-                     || sortBy == nameof(ChannelPointRewardForm.IsPaused)
-                     || sortBy == nameof(ChannelPointRewardForm.IsManageable))
-                        direction = ListSortDirection.Descending;
-                    else
-                        direction = ListSortDirection.Ascending;
-                }
-                else
-                {
-                    direction = _lastDirection == ListSortDirection.Ascending ?
-                                ListSortDirection.Descending : ListSortDirection.Ascending;
-                }
-
-                // ListViewのItemsSourceからCollectionViewを取得してソートを適用
-                var dataView = CollectionViewSource.GetDefaultView(ChannelPointListView.ItemsSource);
-                dataView.SortDescriptions.Clear();
-                dataView.SortDescriptions.Add(new SortDescription(sortBy, direction));
-                dataView.Refresh();
-
-                // 今回のソート情報を記憶
-                _lastHeaderClicked = headerClicked;
-                _lastDirection = direction;
-            }
-        }
-
-
-        /// <summary>
         /// 更新ボタン押下
         /// </summary>
         private async void ReloadButton_Click(object sender, RoutedEventArgs e)
@@ -141,9 +78,10 @@ namespace JTSA.Panels
         public async Task ReloadChannnelPoint()
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "チャンネルポイントリスト再読み込み");
+            var selectedRewardId = (CpManagementListView.SelectedItem as ChannelPointRewardForm)?.RewardId;
 
             ReloadButton.IsEnabled = false;
-            ChannelPointGetStatus.Text = "チャンネルポイント取得中...";
+            CpManagementReloadButton.IsEnabled = false;
 
             var fetchResult = await ChannelPointService.FetchRewardsAsync();
 
@@ -156,24 +94,39 @@ namespace JTSA.Panels
                     ChannelPointRewardFormList.Add(reward);
                 }
 
-                ChannelPointGetStatus.Text = BuildStatusText(fetchResult);
+                CpManagementListView.SelectedItem =
+                    ChannelPointRewardFormList.FirstOrDefault(x => x.RewardId == selectedRewardId)
+                    ?? ChannelPointRewardFormList.FirstOrDefault();
+
+                mainWindow.AppLogPanel.Success(GetType().Name, BuildStatusText(fetchResult));
                 mainWindow.AppLogPanel.Success(GetType().Name, appLogProcessName);
             }
             else
             {
-                ChannelPointGetStatus.Text = $"チャンネルポイントの取得に失敗しました。\n{INFO_TEXT}";
                 mainWindow.AppLogPanel.Error(GetType().Name, "チャンネルポイントリスト取得失敗");
             }
+
+            // 取得した一覧を状態別の3ペインへ振り分ける
+            RefreshRewardStateLists();
 
             // 取得に失敗した状態で「報酬が存在しない」と判断するとプリセットを壊すため、成否を覚えておく
             _isRewardListLoaded = fetchResult != null;
 
             ReloadButton.IsEnabled = true;
+            CpManagementReloadButton.IsEnabled = true;
 
             // 一覧が変わったので、選択中プリセットの内訳も作り直す
             RefreshSelectedPresetDetail();
 
             mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
+        }
+
+        private void CpNavigationTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(sender, e.OriginalSource) ||
+                !CpSettingsTab.IsSelected ||
+                CpManagementListView.SelectedItem != null) return;
+            CpManagementListView.SelectedItem = ChannelPointRewardFormList.FirstOrDefault();
         }
 
 
@@ -195,8 +148,7 @@ namespace JTSA.Panels
             {
                 return $"取得成功！ ({totalCount}件)\n"
                      + "⚠ 操作可否の判定に失敗したため、全件を操作不可として表示しています。"
-                     + "「更新」で再試行してください（解消しない場合は Setting タブから再認証）。\n"
-                     + INFO_TEXT;
+                     + "「更新」で再試行してください（解消しない場合は Setting タブから再認証）。";
             }
 
             var statusText = $"取得成功！ ({totalCount}件) / ✔ 操作可能 {manageableCount}件 / 🔒 操作不可 {lockedCount}件";
@@ -212,7 +164,7 @@ namespace JTSA.Panels
                 statusText += "\n🔒 は Twitch の Web 画面から作成された報酬です。コピーするとこのアプリから操作できるようになります。";
             }
 
-            return statusText + "\n" + INFO_TEXT;
+            return statusText;
         }
 
 
@@ -240,6 +192,8 @@ namespace JTSA.Panels
                 reward.IsEnabled = !requestValue;
                 MessageBox.Show($"有効/無効の切り替えに失敗しました。\n\n{result.ErrorMessage}");
             }
+
+            RefreshRewardStateLists();
         }
 
 
@@ -267,63 +221,191 @@ namespace JTSA.Panels
                 reward.IsPaused = !requestValue;
                 MessageBox.Show($"一時停止の切り替えに失敗しました。\n\n{result.ErrorMessage}");
             }
+
+            RefreshRewardStateLists();
         }
+
+
+        private void RefreshRewardStateLists()
+        {
+            EnabledChannelPointRewardFormList.Clear();
+            PausedChannelPointRewardFormList.Clear();
+            DisabledChannelPointRewardFormList.Clear();
+
+            foreach (var reward in ChannelPointRewardFormList)
+            {
+                if (!reward.IsEnabled)
+                    DisabledChannelPointRewardFormList.Add(reward);
+                else if (reward.IsPaused)
+                    PausedChannelPointRewardFormList.Add(reward);
+                else
+                    EnabledChannelPointRewardFormList.Add(reward);
+            }
+        }
+
+
+        private void RewardList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+
+        private void RewardList_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed || sender is not ListView listView) return;
+
+            var currentPoint = e.GetPosition(null);
+            if (Math.Abs(currentPoint.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance
+             && Math.Abs(currentPoint.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+            var container = ItemsControl.ContainerFromElement(listView, e.OriginalSource as DependencyObject) as ListViewItem;
+            if (container?.DataContext is ChannelPointRewardForm reward)
+                DragDrop.DoDragDrop(container, reward, DragDropEffects.Move);
+        }
+
+
+        private async void RewardList_Drop(object sender, DragEventArgs e)
+        {
+            if (sender is not ListView listView
+             || listView.Tag is not string targetState
+             || e.Data.GetData(typeof(ChannelPointRewardForm)) is not ChannelPointRewardForm reward
+             || !reward.IsManageable) return;
+
+            var originalEnabled = reward.IsEnabled;
+            var originalPaused = reward.IsPaused;
+            var targetEnabled = targetState != "Disabled";
+            var targetPaused = targetState == "Paused";
+
+            if (originalEnabled == targetEnabled && originalPaused == targetPaused) return;
+
+            listView.IsEnabled = false;
+            var errorMessage = "";
+
+            if (reward.IsEnabled != targetEnabled)
+            {
+                var enabledResult = await ChannelPointService.SetEnabledAsync(reward, targetEnabled);
+                if (enabledResult.IsSuccess)
+                    reward.IsEnabled = targetEnabled;
+                else
+                    errorMessage = enabledResult.ErrorMessage;
+            }
+
+            if (string.IsNullOrEmpty(errorMessage) && reward.IsPaused != targetPaused)
+            {
+                var pausedResult = await ChannelPointService.SetPausedAsync(reward, targetPaused);
+                if (pausedResult.IsSuccess)
+                    reward.IsPaused = targetPaused;
+                else
+                    errorMessage = pausedResult.ErrorMessage;
+            }
+
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                if (reward.IsEnabled != originalEnabled)
+                    await ChannelPointService.SetEnabledAsync(reward, originalEnabled);
+                if (reward.IsPaused != originalPaused)
+                    await ChannelPointService.SetPausedAsync(reward, originalPaused);
+
+                reward.IsEnabled = originalEnabled;
+                reward.IsPaused = originalPaused;
+                MessageBox.Show($"状態の変更に失敗しました。\n\n{errorMessage}");
+            }
+            else
+            {
+                mainWindow.AppLogPanel.Success(GetType().Name,
+                    $"CP状態変更 「 {reward.Title} 」→ {GetRewardStateLabel(targetState)}");
+            }
+
+            listView.IsEnabled = true;
+            RefreshRewardStateLists();
+        }
+
+
+        private static string GetRewardStateLabel(string state) => state switch
+        {
+            "Paused" => "一時停止中",
+            "Disabled" => "無効",
+            _ => "有効"
+        };
 
 
         /// <summary>
         /// 新規作成ボタン押下
         /// </summary>
-        private void CreateRewardButton_Click(object sender, RoutedEventArgs e)
+        private async void CreateRewardButton_Click(object sender, RoutedEventArgs e)
         {
-            RewardFormPanel.Visibility = Visibility.Visible;
-            RewardNameTextBox.Text = "";
-            RewardCostTextBox.Text = "";
-        }
-
-
-        /// <summary>
-        /// キャンセルボタン押下
-        /// </summary>
-        private void CreateRewardCancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            RewardFormPanel.Visibility = Visibility.Collapsed;
-        }
-
-
-        /// <summary>
-        /// 作成ボタン押下
-        /// </summary>
-        private async void CreateRewardSubmitButton_Click(object sender, RoutedEventArgs e)
-        {
-            string name = RewardNameTextBox.Text.Trim();
-            string costText = RewardCostTextBox.Text.Trim();
-
-            if (string.IsNullOrEmpty(name) || !int.TryParse(costText, out int cost) || cost < 1)
+            var window = new ChannelPointRewardCreateWindow
             {
-                MessageBox.Show("名前と正しいコストを入力してください。");
+                Owner = mainWindow
+            };
+
+            if (window.ShowDialog() == true)
+                await ReloadChannnelPoint();
+        }
+
+        private async void SaveManagedRewardButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: ChannelPointRewardForm reward }) return;
+            if (!int.TryParse(CpManagementCostTextBox.Text.Trim(), out var cost) || cost < 1)
+            {
+                MessageBox.Show("1以上のコストを入力してください。", "入力内容を確認");
                 return;
             }
 
-            var req = new CreateCustomRewardsRequest
+            var result = await ChannelPointService.UpdateDetailsAsync(
+                reward, reward.Title, CpManagementPromptTextBox.Text.Trim(), cost);
+            if (!result.IsSuccess)
             {
-                Title = name,
-                Cost = cost,
-                // 画像URLはTwitch APIの仕様上、作成時には直接指定できない（TwitchのWeb画面でのみ設定可能）
-                Prompt = "",
-                IsEnabled = true
-            };
+                MessageBox.Show($"更新に失敗しました。\n\n{result.ErrorMessage}", "更新失敗");
+                return;
+            }
 
-            var result = await TwitchHelper.CreateCustomRewardAsync(req);
-            if (result.IsSuccess)
+            await ReloadChannnelPoint();
+        }
+
+        private void CpManagementListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            SetCpNameEditing(false);
+        }
+
+        private async void CpNameEditButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (CpManagementListView.SelectedItem is not ChannelPointRewardForm reward || !reward.IsManageable) return;
+
+            if (CpDetailNameTextBox.Visibility != Visibility.Visible)
             {
-                MessageBox.Show("作成しました。\n\n画像は Twitch の Web 画面から設定してください。");
-                RewardFormPanel.Visibility = Visibility.Collapsed;
-                await ReloadChannnelPoint();
+                CpDetailNameTextBox.Text = reward.Title;
+                SetCpNameEditing(true);
+                CpDetailNameTextBox.Focus();
+                CpDetailNameTextBox.SelectAll();
+                return;
             }
-            else
+
+            var title = CpDetailNameTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(title) ||
+                !int.TryParse(CpManagementCostTextBox.Text.Trim(), out var cost) || cost < 1)
             {
-                MessageBox.Show($"作成に失敗しました。\n\n{result.ErrorMessage}");
+                MessageBox.Show("CP名と1以上のコストを入力してください。", "入力内容を確認");
+                return;
             }
+
+            var result = await ChannelPointService.UpdateDetailsAsync(
+                reward, title, CpManagementPromptTextBox.Text.Trim(), cost);
+            if (!result.IsSuccess)
+            {
+                MessageBox.Show($"更新に失敗しました。\n\n{result.ErrorMessage}", "更新失敗");
+                return;
+            }
+
+            await ReloadChannnelPoint();
+        }
+
+        private void SetCpNameEditing(bool isEditing)
+        {
+            CpDetailTitleTextBlock.Visibility = isEditing ? Visibility.Collapsed : Visibility.Visible;
+            CpDetailNameTextBox.Visibility = isEditing ? Visibility.Visible : Visibility.Collapsed;
+            CpNameEditButton.Content = isEditing ? "✓" : "✎";
+            CpNameEditButton.ToolTip = isEditing ? "CP名の変更を確定" : "CP名を編集";
         }
 
 
@@ -337,6 +419,11 @@ namespace JTSA.Panels
         {
             var itemCounts = DAO_ChannelPointPreset.SelectItemCounts();
             var headers = DAO_ChannelPointPreset.SelectAllHeader();
+            var appliedPresetId = long.TryParse(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.AppliedChannelPointPresetId)?.Value,
+                out var parsedAppliedPresetId)
+                ? parsedAppliedPresetId
+                : (long?)null;
 
             ChannelPointPresetFormList.Clear();
 
@@ -347,12 +434,13 @@ namespace JTSA.Panels
                     PresetId = header.PresetId,
                     PresetName = header.PresetName,
                     ItemCount = itemCounts.TryGetValue(header.PresetId, out var count) ? count : 0,
-                    LastUsedDate = header.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm")
+                    LastUsedDate = header.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm"),
+                    IsApplied = header.PresetId == appliedPresetId
                 });
             }
 
-            // 選択の指定が無い場合（起動時・削除後など）は既定のプリセットを選んでおく
-            selectPresetId ??= FindDefaultPresetId(headers);
+            // 選択の指定が無い場合は適用中のプリセットを優先し、無ければ既定を選ぶ
+            selectPresetId ??= appliedPresetId ?? FindDefaultPresetId(headers);
 
             if (selectPresetId != null)
             {
@@ -414,12 +502,18 @@ namespace JTSA.Panels
         /// </summary>
         private void PresetComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            SetPresetNameEditing(false);
             RefreshSelectedPresetDetail();
 
-            // 名前変更しやすいよう、選択したプリセット名を入力欄へ入れておく
             if (PresetComboBox.SelectedItem is ChannelPointPresetForm selectedPreset)
             {
-                PresetNameTextBox.Text = selectedPreset.PresetName;
+                PresetDetailTitleTextBlock.Text = selectedPreset.PresetName;
+                PresetNameEditButton.IsEnabled = true;
+            }
+            else
+            {
+                PresetDetailTitleTextBlock.Text = "プリセットを選択してください";
+                PresetNameEditButton.IsEnabled = false;
             }
         }
 
@@ -453,6 +547,7 @@ namespace JTSA.Panels
                     RewardId = item.RewardId,
                     RewardTitle = item.RewardTitle,
                     IsEnabled = item.IsEnabled,
+                    IsPaused = item.IsPaused,
                     IsExisting = isExisting
                 });
             }
@@ -461,8 +556,9 @@ namespace JTSA.Panels
 
             PresetItemListView.Visibility = Visibility.Visible;
             PresetDetailStatus.Text =
-                $"「{preset.PresetName}」：ON {ChannelPointPresetItemFormList.Count(x => x.IsEnabled)}件 / "
-                + $"OFF {ChannelPointPresetItemFormList.Count(x => !x.IsEnabled)}件"
+                $"「{preset.PresetName}」：有効 {ChannelPointPresetItemFormList.Count(x => x.IsActiveState)}件 / "
+                + $"一時停止 {ChannelPointPresetItemFormList.Count(x => x.IsPausedState)}件 / "
+                + $"無効 {ChannelPointPresetItemFormList.Count(x => x.IsDisabledState)}件"
                 + (missingCount > 0 ? $"　※（削除済み）の{missingCount}件はプリセットから取り除きました" : "")
                 + $"　最終適用: {preset.LastUsedDate}";
 
@@ -494,84 +590,62 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// 適用ボタン押下
+        /// プリセット一覧のダブルクリックで適用する
         /// </summary>
-        private async void ApplyPresetButton_Click(object sender, RoutedEventArgs e)
+        private async void PresetComboBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            if (sender is not ListBox listBox ||
+                ItemsControl.ContainerFromElement(listBox, e.OriginalSource as DependencyObject)
+                    is not ListBoxItem { DataContext: ChannelPointPresetForm preset }) return;
+
+            listBox.IsEnabled = false;
+            try
             {
-                MessageBox.Show("適用するプリセットを選択してください。");
-                return;
+                // 画面の一覧をそのまま渡すことで、更新結果が即座に画面へ反映される
+                var result = await ChannelPointService.ApplyPresetAsync(
+                    preset.PresetId,
+                    ChannelPointRewardFormList.ToList());
+
+                RefreshRewardStateLists();
+
+                // 適用日時・件数・適用中表示を反映する
+                ReloadPreset(preset.PresetId);
+
+                if (result.IsSuccess)
+                {
+                    mainWindow.AppLogPanel.Success(GetType().Name, result.SummaryText);
+                }
+                else
+                {
+                    MessageBox.Show($"{result.SummaryText}\n\n{result.ErrorMessage}");
+                }
             }
-
-            ApplyPresetButton.IsEnabled = false;
-
-            // 画面の一覧をそのまま渡すことで、更新結果が即座に画面へ反映される
-            var result = await ChannelPointService.ApplyPresetAsync(
-                preset.PresetId,
-                ChannelPointRewardFormList.ToList());
-
-            ApplyPresetButton.IsEnabled = true;
-
-            // 適用日時と件数を反映する
-            ReloadPreset(preset.PresetId);
-
-            if (result.IsSuccess)
+            finally
             {
-                ChannelPointGetStatus.Text = result.SummaryText;
-            }
-            else
-            {
-                MessageBox.Show($"{result.SummaryText}\n\n{result.ErrorMessage}");
+                listBox.IsEnabled = true;
             }
         }
 
 
         /// <summary>
-        /// 新規保存ボタン押下：今の一覧の有効/無効を新しいプリセットとして保存する
+        /// 追加ボタン押下：今の一覧の有効/無効を新しいプリセットとして保存する
         /// </summary>
         private void SavePresetButton_Click(object sender, RoutedEventArgs e)
         {
-            var presetName = PresetNameTextBox.Text.Trim();
-
-            if (string.IsNullOrEmpty(presetName))
-            {
-                MessageBox.Show("プリセット名を入力してください。");
-                return;
-            }
+            const string baseName = "新しいプリセット";
+            var existingNames = ChannelPointPresetFormList
+                .Select(x => x.PresetName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var presetName = baseName;
+            for (var suffix = 2; existingNames.Contains(presetName); suffix++)
+                presetName = $"{baseName} ({suffix})";
 
             var savedPresetId = SavePreset(presetName, null);
             if (savedPresetId == null) return;
 
             ReloadPreset(savedPresetId);
 
-            MessageBox.Show($"プリセット「{presetName}」を保存しました。");
-        }
-
-
-        /// <summary>
-        /// 上書き保存ボタン押下：選択中のプリセットを今の一覧の状態で置き換える
-        /// </summary>
-        private void OverwritePresetButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
-            {
-                MessageBox.Show("上書きするプリセットを選択してください。");
-                return;
-            }
-
-            var confirm = MessageBox.Show(
-                $"プリセット「{preset.PresetName}」を、今の一覧の有効/無効で上書きします。よろしいですか？",
-                "プリセットの上書き保存", MessageBoxButton.OKCancel);
-
-            if (confirm != MessageBoxResult.OK) return;
-
-            var savedPresetId = SavePreset(preset.PresetName, preset.PresetId);
-            if (savedPresetId == null) return;
-
-            ReloadPreset(savedPresetId);
-
-            MessageBox.Show($"プリセット「{preset.PresetName}」を上書きしました。");
+            BeginPresetNameEdit();
         }
 
 
@@ -602,18 +676,17 @@ namespace JTSA.Panels
         }
 
 
-        /// <summary>
-        /// 名前変更ボタン押下
-        /// </summary>
-        private void RenamePresetButton_Click(object sender, RoutedEventArgs e)
+        private void PresetNameEditButton_Click(object sender, RoutedEventArgs e)
         {
-            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            if (PresetDetailNameTextBox.Visibility != Visibility.Visible)
             {
-                MessageBox.Show("名前を変更するプリセットを選択してください。");
+                BeginPresetNameEdit();
                 return;
             }
 
-            var presetName = PresetNameTextBox.Text.Trim();
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset) return;
+
+            var presetName = PresetDetailNameTextBox.Text.Trim();
             if (string.IsNullOrEmpty(presetName))
             {
                 MessageBox.Show("新しいプリセット名を入力してください。");
@@ -630,17 +703,104 @@ namespace JTSA.Panels
             ReloadPreset(preset.PresetId);
         }
 
+        private void BeginPresetNameEdit()
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset) return;
+
+            PresetDetailNameTextBox.Text = preset.PresetName;
+            SetPresetNameEditing(true);
+            PresetDetailNameTextBox.Focus();
+            PresetDetailNameTextBox.SelectAll();
+        }
+
+        private void SetPresetNameEditing(bool isEditing)
+        {
+            PresetDetailTitleTextBlock.Visibility = isEditing
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+            PresetDetailNameTextBox.Visibility = isEditing
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            PresetNameEditButton.Content = isEditing ? "✓" : "✎";
+            PresetNameEditButton.ToolTip = isEditing
+                ? "名前の変更を確定"
+                : "プリセット名を編集";
+        }
+
+        private void PresetItemStateRadioButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset ||
+                sender is not RadioButton { DataContext: ChannelPointPresetItemForm item }) return;
+
+            var saved = DAO_ChannelPointPreset.UpdateItemState(
+                preset.PresetId, item.RewardId, item.IsEnabled, item.IsPaused);
+            if (!saved)
+            {
+                MessageBox.Show("プリセット内容を更新できませんでした。");
+            }
+
+            RefreshSelectedPresetDetail();
+        }
+
+        private void DeletePresetItemButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset ||
+                sender is not Button { Tag: ChannelPointPresetItemForm item }) return;
+
+            e.Handled = true;
+            if (!DAO_ChannelPointPreset.DeleteItem(preset.PresetId, item.RewardId))
+            {
+                MessageBox.Show("プリセットからCPを削除できませんでした。");
+                return;
+            }
+
+            ReloadPreset(preset.PresetId);
+        }
+
+        private void RegisterPresetRewardsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
+            {
+                MessageBox.Show("CPを登録するプリセットを選択してください。");
+                return;
+            }
+
+            var existingIds = DAO_ChannelPointPreset.SelectItemsByPresetId(preset.PresetId)
+                .Select(x => x.RewardId)
+                .ToHashSet();
+            var window = new ChannelPointPresetRewardSelectionWindow(existingIds)
+            {
+                Owner = mainWindow
+            };
+
+            if (window.ShowDialog() != true || window.SelectedRewards.Count == 0) return;
+
+            var now = DateTime.Now;
+            DAO_ChannelPointPreset.AddItems(
+                preset.PresetId,
+                window.SelectedRewards.Select(reward => new T_ChannelPointPresetItem
+                {
+                    PresetId = preset.PresetId,
+                    RewardId = reward.RewardId,
+                    RewardTitle = reward.Title,
+                    IsEnabled = reward.IsEnabled,
+                    IsPaused = reward.IsPaused,
+                    CreatedDateTime = now,
+                    UpdatedDateTime = now,
+                    LastUsedDateTime = now
+                }));
+
+            ReloadPreset(preset.PresetId);
+        }
+
 
         /// <summary>
         /// 削除ボタン押下
         /// </summary>
         private void DeletePresetButton_Click(object sender, RoutedEventArgs e)
         {
-            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset)
-            {
-                MessageBox.Show("削除するプリセットを選択してください。");
-                return;
-            }
+            if (sender is not Button { Tag: ChannelPointPresetForm preset }) return;
+            e.Handled = true;
 
             var confirm = MessageBox.Show(
                 $"プリセット「{preset.PresetName}」を削除します。よろしいですか？",
@@ -649,14 +809,24 @@ namespace JTSA.Panels
             if (confirm != MessageBoxResult.OK) return;
 
             var isSuccess = DAO_ChannelPointPreset.Delete(preset.PresetId);
+            if (isSuccess && preset.IsApplied)
+            {
+                DAO_Setting.InsertUpdate(
+                    DAO_Setting.SettingName.AppliedChannelPointPresetId,
+                    string.Empty);
+            }
 
             mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
                 $"プリセット削除 「 {preset.PresetName} 」",
                 $"プリセット削除失敗 「 {preset.PresetName} 」"
             );
 
-            PresetNameTextBox.Text = "";
             ReloadPreset();
+        }
+
+        private void PresetDeleteButton_PreviewMouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
         }
 
         #endregion
@@ -752,31 +922,12 @@ namespace JTSA.Panels
 
 
         /// <summary>
-        /// ツールバーの「選択をコピー」押下（チェックした分をまとめてコピー）
-        /// </summary>
-        private async void CopySelectedButton_Click(object sender, RoutedEventArgs e)
-        {
-            var targets = ChannelPointRewardFormList.Where(x => x.IsSelected && x.CanCopy).ToList();
-
-            if (targets.Count == 0)
-            {
-                MessageBox.Show("コピーする報酬にチェックを入れてください。\n\nコピーできるのは「操作可能」列が 🔒 の報酬だけです。");
-                return;
-            }
-
-            await CopyRewardsAsync(targets);
-        }
-
-
-        /// <summary>
         /// 報酬のコピーを実行し、結果をまとめて通知する
         /// </summary>
         /// <param name="targets">コピー対象</param>
         private async Task CopyRewardsAsync(List<ChannelPointRewardForm> targets)
         {
             var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(GetType().Name, "チャンネルポイント報酬コピー");
-
-            CopySelectedButton.IsEnabled = false;
 
             var suffix = ChannelPointService.GetCopySuffix();
             var results = new List<ChannelPointCopyResult>();
@@ -791,8 +942,6 @@ namespace JTSA.Panels
                     $"報酬コピー失敗 「 {result.SourceTitle} 」：{result.ErrorMessage}"
                 );
             }
-
-            CopySelectedButton.IsEnabled = true;
 
             // コピー分を一覧へ反映する
             await ReloadChannnelPoint();
@@ -840,35 +989,6 @@ namespace JTSA.Panels
             MessageBox.Show(message.ToString(), "チャンネルポイントのコピー結果");
         }
 
-
-        /// <summary>
-        /// Twitch のチャンネルポイント設定ページを開く
-        /// （コピー元の削除や画像設定は Web 画面でしか行えないため）
-        /// </summary>
-        private void OpenTwitchRewardPageButton_Click(object sender, RoutedEventArgs e)
-        {
-            var url = $"https://dashboard.twitch.tv/u/{JTSAHelper.LoginName}/viewer-rewards/channel-points/rewards";
-
-            var isSuccess = true;
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                isSuccess = false;
-                mainWindow.AppLogPanel.Error(GetType().Name, "Twitch報酬設定ページを開けませんでした：" + ex.Message);
-            }
-
-            mainWindow.AppLogPanel.AddSwitchLog(isSuccess, GetType().Name,
-                "Twitch報酬設定ページを開きました",
-                "Twitch報酬設定ページを開けませんでした"
-            );
-        }
 
         #endregion
     }
