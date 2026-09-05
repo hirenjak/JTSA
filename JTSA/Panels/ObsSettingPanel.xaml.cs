@@ -40,9 +40,7 @@ public partial class ObsSettingPanel : UserControl
     {
         InitializeComponent();
         TextSourceCardsItemsControl.ItemsSource = textSourceCards;
-        var accounts = DAO_TwitchAccount.SelectAll();
-        MainTwitchAccountComboBox.ItemsSource = accounts;
-        SubTwitchAccountComboBox.ItemsSource = accounts;
+        ReloadTwitchAccounts();
         ReloadSettings();
         RestoreTextSourceCards();
         RestoreSceneSwitchPresets();
@@ -50,6 +48,28 @@ public partial class ObsSettingPanel : UserControl
         MigrateLegacyCaptureSettings();
         RestoreCaptureSourceRegistrations();
         RestoreSelectedCaptureSource();
+    }
+
+    /// <summary>初回認証・アカウント追加削除後もOBSの候補一覧を同期する。</summary>
+    public void ReloadTwitchAccounts()
+    {
+        var accounts = DAO_TwitchAccount.SelectAll();
+        foreach (var (comboBox, setting) in new[]
+        {
+            (MainTwitchAccountComboBox, DAO_Setting.SettingName.MainObsTwitchAccountId),
+            (SubTwitchAccountComboBox, DAO_Setting.SettingName.SubObsTwitchAccountId)
+        })
+        {
+            // 未保存の選択を優先し、URL・パスワードなど編集中の設定は読み直さない。
+            var selectedId = comboBox.SelectedValue as long?;
+            if (selectedId is null && long.TryParse(DAO_Setting.SelectOneById(setting)?.Value, out var savedId))
+                selectedId = savedId;
+
+            comboBox.ItemsSource = accounts;
+            comboBox.SelectedValue = selectedId is long id && accounts.Any(account => account.Id == id)
+                ? selectedId
+                : null;
+        }
     }
 
     public void ShowSceneSwitchSettings()

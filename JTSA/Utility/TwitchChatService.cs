@@ -11,6 +11,7 @@ public sealed class TwitchChatService
     private readonly TwitchClient client;
     private readonly string channelName;
     private readonly SemaphoreSlim reconnectLock = new(1, 1);
+    private readonly JTSA.Utility.GiftNotificationCounter giftCounter = new();
     private CancellationTokenSource? healthCheckCancellation;
     private volatile bool disconnectRequested;
     private long lastReceivedAt = Environment.TickCount64;
@@ -42,6 +43,7 @@ public sealed class TwitchChatService
         client.OnNewSubscriber += Client_OnNewSubscriber;
         client.OnReSubscriber += Client_OnReSubscriber;
         client.OnGiftedSubscription += Client_OnGiftedSubscription;
+        client.OnCommunitySubscription += Client_OnCommunitySubscription;
         client.OnDisconnected += Client_OnDisconnected;
         client.OnConnectionError += Client_OnConnectionError;
         client.OnSendReceiveData += (_, e) =>
@@ -237,20 +239,60 @@ public sealed class TwitchChatService
 
     private Task Client_OnGiftedSubscription(object? sender, OnGiftedSubscriptionArgs e)
     {
-        // GiftedSubscription の DisplayName は受取側になる場合があるため、
-        // IRC の送信者を表す Login を優先してギフトした側を集計する。
-        JTSA.Utility.StreamSupportTracker.AddGiftSubscription(
-            GetString(e.GiftedSubscription, "Login", "DisplayName"),
-            GetString(e.GiftedSubscription, "MsgParamSubPlan"));
-        SubscriptionReceived?.Invoke();
+        var gift = e.GiftedSubscription;
+        RecordGift(gift.Id, GetGiftOrigin(gift.MsgParamOriginId, gift.UndocumentedTags), gift.IsAnonymous,
+            gift.Login, gift.DisplayName, GetSubscriptionTier(gift.MsgParamSubPlan), false, 1);
         return Task.CompletedTask;
     }
+
+    private Task Client_OnCommunitySubscription(object? sender, OnCommunitySubscriptionArgs e)
+    {
+        var gift = e.GiftedSubscription;
+        RecordGift(gift.Id, GetGiftOrigin(gift.MsgParamOriginId, gift.UndocumentedTags), gift.IsAnonymous,
+            gift.Login, gift.DisplayName, GetSubscriptionTier(gift.MsgParamSubPlan), true, gift.MsgParamMassGiftCount);
+        return Task.CompletedTask;
+    }
+
+    // TwitchLib 4.0.1のまとめ通知ではorigin-idがUndocumentedTagsに残る。
+    private static string? GetGiftOrigin(string? originId, Dictionary<string, string>? tags) =>
+        !string.IsNullOrWhiteSpace(originId) ? originId : tags?.GetValueOrDefault("msg-param-origin-id");
+
+    private void RecordGift(string? id, string? originId, bool anonymous,
+        string? login, string? displayName, string tier, bool community, int amount)
+    {
+        try
+        {
+            var added = giftCounter.CountNew(id, originId, community, amount);
+            if (added == 0) return;
+            var name = anonymous ? "匿名ユーザー" :
+                !string.IsNullOrWhiteSpace(login) ? login :
+                !string.IsNullOrWhiteSpace(displayName) ? displayName : "不明なユーザー";
+            JTSA.Utility.StreamSupportTracker.AddGiftSubscription(name, tier, added);
+            SubscriptionReceived?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            // 演出などの失敗で次のIRC通知の受信を止めない。
+            Console.WriteLine($"サブギフト通知処理エラー: {ex.Message}");
+        }
+    }
+
+    private static string GetSubscriptionTier(TwitchLib.Client.Enums.SubscriptionPlan plan) => plan switch
+    {
+        TwitchLib.Client.Enums.SubscriptionPlan.Tier1 => "1",
+        TwitchLib.Client.Enums.SubscriptionPlan.Tier2 => "2",
+        TwitchLib.Client.Enums.SubscriptionPlan.Tier3 => "3",
+        TwitchLib.Client.Enums.SubscriptionPlan.Prime => "Prime",
+        _ => "不明"
+    };
 
     private static string GetString(object source, params string[] propertyNames)
     {
         foreach (var propertyName in propertyNames)
         {
-            var value = source.GetType().GetProperty(propertyName)?.GetValue(source)?.ToString();
+            var rawValue = source.GetType().GetProperty(propertyName)?.GetValue(source);
+            if (rawValue is TwitchLib.Client.Enums.SubscriptionPlan plan) return GetSubscriptionTier(plan);
+            var value = rawValue?.ToString();
             if (!string.IsNullOrWhiteSpace(value)) return value;
         }
         return "不明なユーザー";

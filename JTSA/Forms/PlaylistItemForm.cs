@@ -1,4 +1,4 @@
-﻿using JTSA.Panels;
+using JTSA.Panels;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,6 +14,9 @@ namespace JTSA.Forms
     {
         /// <summary> カテゴリーID </summary>
         public long PlaylistId { get; set; }
+        public bool IsReadOnly { get; set; }
+        public string DisplayLabel { get; set; } = string.Empty;
+        public Visibility DeleteVisibility => IsReadOnly ? Visibility.Collapsed : Visibility.Visible;
 
         /// <summary> カテゴリーID </summary>
         public string CategoryId { get; set; } = "";

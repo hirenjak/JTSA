@@ -24,6 +24,14 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsHourly { get; set; }
+    public bool IsAdStart { get; set; }
+    public bool IsAdEnd { get; set; }
+    public bool IsAdUpcoming { get; set; }
+    public int AdAdvanceMinutes { get; set; } = 1;
+    public bool IsScheduledTime { get; set; }
+    public int ScheduledHour { get; set; }
+    public int ScheduledMinute { get; set; }
     public bool IsObsStreamStart { get; set; }
     public bool IsObsStreamStartMain { get; set; }
     public bool IsObsStreamStartSub { get; set; }
@@ -46,6 +54,11 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
             if (IsBits) items.Add("ビッツ");
             if (IsFirstChat) items.Add("チャット入室");
             if (IsFollow) items.Add("フォロー");
+            if (IsAdStart) items.Add("CM開始");
+            if (IsAdEnd) items.Add("CM終了予定");
+            if (IsAdUpcoming) items.Add($"CM開始{AdAdvanceMinutes}分前");
+            if (IsHourly) items.Add("時報（毎時00分）");
+            if (IsScheduledTime) items.Add($"指定時刻：{ScheduledHour:00}:{ScheduledMinute:00}");
             if (IsObsStreamStartMain) items.Add("配信開始：メインOBS");
             if (IsObsStreamStartSub) items.Add("配信開始：サブOBS");
             if (!string.IsNullOrWhiteSpace(TriggerChannelPointId)) items.Add("チャンネルポイント");
@@ -282,6 +295,14 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsBits = x.IsBits,
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
+                IsHourly = x.IsHourly,
+                AdAdvanceMinutes = x.AdAdvanceMinutes,
+                IsAdUpcoming = x.IsAdUpcoming,
+                IsAdEnd = x.IsAdEnd,
+                IsAdStart = x.IsAdStart,
+                ScheduledMinute = x.ScheduledMinute,
+                ScheduledHour = x.ScheduledHour,
+                IsScheduledTime = x.IsScheduledTime,
                 IsObsStreamStart = x.IsObsStreamStart,
                 IsObsStreamStartMain = x.IsObsStreamStartMain,
                 IsObsStreamStartSub = x.IsObsStreamStartSub,
@@ -746,6 +767,14 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsBits = header.IsBits,
             IsFirstChat = header.IsFirstChat,
             IsFollow = header.IsFollow,
+            IsHourly = header.IsHourly,
+            AdAdvanceMinutes = header.AdAdvanceMinutes,
+            IsAdUpcoming = header.IsAdUpcoming,
+            IsAdEnd = header.IsAdEnd,
+            IsAdStart = header.IsAdStart,
+            ScheduledMinute = header.ScheduledMinute,
+            ScheduledHour = header.ScheduledHour,
+            IsScheduledTime = header.IsScheduledTime,
             IsObsStreamStart = header.IsObsStreamStartMain || header.IsObsStreamStartSub,
             IsObsStreamStartMain = header.IsObsStreamStartMain,
             IsObsStreamStartSub = header.IsObsStreamStartSub,

@@ -86,8 +86,7 @@ public partial class AppArrangePanel : UserControl
     {
         foreach (var app in RegisteredApps)
         {
-            using var process = FindProcess(app);
-            app.Status = process is null ? "停止" : "起動中";
+            app.Status = IsAppRunning(app) ? "起動中" : "停止";
         }
     }
 
@@ -102,6 +101,21 @@ public partial class AppArrangePanel : UserControl
         Height = item.Height,
         IsAutoStart = item.IsAutoStart
     };
+
+    private static bool IsAppRunning(AppInfoForm app)
+    {
+        // OBSなどはタイトルが変化し、トレイ格納時にはウィンドウがない場合もある。
+        // 起動済み判定には、登録時のタイトルやMainWindowHandleを使わない。
+        var processes = Process.GetProcessesByName(app.ProcessName);
+        try
+        {
+            return processes.Length > 0;
+        }
+        finally
+        {
+            foreach (var process in processes) process.Dispose();
+        }
+    }
 
     private static Process? FindProcess(AppInfoForm app)
     {
@@ -146,6 +160,22 @@ public partial class AppArrangePanel : UserControl
 
     private bool Start(AppInfoForm app)
     {
+        try
+        {
+            // 自動・一括・個別のどの起動経路でも二重起動を防ぐ。
+            if (IsAppRunning(app))
+            {
+                app.Status = "起動中";
+                ShowStatus($"すでに起動しています: {app.ProcessName}");
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"起動状態を確認できないため起動を見送りました: {ex.Message}", false);
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(app.AppExePath) || !File.Exists(app.AppExePath))
         {
             ShowStatus($"起動ファイルが見つかりません: {app.ProcessName}", false);
@@ -254,8 +284,7 @@ public partial class AppArrangePanel : UserControl
     {
         foreach (var app in RegisteredApps.Where(app => !autoStartOnly || app.IsAutoStart))
         {
-            using var process = FindProcess(app);
-            if (process is null) Start(app);
+            Start(app);
         }
     }
 

@@ -320,6 +320,8 @@ namespace JTSA.Panels
 
                 mainWindow.ReloadTargetAccounts();
                 ReloadRegisteredAccounts();
+                mainWindow.RemoveNotification($"oauth-{account.Id}");
+                if (account.IsPrimary) mainWindow.RemoveNotification("oauth");
                 MessageBox.Show($"{authenticatedUser.DisplayName} を再認証しました。", "Twitchアカウント");
             }
             catch (Exception ex)

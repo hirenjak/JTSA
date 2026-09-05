@@ -20,6 +20,77 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void StreamExpansionHourly_RoundTripsAfterMigration()
+    {
+        var header = new T_StreamExpansionHeader
+        {
+            Name = "Hourly", IsActive = true, UpdatedDateTime = DateTime.Now
+        };
+        var id = DAO_StreamExpansion.Save(header, []);
+        var saved = Assert.Single(DAO_StreamExpansion.SelectAllHeaders());
+        Assert.False(saved.IsHourly);
+        saved.IsHourly = true;
+        saved.IsAdStart = true;
+        saved.IsAdEnd = true;
+        saved.IsAdUpcoming = true;
+        saved.AdAdvanceMinutes = 3;
+        saved.IsScheduledTime = true;
+        saved.ScheduledHour = 23;
+        saved.ScheduledMinute = 55;
+        DAO_StreamExpansion.Save(saved, []);
+        Assert.True(Assert.Single(DAO_StreamExpansion.SelectAllHeaders()).IsHourly);
+        var scheduled = Assert.Single(DAO_StreamExpansion.SelectAllHeaders());
+        Assert.True(scheduled.IsAdStart && scheduled.IsAdEnd && scheduled.IsAdUpcoming);
+        Assert.Equal(3, scheduled.AdAdvanceMinutes);
+        Assert.True(scheduled.IsScheduledTime);
+        Assert.Equal(23, scheduled.ScheduledHour);
+        Assert.Equal(55, scheduled.ScheduledMinute);
+        saved.IsHourly = false;
+        DAO_StreamExpansion.Save(saved, []);
+        Assert.False(Assert.Single(DAO_StreamExpansion.SelectAllHeaders()).IsHourly);
+    }
+
+    [Fact]
+    public void ParticipationStore_PersistsAccountsAndClearsWithoutReplayingRedemptions()
+    {
+        var participant = new JTSA.Forms.ParticipationUserForm("user", "参加者", "入力", new DateTime(2026, 9, 4, 12, 0, 0))
+        { ProfileImageUrl = "https://example.test/icon.png", ParticipationCount = 3 };
+        JTSA.Utility.ParticipationStore.Save("account-a", [participant], ["redemption-a"]);
+        JTSA.Utility.ParticipationStore.Save("account-b", [participant with { UserId = "other" }], ["redemption-b"]);
+        Assert.Equal(participant, Assert.Single(JTSA.Utility.ParticipationStore.Load("account-a").Users));
+        Assert.Equal("other", Assert.Single(JTSA.Utility.ParticipationStore.Load("account-b").Users).UserId);
+        JTSA.Utility.ParticipationStore.Save("account-a", [], ["redemption-a"], [participant]);
+        var playing = JTSA.Utility.ParticipationStore.Load("account-a");
+        Assert.Empty(playing.Users);
+        Assert.Equal(participant, Assert.Single(playing.PlayingUsers));
+        JTSA.Utility.ParticipationStore.Save("account-a", [], ["redemption-a"]);
+        var restored = JTSA.Utility.ParticipationStore.Load("account-a");
+        Assert.Empty(restored.Users);
+        Assert.Empty(restored.PlayingUsers);
+        Assert.Equal(3, JTSA.Utility.ParticipationStore.GetParticipationCount("account-a", "user"));
+        Assert.Equal(0, JTSA.Utility.ParticipationStore.GetParticipationCount("account-b", "user"));
+        var returning = participant with
+        {
+            ParticipationCount = JTSA.Utility.ParticipationStore.GetParticipationCount("account-a", "user"),
+            MatchCount = 0
+        };
+        JTSA.Utility.ParticipationStore.Save("account-a", [returning], ["redemption-a"]);
+        Assert.Equal(3, Assert.Single(JTSA.Utility.ParticipationStore.Load("account-a").Users).ParticipationCount);
+        Assert.Equal("redemption-a", Assert.Single(restored.RedemptionIds));
+        Assert.Single(JTSA.Utility.ParticipationStore.Load("account-b").Users);
+        JTSA.Utility.ParticipationStore.Save("account-a", [], ["redemption-a"], [returning], slotCount: 4);
+        JTSA.Utility.ParticipationStore.Clear("account-a");
+        var cleared = JTSA.Utility.ParticipationStore.Load("account-a");
+        Assert.Empty(cleared.Users);
+        Assert.Empty(cleared.PlayingUsers);
+        Assert.Empty(cleared.ParticipationCounts);
+        Assert.Equal(4, cleared.SlotCount);
+        Assert.Equal("redemption-a", Assert.Single(cleared.RedemptionIds));
+        Assert.Equal(0, JTSA.Utility.ParticipationStore.GetParticipationCount("account-a", "user"));
+        Assert.Equal(3, JTSA.Utility.ParticipationStore.GetParticipationCount("account-b", "other"));
+    }
+
+    [Fact]
     public void CategoryDao_InsertSelectUpdateDelete_RoundTripsData()
     {
         var created = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);

@@ -7,6 +7,7 @@ public partial class StreamExpansionPlaceholderHelpWindow : Window
 {
     public ObservableCollection<PlaceholderHelpItem> PlaceholderItems { get; } =
     [
+        new("{current_time}", "アクション実行時のPCの現在時刻（24時間表記、例：09:05）。遅延設定がある場合は遅延後の時刻"),
         new("{chat_user}", "チャットしたユーザーの表示名（チャット・初回チャット時）"),
         new("{chat_login}", "チャットしたユーザーのログイン名（チャット・初回チャット時）"),
         new("{raid_user}", "レイド元ユーザーの表示名（レイド時）"),

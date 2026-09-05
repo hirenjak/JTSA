@@ -5,6 +5,20 @@ namespace JTSA.Tests;
 
 public class TitlePlaceholderReplacerTests
 {
+    [Theory]
+    [InlineData("{date, yyyy年mm月dd日}", "2026年09月04日")]
+    [InlineData("${date, yyyy年MM月dd日}", "2026年09月04日")]
+    [InlineData("${date, yy/m/d}", "26/9/4")]
+    [InlineData("{date, M}", "9")]
+    [InlineData("{date, yyyy-MM-dd 'mm'}", "2026-09-04 mm")]
+    [InlineData("${date} / {date, mm月dd日}", "2026/09/04 / 09月04日")]
+    [InlineData("{date, }", "{date, }")]
+    [InlineData("${date, yyyy'broken}", "${date, yyyy'broken}")]
+    public void ReplaceDateSupportsCustomFormatsWithoutBreakingInvalidTemplates(string template, string expected)
+    {
+        Assert.Equal(expected, TitlePlaceholderReplacer.ReplaceDate(template, new DateTime(2026, 9, 4, 12, 35, 0)));
+    }
+
     [Fact]
     public void ReplaceTitle_ReplacesEveryTitlePlaceholder()
     {

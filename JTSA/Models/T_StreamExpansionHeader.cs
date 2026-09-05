@@ -25,6 +25,14 @@ namespace JTSA.Models
         public bool IsFirstChat { get; set; }
 
         public bool IsFollow { get; set; }
+        public bool IsHourly { get; set; }
+        public bool IsAdStart { get; set; }
+        public bool IsAdEnd { get; set; }
+        public bool IsAdUpcoming { get; set; }
+        public int AdAdvanceMinutes { get; set; } = 1;
+        public bool IsScheduledTime { get; set; }
+        public int ScheduledHour { get; set; }
+        public int ScheduledMinute { get; set; }
 
         public bool IsObsStreamStart { get; set; }
 

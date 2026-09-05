@@ -1,4 +1,4 @@
-﻿using JTSA.Forms;
+using JTSA.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Windows;
@@ -16,6 +16,8 @@ namespace JTSA.Utility
         private readonly ServiceProvider serviceProvider;
         private readonly EventSubWebsocketClient eventSubClient;
         private readonly TwitchAPI twitchApi;
+        private readonly AdTriggerMonitor adMonitor;
+        internal event Action<StreamExpansionTriggerType, string>? AdTriggered;
 
         private readonly string broadcasterUserId;
         private readonly object tokenSync = new();
@@ -52,6 +54,8 @@ namespace JTSA.Utility
             twitchApi = api;
             broadcasterUserId = broadcasterId;
 
+            adMonitor = new AdTriggerMonitor(api, broadcasterId, LogError);
+            adMonitor.Triggered += (type, value) => AdTriggered?.Invoke(type, value);
             RegisterEvents();
         }
 
@@ -100,6 +104,14 @@ namespace JTSA.Utility
             eventSubClient.ChannelFollow += OnChannelFollow;
             eventSubClient.ChannelRaid += OnChannelRaid;
             eventSubClient.ChannelCheer += OnChannelCheer;
+            eventSubClient.ChannelAdBreakBegin += OnAdBreakBegin;
+        }
+
+        private Task OnAdBreakBegin(object? sender, ChannelAdBreakBeginArgs e)
+        {
+            var ad = e.Payload.Event;
+            adMonitor.OnBegin(ad.StartedAt, ad.DurationSeconds);
+            return Task.CompletedTask;
         }
 
         public async Task ConnectAsync()
@@ -111,6 +123,7 @@ namespace JTSA.Utility
             }
 
             await eventSubClient.ConnectAsync();
+            adMonitor.Start();
         }
 
         public async Task DisconnectAsync()
@@ -183,6 +196,19 @@ namespace JTSA.Utility
             };
 
             LogSuccess($"EventSub購読開始：{GetTokenDiagnostics()}");
+            try
+            {
+                await twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                    type: "channel.ad_break.begin", version: "1", condition: condition,
+                    method: EventSubTransportMethod.Websocket,
+                    websocketSessionId: eventSubClient.SessionId,
+                    accessToken: twitchApi.Settings.AccessToken);
+                LogSuccess("CM開始のEventSub購読が完了しました");
+            }
+            catch (Exception ex)
+            {
+                LogError($"CM開始の購読失敗：{ex.GetType().Name}。Twitchを再認証し channel:read:ads を許可してください。");
+            }
             // 権限不足でもチャネポなどの購読を妨げない。
             try
             {
@@ -311,9 +337,9 @@ namespace JTSA.Utility
                 RewardPrompt = redemption.Reward.Prompt,
 
                 UserInput = redemption.UserInput,
+                RedeemedAt = redemption.RedeemedAt.UtcDateTime,
                 Status = redemption.Status
             };
-
             ChannelPointRedeemed?.Invoke(form);
 
             return Task.CompletedTask;
@@ -344,7 +370,7 @@ namespace JTSA.Utility
             return Task.CompletedTask;
         }
 
-        private static void LogSuccess(string message)
+        private void LogSuccess(string message)
         {
             var application = Application.Current;
             if (application?.Dispatcher == null)
@@ -361,10 +387,14 @@ namespace JTSA.Utility
             if (application.MainWindow is MainWindow mainWindow)
             {
                 mainWindow.AppLogPanel.Success(nameof(TwitchEventSubService), message);
+                if (message == "CM開始のEventSub購読が完了しました")
+                    mainWindow.RemoveNotification($"eventsub-{broadcasterUserId}-ads");
+                if (message == "ビッツ受信のEventSub購読が完了しました")
+                    mainWindow.RemoveNotification($"eventsub-{broadcasterUserId}-bits");
             }
         }
 
-        private static void LogError(string message)
+        private void LogError(string message)
         {
             var application = Application.Current;
             if (application?.Dispatcher == null)
@@ -381,6 +411,14 @@ namespace JTSA.Utility
             if (application.MainWindow is MainWindow mainWindow)
             {
                 mainWindow.AppLogPanel.Error(nameof(TwitchEventSubService), message);
+                // These warnings used to reach only AppLog, leaving the notification button hidden.
+                if (message.Contains("再認証"))
+                {
+                    var category = message.StartsWith("CM予定") ? "ad-schedule"
+                        : message.Contains("channel:read:ads") ? "ads" : "bits";
+                    mainWindow.ShowNotification($"eventsub-{broadcasterUserId}-{category}",
+                        "Twitchの認証・権限を確認してください", message);
+                }
             }
         }
 
@@ -457,6 +495,7 @@ namespace JTSA.Utility
                 return;
 
             isDisposed = true;
+            await adMonitor.DisposeAsync();
 
             eventSubClient.WebsocketConnected -=
                 OnWebsocketConnected;
@@ -476,6 +515,7 @@ namespace JTSA.Utility
             eventSubClient.ChannelFollow -= OnChannelFollow;
             eventSubClient.ChannelRaid -= OnChannelRaid;
             eventSubClient.ChannelCheer -= OnChannelCheer;
+            eventSubClient.ChannelAdBreakBegin -= OnAdBreakBegin;
 
             try
             {

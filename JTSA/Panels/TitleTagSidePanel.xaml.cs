@@ -154,7 +154,15 @@ namespace JTSA.Panels
                 DAO_TitleTag.Delete(item.Id);
             }
 
+            ReloadTitleTagsAfterChange();
+        }
+
+        private void ReloadTitleTagsAfterChange()
+        {
             ReloadTitleTag();
+            // Calendar registration has its own list, but edits affect the shared tag database.
+            if (!ReferenceEquals(this, mainWindow.TitleTagSidePanel))
+                mainWindow.TitleTagSidePanel.ReloadTitleTag();
         }
 
 
@@ -210,6 +218,13 @@ namespace JTSA.Panels
                 Placeholder = "${date}",
                 IsSystem = true,
                 DisplayName = "今日の日付（yyyy/MM/dd）",
+                LastUsedDate = string.Empty
+            });
+            TitleTagFormList.Add(new()
+            {
+                Placeholder = "${date, yyyy年mm月dd日}",
+                IsSystem = true,
+                DisplayName = "今日の日付（形式指定可：yyyy年mm月dd日）",
                 LastUsedDate = string.Empty
             });
             TitleTagFormList.Add(new()
@@ -279,7 +294,7 @@ namespace JTSA.Panels
             );
 
             // 再読み込み処理
-            ReloadTitleTag();
+            ReloadTitleTagsAfterChange();
 
             mainWindow.AppLogPanel.ProcessEnd(GetType().Name, appLogProcessName);
         }

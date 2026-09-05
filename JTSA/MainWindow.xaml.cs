@@ -63,6 +63,9 @@ namespace JTSA
 
         /// <summary> 現在の配信状態を定期更新するタイマ </summary>
         private readonly DispatcherTimer streamStatusTimer;
+        private readonly DispatcherTimer hourlyTriggerTimer;
+        private readonly HourlyTriggerClock hourlyTriggerClock = new(DateTime.Now);
+        private readonly ScheduledTriggerClock scheduledTriggerClock = new(DateTime.Now);
         private readonly DispatcherTimer streamDurationTimer;
         private bool isStreamStatusUpdating;
         private DateTime? nextStreamStatusUpdateAtUtc;
@@ -238,6 +241,7 @@ namespace JTSA
             // WPF上の初期化処理
 			InitializeComponent();
             DataContext = this;
+            InitializeNotifications();
             CalendarPanel.AddRequested += CalendarPanel_AddRequested;
             CalendarPanel.EditRequested += CalendarPanel_EditRequested;
             twitchStatusHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -265,6 +269,22 @@ namespace JTSA
 
             streamStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
             streamStatusTimer.Tick += async (_, _) => await UpdateStreamStatusAsync();
+
+            hourlyTriggerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            hourlyTriggerTimer.Tick += async (_, _) =>
+            {
+                var now = DateTime.Now;
+                // Consume both boundaries before awaiting delayed actions.
+                var hourly = hourlyTriggerClock.TryTick(now);
+                var scheduled = scheduledTriggerClock.TryTick(now);
+                if (!isAccountAwarePanelsInitialized) return;
+                var value = now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                var tasks = new List<Task>();
+                if (hourly) tasks.Add(streamExpansionService.HandleAsync(StreamExpansionTriggerType.Hourly, value));
+                if (scheduled) tasks.Add(streamExpansionService.HandleAsync(StreamExpansionTriggerType.ScheduledTime, value));
+                await Task.WhenAll(tasks);
+            };
+            hourlyTriggerTimer.Start();
             streamStatusTimer.Start();
 
             // APIの取得間隔中も、取得済みの配信開始時刻を基準に表示を進める。
@@ -286,6 +306,7 @@ namespace JTSA
             Closing += (_, _) => SaveWindowPosition();
             Closed += (_, _) =>
             {
+                hourlyTriggerTimer.Stop();
                 mainObsController.Dispose();
                 subObsController.Dispose();
             };
@@ -661,6 +682,7 @@ namespace JTSA
         /// </summary>
         public void RequireOAuthReauthentication(string reason, string responseDetail = "")
         {
+            ShowNotification("oauth", "Twitchの再認証が必要です", reason);
             // 認証エラー後もチャットイベントからAPI呼び出しが連打されないようにする。
             TwitchHelper.AccessToken = string.Empty;
             SettingPanel.SetAccessTokenStatus(false);
@@ -1196,6 +1218,7 @@ namespace JTSA
         public void ReloadTargetAccounts(long? selectAccountId = null)
         {
             var accounts = DAO_TwitchAccount.SelectAll();
+            ObsSettingPanel.ReloadTwitchAccounts();
             TargetAccountComboBox.ItemsSource = accounts;
             var savedId = selectAccountId;
             if (savedId is null && long.TryParse(
@@ -1383,6 +1406,7 @@ namespace JTSA
                     AppLogPanel.Error(
                         GetType().Name,
                         $"{account.UserName} のアクセストークン更新に失敗しました。再認証してください。");
+                    ShowNotification($"oauth-{account.Id}", "Twitchの再認証が必要です", $"{account.UserName} を設定タブのアカウント一覧から再認証してください。");
                     return null;
                 }
 
@@ -1409,7 +1433,12 @@ namespace JTSA
             await Dispatcher.InvokeAsync(() =>
             {
                 if (account is null || account.IsPrimary)
+                {
+                    RemoveNotification("oauth");
                     TwitchHelper.AccessToken = accessToken;
+                }
+
+                if (account != null) RemoveNotification($"oauth-{account.Id}");
 
                 if (account is not null)
                     ChatPanel.UpdateConnectedAccessToken(account.BroadcasterId, accessToken);

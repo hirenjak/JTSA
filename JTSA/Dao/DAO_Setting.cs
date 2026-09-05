@@ -72,6 +72,8 @@ namespace JTSA.Dao
             ObsCategoryCaptureRules = 45,
             /// <summary>チャットオーバーレイ背景の不透明度（0～100）</summary>
             ChatOverlayBackgroundOpacity = 46,
+            ParticipationRewards = 47,
+            ParticipationLists = 48,
         }
 
 

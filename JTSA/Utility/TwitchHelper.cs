@@ -430,7 +430,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts")
+                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -954,10 +954,6 @@ namespace JTSA.Utility
 
         public static async Task<bool?> PinedChat(string chatId)
         {
-            MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
-            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
-
-
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
             client.DefaultRequestHeaders.Add("Client-Id", ClientID);
@@ -972,7 +968,6 @@ namespace JTSA.Utility
             
             if (!response.IsSuccessStatusCode)
             {
-                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                 return false;
             }
 
@@ -982,9 +977,6 @@ namespace JTSA.Utility
 
         public static async Task<bool?> PinedDeleteChat(string messageId)
         {
-            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
-
-
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
             client.DefaultRequestHeaders.Add("Client-Id", ClientID);
@@ -999,7 +991,6 @@ namespace JTSA.Utility
 
             if (!response.IsSuccessStatusCode)
             {
-                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                 return false;
             }
 
@@ -1010,8 +1001,6 @@ namespace JTSA.Utility
         {
             // 権限エラーで再認証画面へ遷移した後は、チャットイベントごとの再試行を止める。
             if (string.IsNullOrWhiteSpace(AccessToken)) return null;
-
-            var appLogProcessName = mainWindow.AppLogPanel.ProcessStart(nameof(TwitchHelper), "ピン止め処理");
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
@@ -1027,7 +1016,6 @@ namespace JTSA.Utility
 
             if (!response.IsSuccessStatusCode)
             {
-                mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
                 return null;
             }
 

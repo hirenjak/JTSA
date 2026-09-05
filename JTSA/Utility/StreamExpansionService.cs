@@ -6,7 +6,7 @@ using System.Windows;
 
 namespace JTSA.Utility;
 
-internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart }
+internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart, Hourly, ScheduledTime, AdStart, AdEnd, AdUpcoming }
 
 internal sealed record StreamExpansionChatUserContext(
     bool IsBroadcaster,
@@ -222,6 +222,21 @@ internal sealed class StreamExpansionService
             case StreamExpansionTriggerType.FirstChat:
                 return rule.IsFirstChat;
 
+            case StreamExpansionTriggerType.ScheduledTime:
+                return rule.IsScheduledTime &&
+                    rule.ScheduledHour is >= 0 and <= 23 &&
+                    rule.ScheduledMinute is >= 0 and <= 55 && rule.ScheduledMinute % 5 == 0 &&
+                    value == FormattableString.Invariant($"{rule.ScheduledHour:00}:{rule.ScheduledMinute:00}");
+
+            case StreamExpansionTriggerType.AdStart:
+                return rule.IsAdStart;
+            case StreamExpansionTriggerType.AdEnd:
+                return rule.IsAdEnd;
+            case StreamExpansionTriggerType.AdUpcoming:
+                return rule.IsAdUpcoming && int.TryParse(value, out var minutes) && rule.AdAdvanceMinutes == minutes;
+            case StreamExpansionTriggerType.Hourly:
+                return rule.IsHourly;
+
             case StreamExpansionTriggerType.Follow:
                 return rule.IsFollow;
 
@@ -420,6 +435,7 @@ internal sealed class StreamExpansionService
 
     private static string ToTriggerName(StreamExpansionTriggerType type) => type switch
     {
+        StreamExpansionTriggerType.ScheduledTime => "scheduled_time",
         StreamExpansionTriggerType.FirstChat => "first_chat",
         StreamExpansionTriggerType.ChannelPoint => "channel_point",
         StreamExpansionTriggerType.ObsStreamStart => "obs_stream_start",

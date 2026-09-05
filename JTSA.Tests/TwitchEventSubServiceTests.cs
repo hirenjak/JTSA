@@ -21,14 +21,14 @@ public class TwitchEventSubServiceTests
         await using var service = new TwitchEventSubService(api, "account-a");
 
         await SimulateConnectionAsync(service, "session-before");
-        Assert.Equal(4, http.Tokens.Count);
+        Assert.Equal(5, http.Tokens.Count);
         Assert.All(http.Tokens, token => Assert.Equal("expired-token", token));
         http.Tokens.Clear();
 
         Assert.True(service.UpdateAccessToken("account-a", "refreshed-token"));
         await SimulateConnectionAsync(service, "session-after");
 
-        Assert.Equal(4, http.Tokens.Count);
+        Assert.Equal(5, http.Tokens.Count);
         Assert.All(http.Tokens, token => Assert.Equal("refreshed-token", token));
         Assert.Contains("TokenGeneration=1", service.GetTokenDiagnostics());
         Assert.DoesNotContain("refreshed-token", service.GetTokenDiagnostics());

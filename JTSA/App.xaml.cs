@@ -118,13 +118,12 @@ namespace JTSA
             }
         }
 
-        protected override async void OnStartup(StartupEventArgs e)
+        protected override void OnStartup(StartupEventArgs e)
         {
-            await UpdateCheck();
             base.OnStartup(e);
         }
 
-        private static async Task UpdateCheck()
+        internal static async Task UpdateCheck(MainWindow window)
         {
             try
             {
@@ -141,21 +140,20 @@ namespace JTSA
                 if (info == null || info.TargetFullRelease == null) return;
 
                 var latest = info.TargetFullRelease;
-                var result = MessageBox.Show(
-                    $"新しいバージョン（{latest.Version}）があります。アップデートしますか？",
-                    "アップデート確認",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Information);
-
-                if (result == MessageBoxResult.Yes)
+                window.ShowNotification("update", "アプリの更新があります",
+                    $"バージョン {latest.Version} を利用できます。更新するとJTSAが再起動します。", "更新する", async () =>
                 {
                     await mgr.DownloadUpdatesAsync(info);
                     mgr.ApplyUpdatesAndRestart(info);
-                }
+                });
             }
             catch (Exception ex)
             {
-                MessageBox.Show("アップデート確認中にエラーが発生しました: " + ex.Message);
+                window.ShowNotification("update-check", "更新を確認できませんでした", "通信状態を確認して再試行してください。", "再試行", async () =>
+                {
+                    window.RemoveNotification("update-check");
+                    await UpdateCheck(window);
+                });
             }
         }
     }
