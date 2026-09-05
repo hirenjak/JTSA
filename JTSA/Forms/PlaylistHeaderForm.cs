@@ -18,6 +18,7 @@ namespace JTSA.Forms
         public bool IsReadOnly { get; set; }
         public Visibility DeleteVisibility => IsReadOnly ? Visibility.Collapsed : Visibility.Visible;
         private string gamePlayListName = string.Empty;
+        private bool isObsSelected;
 
         public required long GamePlayListId { get; set; }
         public required string GamePlayListName
@@ -33,6 +34,16 @@ namespace JTSA.Forms
         public required string LastUsedDate { get; set; }
         public required string ImageUrl { get; set; }
         public required bool IsLoaded { get; set; }
+        public bool IsObsSelected
+        {
+            get => isObsSelected;
+            set
+            {
+                if (isObsSelected == value) return;
+                isObsSelected = value;
+                OnPropertyChanged();
+            }
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

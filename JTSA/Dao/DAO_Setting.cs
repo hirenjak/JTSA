@@ -74,6 +74,10 @@ namespace JTSA.Dao
             ChatOverlayBackgroundOpacity = 46,
             ParticipationRewards = 47,
             ParticipationLists = 48,
+            /// <summary>OBSのプレイリスト表示で選択中のプレイリストID</summary>
+            ObsGamePlaylistId = 49,
+            /// <summary>最後に正常適用されたチャンネルポイントプリセットID</summary>
+            AppliedChannelPointPresetId = 50,
         }
 
 

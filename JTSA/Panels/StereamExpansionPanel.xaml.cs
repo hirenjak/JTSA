@@ -16,6 +16,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     private string headerName = string.Empty;
     private bool isActive;
     private bool doShoutout;
+    private bool doGrantVip;
     public long HeaderId { get; set; }
     public string HeaderName { get => headerName; set { headerName = value; Changed(); } }
     public bool IsActive { get => isActive; set { isActive = value; Changed(); } }
@@ -36,6 +37,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsObsStreamStartMain { get; set; }
     public bool IsObsStreamStartSub { get; set; }
     public bool DoShoutout { get => doShoutout; set { doShoutout = value; Changed(); } }
+    public bool DoGrantVip { get => doGrantVip; set { doGrantVip = value; Changed(); } }
     public int DelaySeconds { get; set; }
     public string TriggerComment { get; set; } = string.Empty;
     public bool ChatPermissionEveryone { get; set; }
@@ -124,6 +126,7 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     private string chatContent = string.Empty;
     private string clipUserName = string.Empty;
     private string clipTargetMode = "Disabled";
+    private int clipRankingLimit = StreamExpansionClipSettings.DefaultRankingLimit;
     public string ClipUserName
     {
         get => clipTargetMode switch
@@ -158,6 +161,17 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     public bool IsClipSpecified { get => clipTargetMode == "Specified"; set { if (value) SetClipTargetMode("Specified"); } }
     public bool IsClipConfigured => clipTargetMode != "Disabled"
         && (clipTargetMode != "Specified" || !string.IsNullOrWhiteSpace(clipUserName));
+    public int ClipRankingLimit
+    {
+        get => clipRankingLimit;
+        set
+        {
+            var normalized = Math.Clamp(value, 1, 100);
+            if (clipRankingLimit == normalized) return;
+            clipRankingLimit = normalized;
+            Changed();
+        }
+    }
 
     private void SetClipTargetMode(string mode)
     {
@@ -260,7 +274,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         Loaded += StereamExpansionPanel_Loaded;
         IsVisibleChanged += StereamExpansionPanel_IsVisibleChanged;
         AddHandler(TextBox.LostKeyboardFocusEvent, new System.Windows.Input.KeyboardFocusChangedEventHandler(AutoSaveTextBox_LostKeyboardFocus), true);
-        AddHandler(CheckBox.ClickEvent, new RoutedEventHandler(AutoSaveCheckBox_Click), true);
+        AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent,
+            new RoutedEventHandler(AutoSaveToggleButton_Click), true);
         AddHandler(System.Windows.Controls.Primitives.Selector.SelectionChangedEvent,
             new SelectionChangedEventHandler(AutoSaveComboBox_SelectionChanged), true);
         AddHandler(System.Windows.Controls.Primitives.RangeBase.ValueChangedEvent,
@@ -362,6 +377,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsObsStreamStartMain = x.IsObsStreamStartMain,
                 IsObsStreamStartSub = x.IsObsStreamStartSub,
                 DoShoutout = x.DoShoutout,
+                DoGrantVip = x.DoGrantVip,
                 DelaySeconds = x.DelaySeconds,
                 TriggerComment = x.TriggerComment,
                 ChatPermissionEveryone = x.ChatPermissionEveryone,
@@ -563,7 +579,9 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                             form.ChatContent = item.Content;
                             break;
                         case "ObsClip":
-                            form.ClipUserName = item.Content;
+                            var clipSettings = StreamExpansionClipSettings.Decode(item.Content);
+                            form.ClipUserName = clipSettings.Login;
+                            form.ClipRankingLimit = clipSettings.RankingLimit;
                             break;
                         case "ObsText":
                             form.ObsTextForms.Add(new()
@@ -758,7 +776,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         try
         {
             if (item.IsClipConfigured)
-                await streamExpansionService.PlayClipPreviewAsync(item.ClipUserName);
+                await streamExpansionService.PlayClipPreviewAsync(item.ClipUserName, item.ClipRankingLimit);
             foreach (var obsText in configuredItems)
                 await mainWindow.SetObsTextSourceAsync(obsText.IsSubObs, obsText.SourceName, obsText.TextTemplate);
         }
@@ -799,7 +817,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             AddSaveItem(saveItems, form.IsImageConfigured, "Image", imageContent, form.Weight, 100, groupIndex);
             AddSaveItem(saveItems, form.IsAudioConfigured, "Audio", form.AudioContent, form.Weight, form.AudioVolume, groupIndex);
             AddSaveItem(saveItems, form.IsChatConfigured, "Chat", form.ChatContent, form.Weight, 100, groupIndex);
-            AddSaveItem(saveItems, form.IsClipConfigured, "ObsClip", form.ClipUserName.Trim(), form.Weight, 100, groupIndex);
+            var clipSettings = new StreamExpansionClipSettings(form.ClipUserName.Trim(), form.ClipRankingLimit);
+            AddSaveItem(saveItems, form.IsClipConfigured, "ObsClip", clipSettings.Encode(), form.Weight, 100, groupIndex);
             foreach (var obsText in form.ObsTextForms)
             {
                 if (string.IsNullOrWhiteSpace(obsText.SourceName)) continue;
@@ -840,6 +859,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsObsStreamStartMain = header.IsObsStreamStartMain,
             IsObsStreamStartSub = header.IsObsStreamStartSub,
             DoShoutout = header.DoShoutout,
+            DoGrantVip = header.DoGrantVip,
             DelaySeconds = Math.Clamp(header.DelaySeconds, 0, 3600),
             TriggerComment = header.TriggerComment?.Trim() ?? "",
             ChatPermissionEveryone = header.ChatPermissionEveryone,
@@ -899,11 +919,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         return null;
     }
 
-    private void AutoSaveCheckBox_Click(object sender, RoutedEventArgs e)
+    private void AutoSaveToggleButton_Click(object sender, RoutedEventArgs e)
     {
-        if (e.OriginalSource is not CheckBox checkBox) return;
-        if (checkBox.DataContext is StreamExpansionHeaderForm header && header != editingHeader) return;
-        checkBox.GetBindingExpression(CheckBox.IsCheckedProperty)?.UpdateSource();
+        if (e.OriginalSource is not System.Windows.Controls.Primitives.ToggleButton toggleButton) return;
+        if (toggleButton.DataContext is StreamExpansionHeaderForm header && header != editingHeader) return;
+        toggleButton.GetBindingExpression(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty)?.UpdateSource();
         SaveCurrent();
     }
 

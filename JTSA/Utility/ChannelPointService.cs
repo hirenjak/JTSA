@@ -202,6 +202,30 @@ namespace JTSA.Utility
             return await UpdateAsync(reward, new UpdateCustomRewardRequest { IsPaused = isPaused });
         }
 
+        public static async Task<TwitchApiResult<bool>> SetStateAsync(
+            ChannelPointRewardForm reward, bool isEnabled, bool isPaused)
+        {
+            return await UpdateAsync(reward, new UpdateCustomRewardRequest
+            {
+                IsEnabled = isEnabled,
+                IsPaused = isEnabled && isPaused
+            });
+        }
+
+        public static async Task<TwitchApiResult<bool>> UpdateDetailsAsync(
+            ChannelPointRewardForm reward,
+            string title,
+            string prompt,
+            int cost)
+        {
+            return await UpdateAsync(reward, new UpdateCustomRewardRequest
+            {
+                Title = title,
+                Prompt = prompt,
+                Cost = cost
+            });
+        }
+
 
         /// <summary>
         /// 報酬を更新し、成功したらAPIが返した最新値をFormへ反映する。
@@ -430,6 +454,7 @@ namespace JTSA.Utility
                 RewardId = reward.RewardId,
                 RewardTitle = reward.Title,
                 IsEnabled = reward.IsEnabled,
+                IsPaused = reward.IsPaused,
                 LastUsedDateTime = now,
                 CreatedDateTime = now,
                 UpdatedDateTime = now
@@ -496,13 +521,14 @@ namespace JTSA.Utility
                 }
 
                 // 既に狙いの状態なら何もしない（API呼び出しを減らす）
-                if (reward.IsEnabled == item.IsEnabled)
+                if (reward.IsEnabled == item.IsEnabled &&
+                    reward.IsPaused == (item.IsEnabled && item.IsPaused))
                 {
                     result.UnchangedCount++;
                     continue;
                 }
 
-                var updateResult = await SetEnabledAsync(reward, item.IsEnabled);
+                var updateResult = await SetStateAsync(reward, item.IsEnabled, item.IsPaused);
 
                 if (updateResult.IsSuccess)
                 {
@@ -521,6 +547,12 @@ namespace JTSA.Utility
             result.IsSuccess = result.FailedCount == 0;
 
             DAO_ChannelPointPreset.UpdateLastUsed(presetId);
+            if (result.IsSuccess)
+            {
+                DAO_Setting.InsertUpdate(
+                    SettingName.AppliedChannelPointPresetId,
+                    presetId.ToString());
+            }
 
             mainWindow.AppLogPanel.AddSwitchLog(result.IsSuccess, nameof(ChannelPointService),
                 result.SummaryText,

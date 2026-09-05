@@ -328,7 +328,6 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -448,7 +447,7 @@
             </StackPanel>
 
             <Button x:Name="ObsSceneShortcutToggleButton"
-                    Grid.Column="1" Content="ショートカット ☰"
+                    Grid.Column="1" Content="OBS ☰"
                     Width="90" Height="22" Margin="8,0,0,0"
                     Padding="0" FontSize="11" VerticalAlignment="Center"
                     Foreground="White" Background="#FF565656"
@@ -471,19 +470,27 @@
                 </Button.Template>
             </Button>
 
-            <Button Grid.Column="2" Content="OBSキャプチャ設定" Width="110" Height="22"
-                    Margin="8,0,0,0" Padding="6,0" HorizontalAlignment="Left"
-                    Foreground="White" Background="#FF285653"
-                    BorderBrush="LightSeaGreen" BorderThickness="1"
-                    ToolTip="現在のカテゴリに対するOBSキャプチャ先を設定します"
-                    Click="OpenCurrentCategoryObsCaptureButton_Click"/>
-            <Button Grid.Column="3" Content="配信情報を編集 ↗" Height="22"
-                    Margin="8,0,0,0" Padding="6,0" HorizontalAlignment="Left"
-                    Foreground="White" Background="#FF285653"
-                    BorderBrush="LightSeaGreen" BorderThickness="1"
-                    ToolTip="選択中のアカウントの配信情報編集を外部ブラウザで開きます"
-                    Click="OpenStreamInfoEditorButton_Click"/>
-            <Button x:Name="LaunchSteamGameButton" Grid.Column="4"
+            <Button x:Name="UrlLinkToggleButton"
+                    Grid.Column="2" Content="URLリンク ☰"
+                    Width="90" Height="22" Margin="8,0,0,0"
+                    Padding="0" FontSize="11" VerticalAlignment="Center"
+                    Foreground="White" Background="#FF565656"
+                    BorderBrush="#FF777777" BorderThickness="1" Cursor="Hand"
+                    Click="UrlLinkToggleButton_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="0" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <Button x:Name="LaunchSteamGameButton" Grid.Column="3"
                     Content="ゲーム起動" Width="88" Height="22"
                     Padding="6,0" HorizontalAlignment="Right"
                     IsEnabled="False"
@@ -590,13 +597,33 @@
                 </Style.Triggers>
             </Style>
          </Grid.Resources>
-         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Grid x:Name="ObsSceneShortcutPanel" Grid.Column="0" Margin="0,0,6,0" Background="#FF4C4C4C">
+         <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+         </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Width="116" Margin="0,0,6,0" Padding="8,4"
+                Background="#FF4C4C4C" BorderBrush="#FF666666" BorderThickness="1">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="キャプチャ設定" Foreground="#FFD0D0D0"
+                           TextAlignment="Center" FontSize="10" FontWeight="SemiBold"/>
+                <Button Content="設定" Height="19" Margin="0,3,0,0" Padding="7,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="現在のカテゴリに対するOBSキャプチャ先を設定します"
+                        Click="OpenCurrentCategoryObsCaptureButton_Click"/>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="ObsSceneShortcutPanel" Grid.Column="1" Margin="6,0"
+                Background="#FF4C4C4C" BorderBrush="#FF666666" BorderThickness="1">
+          <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <StackPanel VerticalAlignment="Center" Margin="8,2,9,2">
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="8,2,9,2">
                 <TextBlock Text="シーン選択" Foreground="#FFD0D0D0"
                            TextAlignment="Center" FontSize="10" FontWeight="SemiBold"/>
                 <Button Content="設定" Height="19" Margin="0,3,0,0" Padding="7,0"
@@ -620,9 +647,10 @@
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
-        </Grid>
+          </Grid>
+        </Border>
 
-        <Grid x:Name="ObsSourceShortcutPanel" Grid.Column="1" Margin="6,0,0,0" Background="#FF4C4C4C">
+        <Grid x:Name="ObsSourceShortcutPanel" Grid.Column="2" Margin="6,0,0,0" Background="#FF4C4C4C">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center" Margin="8,2,9,2">
                 <TextBlock Text="ソース表示" Foreground="#FFD0D0D0"
@@ -642,6 +670,50 @@
             </Grid>
         </Grid>
         </Grid>
+        </Border>
+
+        <Border x:Name="UrlLinkPanel" Grid.Row="3" Margin="8,0,8,4"
+                Padding="8,7" Visibility="Collapsed"
+                Background="#FF464646" BorderBrush="#FF555555"
+                BorderThickness="1,0,1,1" CornerRadius="0">
+            <WrapPanel>
+                <Button Content="配信情報を編集 ↗" Width="130" Height="26"
+                        Margin="0,0,8,0" Padding="8,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="選択中のアカウントの配信情報編集を外部ブラウザで開きます"
+                        Click="OpenStreamInfoEditorButton_Click"/>
+                <Button Content="報酬設定 ↗" Width="130" Height="26"
+                        Margin="0,0,8,0" Padding="8,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="選択中のアカウントのTwitch報酬設定を外部ブラウザで開きます"
+                        Click="OpenTwitchRewardSettingsButton_Click"/>
+                <Button Content="ビデオプロデューサー ↗" Width="150" Height="26"
+                        Margin="0,0,8,0" Padding="8,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="選択中のアカウントのビデオプロデューサーを外部ブラウザで開きます"
+                        Click="OpenTwitchVideoProducerButton_Click"/>
+                <Button Content="スタンプ管理 ↗" Width="130" Height="26"
+                        Margin="0,0,8,0" Padding="8,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="選択中のアカウントのスタンプ管理を外部ブラウザで開きます"
+                        Click="OpenTwitchEmoteManagerButton_Click"/>
+                <Button Content="配信ページ ↗" Width="130" Height="26"
+                        Margin="0,0,8,0" Padding="8,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="選択中のアカウントのTwitch配信ページを外部ブラウザで開きます"
+                        Click="OpenSelectedTwitchChannelButton_Click"/>
+                <Button Content="StreamTogether ↗" Width="130" Height="26"
+                        Padding="8,0"
+                        Foreground="White" Background="#FF285653"
+                        BorderBrush="LightSeaGreen" BorderThickness="1"
+                        ToolTip="StreamTogetherを外部ブラウザで開きます"
+                        Click="OpenGuestStarButton_Click"/>
+            </WrapPanel>
         </Border>
 
         <Grid 
@@ -848,6 +920,19 @@
                                                                 <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
                                                                 <TextBlock Text="{Binding TitlePlaceholder, StringFormat=テンプレート：{0}}"
                                                                            Foreground="LightGray" FontSize="11" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding SelectedFriendNames, StringFormat=フレンド：{0}}"
+                                                                           Foreground="#FF9FD8CF" FontSize="11" TextWrapping="Wrap">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="TextBlock">
+                                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding SelectedFriendNames}" Value="">
+                                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
 
                                                                 <Grid Margin="0" Height="Auto">
                                                                     <Grid.ColumnDefinitions>

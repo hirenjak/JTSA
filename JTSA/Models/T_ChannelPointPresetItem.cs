@@ -17,6 +17,9 @@ namespace JTSA.Models
         /// <summary> 適用時に設定する有効／無効 </summary>
         public bool IsEnabled { get; set; }
 
+        /// <summary> 適用時に設定する一時停止状態 </summary>
+        public bool IsPaused { get; set; }
+
         /// <summary> 保存時点の報酬名。報酬が削除された後もプリセットの内容を表示できるようにするため </summary>
         public required string RewardTitle { get; set; }
     }

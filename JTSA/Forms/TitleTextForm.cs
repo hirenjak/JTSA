@@ -18,6 +18,8 @@ namespace JTSA.Forms
         public required string CategoryId { get; set; }
         public required string CategoryName { get; set; }
         public required string CategoryBoxArtUrl { get; set; }
+        public string SelectedFriendIds { get; set; } = string.Empty;
+        public string SelectedFriendNames { get; set; } = string.Empty;
         public required string LastUsedDate { get; set; }
     }
 }

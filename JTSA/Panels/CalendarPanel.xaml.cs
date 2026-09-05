@@ -70,7 +70,6 @@ public partial class CalendarPanel : UserControl
             Entries.Add(entry);
         }
 
-        EntryCountTextBlock.Text = $"{Entries.Count:N0}件";
         BuildCalendarDays();
         if (selectedDate.HasValue)
             CalendarEntryListBox.SelectedItem = Entries.FirstOrDefault(x => x.CalendarDate.Date == selectedDate.Value.Date);
@@ -178,9 +177,6 @@ public partial class CalendarPanel : UserControl
             });
         }
 
-        var monthEnd = displayedCalendarMonth.AddMonths(1);
-        var count = Entries.Count(entry => entry.CalendarDate >= displayedCalendarMonth && entry.CalendarDate < monthEnd);
-        CalendarMonthSummaryTextBlock.Text = $"予定 {count:N0}件";
     }
 
     private void EntryDatePicker_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)

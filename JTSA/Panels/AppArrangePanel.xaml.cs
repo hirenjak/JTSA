@@ -14,7 +14,6 @@ namespace JTSA.Panels;
 public partial class AppArrangePanel : UserControl
 {
     public ObservableCollection<AppInfoForm> RegisteredApps { get; } = [];
-    public ObservableCollection<AppInfoForm> RunningApps { get; } = [];
 
     private readonly DispatcherTimer statusTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private bool isLoadingAutoStartSetting;
@@ -27,7 +26,6 @@ public partial class AppArrangePanel : UserControl
         Loaded += (_, _) =>
         {
             ReloadRegisteredApps();
-            ReloadRunningApps();
             LoadAutoStartSetting();
             statusTimer.Start();
         };
@@ -59,27 +57,6 @@ public partial class AppArrangePanel : UserControl
             RegisteredApps.Add(ToForm(item));
         }
         UpdateStatuses();
-    }
-
-    private void ReloadRunningApps()
-    {
-        RunningApps.Clear();
-        foreach (var process in Process.GetProcesses().OrderBy(x => x.ProcessName))
-        {
-            try
-            {
-                if (process.MainWindowHandle == IntPtr.Zero || string.IsNullOrWhiteSpace(process.MainWindowTitle)) continue;
-                RunningApps.Add(new AppInfoForm { ProcessName = process.ProcessName, WindowTitle = process.MainWindowTitle });
-            }
-            catch
-            {
-                // 権限の異なるプロセスなど、情報を取得できないものは一覧から除外する。
-            }
-            finally
-            {
-                process.Dispose();
-            }
-        }
     }
 
     private void UpdateStatuses()
@@ -224,9 +201,16 @@ public partial class AppArrangePanel : UserControl
         MainWindow.StatusTextBlock.Foreground = success ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.OrangeRed;
     }
 
-    private void RegisterButton_Click(object sender, RoutedEventArgs e)
+    private void OpenAppRegistrationButton_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.DataContext is not AppInfoForm app || !TryGetWindowInfo(app, out var captured)) return;
+        var window = new AppRegistrationWindow
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (window.ShowDialog() != true || window.SelectedApp is not AppInfoForm app
+            || !TryGetWindowInfo(app, out var captured)) return;
+
         Save(captured);
         ReloadRegisteredApps();
         ShowStatus($"アプリを登録しました: {app.ProcessName}");
@@ -275,7 +259,6 @@ public partial class AppArrangePanel : UserControl
         ShowStatus($"登録を削除しました: {app.ProcessName}");
     }
 
-    private void ReloadRunningButton_Click(object sender, RoutedEventArgs e) => ReloadRunningApps();
     private void StartAllButton_Click(object sender, RoutedEventArgs e) => StartRegisteredApps();
     private void MoveAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Win32Helper.SetAppWindowRect(app); ShowStatus("登録済みアプリを一括配置しました。"); }
     private void StopAllButton_Click(object sender, RoutedEventArgs e) { foreach (var app in RegisteredApps.Where(x => x.Status == "起動中")) Stop(app); }

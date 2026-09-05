@@ -16,4 +16,6 @@ public class T_TitleText : DBBaseTransaction
     public required string CategoryName { get; set; }
 
     public required string CategoryBoxArtUrl { get; set; }
+
+    public string SelectedFriendIds { get; set; } = string.Empty;
 }
