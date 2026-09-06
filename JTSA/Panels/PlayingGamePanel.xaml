@@ -159,12 +159,15 @@
                 BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <TextBlock Grid.Row="0" Text="※ダブルクリックで適用"
+                       Foreground="#FFBDBDBD" FontSize="11" Margin="8,6,8,4"/>
             <Grid
-                    Grid.Row="0" >
+                    Grid.Row="1" >
 
                 <ListBox x:Name="GamePlaylistListBox" 
                         d:ItemsSource="{d:SampleData ItemCount = 3}"
@@ -174,7 +177,8 @@
                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                        SelectionChanged="GamePlaylistListBox_SelectionChanged">
+                        SelectionChanged="GamePlaylistListBox_SelectionChanged"
+                        MouseDoubleClick="GamePlaylistListBox_MouseDoubleClick">
 
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -192,8 +196,8 @@
                                                      VerticalAlignment="Center"
                                                      GroupName="ObsDisplayPlaylist"
                                                      ToolTip="このプレイリストをOBSに表示"
-                                                     IsChecked="{Binding IsObsSelected, Mode=TwoWay}"
-                                                     Click="ObsPlaylistRadioButton_Click"/>
+                                                     IsHitTestVisible="False"
+                                                     IsChecked="{Binding IsObsSelected, Mode=OneWay}"/>
 
                                         <Image Grid.Column="1" Source="{Binding ImageUrl}"
                                    Height="48"
@@ -268,7 +272,7 @@
 
             </Grid>
 
-            <Button Grid.Row="1" Content="＋ プレイリストを追加" Height="30" Margin="4"
+            <Button Grid.Row="2" Content="＋ プレイリストを追加" Height="30" Margin="4"
                     Padding="8,0" HorizontalContentAlignment="Left"
                     Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
                     BorderThickness="1" Click="GamePlayListSaveButton_Click"/>

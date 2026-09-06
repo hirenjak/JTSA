@@ -78,23 +78,56 @@
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
         </Style>
+        <Style x:Key="CpCardListItemStyle" TargetType="ListViewItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="CpCardListStyle" TargetType="ListView">
             <Setter Property="Background" Value="#FF383838"/>
             <Setter Property="BorderBrush" Value="#FF5E5E5E"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="AllowDrop" Value="True"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource CpCardListItemStyle}"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
             <Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
             <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
             <EventSetter Event="PreviewMouseLeftButtonDown" Handler="RewardList_PreviewMouseLeftButtonDown"/>
             <EventSetter Event="MouseMove" Handler="RewardList_MouseMove"/>
+            <EventSetter Event="PreviewDragOver" Handler="RewardList_DragOver"/>
             <EventSetter Event="Drop" Handler="RewardList_Drop"/>
         </Style>
 
         <DataTemplate x:Key="CpRewardCardTemplate">
-            <Border Background="#FF505050" BorderBrush="#FF686868" BorderThickness="1"
-                    CornerRadius="3" Padding="8" Margin="3" Cursor="SizeAll">
+            <Border BorderThickness="1" CornerRadius="3" Padding="8" Margin="3" Cursor="SizeAll">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#FF505050"/>
+                        <Setter Property="BorderBrush" Value="#FF686868"/>
+                        <Setter Property="Opacity" Value="1"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsManageable}" Value="False">
+                                <Setter Property="Background" Value="#FF353535"/>
+                                <Setter Property="BorderBrush" Value="#FF464646"/>
+                                <Setter Property="Opacity" Value="0.68"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -153,7 +186,7 @@
                     <TextBlock Text="CP一覧" Style="{StaticResource CpSectionTitleStyle}"
                                VerticalAlignment="Center"/>
                     <Button x:Name="CpManagementReloadButton" Grid.Column="1" Content="更新"
-                            Width="70" Height="24" HorizontalAlignment="Right"
+                            Width="44" Margin="5,0,0,0" HorizontalAlignment="Right"
                             Style="{StaticResource CpSecondaryButtonStyle}"
                             Click="ReloadButton_Click"/>
                 </Grid>
@@ -178,6 +211,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="54"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Image Source="{Binding ImageUrl}" Width="42" Height="42"
                                    Stretch="Uniform" VerticalAlignment="Center"/>
@@ -192,6 +226,12 @@
                                     <Run Text="{Binding Cost}"/><Run Text=" CP"/>
                                 </TextBlock>
                             </StackPanel>
+                            <Button Grid.Column="2" Content="複製" Width="44" Margin="5,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource CpSecondaryButtonStyle}"
+                                    Visibility="{Binding CopyButtonVisibility}" Tag="{Binding}"
+                                    ToolTip="このCPをアプリ側で操作可能なCPとして複製"
+                                    Click="CopyRewardButton_Click"/>
                         </Grid>
                         <Border Height="2" Background="White"/>
                       </StackPanel>
@@ -256,7 +296,7 @@
                     <Image Grid.Column="1" Source="{Binding ImageUrl}" Width="28" Height="28"
                            Margin="8,0,0,0" Stretch="Uniform"/>
                 </Grid>
-                <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid Grid.Row="1" Margin="0,10,0,10">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="80"/><ColumnDefinition Width="130"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <TextBlock Text="コスト" Style="{StaticResource CpFieldLabelStyle}" VerticalAlignment="Center"/>
                     <TextBox x:Name="CpManagementCostTextBox" Grid.Column="1" Height="28"
@@ -273,12 +313,9 @@
                              AcceptsReturn="True" TextWrapping="Wrap" MaxLength="200"/>
                 </Grid>
                 <TextBlock Grid.Row="3"
-                           Text="✔ はこのアプリから編集できるCPです。&#10;🔒 は Twitch の Web 画面から作成されたCPです。コピーするとこのアプリから操作できます。&#10;※画像追加はTwitch公式UIのみ対応です。（画像サイズツールについてはTipsを参照）"
+                           Text="✔ はこのアプリから編集できるCPです。&#10;🔒 は Twitch の Web 画面から作成されたCPです。複製するとこのアプリから操作できます。&#10;※画像追加はTwitch公式UIのみ対応です。（画像サイズツールについてはTipsを参照）"
                            Style="{StaticResource CpDescriptionStyle}" Margin="80,6,0,0"/>
                 <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="コピー" Width="90" Height="30" Margin="0,0,8,0"
-                            Visibility="{Binding CopyButtonVisibility}" Tag="{Binding}"
-                            Click="CopyRewardButton_Click"/>
                     <Button Content="保存" Width="90" Height="30"
                             Visibility="{Binding EditButtonVisibility}" Tag="{Binding}"
                             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
@@ -347,8 +384,10 @@
                         <TextBlock Style="{StaticResource CpPaneTitleStyle}" VerticalAlignment="Center">
                             <Run Text="無効のCP  "/><Run Text="{Binding DisabledChannelPointRewardFormList.Count, Mode=OneWay}"/>
                         </TextBlock>
-                        <Button x:Name="ReloadButton" Grid.Column="1" Content="更新" Width="70" Height="24"
-                                HorizontalAlignment="Right" Click="ReloadButton_Click"/>
+                        <Button x:Name="ReloadButton" Grid.Column="1" Content="更新" Width="44"
+                                Margin="5,0,0,0" HorizontalAlignment="Right"
+                                Style="{StaticResource CpSecondaryButtonStyle}"
+                                Click="ReloadButton_Click"/>
                     </Grid>
                     <ListView x:Name="DisabledChannelPointListView" Grid.Row="1" Tag="Disabled"
                               Style="{StaticResource CpCardListStyle}"
@@ -373,11 +412,14 @@
          <Grid Grid.Column="0" Margin="8,4,0,8">
            <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
            </Grid.RowDefinitions>
                 <TextBlock Text="プリセット一覧" Style="{StaticResource CpSectionTitleStyle}"
-                           Margin="0,0,0,8"/>
-                <Border Grid.Row="1" MinHeight="160"
+                           Margin="0,0,0,4"/>
+                <TextBlock Grid.Row="1" Text="※ダブルクリックで適用"
+                           Style="{StaticResource CpDescriptionStyle}" Margin="0,0,0,6"/>
+                <Border Grid.Row="2" MinHeight="160"
                         BorderBrush="#FF606060" BorderThickness="1">
                   <DockPanel LastChildFill="True">
                     <Button DockPanel.Dock="Bottom"
@@ -402,7 +444,6 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <RadioButton Grid.Column="0" Margin="0,0,8,0"
                                              VerticalAlignment="Center"
@@ -412,10 +453,7 @@
                                              ToolTip="現在適用されているプリセット"/>
                                 <TextBlock Grid.Column="1" Text="{Binding PresetName}" Foreground="White"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                <Border Grid.Column="2" Background="#FF5A5A5A" CornerRadius="10" Padding="7,2" Margin="8,0,0,0">
-                                    <TextBlock Text="{Binding ItemCount, StringFormat={}{0}件}" Foreground="#FFD0D0D0" FontSize="10"/>
-                                </Border>
-                                <Button Grid.Column="3" Width="20" Height="20" Margin="5,0,0,0" Padding="0"
+                                <Button Grid.Column="2" Width="20" Height="20" Margin="5,0,0,0" Padding="0"
                                         HorizontalAlignment="Right" VerticalAlignment="Center"
                                         Background="Transparent" Foreground="#FFFF6F78" BorderThickness="0"
                                         FontSize="16" Content="×" ToolTip="このプリセットを削除"
@@ -437,62 +475,100 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
            </Grid.RowDefinitions>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                <TextBlock x:Name="PresetDetailTitleTextBlock"
-                           Text="プリセットを選択してください"
-                           Style="{StaticResource CpSectionTitleStyle}"
-                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <TextBox x:Name="PresetDetailNameTextBox"
-                         Visibility="Collapsed" Width="300" Height="28" Padding="5,0"
-                         VerticalContentAlignment="Center"/>
-                <Button x:Name="PresetNameEditButton"
-                        Content="✎" Width="30" Height="28" Margin="4,0,0,0"
-                        IsEnabled="False"
-                        Foreground="White"
-                        ToolTip="プリセット名を編集"
-                        Click="PresetNameEditButton_Click">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Style.Triggers>
-                                <Trigger Property="Content" Value="✓">
-                                    <Setter Property="Background" Value="#FF565656"/>
-                                    <Setter Property="BorderBrush" Value="#FF777777"/>
-                                    <Setter Property="BorderThickness" Value="1"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+            <StackPanel Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="PresetDetailTitleTextBlock"
+                                   Text="プリセットを選択してください"
+                                   Style="{StaticResource CpSectionTitleStyle}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBox x:Name="PresetDetailNameTextBox"
+                                 Visibility="Collapsed" Width="300" Height="28" Padding="5,0"
+                                 VerticalContentAlignment="Center"/>
+                        <Button x:Name="PresetNameEditButton"
+                                Content="✎" Width="30" Height="28" Margin="4,0,0,0"
+                                IsEnabled="False"
+                                Foreground="White"
+                                ToolTip="プリセット名を編集"
+                                Click="PresetNameEditButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="Content" Value="✓">
+                                            <Setter Property="Background" Value="#FF565656"/>
+                                            <Setter Property="BorderBrush" Value="#FF777777"/>
+                                            <Setter Property="BorderThickness" Value="1"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <Button Content="カテゴリ管理" Width="90" Height="26" Margin="8,0,0,0"
+                                Style="{StaticResource CpSecondaryButtonStyle}"
+                                ToolTip="カテゴリの追加・編集・削除"
+                                Click="OpenCategoryManagementButton_Click"/>
+                        <Button x:Name="UpdatePresetContentButton"
+                                Content="更新" Width="44" Margin="5,0,0,0"
+                                Style="{StaticResource CpSecondaryButtonStyle}"
+                                IsEnabled="False"
+                                ToolTip="現在の操作可能なCPをプリセット内容に反映"
+                                Click="UpdatePresetContentButton_Click"/>
+                    </StackPanel>
+                </Grid>
+                <TextBlock Text="※ プリセット内容には、アプリ側で複製したCPのみ表示されます。"
+                           Style="{StaticResource CpDescriptionStyle}" Margin="0,4,0,0"/>
             </StackPanel>
-            <Grid Grid.Row="1" Margin="0,0,0,6">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="PresetDetailStatus" Style="{StaticResource CpDescriptionStyle}"
-                           VerticalAlignment="Center"
-                           Text="プリセットを選択すると内容が表示されます。"/>
-                <Button Grid.Column="1" Content="CPを登録" Width="90" Height="26" Margin="8,0,0,0"
-                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                        Foreground="White" Background="#FF285653"
-                        BorderBrush="LightSeaGreen" BorderThickness="1"
-                        Click="RegisterPresetRewardsButton_Click"/>
-            </Grid>
+            <TextBlock x:Name="PresetDetailStatus" Grid.Row="1"
+                       Style="{StaticResource CpDescriptionStyle}" Margin="0,0,0,6"
+                       VerticalAlignment="Center"
+                       Text="プリセットを選択すると内容が表示されます。"/>
             <ListView x:Name="PresetItemListView" Grid.Row="2"
                       Background="#FF404040" Foreground="White"
                       ItemsSource="{Binding ChannelPointPresetItemFormList}"
-                      Visibility="Collapsed">
+                      Visibility="Collapsed"
+                      SizeChanged="PresetItemListView_SizeChanged">
                 <ListView.Resources>
                     <Style TargetType="GridViewColumnHeader">
                         <Setter Property="Height" Value="28"/>
-                        <Setter Property="Padding" Value="8,0"/>
+                        <Setter Property="Padding" Value="4,0"/>
                         <Setter Property="Foreground" Value="White"/>
                         <Setter Property="Background" Value="#FF565656"/>
                         <Setter Property="BorderBrush" Value="#FF777777"/>
                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
                         <Setter Property="FontWeight" Value="Normal"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <EventSetter Event="Click" Handler="PresetItemColumnHeader_Click"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="GridViewColumnHeader">
+                                    <Border x:Name="HeaderBorder"
+                                            Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}">
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="HeaderBorder" Property="Background" Value="#FF626262"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="HeaderBorder" Property="Background" Value="#FF344D4B"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
                     </Style>
                 </ListView.Resources>
                 <ListView.ItemContainerStyle>
@@ -530,13 +606,15 @@
                 </ListView.ItemContainerStyle>
                 <ListView.View>
                     <GridView>
-                        <GridViewColumn Width="55">
+                        <GridViewColumn Width="44">
                             <GridViewColumn.Header>
-                                <GridViewColumnHeader Content="有効" HorizontalContentAlignment="Center"/>
+                                <GridViewColumnHeader Content="有効" Tag="IsActiveState"
+                                                      ToolTip="クリックで並べ替え"
+                                                      HorizontalContentAlignment="Center"/>
                             </GridViewColumn.Header>
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid Width="55">
+                                    <Grid Width="44">
                                         <RadioButton GroupName="{Binding RewardId}"
                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
                                                      IsChecked="{Binding IsActiveState, Mode=TwoWay}"
@@ -545,13 +623,15 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <GridViewColumn Width="75">
+                        <GridViewColumn Width="44">
                             <GridViewColumn.Header>
-                                <GridViewColumnHeader Content="一時停止" HorizontalContentAlignment="Center"/>
+                                <GridViewColumnHeader Content="停止" Tag="IsPausedState"
+                                                      ToolTip="クリックで並べ替え"
+                                                      HorizontalContentAlignment="Center"/>
                             </GridViewColumn.Header>
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid Width="75">
+                                    <Grid Width="44">
                                         <RadioButton GroupName="{Binding RewardId}"
                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
                                                      IsChecked="{Binding IsPausedState, Mode=TwoWay}"
@@ -560,13 +640,15 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <GridViewColumn Width="55">
+                        <GridViewColumn Width="44">
                             <GridViewColumn.Header>
-                                <GridViewColumnHeader Content="無効" HorizontalContentAlignment="Center"/>
+                                <GridViewColumnHeader Content="無効" Tag="IsDisabledState"
+                                                      ToolTip="クリックで並べ替え"
+                                                      HorizontalContentAlignment="Center"/>
                             </GridViewColumn.Header>
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid Width="55">
+                                    <Grid Width="44">
                                         <RadioButton GroupName="{Binding RewardId}"
                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
                                                      IsChecked="{Binding IsDisabledState, Mode=TwoWay}"
@@ -575,22 +657,24 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <GridViewColumn Header="報酬名" Width="300"
-                                        DisplayMemberBinding="{Binding RewardTitle}"/>
-                        <GridViewColumn Width="55">
+                        <GridViewColumn x:Name="PresetRewardNameColumn" Width="320"
+                                        DisplayMemberBinding="{Binding RewardTitle}">
                             <GridViewColumn.Header>
-                                <GridViewColumnHeader Content="削除" HorizontalContentAlignment="Center"/>
+                                <GridViewColumnHeader Content="報酬名" Tag="RewardTitle"
+                                                      ToolTip="クリックで並べ替え"/>
+                            </GridViewColumn.Header>
+                        </GridViewColumn>
+                        <GridViewColumn Width="82">
+                            <GridViewColumn.Header>
+                                <GridViewColumnHeader Content="CPコスト" Tag="Cost"
+                                                      ToolTip="クリックで並べ替え"
+                                                      HorizontalContentAlignment="Center"/>
                             </GridViewColumn.Header>
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Grid Width="55">
-                                        <Button Content="×" Width="20" Height="20" Padding="0" Margin="0,0,8,0"
-                                                HorizontalAlignment="Right" VerticalAlignment="Center"
-                                                Background="Transparent" Foreground="#FFFF6F78"
-                                                BorderThickness="0" FontSize="16"
-                                                ToolTip="プリセットから削除" Tag="{Binding}"
-                                                Click="DeletePresetItemButton_Click"/>
-                                    </Grid>
+                                    <TextBlock Width="70" Margin="0,0,8,0"
+                                               Text="{Binding Cost, StringFormat={}{0:N0}}"
+                                               HorizontalAlignment="Right" TextAlignment="Right"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>

@@ -38,6 +38,9 @@ namespace JTSA.Forms
         /// <summary> 報酬名（プリセット保存時点のもの） </summary>
         public string RewardTitle { get; set; } = "";
 
+        /// <summary> 現在のCPコスト </summary>
+        public int Cost { get; set; }
+
         /// <summary>
         /// 現在の報酬一覧に存在するか。
         /// falseの場合、報酬が削除されているため適用時にスキップされる。
