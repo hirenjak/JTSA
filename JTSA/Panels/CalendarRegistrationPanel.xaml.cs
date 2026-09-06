@@ -61,6 +61,18 @@ public partial class CalendarRegistrationPanel : UserControl
         LoadEntry(entry);
     }
 
+    public void SelectEntryForDuplication(long entryId)
+    {
+        Reload();
+        var entry = Entries.FirstOrDefault(item => item.Id == entryId);
+        if (entry is null) return;
+        LoadEntry(entry);
+        editingEntryId = null;
+        StatusTextBlock.Text = string.IsNullOrWhiteSpace(categoryName)
+            ? "複製した予定を新規登録できます"
+            : $"カテゴリ：{categoryName}（複製して新規登録）";
+    }
+
     public void SetScheduleDateFromCalendar(DateTime date)
     {
         editingEntryId = null;
@@ -234,6 +246,8 @@ public partial class CalendarRegistrationPanel : UserControl
                 BroadcastId = item.UserId,
                 UserId = item.LoginId,
                 DisplayName = item.DisplayName,
+                StreamingPlatform = item.StreamingPlatform,
+                StreamingUrl = item.StreamingUrl,
                 LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm"),
                 ProfileImage = FriendPanel.CreateProfileImage(item.ProfielImageUrl)
             });

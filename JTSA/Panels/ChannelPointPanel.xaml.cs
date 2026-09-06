@@ -3,8 +3,10 @@ using JTSA.Forms;
 using JTSA.Models;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace JTSA.Panels
@@ -24,6 +26,10 @@ namespace JTSA.Panels
         public ObservableCollection<ChannelPointRewardForm> DisabledChannelPointRewardFormList { get; } = [];
 
         private Point _dragStartPoint;
+        private ChannelPointRewardForm? _dragReward;
+        private bool _isRewardDropInProgress;
+        private string? _presetSortProperty = nameof(ChannelPointPresetItemForm.Cost);
+        private ListSortDirection _presetSortDirection = ListSortDirection.Ascending;
 
         /// <summary> プリセット一覧 </summary>
         public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = [];
@@ -156,12 +162,12 @@ namespace JTSA.Panels
             if (manageableCount == 0 && totalCount > 0)
             {
                 statusText += "\n⚠ このアプリから操作できる報酬がありません。"
-                            + "🔒 の報酬にチェックを入れて「選択をコピー」すると、操作できる報酬が作られます。"
+                            + "🔒 の報酬を「複製」すると、操作できる報酬が作られます。"
                             + "（プリセットの保存も操作可能な報酬が必要です）";
             }
             else if (lockedCount > 0)
             {
-                statusText += "\n🔒 は Twitch の Web 画面から作成された報酬です。コピーするとこのアプリから操作できるようになります。";
+                statusText += "\n🔒 は Twitch の Web 画面から作成された報酬です。複製するとこのアプリから操作できるようになります。";
             }
 
             return statusText;
@@ -246,21 +252,76 @@ namespace JTSA.Panels
 
         private void RewardList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _dragStartPoint = e.GetPosition(null);
+            _dragReward = null;
+            if (sender is not ListView listView || e.OriginalSource is not DependencyObject origin) return;
+
+            // 削除ボタンなど、カード内の操作部品からはドラッグを開始しない。
+            for (var node = origin; node != null && node != listView;)
+            {
+                if (node is System.Windows.Controls.Primitives.ButtonBase) return;
+                node = node is System.Windows.Media.Visual
+                    ? System.Windows.Media.VisualTreeHelper.GetParent(node)
+                    : LogicalTreeHelper.GetParent(node);
+            }
+
+            if (ItemsControl.ContainerFromElement(listView, origin) is ListViewItem
+                { DataContext: ChannelPointRewardForm reward })
+            {
+                _dragStartPoint = e.GetPosition(listView);
+                _dragReward = reward;
+            }
         }
 
 
         private void RewardList_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton != MouseButtonState.Pressed || sender is not ListView listView) return;
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                _dragReward = null;
+                return;
+            }
+            if (sender is not ListView listView || _dragReward is not { } reward) return;
 
-            var currentPoint = e.GetPosition(null);
+            var currentPoint = e.GetPosition(listView);
             if (Math.Abs(currentPoint.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance
              && Math.Abs(currentPoint.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance) return;
 
-            var container = ItemsControl.ContainerFromElement(listView, e.OriginalSource as DependencyObject) as ListViewItem;
-            if (container?.DataContext is ChannelPointRewardForm reward)
-                DragDrop.DoDragDrop(container, reward, DragDropEffects.Move);
+            _dragReward = null;
+            var row = listView.ItemContainerGenerator.ContainerFromItem(reward) as FrameworkElement;
+            var layer = System.Windows.Documents.AdornerLayer.GetAdornerLayer(this);
+            var preview = row is not null && layer is not null
+                ? new JTSA.Controls.ParticipationDragPreview(this, row) { IsHitTestVisible = false }
+                : null;
+            GiveFeedbackEventHandler feedback = (_, _) => preview?.FollowPointer();
+
+            try
+            {
+                if (preview is not null)
+                {
+                    layer!.Add(preview);
+                    preview.FollowPointer();
+                    listView.GiveFeedback += feedback;
+                }
+
+                DragDrop.DoDragDrop(listView, reward, DragDropEffects.Move);
+            }
+            finally
+            {
+                listView.GiveFeedback -= feedback;
+                if (preview is not null) layer!.Remove(preview);
+            }
+
+            e.Handled = true;
+        }
+
+
+        private void RewardList_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = sender is ListView
+                && e.Data.GetData(typeof(ChannelPointRewardForm)) is ChannelPointRewardForm { IsManageable: true }
+                ? DragDropEffects.Move
+                : DragDropEffects.None;
+            e.Handled = true;
         }
 
 
@@ -269,7 +330,8 @@ namespace JTSA.Panels
             if (sender is not ListView listView
              || listView.Tag is not string targetState
              || e.Data.GetData(typeof(ChannelPointRewardForm)) is not ChannelPointRewardForm reward
-             || !reward.IsManageable) return;
+             || !reward.IsManageable
+             || _isRewardDropInProgress) return;
 
             var originalEnabled = reward.IsEnabled;
             var originalPaused = reward.IsPaused;
@@ -278,7 +340,7 @@ namespace JTSA.Panels
 
             if (originalEnabled == targetEnabled && originalPaused == targetPaused) return;
 
-            listView.IsEnabled = false;
+            _isRewardDropInProgress = true;
             var errorMessage = "";
 
             if (reward.IsEnabled != targetEnabled)
@@ -316,7 +378,7 @@ namespace JTSA.Panels
                     $"CP状態変更 「 {reward.Title} 」→ {GetRewardStateLabel(targetState)}");
             }
 
-            listView.IsEnabled = true;
+            _isRewardDropInProgress = false;
             RefreshRewardStateLists();
         }
 
@@ -327,6 +389,57 @@ namespace JTSA.Panels
             "Disabled" => "無効",
             _ => "有効"
         };
+
+
+        private void PresetItemListView_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (PresetItemListView.View is not GridView gridView) return;
+
+            var fixedWidth = gridView.Columns
+                .Where(column => !ReferenceEquals(column, PresetRewardNameColumn))
+                .Sum(column => column.ActualWidth);
+            var chromeWidth = SystemParameters.VerticalScrollBarWidth + 6;
+
+            PresetRewardNameColumn.Width = Math.Max(
+                120,
+                PresetItemListView.ActualWidth - fixedWidth - chromeWidth);
+        }
+
+
+        private void PresetItemColumnHeader_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not GridViewColumnHeader { Tag: string propertyName }) return;
+
+            _presetSortDirection = _presetSortProperty == propertyName
+                && _presetSortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+            _presetSortProperty = propertyName;
+
+            ApplyPresetItemSort();
+        }
+
+
+        private void ApplyPresetItemSort()
+        {
+            if (_presetSortProperty is null) return;
+
+            var view = CollectionViewSource.GetDefaultView(ChannelPointPresetItemFormList);
+            view.SortDescriptions.Clear();
+            view.SortDescriptions.Add(new SortDescription(_presetSortProperty, _presetSortDirection));
+        }
+
+
+        private void OpenCategoryManagementButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new CategoryWindow
+            {
+                Owner = mainWindow
+            };
+
+            window.ShowDialog();
+            mainWindow.CategoryPanel.ReloadCategory();
+        }
 
 
         /// <summary>
@@ -509,11 +622,13 @@ namespace JTSA.Panels
             {
                 PresetDetailTitleTextBlock.Text = selectedPreset.PresetName;
                 PresetNameEditButton.IsEnabled = true;
+                UpdatePresetContentButton.IsEnabled = true;
             }
             else
             {
                 PresetDetailTitleTextBlock.Text = "プリセットを選択してください";
                 PresetNameEditButton.IsEnabled = false;
+                UpdatePresetContentButton.IsEnabled = false;
             }
         }
 
@@ -534,8 +649,11 @@ namespace JTSA.Panels
             }
 
             var items = DAO_ChannelPointPreset.SelectItemsByPresetId(preset.PresetId);
+            var rewardCosts = ChannelPointRewardFormList
+                .GroupBy(reward => reward.RewardId)
+                .ToDictionary(group => group.Key, group => group.First().Cost);
 
-            foreach (var item in items.OrderByDescending(x => x.IsEnabled).ThenBy(x => x.RewardTitle))
+            foreach (var item in items)
             {
                 // 報酬一覧に存在するかどうかだけを見る（操作可否は適用時に判定する）。
                 // 一覧を取得できていないときは存在の判断がつかないので「ある」扱いにして誤表示を防ぐ
@@ -546,11 +664,14 @@ namespace JTSA.Panels
                 {
                     RewardId = item.RewardId,
                     RewardTitle = item.RewardTitle,
+                    Cost = rewardCosts.GetValueOrDefault(item.RewardId),
                     IsEnabled = item.IsEnabled,
                     IsPaused = item.IsPaused,
                     IsExisting = isExisting
                 });
             }
+
+            ApplyPresetItemSort();
 
             var missingCount = ChannelPointPresetItemFormList.Count(x => !x.IsExisting);
 
@@ -676,6 +797,25 @@ namespace JTSA.Panels
         }
 
 
+        private void UpdatePresetContentButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (PresetComboBox.SelectedItem is not ChannelPointPresetForm preset) return;
+
+            if (!_isRewardListLoaded)
+            {
+                MessageBox.Show(
+                    "CP一覧を取得できていないため、プリセット内容を更新できません。\n\nCP一覧を更新してから再度お試しください。",
+                    "プリセット内容を更新");
+                return;
+            }
+
+            var savedPresetId = SavePreset(preset.PresetName, preset.PresetId);
+            if (savedPresetId == null) return;
+
+            ReloadPreset(savedPresetId);
+        }
+
+
         private void PresetNameEditButton_Click(object sender, RoutedEventArgs e)
         {
             if (PresetDetailNameTextBox.Visibility != Visibility.Visible)
@@ -768,7 +908,9 @@ namespace JTSA.Panels
             var existingIds = DAO_ChannelPointPreset.SelectItemsByPresetId(preset.PresetId)
                 .Select(x => x.RewardId)
                 .ToHashSet();
-            var window = new ChannelPointPresetRewardSelectionWindow(existingIds)
+            var window = new ChannelPointPresetRewardSelectionWindow(
+                existingIds,
+                ChannelPointRewardFormList)
             {
                 Owner = mainWindow
             };

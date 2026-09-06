@@ -20,6 +20,74 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void FriendForm_TitlePlaceholderName_UsesDisplayNameOutsideTwitch()
+    {
+        var twitch = new JTSA.Forms.FriendForm
+        {
+            BroadcastId = "12345", UserId = "twitch_login", DisplayName = "Twitch表示名",
+            StreamingPlatform = "Twitch", LastUsedDate = ""
+        };
+        var legacyTwitch = new JTSA.Forms.FriendForm
+        {
+            BroadcastId = "67890", UserId = "legacy_login", DisplayName = "旧表示名",
+            LastUsedDate = ""
+        };
+        var otherPlatform = new JTSA.Forms.FriendForm
+        {
+            BroadcastId = "manual:test", UserId = "video_user", DisplayName = "動画ユーザー",
+            StreamingPlatform = "YouTube", LastUsedDate = ""
+        };
+
+        Assert.Equal("@twitch_login", twitch.TitlePlaceholderName);
+        Assert.Equal("@legacy_login", legacyTwitch.TitlePlaceholderName);
+        Assert.Equal("動画ユーザー", otherPlatform.TitlePlaceholderName);
+    }
+
+    [Fact]
+    public void UserDao_ManualFriend_RoundTripsStreamingProfileWithoutDuplicates()
+    {
+        DAO_User.InsertUpdateFriend(
+            null,
+            "video-user",
+            "動画サイトの友人",
+            "https://example.test/profile.png",
+            "YouTube",
+            "https://example.test/channel/video-user");
+        DAO_User.InsertUpdateFriend(
+            null,
+            "video-user",
+            "更新後の表示名",
+            null,
+            "ニコニコ生放送",
+            "https://example.test/live/video-user");
+
+        var friend = Assert.Single(DAO_User.SelectAllOrderbyLastUser());
+        Assert.StartsWith("manual:", friend.UserId);
+        Assert.Equal("video-user", friend.LoginId);
+        Assert.Equal("更新後の表示名", friend.DisplayName);
+        Assert.Equal("ニコニコ生放送", friend.StreamingPlatform);
+        Assert.Equal("https://example.test/live/video-user", friend.StreamingUrl);
+        Assert.Null(friend.ProfielImageUrl);
+    }
+
+    [Fact]
+    public void Calendar_SelectByDate_ReturnsOnlyRequestedDateInTimeOrder()
+    {
+        var targetDate = new DateTime(2026, 9, 6);
+        DAO_Calendar.InsertUpdate(targetDate, "夜の予定", startTime: new TimeSpan(20, 0, 0));
+        DAO_Calendar.InsertUpdate(targetDate, "朝の予定", startTime: new TimeSpan(9, 30, 0));
+        DAO_Calendar.InsertUpdate(targetDate.AddDays(-1), "昨日の予定", startTime: new TimeSpan(23, 0, 0));
+        DAO_Calendar.InsertUpdate(targetDate.AddDays(1), "明日の予定", startTime: new TimeSpan(1, 0, 0));
+
+        var entries = DAO_Calendar.SelectByDate(targetDate.AddHours(12));
+
+        Assert.Collection(
+            entries,
+            entry => Assert.Equal("朝の予定", entry.Content),
+            entry => Assert.Equal("夜の予定", entry.Content));
+    }
+
+    [Fact]
     public void StreamExpansionClip_RoundTripsWithOtherActions()
     {
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader { Name = "Clips", IsActive = true, UpdatedDateTime = DateTime.Now },

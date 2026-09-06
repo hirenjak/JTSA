@@ -28,6 +28,22 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="RaidPrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF285653"/>
+            <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="7,0"/>
+        </Style>
+        <Style x:Key="RaidSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF565656"/>
+            <Setter Property="BorderBrush" Value="#FF777777"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="7,0"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid Margin="8,4,8,8">
@@ -54,22 +70,26 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
-                            <StackPanel.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="配信をブラウザで開く" Click="OpenTwitchChannelMenuItem_Click"/>
-                                </ContextMenu>
-                            </StackPanel.ContextMenu>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Image Grid.Column="0" Source="{Binding ThumbnailUrl}" 
+                                <StackPanel Grid.Column="0" Width="82" Margin="0,0,8,0" VerticalAlignment="Center">
+                                    <Button Content="レイド実行" Tag="{Binding}" Margin="0,0,0,6"
+                                            Style="{StaticResource RaidPrimaryButtonStyle}"
+                                            Click="ExecuteRaidButton_Click"/>
+                                    <Button Content="配信を見る" Tag="{Binding}"
+                                            Style="{StaticResource RaidSecondaryButtonStyle}"
+                                            Click="OpenTwitchChannelButton_Click"/>
+                                </StackPanel>
+
+                                <Image Grid.Column="1" Source="{Binding ThumbnailUrl}"
                                            Width="128" Height="72" Margin="0,0,8,0"/>
 
-                                <Grid Grid.Column="1">
+                                <Grid Grid.Column="2">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>

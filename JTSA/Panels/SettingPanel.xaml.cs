@@ -72,7 +72,6 @@ namespace JTSA.Panels
         private async void SettingPanel_Loaded(object sender, RoutedEventArgs e)
         {
             Loaded -= SettingPanel_Loaded;
-            mainWindow.ObsSettingPanel.MoveConnectionSettingsTo(ObsConnectionSettingsHost);
             await LoadVoiceVoxSpeakersAsync(showError: false);
         }
 
@@ -320,8 +319,10 @@ namespace JTSA.Panels
 
                 mainWindow.ReloadTargetAccounts();
                 ReloadRegisteredAccounts();
-                mainWindow.RemoveNotification($"oauth-{account.Id}");
-                if (account.IsPrimary) mainWindow.RemoveNotification("oauth");
+                mainWindow.RemoveOAuthReauthenticationNotification(
+                    account.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (account.IsPrimary)
+                    mainWindow.RemoveOAuthReauthenticationNotification("primary");
                 MessageBox.Show($"{authenticatedUser.DisplayName} を再認証しました。", "Twitchアカウント");
             }
             catch (Exception ex)

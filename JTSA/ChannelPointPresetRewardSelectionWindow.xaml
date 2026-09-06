@@ -11,26 +11,29 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TextBlock x:Name="StatusTextBlock" Text="CP一覧を読み込んでいます…" Foreground="White"
+        <TextBlock x:Name="StatusTextBlock" Text="CP一覧を準備しています…" Foreground="White"
                    FontSize="16" Margin="0,0,0,10"/>
         <ListBox x:Name="RewardListBox" Grid.Row="1" ItemsSource="{Binding Choices}"
                  Background="#FF383838" BorderBrush="#FF606060"
                  IsEnabled="False"
-                 HorizontalContentAlignment="Stretch">
+                 SelectionMode="Single"
+                 HorizontalContentAlignment="Stretch"
+                 SelectionChanged="RewardListBox_SelectionChanged"
+                 MouseDoubleClick="RewardListBox_MouseDoubleClick">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid Margin="6,5">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,10,0"
-                                  VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Reward.Title}"
+                        <TextBlock Text="{Binding Reward.Title}"
                                    Foreground="White" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" Text="{Binding Reward.Cost, StringFormat={}{0} CP}"
+                        <TextBlock Grid.Column="1" Text="{Binding Reward.Cost, StringFormat={}{0} CP}"
                                    Foreground="LightGray" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding UnavailableReason}"
+                                   Foreground="#FFFFC266" Margin="12,0,0,0" VerticalAlignment="Center"/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>

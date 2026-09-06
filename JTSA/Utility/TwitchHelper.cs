@@ -403,8 +403,15 @@ namespace JTSA.Utility
                 accountApi.Settings.AccessToken = accessToken;
                 var apiResponse = await accountApi.Helix.Raids.StartRaidAsync(fromBroadcasterId, toRaidBroadcasterId);
 
+                var raid = apiResponse.Data?.FirstOrDefault();
+                if (raid is null)
+                {
+                    mainWindow.AppLogPanel.Error(nameof(TwitchHelper), appLogProcessName + "：Twitchからレイド開始情報が返されませんでした");
+                    return null;
+                }
+
                 mainWindow.AppLogPanel.ProcessEnd(nameof(TwitchHelper), appLogProcessName);
-                return apiResponse.Data.FirstOrDefault().CreatedAt;
+                return raid.CreatedAt;
             }
             catch (Exception ex)
             {

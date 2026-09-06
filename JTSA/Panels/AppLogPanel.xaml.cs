@@ -71,6 +71,8 @@ namespace JTSA.Panels
     /// </summary>
     public partial class AppLogPanel : UserControl
     {
+        private const int MaxDisplayedLogCount = 1000;
+
         /// <summary> メインウィンドウ </summary>
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
@@ -117,6 +119,7 @@ namespace JTSA.Panels
                 Content = "【 " + traceClassName + "】 " + log,  
                 Color = color
             });
+            TrimDisplayedLogs();
         }
 
         public void AddLog(string logText, SolidColorBrush color)
@@ -134,6 +137,15 @@ namespace JTSA.Panels
                     Content = logText,
                     Color = color
                 });
+            TrimDisplayedLogs();
+        }
+
+        private void TrimDisplayedLogs()
+        {
+            while (AppLogFormList.Count > MaxDisplayedLogCount)
+            {
+                AppLogFormList.RemoveAt(AppLogFormList.Count - 1);
+            }
         }
 
         /// <summary>
@@ -214,6 +226,7 @@ namespace JTSA.Panels
         /// <param name="e"></param>
         private void ClearLogButton_Click(object sender, RoutedEventArgs e)
         {
+            AppLogFormList.Clear();
         }
     }
 }

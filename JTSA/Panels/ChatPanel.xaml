@@ -39,6 +39,12 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
+        <Style x:Key="OverviewDangerButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="#FFFF9A9F"/>
+            <Setter Property="Background" Value="#FF4A3839"/>
+            <Setter Property="BorderBrush" Value="#FF815052"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
     </UserControl.Resources>
     <UserControl.CommandBindings>
         <CommandBinding Command="{x:Static local:ChatPanel.AddFriendCommand}"
@@ -50,7 +56,9 @@
         Margin="8, 4, 8, 0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition x:Name="ParticipationManagementColumn" Width="0"/><ColumnDefinition x:Name="ChatUserListColumn" Width="210"/>
+            <ColumnDefinition x:Name="TodoManagementColumn" Width="0"/>
+            <ColumnDefinition x:Name="ParticipationManagementColumn" Width="0"/>
+            <ColumnDefinition x:Name="ChatUserListColumn" Width="210"/>
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -103,6 +111,12 @@
                                       ToolTip="通知音量・参加音量の設定を表示／非表示にします"/>
     </StackPanel>
     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="TodoManagementToggleButton"
+                                Content="ToDo管理 ＞" Margin="8,0,0,0" Padding="8,0"
+                                Height="22" VerticalAlignment="Top"
+                                Style="{StaticResource OverviewSecondaryButtonStyle}"
+                                ToolTip="ToDo管理エリアを表示／非表示にします"
+                                Click="TodoManagementToggleButton_Click"/>
                         <Button x:Name="ParticipationManagementToggleButton"
                                 Content="参加型管理 ＞" Margin="8,0,0,0" Padding="8,0"
                                 Height="22" VerticalAlignment="Top"
@@ -247,15 +261,38 @@
             
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" Grid.Column="0" x:Name="ChatListBox"
-                      HorizontalScrollBarVisibility="Disabled" 
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                      Height="Auto" Width="Auto" 
-                      Background="#FF404040" >
-            <ItemsControl ItemsSource="{Binding TwitchChatFormList}"
-                          d:ItemsSource="{d:SampleData ItemCount = 3}">
-                <ItemsControl.ItemTemplate>
+        <ListBox Grid.Row="1" Grid.Column="0" x:Name="ChatListBox"
+                 ItemsSource="{Binding TwitchChatFormList}"
+                 d:ItemsSource="{d:SampleData ItemCount = 3}"
+                 Background="#FF404040"
+                 BorderThickness="0"
+                 HorizontalAlignment="Stretch"
+                 HorizontalContentAlignment="Stretch"
+                 ScrollViewer.CanContentScroll="True"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.ScrollUnit="Pixel">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Focusable" Value="False"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
                             <StackPanel Margin="8, 4, 8, 0">
@@ -338,9 +375,8 @@
                             <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
                         </StackPanel>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
 
         <StackPanel
@@ -455,7 +491,72 @@
 
         </StackPanel>
 
-        <Border x:Name="ParticipationManagementPanel" Visibility="Collapsed" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Margin="8,0,0,0"
+        <Border x:Name="TodoManagementPanel" Visibility="Collapsed"
+                Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Margin="8,0,0,0"
+                Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1">
+            <DockPanel Margin="8">
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="ToDo管理" Foreground="White" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="TodoCategoryTextBlock" Text="カテゴリ未設定"
+                                   Foreground="LightGray" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="閉じる" Width="48" Height="22"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            ToolTip="ToDo管理を閉じる" Style="{StaticResource OverviewDangerButtonStyle}"
+                            Click="TodoManagementToggleButton_Click"/>
+                </Grid>
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right" Content="追加" Width="44" Margin="5,0,0,0"
+                            Style="{StaticResource OverviewSecondaryButtonStyle}"
+                            Click="AddTodoButton_Click"/>
+                    <TextBox x:Name="TodoInputTextBox" Height="24" Padding="5,0"
+                             VerticalContentAlignment="Center" MaxLength="200"
+                             ToolTip="Enterキーでも追加できます"
+                             KeyDown="TodoInputTextBox_KeyDown"/>
+                </DockPanel>
+                <Button DockPanel.Dock="Bottom" Content="完了済みを削除" Height="26" Margin="0,8,0,0"
+                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                        Click="ClearCompletedTodosButton_Click"/>
+                <RadioButton x:Name="NoCurrentTodoRadioButton" DockPanel.Dock="Top"
+                             Content="実行中タスクなし" GroupName="CurrentTodo"
+                             Foreground="LightGray" Margin="0,0,0,7"
+                             Click="NoCurrentTodoRadioButton_Click"/>
+                <ListBox ItemsSource="{Binding TodoItems, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}}"
+                         Background="Transparent" BorderThickness="0"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <RadioButton GroupName="CurrentTodo" IsChecked="{Binding IsCurrent, Mode=OneWay}"
+                                             VerticalAlignment="Top" Margin="0,3,6,0"
+                                             ToolTip="現在やっているToDoとしてOBSで強調"
+                                             Click="TodoCurrentRadioButton_Click"/>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                                          VerticalAlignment="Top" Margin="0,3,6,0"
+                                          Click="TodoCompletedCheckBox_Click"/>
+                                <TextBlock x:Name="TodoText" Grid.Column="2" Text="{Binding Text}"
+                                           Foreground="White" TextWrapping="Wrap"/>
+                                <Button Grid.Column="3" Content="×" Width="24" Tag="{Binding}"
+                                        ToolTip="ToDoを削除" Style="{StaticResource OverviewDeleteButtonStyle}"
+                                        Click="RemoveTodoButton_Click"/>
+                            </Grid>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                    <Setter TargetName="TodoText" Property="Foreground" Value="#FF888888"/>
+                                    <Setter TargetName="TodoText" Property="TextDecorations" Value="Strikethrough"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <Border x:Name="ParticipationManagementPanel" Visibility="Collapsed" Grid.Row="0" Grid.RowSpan="3" Grid.Column="2" Margin="8,0,0,0"
                 Background="#FF303030" BorderBrush="#FF606060" BorderThickness="1">
             <DockPanel Margin="8">
                 <StackPanel DockPanel.Dock="Top">
@@ -467,10 +568,10 @@
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="1" Content="更新" Click="ReloadParticipationRewards" Width="44" Margin="5,0,0,0"
                                 ToolTip="チャネポ一覧を更新" Style="{StaticResource OverviewSecondaryButtonStyle}"/>
-                        <Button Grid.Column="2" Content="×" Width="24" Height="22" Margin="4,0,0,0"
-                                VerticalAlignment="Center"
+                        <Button Grid.Column="2" Content="閉じる" Width="48" Height="22" Margin="4,0,0,0"
+                                HorizontalAlignment="Right" VerticalAlignment="Top"
                                 ToolTip="参加型管理を閉じる" AutomationProperties.Name="参加型管理を閉じる"
-                                Style="{StaticResource OverviewDeleteButtonStyle}"
+                                Style="{StaticResource OverviewDangerButtonStyle}"
                                 Click="ParticipationManagementToggleButton_Click"/>
                         <ComboBox Grid.Column="0" x:Name="ParticipationRewardComboBox" DisplayMemberPath="Title" SelectedValuePath="Id"
                                   SelectionChanged="ParticipationReward_Changed"/>
@@ -570,7 +671,7 @@
         <!-- この配信中に発言したユーザー。最新発言者を先頭に表示する。 -->
         <Border Grid.Row="0"
                 Grid.RowSpan="3"
-                Grid.Column="2"
+                Grid.Column="3"
                 x:Name="ChatUserListPanel"
                 Margin="8,0,0,0"
                 Background="#FF303030"
@@ -583,10 +684,10 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="10,0,6,0">
-                    <Button DockPanel.Dock="Right" Content="×" Width="24" Height="22"
-                            VerticalAlignment="Center" Margin="4,0,0,0"
+                    <Button DockPanel.Dock="Right" Content="閉じる" Width="48" Height="22"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4,8,0,0"
                             ToolTip="ユーザー一覧を閉じる" AutomationProperties.Name="ユーザー一覧を閉じる"
-                            Style="{StaticResource OverviewDeleteButtonStyle}"
+                            Style="{StaticResource OverviewDangerButtonStyle}"
                             Click="ChatUserListToggleButton_Click"/>
                 <TextBlock
                            Text="{Binding ChatUserFormList.Count, StringFormat=チャットユーザー ({0})}"

@@ -12,6 +12,10 @@ public class M_User : DBBase
 
     public string? ProfielImageUrl { get; set; }
 
+    public string StreamingPlatform { get; set; } = string.Empty;
+
+    public string StreamingUrl { get; set; } = string.Empty;
+
     /// <summary>フレンド一覧へ明示的に登録されているか。</summary>
     public bool IsFriend { get; set; } = false;
 }

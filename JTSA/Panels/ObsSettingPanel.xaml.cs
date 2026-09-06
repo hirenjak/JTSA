@@ -180,15 +180,6 @@ public partial class ObsSettingPanel : UserControl
         indicator.Fill = brush;
     }
 
-    public void MoveConnectionSettingsTo(Panel host)
-    {
-        if (ReferenceEquals(ObsConnectionSettingsSection.Parent, host)) return;
-        if (ObsConnectionSettingsSection.Parent is Panel currentParent)
-            currentParent.Children.Remove(ObsConnectionSettingsSection);
-        host.Children.Add(ObsConnectionSettingsSection);
-        ObsSettingsTab.Visibility = Visibility.Collapsed;
-    }
-
     private void TipsLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
@@ -1445,10 +1436,11 @@ public partial class ObsSettingPanel : UserControl
 
     private async void CardObs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards)
+        if (sender is not ComboBox { Tag: ObsTextSourceCard card, SelectedItem: ComboBoxItem selectedItem } ||
+            isRestoringCards)
             return;
 
-        var isSub = ((sender as ComboBox)?.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "sub";
+        var isSub = selectedItem.Tag?.ToString() == "sub";
         // ItemsControl生成時にもSelectionChangedが発火するため、保存値と同じ初期選択では
         // 復元済みのシーン・ソースを消さない。
         if (card.IsSub == isSub && card.SelectedScene is not null)
@@ -1487,8 +1479,16 @@ public partial class ObsSettingPanel : UserControl
 
     private async void CardScene_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards || card.SelectedScene is null)
+        if (sender is not ComboBox { Tag: ObsTextSourceCard card, SelectedItem: string selectedScene } ||
+            isRestoringCards)
             return;
+
+        // 一覧のアイテム切替で編集UIが再生成された場合にもSelectionChangedが発火する。
+        // 実際にシーンが変わっていなければ、保存済みソースを維持する。
+        if (card.SelectedScene == selectedScene && card.SelectedSource is not null)
+            return;
+
+        card.SelectedScene = selectedScene;
 
         // 保存済みカードの初期描画イベントでは、復元済みソースを維持する。
         // Loaded後の再取得処理が一覧と現在テキストを更新する。
@@ -1517,8 +1517,19 @@ public partial class ObsSettingPanel : UserControl
 
     private void CardSource_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.Tag is not ObsTextSourceCard card || isRestoringCards || card.SelectedSource is null || card.Controller is null)
+        if (sender is not ComboBox { Tag: ObsTextSourceCard card, SelectedItem: string selectedSource } ||
+            isRestoringCards)
             return;
+
+        card.SelectedSource = selectedSource;
+
+        SaveTextSourceCards();
+        card.IsTargetEditing = false;
+        if (card.Controller is null)
+        {
+            card.Status = "ソース設定を保存しました";
+            return;
+        }
 
         try
         {
@@ -1530,12 +1541,139 @@ public partial class ObsSettingPanel : UserControl
         {
             card.Status = $"文言取得失敗: {ex.GetBaseException().Message}";
         }
-        SaveTextSourceCards();
     }
 
-    private void CardDisplayName_LostFocus(object sender, RoutedEventArgs e)
+    private async void BrowserSourceObsComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if ((sender as TextBox)?.Tag is ObsTextSourceCard card && card.SelectedSource is not null)
+        if (!IsLoaded || BrowserSourceObsComboBox.SelectedItem is not ComboBoxItem selectedItem)
+            return;
+
+        BrowserSourceSceneComboBox.ItemsSource = null;
+        BrowserSourceStatusTextBlock.Text = "シーン一覧を取得しています...";
+        try
+        {
+            var isSub = selectedItem.Tag?.ToString() == "sub";
+            var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(isSub);
+            if (controller is null)
+            {
+                BrowserSourceStatusTextBlock.Text = "OBSに接続できません";
+                return;
+            }
+
+            BrowserSourceSceneComboBox.ItemsSource = await Task.Run(controller.GetSceneNames);
+            BrowserSourceSceneComboBox.SelectedIndex = BrowserSourceSceneComboBox.Items.Count > 0 ? 0 : -1;
+            BrowserSourceStatusTextBlock.Text = BrowserSourceSceneComboBox.Items.Count > 0
+                ? "追加先シーンを選択してください"
+                : "シーンがありません";
+        }
+        catch (Exception ex)
+        {
+            BrowserSourceStatusTextBlock.Text = $"シーン取得失敗: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private async void AddBrowserSourceButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (BrowserSourceObsComboBox.SelectedItem is not ComboBoxItem obsItem ||
+            BrowserSourceSceneComboBox.SelectedItem is not string sceneName ||
+            sender is not Button { Tag: string sourceIndexText } ||
+            !int.TryParse(sourceIndexText, out var sourceIndex))
+        {
+            BrowserSourceStatusTextBlock.Text = "追加先OBSとシーンを選択してください";
+            return;
+        }
+
+        var source = sourceIndex switch
+        {
+            0 => ("JTSA チャット表示", "http://localhost:8026/chat", 600, 400),
+            1 => ("JTSA ToDo一覧", "http://localhost:8026/todos", 600, 800),
+            2 => ("JTSA 参加一覧", "http://localhost:8026/participants", 600, 1000),
+            3 => ("JTSA ゲームプレイリスト", "http://localhost:8026/obs", 1920, 320),
+            4 => ("JTSA 配信拡張画像", "http://localhost:8026/expansion", 1600, 900),
+            _ => ("JTSA 配信拡張クリップ", "http://localhost:8026/expansion-clips", 1920, 1080)
+        };
+
+        BrowserSourceStatusTextBlock.Text = "ブラウザソースを追加しています...";
+        try
+        {
+            var isSub = obsItem.Tag?.ToString() == "sub";
+            var controller = await ((MainWindow)Application.Current.MainWindow).EnsureObsConnectedAsync(isSub);
+            if (controller is null)
+            {
+                BrowserSourceStatusTextBlock.Text = "OBSに接続できません";
+                return;
+            }
+
+            await Task.Run(() => controller.CreateBrowserSource(
+                sceneName, source.Item1, source.Item2, source.Item3, source.Item4));
+            BrowserSourceStatusTextBlock.Text = $"「{source.Item1}」を追加しました";
+        }
+        catch (Exception ex)
+        {
+            BrowserSourceStatusTextBlock.Text = $"追加失敗: {ex.GetBaseException().Message}";
+        }
+    }
+
+    private async void EditSourceCardButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not ObsTextSourceCard card) return;
+
+        card.IsTargetEditing = true;
+        var selectedScene = card.SelectedScene;
+        var selectedSource = card.SelectedSource;
+        try
+        {
+            card.Status = "接続中...";
+            card.Controller ??= await ((MainWindow)Application.Current.MainWindow)
+                .EnsureObsConnectedAsync(card.IsSub);
+            if (card.Controller is null)
+            {
+                card.Status = "OBSに接続できません";
+                return;
+            }
+
+            isRestoringCards = true;
+            ReplaceItems(card.Scenes, card.Controller.GetSceneNames());
+            card.SelectedScene = selectedScene;
+            if (selectedScene is null || !card.Scenes.Contains(selectedScene))
+            {
+                card.Status = "シーンを選択してください";
+                return;
+            }
+
+            ReplaceItems(card.Sources, card.Controller.GetTextSourceNames(selectedScene));
+            card.SelectedSource = selectedSource;
+            card.Status = "接続先を編集できます";
+        }
+        catch (Exception ex)
+        {
+            card.Status = $"ソース取得失敗: {ex.GetBaseException().Message}";
+        }
+        finally
+        {
+            isRestoringCards = false;
+        }
+    }
+
+    private void CardDisplayNameEditButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not ObsTextSourceCard card) return;
+
+        if (!card.IsDisplayNameEditing)
+        {
+            card.IsDisplayNameEditing = true;
+            return;
+        }
+
+        card.DisplayName = card.DisplayName.Trim();
+        if (string.IsNullOrWhiteSpace(card.DisplayName))
+        {
+            card.Status = "表示名を入力してください";
+            return;
+        }
+
+        card.IsDisplayNameEditing = false;
+        if (card.SelectedSource is not null)
             SaveTextSourceCards();
     }
 
@@ -1585,7 +1723,13 @@ public partial class ObsSettingPanel : UserControl
         {
             foreach (var setting in DAO_ObsTextSource.SelectAll())
             {
-                var card = new ObsTextSourceCard { IsSub = setting.IsSubObs, DisplayName = setting.DisplayName };
+                var card = new ObsTextSourceCard
+                {
+                    IsSub = setting.IsSubObs,
+                    DisplayName = setting.DisplayName,
+                    IsDisplayNameEditing = false,
+                    IsTargetEditing = false
+                };
                 if (setting.SceneName is not null) card.Scenes.Add(setting.SceneName);
                 if (setting.SourceName is not null) card.Sources.Add(setting.SourceName);
                 card.SelectedScene = setting.SceneName;
@@ -1638,6 +1782,9 @@ public partial class ObsSettingPanel : UserControl
         private string? selectedScene;
         private string? selectedSource;
         private bool isTextLoaded;
+        private bool isSub;
+        private bool isDisplayNameEditing = true;
+        private bool isTargetEditing = true;
         public string DisplayName
         {
             get => displayName;
@@ -1648,8 +1795,42 @@ public partial class ObsSettingPanel : UserControl
                 Notify();
             }
         }
-        public bool IsSub { get; set; }
+        public bool IsSub
+        {
+            get => isSub;
+            set
+            {
+                if (isSub == value) return;
+                isSub = value;
+                Notify();
+                Notify(nameof(ObsSelectedIndex));
+                Notify(nameof(ObsDisplayName));
+            }
+        }
         public int ObsSelectedIndex { get => IsSub ? 1 : 0; set => IsSub = value == 1; }
+        public string ObsDisplayName => IsSub ? "サブOBS" : "メインOBS";
+        public bool IsDisplayNameEditing
+        {
+            get => isDisplayNameEditing;
+            set
+            {
+                if (isDisplayNameEditing == value) return;
+                isDisplayNameEditing = value;
+                Notify();
+                Notify(nameof(DisplayNameEditButtonText));
+            }
+        }
+        public string DisplayNameEditButtonText => IsDisplayNameEditing ? "✓" : "✎";
+        public bool IsTargetEditing
+        {
+            get => isTargetEditing;
+            set
+            {
+                if (isTargetEditing == value) return;
+                isTargetEditing = value;
+                Notify();
+            }
+        }
         public ObservableCollection<string> Scenes { get; } = [];
         public ObservableCollection<string> Sources { get; } = [];
         public string? SelectedScene

@@ -228,36 +228,64 @@ namespace JTSA.Panels
 
         #region ==================== レイド関連イベントハンドラ ====================
 
-        /// <summary>
-        /// レイドユーザーダブルクリック時イベント
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void RaidUserListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private async void ExecuteRaidButton_Click(object sender, RoutedEventArgs e)
         {
-            if ((sender as ListBox)?.SelectedItem is RaidUserForm item)
+            if ((sender as Button)?.Tag is not RaidUserForm item)
+                return;
+
+            await ExecuteRaidAsync(item);
+        }
+
+        private async void RaidUserListBox_MouseDoubleClick(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e)
+        {
+            for (var element = e.OriginalSource as DependencyObject; element is not null;
+                 element = System.Windows.Media.VisualTreeHelper.GetParent(element))
             {
-                var target = await mainWindow.GetSelectedTargetAccountAsync();
-                if (target is null)
+                if (element is Button)
                     return;
-                await TwitchHelper.StreamRaid(
-                    target.Value.Account.BroadcasterId,
-                    item.UserId,
-                    target.Value.AccessToken);
-                JTSAHelper.OpenMyTwitchChannel();
+            }
+
+            if ((sender as ListBox)?.SelectedItem is RaidUserForm item)
+                await ExecuteRaidAsync(item);
+        }
+
+        private async Task ExecuteRaidAsync(RaidUserForm item)
+        {
+            if (MessageBox.Show(
+                    $"{item.UserName} へレイドを実行しますか？",
+                    "レイド実行",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
+
+            var target = await mainWindow.GetSelectedTargetAccountAsync();
+            if (target is null)
+            {
+                MessageBox.Show("レイド元のTwitchアカウントを取得できませんでした。", "レイド実行");
+                return;
+            }
+
+            var createdAt = await TwitchHelper.StreamRaid(
+                target.Value.Account.BroadcasterId,
+                item.UserId,
+                target.Value.AccessToken);
+            if (!createdAt.HasValue)
+            {
+                MessageBox.Show(
+                    "レイドを開始できませんでした。AppLogで詳細を確認してください。\n" +
+                    "このエラーは、相手側がレイドを拒否している場合にも表示されます。",
+                    "レイド実行",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
             }
         }
 
-        /// <summary>
-        /// レイド先ユーザーの配信を既定のブラウザで開く。
-        /// </summary>
-        private void OpenTwitchChannelMenuItem_Click(object sender, RoutedEventArgs e)
+        private void OpenTwitchChannelButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is MenuItem { Parent: ContextMenu contextMenu }
-                && contextMenu.PlacementTarget is FrameworkElement { DataContext: RaidUserForm item })
-            {
+            if ((sender as Button)?.Tag is RaidUserForm item)
                 JTSAHelper.OpenTwitchChannel(item.UserLogin);
-            }
         }
 
         #endregion

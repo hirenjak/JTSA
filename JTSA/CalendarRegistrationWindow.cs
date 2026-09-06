@@ -5,13 +5,20 @@ namespace JTSA;
 
 public sealed class CalendarRegistrationWindow : ToolPanelWindow
 {
-    public CalendarRegistrationWindow(DateTime selectedDate, string titlePlaceholder, long? entryId = null)
+    public CalendarRegistrationWindow(
+        DateTime selectedDate,
+        string titlePlaceholder,
+        long? entryId = null,
+        bool duplicateEntry = false)
         : this(
-            entryId.HasValue ? "カレンダー予定の編集" : "カレンダー予定の登録",
+            entryId.HasValue && duplicateEntry
+                ? "カレンダー予定の複製"
+                : entryId.HasValue ? "カレンダー予定の編集" : "カレンダー予定の登録",
             new CalendarRegistrationPanel(),
             selectedDate,
             titlePlaceholder,
-            entryId)
+            entryId,
+            duplicateEntry)
     {
     }
 
@@ -20,7 +27,8 @@ public sealed class CalendarRegistrationWindow : ToolPanelWindow
         CalendarRegistrationPanel panel,
         DateTime selectedDate,
         string titlePlaceholder,
-        long? entryId)
+        long? entryId,
+        bool duplicateEntry)
         : base(title, panel)
     {
         Width = 680;
@@ -32,7 +40,9 @@ public sealed class CalendarRegistrationWindow : ToolPanelWindow
         panel.SetInitialPlaceholder(titlePlaceholder);
         panel.CloseRequested += (_, _) => Close();
 
-        if (entryId.HasValue)
+        if (entryId.HasValue && duplicateEntry)
+            panel.SelectEntryForDuplication(entryId.Value);
+        else if (entryId.HasValue)
             panel.SelectEntryForEditing(entryId.Value);
         else
             panel.SetScheduleDateFromCalendar(selectedDate);

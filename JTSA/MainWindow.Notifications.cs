@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using JTSA.Dao;
+using JTSA.Models;
 
 namespace JTSA;
 
@@ -12,6 +14,7 @@ public partial class MainWindow
 {
     private sealed record Notice(string Key, string Title, string Message, string ActionLabel, Func<Task>? Action);
     private readonly ObservableCollection<Notice> notices = new();
+    private readonly Dictionary<string, string> oauthReauthenticationMessages = new();
     private Window? notificationWindow;
     private StackPanel? notificationRows;
     private bool updateCheckStarted;
@@ -19,12 +22,42 @@ public partial class MainWindow
     private void InitializeNotifications()
     {
         notices.CollectionChanged += (_, _) => RefreshNotifications();
+        ShowTodaysCalendarNotification(DateTime.Today);
         Loaded += async (_, _) =>
         {
             if (updateCheckStarted) return;
             updateCheckStarted = true;
             await App.UpdateCheck(this);
         };
+    }
+
+    private void ShowTodaysCalendarNotification(DateTime today)
+    {
+        var entries = DAO_Calendar.SelectByDate(today);
+        if (entries.Count == 0) return;
+
+        var message = string.Join("\n", entries.Select(FormatCalendarEntryForNotification));
+        ShowNotification(
+            "calendar-today",
+            $"本日の予定（{entries.Count}件）",
+            message,
+            "カレンダーを開く",
+            () =>
+            {
+                CalendarPanel.RefreshSelectedDate();
+                MainTabControl.SelectedItem = CalendarTabItem;
+                notificationWindow?.Close();
+                return Task.CompletedTask;
+            });
+    }
+
+    private static string FormatCalendarEntryForNotification(T_CalendarEntry entry)
+    {
+        var time = entry.StartTime == TimeSpan.Zero
+            ? "時刻未設定"
+            : entry.StartTime.ToString(@"hh\:mm");
+        var content = string.IsNullOrWhiteSpace(entry.Content) ? "（予定内容なし）" : entry.Content.Trim();
+        return $"{time}  {content}";
     }
 
     public void ShowNotification(string key, string title, string message, string actionLabel = "", Func<Task>? action = null)
@@ -46,16 +79,71 @@ public partial class MainWindow
         if (notice != null) notices.Remove(notice);
     }
 
+    public void ShowOAuthReauthenticationNotification(string sourceKey, string message)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+                ShowOAuthReauthenticationNotification(sourceKey, message)));
+            return;
+        }
+
+        oauthReauthenticationMessages[sourceKey] = message;
+        RefreshOAuthReauthenticationNotification();
+    }
+
+    public void RemoveOAuthReauthenticationNotification(string sourceKey)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+                RemoveOAuthReauthenticationNotification(sourceKey)));
+            return;
+        }
+
+        oauthReauthenticationMessages.Remove(sourceKey);
+        RefreshOAuthReauthenticationNotification();
+    }
+
+    private void RefreshOAuthReauthenticationNotification()
+    {
+        const string notificationKey = "oauth-reauthentication";
+        if (oauthReauthenticationMessages.Count == 0)
+        {
+            RemoveNotification(notificationKey);
+            return;
+        }
+
+        var messages = oauthReauthenticationMessages.Values.Distinct().ToList();
+        ShowNotification(
+            notificationKey,
+            "Twitchの再認証が必要です",
+            string.Join("\n", messages),
+            "設定を開く",
+            () =>
+            {
+                OpenToolPanelWindow(SettingsPanelHost, SettingPanel, "設定");
+                notificationWindow?.Close();
+                return Task.CompletedTask;
+            });
+    }
+
     private void NotificationButton_Click(object sender, RoutedEventArgs e)
     {
         if (notificationWindow != null) { notificationWindow.Activate(); return; }
         notificationRows = new StackPanel { Margin = new Thickness(16) };
-        notificationWindow = new Window
+        notificationWindow = new ToolPanelWindow(
+            "通知一覧",
+            new ScrollViewer
+            {
+                Content = notificationRows,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = new SolidColorBrush(Color.FromRgb(48, 48, 48))
+            })
         {
-            Title = "通知一覧", Owner = this, Width = 480, Height = 420, MinWidth = 340, MinHeight = 240,
+            Owner = this, Width = 480, Height = 420, MinWidth = 340, MinHeight = 240,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Background = new SolidColorBrush(Color.FromRgb(48, 48, 48)), Foreground = Brushes.White,
-            Content = new ScrollViewer { Content = notificationRows, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }
+            Foreground = Brushes.White
         };
         notificationWindow.Closed += (_, _) => { notificationWindow = null; notificationRows = null; };
         RefreshNotifications();
@@ -65,19 +153,26 @@ public partial class MainWindow
     private void RefreshNotifications()
     {
         NotificationButton.Visibility = notices.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-        NotificationButton.Content = $"通知 ({notices.Count})";
+        NotificationButton.Content = notices.Count > 99 ? "99+" : notices.Count.ToString();
         if (notificationRows == null) return;
         notificationRows.Children.Clear();
         if (notices.Count == 0) notificationRows.Children.Add(new TextBlock { Text = "通知はありません", Foreground = Brushes.White });
         foreach (var notice in notices)
         {
-            var row = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
+            var row = new StackPanel();
             row.Children.Add(new TextBlock { Text = notice.Title, FontWeight = FontWeights.Bold, Foreground = Brushes.LightGoldenrodYellow, TextWrapping = TextWrapping.Wrap });
             row.Children.Add(new TextBlock { Text = notice.Message, Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 8) });
             var buttons = new StackPanel { Orientation = Orientation.Horizontal };
             if (notice.Action != null)
             {
-                var action = new Button { Content = notice.ActionLabel, Padding = new Thickness(10, 4, 10, 4) };
+                var action = new Button
+                {
+                    Content = notice.ActionLabel,
+                    Padding = new Thickness(12, 5, 12, 5),
+                    Background = new SolidColorBrush(Color.FromRgb(40, 86, 83)),
+                    BorderBrush = Brushes.LightSeaGreen,
+                    Foreground = Brushes.White
+                };
                 action.Click += async (_, _) =>
                 {
                     action.IsEnabled = false;
@@ -87,11 +182,28 @@ public partial class MainWindow
                 };
                 buttons.Children.Add(action);
             }
-            var dismiss = new Button { Content = "通知を消す", Margin = new Thickness(8, 0, 0, 0), Padding = new Thickness(10, 4, 10, 4) };
+            var dismiss = new Button
+            {
+                Content = "通知を消す",
+                Margin = new Thickness(8, 0, 0, 0),
+                Padding = new Thickness(12, 5, 12, 5),
+                Background = new SolidColorBrush(Color.FromRgb(85, 85, 85)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(119, 119, 119)),
+                Foreground = Brushes.White
+            };
             dismiss.Click += (_, _) => RemoveNotification(notice.Key);
             buttons.Children.Add(dismiss);
             row.Children.Add(buttons);
-            notificationRows.Children.Add(row);
+            notificationRows.Children.Add(new Border
+            {
+                Child = row,
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 12),
+                Background = new SolidColorBrush(Color.FromRgb(64, 64, 64)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(102, 102, 102)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4)
+            });
         }
     }
 }

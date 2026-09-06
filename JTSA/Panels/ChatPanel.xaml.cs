@@ -13,9 +13,39 @@ using NAudio.Wave;
 using TwitchLib.Api;
 using System.Threading;
 using Microsoft.Win32;
+using System.ComponentModel;
 
 namespace JTSA.Panels
 {
+    public sealed class TodoItemForm : INotifyPropertyChanged
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Text { get; set; } = string.Empty;
+        public bool IsCurrent
+        {
+            get => isCurrent;
+            set
+            {
+                if (isCurrent == value) return;
+                isCurrent = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsCurrent)));
+            }
+        }
+        private bool isCurrent;
+        public bool IsCompleted
+        {
+            get => isCompleted;
+            set
+            {
+                if (isCompleted == value) return;
+                isCompleted = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsCompleted)));
+            }
+        }
+        private bool isCompleted;
+        public event PropertyChangedEventHandler? PropertyChanged;
+    }
+
     public class TwitchChatPart
     {
         public string? Text { get; set; }
@@ -32,6 +62,8 @@ namespace JTSA.Panels
     /// </summary>
     public partial class ChatPanel : UserControl
     {
+        private const int MaxDisplayedChatCount = 1000;
+
         public static readonly RoutedUICommand AddFriendCommand = new(
             "フレンドに追加", nameof(AddFriendCommand), typeof(ChatPanel));
         public static readonly RoutedUICommand AddParticipationCommand = new(
@@ -67,6 +99,7 @@ namespace JTSA.Panels
         public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
         public ObservableCollection<ParticipationUserForm> ParticipationUsers { get; } = new();
         public ObservableCollection<ParticipationUserForm> PlayingParticipationUsers { get; } = new();
+        public ObservableCollection<TodoItemForm> TodoItems { get; } = new();
         private readonly HashSet<string> participationRedemptions = new();
         private readonly Queue<string> participationRedemptionOrder = new();
         private string participationRewardId = "";
@@ -424,6 +457,19 @@ namespace JTSA.Panels
                 waiting = ParticipationUsers.Select(x => new
                 {
                     name = x.DisplayName, icon = x.ProfileImageUrl, count = x.ParticipationCount
+                }).ToArray()
+            }));
+
+        public string CreateObsTodoJson() => Dispatcher.Invoke(() =>
+            JsonSerializer.Serialize(new
+            {
+                visible = isTodoManagementVisible,
+                category = TodoCategoryTextBlock.Text,
+                items = TodoItems.Select(item => new
+                {
+                    text = item.Text,
+                    completed = item.IsCompleted,
+                    current = item.IsCurrent
                 }).ToArray()
             }));
 
@@ -816,7 +862,9 @@ namespace JTSA.Panels
                 twitchChatService = new TwitchChatService(channelName);
                 twitchEventSubService = new TwitchEventSubService(accountApi, broadcasterId);
                 connectedBroadcasterId = broadcasterId;
+                RestoreTodos();
                 RestoreParticipation();
+                RestoreManagementPanelVisibility();
                 ReloadParticipationRewards();
 
                 twitchChatService.MessageReceived += message =>
@@ -1098,6 +1146,10 @@ namespace JTSA.Panels
             UpdateChatUserList(form, userData);
 
             TwitchChatFormList.Insert(0, form);
+            while (TwitchChatFormList.Count > MaxDisplayedChatCount)
+            {
+                TwitchChatFormList.RemoveAt(TwitchChatFormList.Count - 1);
+            }
 
             // 表示を先に確定し、デバイスエラーは通知音サービス内で処理する。
             if (isFirstEntrance)
@@ -1129,10 +1181,166 @@ namespace JTSA.Panels
         }
 
         /// <summary>参加管理エリアとOBSの参加一覧の表示・非表示を切り替える。</summary>
+        private bool isTodoManagementVisible;
+
+        private void TodoManagementToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            SetTodoManagementVisible(!isTodoManagementVisible);
+            SaveManagementPanelVisibility();
+        }
+
+        private void SetTodoManagementVisible(bool isVisible, bool focusInput = true)
+        {
+            isTodoManagementVisible = isVisible;
+            TodoManagementPanel.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+            TodoManagementColumn.Width = new GridLength(isVisible ? 230 : 0);
+            TodoManagementToggleButton.Visibility = isVisible ? Visibility.Collapsed : Visibility.Visible;
+            if (isVisible && focusInput)
+                TodoInputTextBox.Focus();
+        }
+
+        private void AddTodoButton_Click(object sender, RoutedEventArgs e)
+            => AddTodo();
+
+        private void TodoInputTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter) return;
+            AddTodo();
+            e.Handled = true;
+        }
+
+        private void AddTodo()
+        {
+            var text = TodoInputTextBox.Text.Trim();
+            if (text.Length == 0) return;
+            TodoItems.Add(new TodoItemForm { Text = text });
+            TodoInputTextBox.Clear();
+            TodoInputTextBox.Focus();
+            SaveTodos();
+        }
+
+        private void TodoCurrentRadioButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not RadioButton { DataContext: TodoItemForm selected }) return;
+            foreach (var item in TodoItems)
+                item.IsCurrent = ReferenceEquals(item, selected);
+            selected.IsCompleted = false;
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+        }
+
+        private void NoCurrentTodoRadioButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var item in TodoItems)
+                item.IsCurrent = false;
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+        }
+
+        private void TodoCompletedCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox { DataContext: TodoItemForm { IsCompleted: true } item })
+                item.IsCurrent = false;
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+        }
+
+        private void RemoveTodoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: TodoItemForm item }) return;
+            TodoItems.Remove(item);
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+        }
+
+        private void ClearCompletedTodosButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var item in TodoItems.Where(item => item.IsCompleted).ToList())
+                TodoItems.Remove(item);
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+        }
+
+        private void RestoreTodos()
+        {
+            TodoItems.Clear();
+            var categoryId = (Application.Current.MainWindow as MainWindow)?.CurrentCategoryId ?? string.Empty;
+            var category = string.IsNullOrWhiteSpace(categoryId) ? null : DAO_Category.SelectOneById(categoryId);
+            TodoCategoryTextBlock.Text = category?.DisplayName ?? "カテゴリ未設定";
+            if (string.IsNullOrEmpty(connectedBroadcasterId))
+            {
+                UpdateNoCurrentTodoSelection();
+                return;
+            }
+            try
+            {
+                var json = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatTodoLists)?.Value;
+                var lists = JsonSerializer.Deserialize<Dictionary<string, List<TodoItemForm>>>(json ?? "{}") ?? [];
+                var categoryKey = GetTodoCategoryKey(categoryId);
+                if (lists.TryGetValue(categoryKey, out var items))
+                    foreach (var item in items) TodoItems.Add(item);
+                else if (lists.TryGetValue(connectedBroadcasterId, out var legacyItems))
+                {
+                    // 旧形式（アカウント単位）のToDoは、最初に開いたカテゴリへ引き継ぐ。
+                    foreach (var item in legacyItems) TodoItems.Add(item);
+                    lists.Remove(connectedBroadcasterId);
+                    lists[categoryKey] = TodoItems.ToList();
+                    DAO_Setting.InsertUpdate(
+                        DAO_Setting.SettingName.ChatTodoLists,
+                        JsonSerializer.Serialize(lists));
+                }
+            }
+            catch (JsonException)
+            {
+                // 壊れた保存値は無視し、新しい一覧として扱う。
+            }
+            UpdateNoCurrentTodoSelection();
+        }
+
+        private void SaveTodos()
+        {
+            if (string.IsNullOrEmpty(connectedBroadcasterId)) return;
+            try
+            {
+                var json = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatTodoLists)?.Value;
+                Dictionary<string, List<TodoItemForm>> lists;
+                try
+                {
+                    lists = JsonSerializer.Deserialize<Dictionary<string, List<TodoItemForm>>>(json ?? "{}") ?? [];
+                }
+                catch (JsonException)
+                {
+                    lists = [];
+                }
+                var categoryId = (Application.Current.MainWindow as MainWindow)?.CurrentCategoryId ?? string.Empty;
+                lists[GetTodoCategoryKey(categoryId)] = TodoItems.ToList();
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ChatTodoLists, JsonSerializer.Serialize(lists));
+            }
+            catch (Exception ex)
+            {
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"ToDo一覧の保存失敗：{ex.Message}");
+            }
+        }
+
+        private string GetTodoCategoryKey(string categoryId)
+            => $"{connectedBroadcasterId}\n{categoryId}";
+
+        private void UpdateNoCurrentTodoSelection()
+            => NoCurrentTodoRadioButton.IsChecked = !TodoItems.Any(item => item.IsCurrent);
+
+        public void RefreshTodosForCategory()
+        {
+            if (string.IsNullOrEmpty(connectedBroadcasterId)) return;
+            RestoreTodos();
+        }
+
+        /// <summary>参加管理エリアとOBSの参加一覧の表示・非表示を切り替える。</summary>
         private void ParticipationManagementToggleButton_Click(object sender, RoutedEventArgs e)
         {
             SetParticipationManagementVisible(!isParticipationManagementVisible);
             if (!restoringParticipationSlots && !string.IsNullOrEmpty(connectedBroadcasterId)) SaveParticipation();
+            SaveManagementPanelVisibility();
         }
 
         private void SetParticipationManagementVisible(bool isVisible)
@@ -1150,17 +1358,55 @@ namespace JTSA.Panels
         /// <summary>チャットユーザー一覧の表示・非表示を切り替える。</summary>
         private void ChatUserListToggleButton_Click(object sender, RoutedEventArgs e)
         {
-            isChatUserListVisible = !isChatUserListVisible;
+            SetChatUserListVisible(!isChatUserListVisible);
+            SaveManagementPanelVisibility();
+        }
 
-            ChatUserListPanel.Visibility = isChatUserListVisible
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-            ChatUserListColumn.Width = isChatUserListVisible
-                ? new GridLength(210)
-                : new GridLength(0);
-            ChatUserListToggleButton.Visibility = isChatUserListVisible
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+        private sealed record ManagementPanelVisibility(
+            bool TodoVisible,
+            bool ParticipationVisible,
+            bool UserListVisible);
+
+        private void RestoreManagementPanelVisibility()
+        {
+            var visibility = new ManagementPanelVisibility(
+                false,
+                isParticipationManagementVisible,
+                true);
+            try
+            {
+                var json = DAO_Setting.SelectOneById(
+                    DAO_Setting.SettingName.ChatManagementPanelVisibility)?.Value;
+                if (!string.IsNullOrWhiteSpace(json))
+                    visibility = JsonSerializer.Deserialize<ManagementPanelVisibility>(json) ?? visibility;
+            }
+            catch (JsonException)
+            {
+                // 壊れた保存値は既定の開閉状態へ戻す。
+            }
+
+            SetTodoManagementVisible(visibility.TodoVisible, focusInput: false);
+            SetParticipationManagementVisible(visibility.ParticipationVisible);
+            SetChatUserListVisible(visibility.UserListVisible);
+        }
+
+        private void SaveManagementPanelVisibility()
+        {
+            var visibility = new ManagementPanelVisibility(
+                isTodoManagementVisible,
+                isParticipationManagementVisible,
+                isChatUserListVisible);
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.ChatManagementPanelVisibility,
+                JsonSerializer.Serialize(visibility));
+        }
+
+        private void SetChatUserListVisible(bool isVisible)
+        {
+            isChatUserListVisible = isVisible;
+            ChatUserListPanel.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+            ChatUserListColumn.Width = isVisible ? new GridLength(210) : new GridLength(0);
+            ChatUserListToggleButton.Visibility = isVisible ? Visibility.Collapsed : Visibility.Visible;
         }
 
         /// <summary>チャットユーザー一覧の右クリックメニューからフレンドへ追加する。</summary>

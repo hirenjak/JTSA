@@ -80,7 +80,8 @@ namespace JTSA.Panels
                 CreateObsJson,
                 () => mainWindow.ChatPanel.CreateObsChatHtml(),
                 () => mainWindow.ChatPanel.CreateObsChatJson(),
-                () => mainWindow.ChatPanel.CreateObsParticipationJson());
+                () => mainWindow.ChatPanel.CreateObsParticipationJson(),
+                () => mainWindow.ChatPanel.CreateObsTodoJson());
 
             _ = server.StartAsync();
             recentTimer.Tick += (_, _) => { if (IsRecentPlaylist) RefreshRecentPlaylist(); };
@@ -143,9 +144,27 @@ namespace JTSA.Panels
             ReloadGamePlaylistItem();
         }
 
-        private async void ObsPlaylistRadioButton_Click(object sender, RoutedEventArgs e)
+        private async void GamePlaylistListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if ((sender as RadioButton)?.DataContext is not PlaylistHeaderForm selectedHeader) return;
+            if (sender is not ListBox listBox || e.OriginalSource is not DependencyObject origin) return;
+
+            // 削除ボタンのダブルクリックはプレイリスト適用として扱わない。
+            for (var node = origin; node != null && node != listBox;)
+            {
+                if (node is System.Windows.Controls.Primitives.ButtonBase) return;
+                node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node);
+            }
+
+            if (ItemsControl.ContainerFromElement(listBox, origin) is not ListBoxItem
+                { DataContext: PlaylistHeaderForm selectedHeader }) return;
+
+            await ApplyObsPlaylistAsync(selectedHeader);
+            e.Handled = true;
+        }
+
+
+        private async Task ApplyObsPlaylistAsync(PlaylistHeaderForm selectedHeader)
+        {
 
             obsPlaylistId = selectedHeader.GamePlayListId;
             foreach (var header in playlistHeaderFormList.Append(recentHeader))
@@ -153,7 +172,6 @@ namespace JTSA.Panels
 
             DAO_Setting.InsertUpdate(DAO_Setting.SettingName.ObsGamePlaylistId, obsPlaylistId.ToString());
             await RefreshObsPlaylistSnapshotAsync();
-            e.Handled = true;
         }
 
         private void AddCategoryCardButton_Click(object sender, RoutedEventArgs e)

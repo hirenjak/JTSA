@@ -819,6 +819,14 @@ namespace JTSA.Migrations
                     b.Property<string>("ProfielImageUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("StreamingPlatform")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StreamingUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedDateTime")
                         .HasColumnType("TEXT");
 

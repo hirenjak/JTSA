@@ -4,6 +4,19 @@ namespace JTSA.Dao;
 
 internal static class DAO_Calendar
 {
+    public static List<T_CalendarEntry> SelectByDate(DateTime date)
+    {
+        using var db = new AppDbContext();
+        var calendarDate = date.Date;
+        var nextDate = calendarDate.AddDays(1);
+        return db.T_CalendarEntry
+            .Where(entry => entry.CalendarDate >= calendarDate && entry.CalendarDate < nextDate)
+            .ToList()
+            .OrderBy(entry => entry.StartTime)
+            .ThenBy(entry => entry.Id)
+            .ToList();
+    }
+
     public static List<T_CalendarEntry> SelectAll()
     {
         using var db = new AppDbContext();
@@ -65,6 +78,7 @@ internal static class DAO_Calendar
         }
         else
         {
+            entry.CalendarDate = calendarDate;
             entry.Content = content;
             entry.StartTime = startTime ?? TimeSpan.Zero;
             entry.TitlePlaceholder = titlePlaceholder;
