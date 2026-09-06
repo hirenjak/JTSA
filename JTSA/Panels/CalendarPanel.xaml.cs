@@ -1,26 +1,42 @@
 using JTSA.Dao;
 using JTSA.Models;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace JTSA.Panels;
 
-public sealed class CalendarScheduleDayForm
+public sealed class CalendarScheduleDayForm : INotifyPropertyChanged
 {
     public required DateTime Date { get; init; }
     public required int DisplayMonth { get; init; }
     public string ContentPreview { get; init; } = string.Empty;
-    public bool IsSelected { get; init; }
+    public string StartTimeDisplay { get; init; } = string.Empty;
+    public string CategoryBoxArtUrl { get; init; } = string.Empty;
+    public bool IsSelected
+    {
+        get => isSelected;
+        set
+        {
+            if (isSelected == value) return;
+            isSelected = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+        }
+    }
+    private bool isSelected;
     public int Day => Date.Day;
     public bool IsCurrentMonth => Date.Month == DisplayMonth;
     public bool IsToday => Date == DateTime.Today;
     public bool IsSunday => Date.DayOfWeek == DayOfWeek.Sunday;
     public bool IsSaturday => Date.DayOfWeek == DayOfWeek.Saturday;
     public bool HasEntry => !string.IsNullOrWhiteSpace(ContentPreview);
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public partial class CalendarPanel : UserControl
@@ -35,9 +51,14 @@ public partial class CalendarPanel : UserControl
 
     public ObservableCollection<T_CalendarEntry> Entries { get; } = [];
     public ObservableCollection<CalendarScheduleDayForm> CalendarDays { get; } = [];
+    public ObservableCollection<T_CalendarEntry> DayPopupEntries { get; } = [];
     public event Action? AddRequested;
     public event Action<long>? EditRequested;
     public DateTime SelectedDate => selectedDate;
+    private readonly DispatcherTimer dayPopupCloseTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(250)
+    };
 
     public event RoutedEventHandler CloseRequested
     {
@@ -48,6 +69,7 @@ public partial class CalendarPanel : UserControl
     public CalendarPanel()
     {
         InitializeComponent();
+        dayPopupCloseTimer.Tick += DayPopupCloseTimer_Tick;
         MigrateLegacyMemos();
         ReloadEntries();
         EntryDatePicker.SelectedDate = DateTime.Today;
@@ -117,7 +139,8 @@ public partial class CalendarPanel : UserControl
             var entry = Entries.FirstOrDefault(x => x.CalendarDate.Date == selectedDate);
             CalendarEntryListBox.SelectedItem = entry;
             MemoTextBox.Text = entry?.Content ?? string.Empty;
-            BuildCalendarDays();
+            foreach (var day in CalendarDays)
+                day.IsSelected = day.Date == selectedDate;
         }
         finally
         {
@@ -140,6 +163,7 @@ public partial class CalendarPanel : UserControl
     private void TodayButton_Click(object sender, RoutedEventArgs e)
     {
         displayedCalendarMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        BuildCalendarDays();
         SelectDate(DateTime.Today);
     }
 
@@ -147,10 +171,59 @@ public partial class CalendarPanel : UserControl
     {
         if (sender is not Border { DataContext: CalendarScheduleDayForm day }) return;
 
+        var isCurrentMonth = day.IsCurrentMonth;
         if (!day.IsCurrentMonth)
+        {
             displayedCalendarMonth = new DateTime(day.Date.Year, day.Date.Month, 1);
+            BuildCalendarDays();
+        }
         SelectDate(day.Date);
+        ShowDaySchedulePopup(day.Date, isCurrentMonth ? sender as UIElement : this);
         e.Handled = true;
+    }
+
+    private void ShowDaySchedulePopup(DateTime date, UIElement? placementTarget)
+    {
+        dayPopupCloseTimer.Stop();
+        DayPopupEntries.Clear();
+        foreach (var entry in Entries
+                     .Where(entry => entry.CalendarDate.Date == date.Date)
+                     .OrderBy(entry => entry.StartTime)
+                     .ThenBy(entry => entry.Id))
+            DayPopupEntries.Add(entry);
+
+        DaySchedulePopupTitle.Text = date.ToString("M月d日（ddd）の予定", CultureInfo.GetCultureInfo("ja-JP"));
+        DaySchedulePopupEmptyText.Visibility = DayPopupEntries.Count == 0
+            ? Visibility.Visible : Visibility.Collapsed;
+        DaySchedulePopupList.Visibility = DayPopupEntries.Count == 0
+            ? Visibility.Collapsed : Visibility.Visible;
+        DaySchedulePopup.PlacementTarget = placementTarget ?? this;
+        DaySchedulePopup.IsOpen = true;
+    }
+
+    private void DayCell_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (DaySchedulePopup.IsOpen)
+            dayPopupCloseTimer.Start();
+    }
+
+    private void DayCell_MouseEnter(object sender, MouseEventArgs e)
+        => dayPopupCloseTimer.Stop();
+
+    private void DaySchedulePopup_MouseEnter(object sender, MouseEventArgs e)
+        => dayPopupCloseTimer.Stop();
+
+    private void DaySchedulePopup_MouseLeave(object sender, MouseEventArgs e)
+    {
+        dayPopupCloseTimer.Stop();
+        DaySchedulePopup.IsOpen = false;
+    }
+
+    private void DayPopupCloseTimer_Tick(object? sender, EventArgs e)
+    {
+        dayPopupCloseTimer.Stop();
+        if (!DaySchedulePopup.IsMouseOver)
+            DaySchedulePopup.IsOpen = false;
     }
 
     private void BuildCalendarDays()
@@ -159,9 +232,21 @@ public partial class CalendarPanel : UserControl
 
         CalendarMonthTextBlock.Text = displayedCalendarMonth.ToString("yyyy年 M月");
         var calendarStart = displayedCalendarMonth.AddDays(-(int)displayedCalendarMonth.DayOfWeek);
+        var now = DateTime.Now;
         var entriesByDate = Entries
             .GroupBy(entry => entry.CalendarDate.Date)
-            .ToDictionary(group => group.Key, group => group.OrderBy(entry => entry.StartTime).First());
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var orderedEntries = group.OrderBy(entry => entry.StartTime).ToList();
+                    if (group.Key != now.Date) return orderedEntries[0];
+
+                    // 当日は、これから始まる予定のうち現在時刻に最も近いものを優先する。
+                    // 全予定が開始済みなら、直前（最後に開始した）の予定を表示する。
+                    return orderedEntries.FirstOrDefault(entry => entry.StartTime >= now.TimeOfDay)
+                           ?? orderedEntries[^1];
+                });
 
         CalendarDays.Clear();
         for (var index = 0; index < 42; index++)
@@ -173,6 +258,8 @@ public partial class CalendarPanel : UserControl
                 Date = date,
                 DisplayMonth = displayedCalendarMonth.Month,
                 ContentPreview = entry?.Content ?? string.Empty,
+                StartTimeDisplay = entry?.StartTimeDisplay ?? string.Empty,
+                CategoryBoxArtUrl = entry?.CategoryBoxArtUrl ?? string.Empty,
                 IsSelected = date == selectedDate
             });
         }

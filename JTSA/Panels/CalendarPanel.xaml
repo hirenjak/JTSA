@@ -119,13 +119,25 @@
                                     <DataTemplate>
                                         <Border x:Name="DayCell" Margin="1" Padding="3" Background="#FF303030"
                                                 BorderBrush="Transparent" BorderThickness="1" CornerRadius="5"
-                                                Cursor="Hand" MouseLeftButtonUp="DayCell_MouseLeftButtonUp">
+                                                Cursor="Hand" MouseLeftButtonUp="DayCell_MouseLeftButtonUp"
+                                                MouseEnter="DayCell_MouseEnter"
+                                                MouseLeave="DayCell_MouseLeave">
                                             <Grid>
                                                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                                                <TextBlock x:Name="DayNumber" Text="{Binding Day}" FontSize="9" Foreground="#FFE8E8E8" FontWeight="SemiBold"/>
-                                                <TextBlock x:Name="ScheduleText" Grid.Row="1" Text="{Binding ContentPreview}"
-                                                           Visibility="Collapsed" Foreground="White" FontSize="8"
-                                                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                    <TextBlock x:Name="DayNumber" Text="{Binding Day}" FontSize="9"
+                                                               Foreground="#FFE8E8E8" FontWeight="SemiBold"/>
+                                                    <TextBlock x:Name="ScheduleTime" Grid.Column="1"
+                                                               Text="{Binding StartTimeDisplay}" Visibility="Collapsed"
+                                                               Margin="3,0,0,0" Foreground="White" FontSize="8"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </Grid>
+                                                <Image x:Name="ScheduleBoxArt" Grid.Row="1"
+                                                       Source="{Binding CategoryBoxArtUrl}"
+                                                       Width="28" Height="38" Margin="0,2,0,0"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                       Stretch="UniformToFill" Visibility="Collapsed"/>
                                             </Grid>
                                         </Border>
                                         <DataTemplate.Triggers>
@@ -133,19 +145,20 @@
                                                 <Setter TargetName="DayCell" Property="Opacity" Value="0.28"/>
                                                 <Setter TargetName="DayCell" Property="Background" Value="Transparent"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
-                                                <Setter TargetName="DayCell" Property="BorderThickness" Value="2"/>
-                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding IsSunday}" Value="True"><Setter TargetName="DayNumber" Property="Foreground" Value="#FFFF8585"/></DataTrigger>
                                             <DataTrigger Binding="{Binding IsSaturday}" Value="True"><Setter TargetName="DayNumber" Property="Foreground" Value="#FF7DBBFF"/></DataTrigger>
                                             <DataTrigger Binding="{Binding HasEntry}" Value="True">
                                                 <Setter TargetName="DayCell" Property="Background" Value="#FF285653"/>
                                                 <Setter TargetName="DayCell" Property="BorderBrush" Value="LightSeaGreen"/>
-                                                <Setter TargetName="ScheduleText" Property="Visibility" Value="Visible"/>
+                                                <Setter TargetName="ScheduleTime" Property="Visibility" Value="Visible"/>
+                                                <Setter TargetName="ScheduleBoxArt" Property="Visibility" Value="Visible"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                                 <Setter TargetName="DayCell" Property="BorderBrush" Value="#FFFFC857"/>
+                                                <Setter TargetName="DayCell" Property="BorderThickness" Value="2"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                <Setter TargetName="DayCell" Property="BorderBrush" Value="#FFFF5A5F"/>
                                                 <Setter TargetName="DayCell" Property="BorderThickness" Value="2"/>
                                             </DataTrigger>
                                         </DataTemplate.Triggers>
@@ -160,5 +173,47 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <Popup x:Name="DaySchedulePopup" Placement="Bottom" StaysOpen="True"
+               AllowsTransparency="True" PopupAnimation="Fade"
+               MouseEnter="DaySchedulePopup_MouseEnter"
+               MouseLeave="DaySchedulePopup_MouseLeave">
+            <Border Width="300" MaxHeight="320" Margin="4" Padding="8"
+                    Background="#FF292929" BorderBrush="#FF777777"
+                    BorderThickness="1" CornerRadius="5">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <TextBlock x:Name="DaySchedulePopupTitle" Foreground="White"
+                               FontSize="13" FontWeight="SemiBold" Margin="2,0,2,6"/>
+                    <TextBlock x:Name="DaySchedulePopupEmptyText" Grid.Row="1" Text="予定はありません"
+                               Foreground="LightGray" Margin="5" Visibility="Collapsed"/>
+                    <ListBox x:Name="DaySchedulePopupList" Grid.Row="1"
+                             ItemsSource="{Binding DayPopupEntries, ElementName=Root}"
+                             Background="Transparent" BorderThickness="0"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="5" BorderBrush="#FF4C4C4C" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Image Source="{Binding CategoryBoxArtUrl}" Width="32" Height="43"
+                                               VerticalAlignment="Top" Stretch="UniformToFill"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding StartTimeDisplay}" Foreground="#FFFFC857"
+                                                       FontSize="11" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Content}" Foreground="White"
+                                                       FontSize="12" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding CategoryName}" Foreground="LightGray"
+                                                       FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Popup>
     </Grid>
 </UserControl>
