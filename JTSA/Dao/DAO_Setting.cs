@@ -78,6 +78,10 @@ namespace JTSA.Dao
             ObsGamePlaylistId = 49,
             /// <summary>最後に正常適用されたチャンネルポイントプリセットID</summary>
             AppliedChannelPointPresetId = 50,
+            /// <summary>チャット画面のアカウント別ToDo一覧</summary>
+            ChatTodoLists = 51,
+            /// <summary>チャット画面の管理パネル開閉状態</summary>
+            ChatManagementPanelVisibility = 52,
         }
 
 

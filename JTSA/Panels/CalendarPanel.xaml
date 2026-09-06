@@ -42,7 +42,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="5,5,3,6">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="50"/><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="50"/><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/></Grid.ColumnDefinitions>
                                     <Button Tag="{Binding}" Width="44" Height="26" Content="読込" Padding="0"
                                             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
                                             ToolTip="この予定を送信予定の情報へ反映" Click="ApplyEntryButton_Click"/>
@@ -69,10 +69,16 @@
                                             HorizontalAlignment="Right" VerticalAlignment="Top"
                                             Foreground="#FFFF6F78" Background="Transparent" BorderThickness="0"
                                             ToolTip="この予定を削除" Click="DeleteEntryButton_Click"/>
-                                    <Button Grid.Column="4" Tag="{Binding}" Width="44" Height="22" Content="編集" Padding="0"
-                                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,2"
-                                            Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
-                                            ToolTip="この予定を編集" Click="EditEntryButton_Click"/>
+                                    <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom" Margin="0,0,0,2">
+                                        <Button Tag="{Binding}" Width="44" Height="22" Content="複製" Padding="0"
+                                                Margin="0,0,4,0" Foreground="White" Background="#FF565656"
+                                                BorderBrush="#FF777777" ToolTip="この予定を複製"
+                                                Click="DuplicateEntryButton_Click"/>
+                                        <Button Tag="{Binding}" Width="44" Height="22" Content="編集" Padding="0"
+                                                Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
+                                                ToolTip="この予定を編集" Click="EditEntryButton_Click"/>
+                                    </StackPanel>
                                     <Border Grid.ColumnSpan="5" Height="1" Margin="0,8,-3,-7"
                                             VerticalAlignment="Bottom" Background="#FF505050"/>
                                 </Grid>
@@ -206,6 +212,19 @@
                                                        FontSize="12" TextWrapping="Wrap"/>
                                             <TextBlock Text="{Binding CategoryName}" Foreground="LightGray"
                                                        FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding SelectedFriendNames, StringFormat=フレンド：{0}}"
+                                                       Foreground="#FF9EDBD7" FontSize="10" TextWrapping="Wrap">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedFriendNames}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                                     </Grid>
                                 </Border>

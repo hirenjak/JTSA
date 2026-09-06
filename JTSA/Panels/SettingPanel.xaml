@@ -29,8 +29,6 @@
     <StackPanel Orientation="Horizontal" Margin="0,8,0,0"><Button x:Name="SaveXPostTemplateButton" Content="保存" Width="64" Height="22" Click="SaveXPostTemplateButton_Click"/><Button Content="初期値に戻す" Width="96" Height="22" Margin="8,0,0,0" Click="ResetXPostTemplateButton_Click"/></StackPanel>
    </StackPanel></Border></StackPanel></ScrollViewer></TabItem>
 
-   <TabItem Header="OBS接続"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="14,12"><TextBlock Text="OBS接続" Style="{StaticResource SettingTitleStyle}"/><Border Style="{StaticResource SettingCardStyle}"><StackPanel x:Name="ObsConnectionSettingsHost"/></Border></StackPanel></ScrollViewer></TabItem>
-
    <TabItem Header="読み上げ"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="14,12"><TextBlock Text="チャット読み上げ連携" Style="{StaticResource SettingTitleStyle}"/><Border Style="{StaticResource SettingCardStyle}" MaxWidth="650" HorizontalAlignment="Left"><StackPanel>
     <RadioButton x:Name="SpeechDisabledRadioButton" Content="読み上げない" Margin="0,4,0,0" Foreground="White"/><RadioButton x:Name="BouyomiEnabledRadioButton" Content="棒読みちゃん" Margin="0,6,0,0" Foreground="White"/><RadioButton x:Name="VoiceVoxEnabledRadioButton" Content="VOICEVOX" Margin="0,6,0,0" Foreground="White"/>
     <TextBlock Text="棒読みちゃん HTTP URL" Margin="0,12,0,2" Foreground="LightGray"/><TextBox x:Name="BouyomiEndpointTextBox" Padding="4" Text="http://localhost:50080/" Foreground="White" Background="#FF4A4747" BorderBrush="White"/>

@@ -91,6 +91,29 @@ public sealed class ObsController : IDisposable
             .ToList();
     }
 
+    public void CreateBrowserSource(
+        string sceneName,
+        string sourceName,
+        string url,
+        int width,
+        int height)
+    {
+        EnsureConnected();
+        client.SendRequest("CreateInput", new JObject
+        {
+            ["sceneName"] = sceneName,
+            ["inputName"] = sourceName,
+            ["inputKind"] = "browser_source",
+            ["inputSettings"] = new JObject
+            {
+                ["url"] = url,
+                ["width"] = width,
+                ["height"] = height
+            },
+            ["sceneItemEnabled"] = true
+        });
+    }
+
     public string GetCurrentProgramScene()
     {
         EnsureConnected();

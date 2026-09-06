@@ -161,6 +161,7 @@ namespace JTSA
 
 			set
 			{
+				var categoryChanged = !string.Equals(currentCategoryId, value, StringComparison.Ordinal);
 				currentCategoryId = value;
                 SetTwitchSettingApplied(false);
 
@@ -170,6 +171,9 @@ namespace JTSA
                 // Twitchへの反映を待たず、アプリ上でカテゴリを選択した時点でOBSを切り替える。
                 if (!string.IsNullOrWhiteSpace(value) && ObsSettingPanel is not null)
                     _ = ObsSettingPanel.ApplyCaptureRuleForCategoryAsync(value);
+
+                if (categoryChanged && ChatPanel is not null)
+                    ChatPanel.RefreshTodosForCategory();
             }
 		}
 
@@ -185,6 +189,7 @@ namespace JTSA
 			{
 				SelectCategoryNameTextBlock.Text = value;
                 CurrentTitleTextUpdate();
+                ChatPanel?.RefreshTodosForCategory();
             }
 		}
 
@@ -244,6 +249,7 @@ namespace JTSA
             InitializeNotifications();
             CalendarPanel.AddRequested += CalendarPanel_AddRequested;
             CalendarPanel.EditRequested += CalendarPanel_EditRequested;
+            CalendarPanel.DuplicateRequested += CalendarPanel_DuplicateRequested;
             twitchStatusHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             twitchStatusHoldTimer.Tick += TwitchStatusHoldTimer_Tick;
             RestoreWindowPosition();
@@ -2469,12 +2475,16 @@ namespace JTSA
         private void CalendarPanel_EditRequested(long entryId)
             => OpenCalendarRegistrationWindow(entryId);
 
-        private void OpenCalendarRegistrationWindow(long? entryId = null)
+        private void CalendarPanel_DuplicateRequested(long entryId)
+            => OpenCalendarRegistrationWindow(entryId, duplicateEntry: true);
+
+        private void OpenCalendarRegistrationWindow(long? entryId = null, bool duplicateEntry = false)
         {
             var window = new CalendarRegistrationWindow(
                 CalendarPanel.SelectedDate,
                 OverviewTitlePlaceholder,
-                entryId)
+                entryId,
+                duplicateEntry)
             {
                 Owner = this
             };

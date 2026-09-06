@@ -10,19 +10,22 @@ public class ObsHttpServer
     private readonly Func<string> chatHtmlProvider;
     private readonly Func<string> chatJsonProvider;
     private readonly Func<string> participationJsonProvider;
+    private readonly Func<string> todoJsonProvider;
 
     public ObsHttpServer(
         Func<string> htmlProvider,
         Func<string> jsonProvider,
         Func<string> chatHtmlProvider,
         Func<string> chatJsonProvider,
-        Func<string>? participationJsonProvider = null)
+        Func<string>? participationJsonProvider = null,
+        Func<string>? todoJsonProvider = null)
     {
         this.htmlProvider = htmlProvider;
         this.jsonProvider = jsonProvider;
         this.chatHtmlProvider = chatHtmlProvider;
         this.chatJsonProvider = chatJsonProvider;
         this.participationJsonProvider = participationJsonProvider ?? (() => "{\"playing\":[],\"waiting\":[]}");
+        this.todoJsonProvider = todoJsonProvider ?? (() => "{\"visible\":false,\"items\":[]}");
 
         listener.Prefixes.Add("http://localhost:8026/");
     }
@@ -66,6 +69,15 @@ public class ObsHttpServer
                 break;
             case "/participants-data":
                 text = participationJsonProvider();
+                contentType = "application/json";
+                ctx.Response.AddHeader("Cache-Control", "no-store");
+                break;
+            case "/todos":
+                text = JTSA.Utility.TodoOverlay.CreateHtml();
+                contentType = "text/html";
+                break;
+            case "/todos-data":
+                text = todoJsonProvider();
                 contentType = "application/json";
                 ctx.Response.AddHeader("Cache-Control", "no-store");
                 break;

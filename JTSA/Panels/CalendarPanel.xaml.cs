@@ -54,6 +54,7 @@ public partial class CalendarPanel : UserControl
     public ObservableCollection<T_CalendarEntry> DayPopupEntries { get; } = [];
     public event Action? AddRequested;
     public event Action<long>? EditRequested;
+    public event Action<long>? DuplicateRequested;
     public DateTime SelectedDate => selectedDate;
     private readonly DispatcherTimer dayPopupCloseTimer = new()
     {
@@ -331,6 +332,13 @@ public partial class CalendarPanel : UserControl
         if ((sender as Button)?.Tag is not T_CalendarEntry entry) return;
         CalendarEntryListBox.SelectedItem = entry;
         EditRequested?.Invoke(entry.Id);
+        e.Handled = true;
+    }
+
+    private void DuplicateEntryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not T_CalendarEntry entry) return;
+        DuplicateRequested?.Invoke(entry.Id);
         e.Handled = true;
     }
 

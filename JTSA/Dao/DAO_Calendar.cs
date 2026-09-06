@@ -78,6 +78,7 @@ internal static class DAO_Calendar
         }
         else
         {
+            entry.CalendarDate = calendarDate;
             entry.Content = content;
             entry.StartTime = startTime ?? TimeSpan.Zero;
             entry.TitlePlaceholder = titlePlaceholder;

@@ -80,7 +80,8 @@ namespace JTSA.Panels
                 CreateObsJson,
                 () => mainWindow.ChatPanel.CreateObsChatHtml(),
                 () => mainWindow.ChatPanel.CreateObsChatJson(),
-                () => mainWindow.ChatPanel.CreateObsParticipationJson());
+                () => mainWindow.ChatPanel.CreateObsParticipationJson(),
+                () => mainWindow.ChatPanel.CreateObsTodoJson());
 
             _ = server.StartAsync();
             recentTimer.Tick += (_, _) => { if (IsRecentPlaylist) RefreshRecentPlaylist(); };

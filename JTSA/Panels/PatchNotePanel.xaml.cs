@@ -18,6 +18,21 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.3.28",
+                ReleaseDate = "2026/09/06",
+                Summary = "レイアウトおよびデザイン調整",
+                Changes =
+                [
+                    "【CP】",
+                    "・CP自体の設定、現在の有効無効反映変更、プリセットの編集で分かれるようにデザインを修正",
+                    "【カレンダー】",
+                    "・日付ごとに何時～なんのカテゴリを行うかを表示するように修正",
+                    "・当日予定が複数あるものに関しては直近のものをサムネに表示するように修正"
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.3.27",
                 ReleaseDate = "2026/09/06",
                 Summary = "レイアウトおよびデザイン調整",
