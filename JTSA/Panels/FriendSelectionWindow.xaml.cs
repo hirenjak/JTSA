@@ -12,6 +12,7 @@ public partial class FriendSelectionWindow : Window
     {
         initialBroadcastIds = selectedBroadcastIds.ToArray();
         InitializeComponent();
+        SelectionPanel.UseSeparateFriendRegistrationWindow();
         ContentRendered += FriendSelectionWindow_ContentRendered;
     }
 

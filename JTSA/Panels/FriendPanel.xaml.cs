@@ -48,6 +48,26 @@ namespace JTSA.Panels
             ReloadFriend();
         }
 
+        public void AddFriend(
+            string? twitchUserId,
+            string loginId,
+            string displayName,
+            string? profileImageUrl,
+            string streamingPlatform,
+            string streamingUrl,
+            string? existingUserId = null)
+        {
+            DAO_User.InsertUpdateFriend(
+                twitchUserId,
+                loginId.Trim(),
+                displayName.Trim(),
+                string.IsNullOrWhiteSpace(profileImageUrl) ? null : profileImageUrl.Trim(),
+                streamingPlatform.Trim(),
+                streamingUrl.Trim(),
+                existingUserId);
+            ReloadFriend();
+        }
+
 
         /// <summary>
         /// 検索テキスト文字入力時
@@ -74,6 +94,7 @@ namespace JTSA.Panels
             }
 
             ReloadFriend();
+            e.Handled = true;
         }
 
 
@@ -86,6 +107,34 @@ namespace JTSA.Panels
         {
             string userId = FriendAddTextBox.Text;
             await AddFriendAsync(userId);
+        }
+
+        public void UseSeparateFriendRegistrationWindow()
+        {
+            InlineFriendRegistrationPanel.Visibility = Visibility.Collapsed;
+            OpenFriendRegistrationButton.Visibility = Visibility.Visible;
+        }
+
+        private void OpenFriendRegistrationButton_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new FriendRegistrationWindow(this)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            window.ShowDialog();
+            e.Handled = true;
+        }
+
+        private void FriendEditButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button)?.DataContext is not FriendForm friend) return;
+
+            var window = new FriendRegistrationWindow(this, friend.BroadcastId)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            window.ShowDialog();
+            e.Handled = true;
         }
 
 
@@ -133,6 +182,8 @@ namespace JTSA.Panels
                 LoginId = streamerInfo.Login,
                 DisplayName = streamerInfo.DisplayName,
                 ProfielImageUrl = JTSAHelper.BitmapToBase64(profielImage),
+                StreamingPlatform = "Twitch",
+                StreamingUrl = $"https://www.twitch.tv/{streamerInfo.Login}",
                 IsFriend = true,
                 LastUsedDateTime = DateTime.Now,
                 CreatedDateTime = DateTime.Now,
@@ -171,6 +222,8 @@ namespace JTSA.Panels
                     BroadcastId = item.UserId,
                     UserId = item.LoginId,
                     DisplayName = item.DisplayName,
+                    StreamingPlatform = item.StreamingPlatform,
+                    StreamingUrl = item.StreamingUrl,
                     LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd hh:mm"),
                     ProfileImage = CreateProfileImage(item.ProfielImageUrl)
                 });
@@ -227,6 +280,7 @@ namespace JTSA.Panels
             }
 
             UpdateTitlePreview();
+            e.Handled = true;
         }
 
 

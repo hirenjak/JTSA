@@ -16,7 +16,15 @@ namespace JTSA.Forms
         public required string BroadcastId { get; set; }
         public required string UserId { get; set; }
         public required string DisplayName { get; set; }
+        public string StreamingPlatform { get; set; } = string.Empty;
+        public string StreamingUrl { get; set; } = string.Empty;
+        public string TitlePlaceholderName => IsTwitchUser ? $"@{UserId}" : DisplayName;
         public required string LastUsedDate { get; set; }
         public ImageSource? ProfileImage { get; set; }
+
+        private bool IsTwitchUser =>
+            string.Equals(StreamingPlatform, "Twitch", StringComparison.OrdinalIgnoreCase) ||
+            (string.IsNullOrWhiteSpace(StreamingPlatform) &&
+             !BroadcastId.StartsWith("manual:", StringComparison.Ordinal));
     }
 }

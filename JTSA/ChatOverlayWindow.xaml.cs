@@ -237,15 +237,32 @@ namespace JTSA
         /// <param name="e"></param>
         private void TwitchChatFormList_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.Action != NotifyCollectionChangedAction.Add || e.NewItems is null)
+            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems is not null)
             {
+                foreach (TwitchChatForm item in e.NewItems)
+                {
+                    // 元リストは新着が先頭、オーバーレイは新着が末尾。
+                    OverlayTwitchChatFormList.Add(item);
+                }
+
+                QueueScrollToBottom();
                 return;
             }
 
-            foreach (TwitchChatForm item in e.NewItems)
+            if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems is not null)
             {
-                // 元リストは新着が先頭
-                // オーバーレイは新着を末尾
+                foreach (TwitchChatForm item in e.OldItems)
+                {
+                    OverlayTwitchChatFormList.Remove(item);
+                }
+
+                return;
+            }
+
+            // Clear/Replace/Move でも表示順と保持件数が必ず一致するよう再構築する。
+            OverlayTwitchChatFormList.Clear();
+            foreach (var item in TwitchChatFormList.Reverse())
+            {
                 OverlayTwitchChatFormList.Add(item);
             }
 

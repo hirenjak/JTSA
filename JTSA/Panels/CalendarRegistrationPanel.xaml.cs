@@ -234,6 +234,8 @@ public partial class CalendarRegistrationPanel : UserControl
                 BroadcastId = item.UserId,
                 UserId = item.LoginId,
                 DisplayName = item.DisplayName,
+                StreamingPlatform = item.StreamingPlatform,
+                StreamingUrl = item.StreamingUrl,
                 LastUsedDate = item.LastUsedDateTime.ToString("yyyy/MM/dd HH:mm"),
                 ProfileImage = FriendPanel.CreateProfileImage(item.ProfielImageUrl)
             });

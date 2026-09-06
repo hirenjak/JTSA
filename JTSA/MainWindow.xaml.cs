@@ -707,7 +707,7 @@ namespace JTSA
         /// </summary>
         public void RequireOAuthReauthentication(string reason, string responseDetail = "")
         {
-            ShowNotification("oauth", "Twitchの再認証が必要です", reason);
+            ShowOAuthReauthenticationNotification("primary", reason);
             // 認証エラー後もチャットイベントからAPI呼び出しが連打されないようにする。
             TwitchHelper.AccessToken = string.Empty;
             SettingPanel.SetAccessTokenStatus(false);
@@ -1553,7 +1553,9 @@ namespace JTSA
                     AppLogPanel.Error(
                         GetType().Name,
                         $"{account.UserName} のアクセストークン更新に失敗しました。再認証してください。");
-                    ShowNotification($"oauth-{account.Id}", "Twitchの再認証が必要です", $"{account.UserName} を設定タブのアカウント一覧から再認証してください。");
+                    ShowOAuthReauthenticationNotification(
+                        account.Id.ToString(CultureInfo.InvariantCulture),
+                        $"{account.UserName} を設定画面のアカウント一覧から再認証してください。");
                     return null;
                 }
 
@@ -1581,11 +1583,13 @@ namespace JTSA
             {
                 if (account is null || account.IsPrimary)
                 {
-                    RemoveNotification("oauth");
+                    RemoveOAuthReauthenticationNotification("primary");
                     TwitchHelper.AccessToken = accessToken;
                 }
 
-                if (account != null) RemoveNotification($"oauth-{account.Id}");
+                if (account != null)
+                    RemoveOAuthReauthenticationNotification(
+                        account.Id.ToString(CultureInfo.InvariantCulture));
 
                 if (account is not null)
                     ChatPanel.UpdateConnectedAccessToken(account.BroadcasterId, accessToken);
@@ -2236,7 +2240,7 @@ namespace JTSA
 			var friendText = FriendPanel.FriendPrefixWordTextBox.Text;
 			foreach(var friendItem in FriendPanel.SelectedFriendFormList)
 			{
-			 	friendText += " @" + friendItem.UserId;
+			 	friendText += " " + friendItem.TitlePlaceholderName;
 			}
 
             titleText = titleText.Replace("${friend}", friendText + " ");

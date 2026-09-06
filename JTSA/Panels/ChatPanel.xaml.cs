@@ -32,6 +32,8 @@ namespace JTSA.Panels
     /// </summary>
     public partial class ChatPanel : UserControl
     {
+        private const int MaxDisplayedChatCount = 1000;
+
         public static readonly RoutedUICommand AddFriendCommand = new(
             "フレンドに追加", nameof(AddFriendCommand), typeof(ChatPanel));
         public static readonly RoutedUICommand AddParticipationCommand = new(
@@ -1098,6 +1100,10 @@ namespace JTSA.Panels
             UpdateChatUserList(form, userData);
 
             TwitchChatFormList.Insert(0, form);
+            while (TwitchChatFormList.Count > MaxDisplayedChatCount)
+            {
+                TwitchChatFormList.RemoveAt(TwitchChatFormList.Count - 1);
+            }
 
             // 表示を先に確定し、デバイスエラーは通知音サービス内で処理する。
             if (isFirstEntrance)

@@ -26,6 +26,8 @@ namespace JTSA.Dao
                     LoginId = record.LoginId,
                     DisplayName = record.DisplayName,
                     ProfielImageUrl = record.ProfielImageUrl,
+                    StreamingPlatform = record.StreamingPlatform,
+                    StreamingUrl = record.StreamingUrl,
                     IsFriend = record.IsFriend,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
@@ -58,6 +60,8 @@ namespace JTSA.Dao
                     LoginId = record.LoginId,
                     DisplayName = record.DisplayName,
                     ProfielImageUrl = record.ProfielImageUrl,
+                    StreamingPlatform = record.StreamingPlatform,
+                    StreamingUrl = record.StreamingUrl,
                     IsFriend = record.IsFriend,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
@@ -147,6 +151,56 @@ namespace JTSA.Dao
             targetRecord.UpdatedDateTime = DateTime.Now;
 
             return Update(targetRecord);
+        }
+
+        public static void InsertUpdateFriend(
+            string? twitchUserId,
+            string loginId,
+            string displayName,
+            string? profileImageUrl,
+            string streamingPlatform,
+            string streamingUrl,
+            string? existingUserId = null)
+        {
+            using var db = new AppDbContext();
+            var now = DateTime.Now;
+            var user = !string.IsNullOrWhiteSpace(existingUserId)
+                ? db.M_User.SingleOrDefault(x => x.UserId == existingUserId)
+                : string.IsNullOrWhiteSpace(twitchUserId)
+                    ? db.M_User.FirstOrDefault(x => x.UserId.StartsWith("manual:") && x.LoginId == loginId)
+                    : db.M_User.SingleOrDefault(x => x.UserId == twitchUserId);
+            if (user == null)
+            {
+                var userId = string.IsNullOrWhiteSpace(twitchUserId)
+                    ? $"manual:{Guid.NewGuid():N}"
+                    : twitchUserId;
+                db.M_User.Add(new M_User
+                {
+                    UserId = userId,
+                    LoginId = loginId,
+                    DisplayName = displayName,
+                    ProfielImageUrl = profileImageUrl,
+                    StreamingPlatform = streamingPlatform,
+                    StreamingUrl = streamingUrl,
+                    IsFriend = true,
+                    LastUsedDateTime = now,
+                    CreatedDateTime = now,
+                    UpdatedDateTime = now
+                });
+            }
+            else
+            {
+                user.LoginId = loginId;
+                user.DisplayName = displayName;
+                user.ProfielImageUrl = profileImageUrl;
+                user.StreamingPlatform = streamingPlatform;
+                user.StreamingUrl = streamingUrl;
+                user.IsFriend = true;
+                user.LastUsedDateTime = now;
+                user.UpdatedDateTime = now;
+            }
+
+            db.SaveChanges();
         }
 
 

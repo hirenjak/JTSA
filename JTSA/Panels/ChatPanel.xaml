@@ -247,15 +247,38 @@
             
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" Grid.Column="0" x:Name="ChatListBox"
-                      HorizontalScrollBarVisibility="Disabled" 
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                      Height="Auto" Width="Auto" 
-                      Background="#FF404040" >
-            <ItemsControl ItemsSource="{Binding TwitchChatFormList}"
-                          d:ItemsSource="{d:SampleData ItemCount = 3}">
-                <ItemsControl.ItemTemplate>
+        <ListBox Grid.Row="1" Grid.Column="0" x:Name="ChatListBox"
+                 ItemsSource="{Binding TwitchChatFormList}"
+                 d:ItemsSource="{d:SampleData ItemCount = 3}"
+                 Background="#FF404040"
+                 BorderThickness="0"
+                 HorizontalAlignment="Stretch"
+                 HorizontalContentAlignment="Stretch"
+                 ScrollViewer.CanContentScroll="True"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 VirtualizingPanel.IsVirtualizing="True"
+                 VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.ScrollUnit="Pixel">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Focusable" Value="False"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
                             <StackPanel Margin="8, 4, 8, 0">
@@ -338,9 +361,8 @@
                             <Border Margin="0, 4, 0, 0" Width="Auto" Height="2" Background="White"/>
                         </StackPanel>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
 
         <StackPanel
