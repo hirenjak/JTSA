@@ -5,6 +5,7 @@ using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -119,7 +120,8 @@ public partial class AppArrangePanel : UserControl
     {
         // OBSなどはタイトルが変化し、トレイ格納時にはウィンドウがない場合もある。
         // 起動済み判定には、登録時のタイトルやMainWindowHandleを使わない。
-        var processes = Process.GetProcessesByName(app.ProcessName);
+        // bat/cmd はプロセス名が cmd になるため、実行パスとコマンドラインも見る。
+        var processes = GetRegisteredAppProcesses(app);
         try
         {
             return processes.Length > 0;
@@ -128,6 +130,96 @@ public partial class AppArrangePanel : UserControl
         {
             foreach (var process in processes) process.Dispose();
         }
+    }
+
+    private static Process[] GetRegisteredAppProcesses(AppInfoForm app)
+    {
+        var byId = new Dictionary<int, Process>();
+        AddProcessesByName(byId, app.ProcessName);
+
+        if (!string.IsNullOrWhiteSpace(app.AppExePath))
+        {
+            var exeName = Path.GetFileNameWithoutExtension(app.AppExePath);
+            if (!string.Equals(exeName, app.ProcessName, StringComparison.OrdinalIgnoreCase))
+            {
+                AddProcessesByName(byId, exeName);
+            }
+
+            var extension = Path.GetExtension(app.AppExePath);
+            if (extension.Equals(".bat", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var (pid, commandLine) in GetCmdCommandLines())
+                {
+                    if (!CommandLineRefersTo(commandLine, app.AppExePath)) continue;
+                    try
+                    {
+                        AddProcess(byId, Process.GetProcessById(pid));
+                    }
+                    catch (ArgumentException)
+                    {
+                    }
+                }
+            }
+        }
+
+        return [.. byId.Values];
+    }
+
+    private static void AddProcessesByName(Dictionary<int, Process> byId, string processName)
+    {
+        if (string.IsNullOrWhiteSpace(processName)) return;
+        foreach (var process in Process.GetProcessesByName(processName))
+        {
+            AddProcess(byId, process);
+        }
+    }
+
+    private static void AddProcess(Dictionary<int, Process> byId, Process process)
+    {
+        if (byId.TryAdd(process.Id, process)) return;
+        process.Dispose();
+    }
+
+    private static List<(int Pid, string CommandLine)>? cmdCommandLineCache;
+    private static DateTime cmdCommandLineCacheAt;
+
+    private static List<(int Pid, string CommandLine)> GetCmdCommandLines()
+    {
+        if (cmdCommandLineCache is not null && DateTime.UtcNow - cmdCommandLineCacheAt < TimeSpan.FromSeconds(2))
+        {
+            return cmdCommandLineCache;
+        }
+
+        var list = new List<(int Pid, string CommandLine)>();
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name = 'cmd.exe'");
+            foreach (ManagementObject item in searcher.Get())
+            {
+                using (item)
+                {
+                    if (item["CommandLine"] is not string commandLine || string.IsNullOrWhiteSpace(commandLine)) continue;
+                    list.Add((Convert.ToInt32(item["ProcessId"]), commandLine));
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        cmdCommandLineCache = list;
+        cmdCommandLineCacheAt = DateTime.UtcNow;
+        return list;
+    }
+
+    private static bool CommandLineRefersTo(string commandLine, string scriptPath)
+    {
+        var fullPath = Path.GetFullPath(scriptPath);
+        var unquoted = commandLine.Replace("\"", "", StringComparison.Ordinal);
+        return unquoted.Contains(fullPath, StringComparison.OrdinalIgnoreCase)
+            || commandLine.Contains(fullPath, StringComparison.OrdinalIgnoreCase);
     }
 
     private static Process? FindProcess(AppInfoForm app)
@@ -204,6 +296,7 @@ public partial class AppArrangePanel : UserControl
                 WorkingDirectory = Path.GetDirectoryName(app.AppExePath) ?? string.Empty,
                 UseShellExecute = true
             });
+            cmdCommandLineCache = null;
             ShowStatus($"アプリを起動しました: {app.ProcessName}");
             return true;
         }
@@ -222,7 +315,8 @@ public partial class AppArrangePanel : UserControl
 
     private void Stop(AppInfoForm app)
     {
-        var processes = Process.GetProcessesByName(app.ProcessName);
+        var processes = GetRegisteredAppProcesses(app);
+        cmdCommandLineCache = null;
         if (processes.Length == 0)
         {
             ShowStatus($"停止対象が見つかりません: {app.ProcessName}", false);
