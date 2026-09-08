@@ -184,11 +184,26 @@ public partial class AppArrangePanel : UserControl
 
     private void Stop(AppInfoForm app)
     {
-        using var process = FindProcess(app);
-        if (process is null) return;
+        var processes = Process.GetProcessesByName(app.ProcessName);
+        if (processes.Length == 0)
+        {
+            ShowStatus($"停止対象が見つかりません: {app.ProcessName}", false);
+            return;
+        }
         try
         {
-            if (!process.CloseMainWindow()) process.Kill();
+            foreach (var target in processes)
+            {
+                using (target)
+                {
+                    var closed = false;
+                    if (target.MainWindowHandle != IntPtr.Zero)
+                    {
+                        closed = target.CloseMainWindow();
+                    }
+                    if (!closed && !target.HasExited) target.Kill();
+                }
+            }
             ShowStatus($"アプリを停止しました: {app.ProcessName}");
         }
         catch (Exception ex) { ShowStatus($"停止失敗: {ex.Message}", false); }
