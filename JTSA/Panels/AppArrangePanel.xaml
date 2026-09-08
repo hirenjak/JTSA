@@ -74,16 +74,46 @@
                                         <TextBlock Text="{Binding ProcessName}" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding Status, StringFormat=  [{0}]}" Foreground="LightGreen" FontSize="12" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding WindowTitle}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding WindowTitle, StringFormat=タイトル: {0}}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding AppExePath, StringFormat=Path: {0}}"
                                                Foreground="Silver"
                                                FontSize="11"
                                                TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding AppExePath}"/>
+                                    <TextBlock Text="{Binding WindowProcessDisplay}"
+                                               Foreground="Silver"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding WindowProcessDisplay}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding ListenPortDisplay}"
+                                               Foreground="Silver"
+                                               FontSize="11">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ListenPortDisplay}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                     <TextBlock Foreground="DarkGray" FontSize="11">
                                         <Run Text="位置: "/><Run Text="{Binding X}"/><Run Text=", "/><Run Text="{Binding Y}"/>
                                         <Run Text="  サイズ: "/><Run Text="{Binding Width}"/><Run Text=" × "/><Run Text="{Binding Height}"/>
                                         <Run Text="  起動時: "/><Run Text="{Binding WindowStateText, Mode=OneWay}"/>
+                                        <Run Text="  一致: "/><Run Text="{Binding TitleMatchModeText, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -95,7 +125,7 @@
                                               Click="AppStartMinimizedCheckBox_Click"/>
                                     <Button Content="起動/配置" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="StartOrMoveButton_Click"/>
                                     <Button Content="位置保存" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SavePositionButton_Click"/>
-                                    <Button Content="Path" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SetPathButton_Click"/>
+                                    <Button Content="設定" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="EditAppSettingsButton_Click"/>
                                     <Button Content="停止" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="StopButton_Click"/>
                                     <Button Content="削除" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewDeleteButtonStyle}" Click="DeleteButton_Click"/>
                                 </StackPanel>

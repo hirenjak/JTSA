@@ -662,6 +662,9 @@ namespace JTSA.Migrations
                     b.Property<bool>("IsMinimized")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("ListenPort")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastUsedDateTime")
                         .HasColumnType("TEXT");
 
@@ -669,6 +672,13 @@ namespace JTSA.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Width")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WindowProcessName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WindowTitleMatchMode")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("WindowTitle")

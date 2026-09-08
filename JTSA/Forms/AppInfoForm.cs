@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -148,6 +149,102 @@ namespace JTSA.Forms
                     OnPropertyChanged(nameof(AppExePath));
                 }
             }
+        }
+
+        private string? _windowProcessName;
+        public string WindowProcessName
+        {
+            get => _windowProcessName ?? "";
+            set
+            {
+                if (_windowProcessName != value)
+                {
+                    _windowProcessName = value;
+                    OnPropertyChanged(nameof(WindowProcessName));
+                    OnPropertyChanged(nameof(WindowProcessDisplay));
+                }
+            }
+        }
+
+        public string WindowProcessDisplay =>
+            string.IsNullOrWhiteSpace(WindowProcessName) ? "" : $"ウィンドウ: {WindowProcessName}";
+
+        private WindowTitleMatchMode _windowTitleMatchMode;
+        public WindowTitleMatchMode WindowTitleMatchMode
+        {
+            get => _windowTitleMatchMode;
+            set
+            {
+                if (_windowTitleMatchMode != value)
+                {
+                    _windowTitleMatchMode = value;
+                    OnPropertyChanged(nameof(WindowTitleMatchMode));
+                    OnPropertyChanged(nameof(TitleMatchModeText));
+                }
+            }
+        }
+
+        public string TitleMatchModeText =>
+            WindowTitleMatchMode == Models.WindowTitleMatchMode.Contains ? "含む" : "完全一致";
+
+        private int _listenPort;
+        public int ListenPort
+        {
+            get => _listenPort;
+            set
+            {
+                if (_listenPort != value)
+                {
+                    _listenPort = value;
+                    OnPropertyChanged(nameof(ListenPort));
+                    OnPropertyChanged(nameof(ListenPortDisplay));
+                }
+            }
+        }
+
+        public string ListenPortDisplay => ListenPort > 0 ? $"ポート: {ListenPort}" : "";
+
+        public string GetWindowProcessName()
+        {
+            if (!string.IsNullOrWhiteSpace(WindowProcessName)) return WindowProcessName.Trim();
+            if (!string.IsNullOrWhiteSpace(ProcessName)) return ProcessName.Trim();
+            if (!string.IsNullOrWhiteSpace(AppExePath))
+            {
+                return Path.GetFileNameWithoutExtension(AppExePath) ?? "";
+            }
+            return "";
+        }
+
+        public bool HasSeparateWindowProcess()
+        {
+            if (string.IsNullOrWhiteSpace(AppExePath)) return false;
+            var windowProcessName = GetWindowProcessName();
+            if (string.IsNullOrWhiteSpace(windowProcessName)) return false;
+            var launchName = Path.GetFileNameWithoutExtension(AppExePath) ?? "";
+            return !string.Equals(windowProcessName, launchName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string NormalizeWindowProcessName(string windowProcessName, string processName, string appExePath)
+        {
+            var trimmed = (windowProcessName ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) return "";
+            if (string.Equals(trimmed, processName, StringComparison.OrdinalIgnoreCase)) return "";
+            var launchName = string.IsNullOrWhiteSpace(appExePath)
+                ? ""
+                : Path.GetFileNameWithoutExtension(appExePath) ?? "";
+            if (string.Equals(trimmed, launchName, StringComparison.OrdinalIgnoreCase)
+                && !IsBatchPath(appExePath))
+            {
+                return "";
+            }
+            return trimmed;
+        }
+
+        public static bool IsBatchPath(string path)
+        {
+            var extension = Path.GetExtension(path);
+            return extension.Equals(".bat", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".cmd", StringComparison.OrdinalIgnoreCase);
         }
 
         private bool _isAutoStart = true;
