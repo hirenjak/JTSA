@@ -38,7 +38,7 @@
                       Margin="0,0,16,0"
                       Checked="AutoStartCheckBox_Changed"
                       Unchecked="AutoStartCheckBox_Changed"/>
-            <TextBlock Text="「アプリを登録」から起動中のウィンドウを選択できます" Foreground="LightGray" VerticalAlignment="Center"/>
+            <TextBlock Text="「アプリを登録」から起動中ウィンドウの選択、または Path の直接指定ができます" Foreground="LightGray" VerticalAlignment="Center"/>
         </StackPanel>
 
         <Grid Grid.Row="1">

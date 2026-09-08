@@ -246,10 +246,17 @@ public partial class AppArrangePanel : UserControl
             Owner = Window.GetWindow(this)
         };
 
-        if (window.ShowDialog() != true || window.SelectedApp is not AppInfoForm app
-            || !TryGetWindowInfo(app, out var captured)) return;
+        if (window.ShowDialog() != true || window.SelectedApp is not AppInfoForm app) return;
 
-        Save(captured);
+        if (TryGetWindowInfo(app, out var captured))
+        {
+            if (!string.IsNullOrWhiteSpace(app.AppExePath)) captured.AppExePath = app.AppExePath;
+            Save(captured);
+        }
+        else
+        {
+            Save(app);
+        }
         ReloadRegisteredApps();
         ShowStatus($"アプリを登録しました: {app.ProcessName}");
     }
