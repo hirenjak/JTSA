@@ -239,12 +239,13 @@ public partial class AppArrangePanel : UserControl
         captured = app;
         using var process = FindProcess(app);
         if (process is null || !Win32Helper.TryGetRestoredWindowRect(process.MainWindowHandle, out var rect, out var isMinimized)) return false;
+        if (isMinimized) return false;
         captured.WindowTitle = process.MainWindowTitle;
         captured.X = rect.Left;
         captured.Y = rect.Top;
         captured.Width = rect.Right - rect.Left;
         captured.Height = rect.Bottom - rect.Top;
-        captured.IsMinimized = isMinimized;
+        captured.IsMinimized = app.IsMinimized;
         try { captured.AppExePath = process.MainModule?.FileName ?? captured.AppExePath; } catch { }
         return true;
     }
@@ -294,7 +295,8 @@ public partial class AppArrangePanel : UserControl
             {
                 FileName = app.AppExePath,
                 WorkingDirectory = Path.GetDirectoryName(app.AppExePath) ?? string.Empty,
-                UseShellExecute = true
+                UseShellExecute = true,
+                WindowStyle = app.IsMinimized ? ProcessWindowStyle.Minimized : ProcessWindowStyle.Normal
             });
             cmdCommandLineCache = null;
             ShowStatus($"アプリを起動しました: {app.ProcessName}");
@@ -379,9 +381,13 @@ public partial class AppArrangePanel : UserControl
 
     private void SavePositionButton_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.DataContext is not AppInfoForm app || !TryGetWindowInfo(app, out var captured))
+        if ((sender as Button)?.DataContext is not AppInfoForm app)
         {
-            ShowStatus("起動中の対象ウィンドウが見つかりません。", false);
+            return;
+        }
+        if (!TryGetWindowInfo(app, out var captured))
+        {
+            ShowStatus("起動中の通常表示ウィンドウが見つかりません。最小化中の位置は保存しません。", false);
             return;
         }
         Save(captured);
@@ -432,6 +438,15 @@ public partial class AppArrangePanel : UserControl
         ShowStatus(app.IsAutoStart
             ? $"自動起動を有効にしました: {app.ProcessName}"
             : $"自動起動を無効にしました: {app.ProcessName}");
+    }
+
+    private void AppStartMinimizedCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as CheckBox)?.DataContext is not AppInfoForm app) return;
+        Save(app);
+        ShowStatus(app.IsMinimized
+            ? $"最小化して起動を有効にしました: {app.ProcessName}"
+            : $"最小化して起動を無効にしました: {app.ProcessName}");
     }
 
     private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)

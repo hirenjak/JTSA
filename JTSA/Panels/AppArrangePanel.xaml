@@ -83,13 +83,16 @@
                                     <TextBlock Foreground="DarkGray" FontSize="11">
                                         <Run Text="位置: "/><Run Text="{Binding X}"/><Run Text=", "/><Run Text="{Binding Y}"/>
                                         <Run Text="  サイズ: "/><Run Text="{Binding Width}"/><Run Text=" × "/><Run Text="{Binding Height}"/>
-                                        <Run Text="  状態: "/><Run Text="{Binding WindowStateText, Mode=OneWay}"/>
+                                        <Run Text="  起動時: "/><Run Text="{Binding WindowStateText, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                     <CheckBox Content="自動起動" Margin="4,0,10,0" Foreground="White"
                                               VerticalAlignment="Center" IsChecked="{Binding IsAutoStart, Mode=TwoWay}"
                                               Click="AppAutoStartCheckBox_Click"/>
+                                    <CheckBox Content="最小化して起動" Margin="0,0,10,0" Foreground="White"
+                                              VerticalAlignment="Center" IsChecked="{Binding IsMinimized, Mode=TwoWay}"
+                                              Click="AppStartMinimizedCheckBox_Click"/>
                                     <Button Content="起動/配置" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="StartOrMoveButton_Click"/>
                                     <Button Content="位置保存" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SavePositionButton_Click"/>
                                     <Button Content="Path" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SetPathButton_Click"/>

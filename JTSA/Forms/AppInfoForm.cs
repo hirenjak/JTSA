@@ -180,7 +180,7 @@ namespace JTSA.Forms
         }
         
 
-        public string WindowStateText => IsMinimized ? "最小化" : "通常";
+        public string WindowStateText => IsMinimized ? "最小化" : "通常表示";
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
