@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using JTSA.Plugin.Abstractions;
 
 namespace JTSA.Utility;
 
@@ -8,6 +9,7 @@ internal static class StreamExpansionOverlayService
     private static readonly object StateLock = new();
     private static long version;
     private static readonly List<OverlayImage> Images = [];
+    private static readonly Dictionary<string, ExpansionOverlayContent> PluginOverlays = [];
 
     private sealed record OverlayImage(
         long Id,
@@ -61,9 +63,37 @@ internal static class StreamExpansionOverlayService
                     height = image.Height,
                     x = image.X,
                     y = image.Y
+                }),
+                extensions = PluginOverlays.Select(item => new
+                {
+                    id = item.Key,
+                    html = item.Value.Html,
+                    x = item.Value.X,
+                    y = item.Value.Y,
+                    width = item.Value.Width,
+                    height = item.Value.Height
                 })
             });
         }
+    }
+
+    public static void SetPluginOverlay(string pluginId, ExpansionOverlayContent content)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId) || string.IsNullOrWhiteSpace(content.Id)) return;
+        var key = $"{pluginId}:{content.Id}";
+        var normalized = content with
+        {
+            X = Math.Clamp(content.X, 0, 1920),
+            Y = Math.Clamp(content.Y, 0, 1080),
+            Width = Math.Clamp(content.Width, 1, 1920),
+            Height = Math.Clamp(content.Height, 1, 1080)
+        };
+        lock (StateLock) PluginOverlays[key] = normalized;
+    }
+
+    public static void RemovePluginOverlay(string pluginId, string id)
+    {
+        lock (StateLock) PluginOverlays.Remove($"{pluginId}:{id}");
     }
 
     public static (byte[] Data, string ContentType)? GetImage(long id)
@@ -103,6 +133,7 @@ internal static class StreamExpansionOverlayService
                 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
                 #viewport { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; }
                 .expansion-image { position: absolute; object-fit: contain; }
+                .extension-overlay { position: absolute; overflow: hidden; }
             </style>
         </head>
         <body>
@@ -139,6 +170,28 @@ internal static class StreamExpansionOverlayService
                             image.style.height = item.height + "px";
                             image.style.left = item.x + "px";
                             image.style.top = item.y + "px";
+                        }
+
+                        const extensions = data.extensions || [];
+                        const activeExtensionIds = new Set(extensions.map(item => String(item.id)));
+                        viewport.querySelectorAll(".extension-overlay").forEach(element => {
+                            if (!activeExtensionIds.has(element.dataset.id)) element.remove();
+                        });
+
+                        for (const item of extensions) {
+                            const id = String(item.id);
+                            let element = viewport.querySelector(`.extension-overlay[data-id="${CSS.escape(id)}"]`);
+                            if (!element) {
+                                element = document.createElement("div");
+                                element.className = "extension-overlay";
+                                element.dataset.id = id;
+                                viewport.appendChild(element);
+                            }
+                            if (element.innerHTML !== item.html) element.innerHTML = item.html;
+                            element.style.left = item.x + "px";
+                            element.style.top = item.y + "px";
+                            element.style.width = item.width + "px";
+                            element.style.height = item.height + "px";
                         }
                     }
                     catch {

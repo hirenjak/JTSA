@@ -3,6 +3,7 @@ using JTSA.Forms;
 using JTSA.Forms.TwitchIF;
 using JTSA.Models;
 using JTSA.Panels;
+using JTSA.Plugins;
 using JTSA.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
@@ -80,6 +81,7 @@ namespace JTSA
         private bool isTwitchStatusHeld;
 		private string currentCategoryId = string.Empty;
         private readonly Dictionary<FrameworkElement, ToolPanelWindow> toolPanelWindows = new();
+        private readonly PluginManager pluginManager;
 
         protected override void OnSourceInitialized(EventArgs e)
         {
@@ -246,6 +248,8 @@ namespace JTSA
             // WPF上の初期化処理
 			InitializeComponent();
             DataContext = this;
+            pluginManager = new PluginManager(this);
+            ExtensionsPanel.Initialize(pluginManager);
             InitializeNotifications();
             CalendarPanel.AddRequested += CalendarPanel_AddRequested;
             CalendarPanel.EditRequested += CalendarPanel_EditRequested;
@@ -313,6 +317,7 @@ namespace JTSA
             Closed += (_, _) =>
             {
                 hourlyTriggerTimer.Stop();
+                pluginManager.Dispose();
                 mainObsController.Dispose();
                 subObsController.Dispose();
             };

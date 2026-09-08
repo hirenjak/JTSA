@@ -1130,6 +1130,9 @@
                 <TabItem Header="外部アプリ">
                     <panels:AppArrangePanel x:Name="AppArrangePanel"/>
                 </TabItem>
+                <TabItem Header="Extension">
+                    <panels:ExtensionsPanel x:Name="ExtensionsPanel"/>
+                </TabItem>
                 <TabItem Header="Tips" controls:SplitTabPanel.IsRightAligned="True">
                     <panels:ObsTipsPanel/>
                 </TabItem>

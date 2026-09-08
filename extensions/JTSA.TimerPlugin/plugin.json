@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.timer",
+  "name": "タイマー",
+  "entryAssembly": "JTSA.TimerPlugin.dll",
+  "entryType": "JTSA.TimerPlugin.TimerPlugin",
+  "apiVersion": 1
+}

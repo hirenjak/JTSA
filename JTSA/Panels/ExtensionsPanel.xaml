@@ -1,0 +1,56 @@
+<UserControl x:Class="JTSA.Panels.ExtensionsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#FF404040">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DockPanel Margin="0,0,0,10">
+            <Button DockPanel.Dock="Right" Content="再読み込み" Width="100" Height="28"
+                    Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
+                    Click="ReloadButton_Click"/>
+            <StackPanel>
+                <TextBlock Text="Extension" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
+                <TextBlock Text="Plugins フォルダに配置された拡張機能です。"
+                           Foreground="LightGray" Margin="0,3,0,0"/>
+            </StackPanel>
+        </DockPanel>
+
+        <ListBox Grid.Row="1" ItemsSource="{Binding Plugins, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                 Background="#FF353535" BorderBrush="#FF606060" HorizontalContentAlignment="Stretch">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="12" BorderBrush="#FF555555" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding VersionText}" Foreground="#FF9FD8CF" Margin="8,2,0,0"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Description}" Foreground="LightGray" Margin="0,4,12,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Status}" Foreground="#FF91D8CD" Margin="0,5,0,0" FontSize="11"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="開く" Width="90" Height="30" Tag="{Binding}"
+                                    Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
+                                    Click="OpenButton_Click"/>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding LoadErrors, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      Margin="0,8,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate><TextBlock Text="{Binding}" Foreground="#FFFF8A91" TextWrapping="Wrap"/></DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>
