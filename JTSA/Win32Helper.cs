@@ -26,6 +26,27 @@ namespace JTSA
         public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
+        public static extern bool GetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WINDOWPLACEMENT
+        {
+            public int length;
+            public int flags;
+            public int showCmd;
+            public POINT ptMinPosition;
+            public POINT ptMaxPosition;
+            public RECT rcNormalPosition;
+        }
+
+        [DllImport("user32.dll")]
         public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
         [DllImport("user32.dll")]
@@ -58,6 +79,25 @@ namespace JTSA
         private const uint SWP_NOZORDER = 0x0004;
         private const uint SWP_NOACTIVATE = 0x0010;
         private const int SW_RESTORE = 9;
+        private const int SW_MINIMIZE = 6;
+        private const int SW_SHOWMINIMIZED = 2;
+
+        public static bool TryGetRestoredWindowRect(IntPtr hWnd, out RECT rect, out bool isMinimized)
+        {
+            rect = default;
+            isMinimized = false;
+            if (hWnd == IntPtr.Zero) return false;
+
+            var placement = new WINDOWPLACEMENT
+            {
+                length = Marshal.SizeOf<WINDOWPLACEMENT>()
+            };
+            if (!GetWindowPlacement(hWnd, ref placement)) return false;
+
+            isMinimized = placement.showCmd == SW_SHOWMINIMIZED || IsIconic(hWnd);
+            rect = placement.rcNormalPosition;
+            return rect.Right > rect.Left && rect.Bottom > rect.Top;
+        }
 
 
         /// <summary>
@@ -100,8 +140,11 @@ namespace JTSA
                 // ほんの少し待たせたいなら DispatcherTimer/Task.Delay を使う
             }
 
-            return Win32Helper.SetWindowPos(hWnd, IntPtr.Zero, app.X.Value, app.Y.Value, app.Width.Value, app.Height.Value,
+            var moved = Win32Helper.SetWindowPos(hWnd, IntPtr.Zero, app.X.Value, app.Y.Value, app.Width.Value, app.Height.Value,
                                 SWP_NOZORDER | SWP_NOACTIVATE);
+            if (moved && app.IsMinimized)
+                Win32Helper.ShowWindow(hWnd, SW_MINIMIZE);
+            return moved;
         }
 
 

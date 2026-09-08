@@ -20,4 +20,6 @@ public class T_StreamWindow : DBBase
     public int Height { get; set; }
 
     public bool IsAutoStart { get; set; } = true;
+
+    public bool IsMinimized { get; set; }
 }

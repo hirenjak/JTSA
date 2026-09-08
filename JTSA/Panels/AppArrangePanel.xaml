@@ -83,6 +83,7 @@
                                     <TextBlock Foreground="DarkGray" FontSize="11">
                                         <Run Text="位置: "/><Run Text="{Binding X}"/><Run Text=", "/><Run Text="{Binding Y}"/>
                                         <Run Text="  サイズ: "/><Run Text="{Binding Width}"/><Run Text=" × "/><Run Text="{Binding Height}"/>
+                                        <Run Text="  状態: "/><Run Text="{Binding WindowStateText, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">

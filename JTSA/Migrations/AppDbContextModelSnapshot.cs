@@ -659,6 +659,9 @@ namespace JTSA.Migrations
                     b.Property<bool>("IsAutoStart")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsMinimized")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastUsedDateTime")
                         .HasColumnType("TEXT");
 
