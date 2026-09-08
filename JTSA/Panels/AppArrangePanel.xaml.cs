@@ -76,7 +76,8 @@ public partial class AppArrangePanel : UserControl
         Y = item.Y,
         Width = item.Width,
         Height = item.Height,
-        IsAutoStart = item.IsAutoStart
+        IsAutoStart = item.IsAutoStart,
+        IsMinimized = item.IsMinimized
     };
 
     private static bool IsAppRunning(AppInfoForm app)
@@ -110,12 +111,13 @@ public partial class AppArrangePanel : UserControl
     {
         captured = app;
         using var process = FindProcess(app);
-        if (process is null || !Win32Helper.GetWindowRect(process.MainWindowHandle, out var rect)) return false;
+        if (process is null || !Win32Helper.TryGetRestoredWindowRect(process.MainWindowHandle, out var rect, out var isMinimized)) return false;
         captured.WindowTitle = process.MainWindowTitle;
         captured.X = rect.Left;
         captured.Y = rect.Top;
         captured.Width = rect.Right - rect.Left;
         captured.Height = rect.Bottom - rect.Top;
+        captured.IsMinimized = isMinimized;
         try { captured.AppExePath = process.MainModule?.FileName ?? captured.AppExePath; } catch { }
         return true;
     }
@@ -130,6 +132,7 @@ public partial class AppArrangePanel : UserControl
         Width = app.Width ?? 0,
         Height = app.Height ?? 0,
         IsAutoStart = app.IsAutoStart,
+        IsMinimized = app.IsMinimized,
         CreatedDateTime = DateTime.Now,
         UpdatedDateTime = DateTime.Now,
         LastUsedDateTime = DateTime.Now

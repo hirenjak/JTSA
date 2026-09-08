@@ -163,7 +163,24 @@ namespace JTSA.Forms
                 }
             }
         }
+
+        private bool _isMinimized;
+        public bool IsMinimized
+        {
+            get => _isMinimized;
+            set
+            {
+                if (_isMinimized != value)
+                {
+                    _isMinimized = value;
+                    OnPropertyChanged(nameof(IsMinimized));
+                    OnPropertyChanged(nameof(WindowStateText));
+                }
+            }
+        }
         
+
+        public string WindowStateText => IsMinimized ? "最小化" : "通常";
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
