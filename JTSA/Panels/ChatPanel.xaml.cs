@@ -99,6 +99,7 @@ namespace JTSA.Panels
         private string speechEngine = "None";
         private string voiceVoxEndpoint = VoiceVoxClient.DefaultEndpoint;
         private int voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
+        private HashSet<string> speechMutedLogins = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly StreamChatEntranceTracker chatEntranceTracker = new();
 
@@ -208,7 +209,9 @@ namespace JTSA.Panels
                 string.IsNullOrWhiteSpace(point.UserName) ? point.UserLogin : point.UserName,
                 point.UserInput, point.RedeemedAt.ToLocalTime())
             {
-                ParticipationCount = ParticipationStore.GetParticipationCount(connectedBroadcasterId, point.UserId)
+                UserLogin = point.UserLogin,
+                ParticipationCount = ParticipationStore.GetParticipationCount(connectedBroadcasterId, point.UserId),
+                IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, point.UserLogin)
             };
             var index = 0;
             while (index < ParticipationUsers.Count && ParticipationUsers[index].RedeemedAt <= user.RedeemedAt) index++;
@@ -441,8 +444,8 @@ namespace JTSA.Panels
                 SetParticipationManagementVisible(saved.ObsVisible);
                 participationSlotCount = Math.Clamp(saved.SlotCount, 0, 999);
                 ParticipationSlotCountTextBox.Text = participationSlotCount == 0 ? "" : participationSlotCount.ToString();
-                foreach (var user in saved.Users) ParticipationUsers.Add(user);
-                foreach (var user in saved.PlayingUsers) PlayingParticipationUsers.Add(user);
+                foreach (var user in saved.Users) ParticipationUsers.Add(WithResolvedSpeechMute(user));
+                foreach (var user in saved.PlayingUsers) PlayingParticipationUsers.Add(WithResolvedSpeechMute(user));
                 foreach (var id in saved.RedemptionIds)
                     if (participationRedemptions.Add(id)) participationRedemptionOrder.Enqueue(id);
             }
@@ -888,7 +891,7 @@ namespace JTSA.Panels
                     // IRC側はチャット一覧へ重複追加しない。
                     if (!string.IsNullOrWhiteSpace(message.CustomRewardId)) return;
 
-                    SpeakChatMessage(message.Message);
+                    SpeakChatMessage(message.Username, message.Message);
 
                     var isFirstEntrance = chatEntranceTracker.TryEnter(
                         TwitchHelper.CurrentStreamId,
@@ -971,7 +974,7 @@ namespace JTSA.Panels
                     });
                     // IRC側の交換メッセージは重複防止で除外しているため、
                     // ユーザー入力はEventSub側から読み上げへ渡す。
-                    SpeakChatMessage(channelPoint.UserInput);
+                    SpeakChatMessage(channelPoint.UserLogin, channelPoint.UserInput);
 
                     var isFirstEntrance = chatEntranceTracker.TryEnter(
                         TwitchHelper.CurrentStreamId,
@@ -1058,11 +1061,15 @@ namespace JTSA.Panels
             if (!int.TryParse(DAO_Setting.SelectOneById(DAO_Setting.SettingName.VoiceVoxSpeakerId)?.Value,
                 out voiceVoxSpeakerId) || voiceVoxSpeakerId < 0)
                 voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
+            speechMutedLogins = SpeechMuteFilter.Parse(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMutedUserLogins)?.Value);
+            RefreshSpeechMuteFlags();
         }
 
-        private async void SpeakChatMessage(string message)
+        private async void SpeakChatMessage(string userLogin, string message)
         {
             if (speechEngine == "None" || string.IsNullOrWhiteSpace(message)) return;
+            if (SpeechMuteFilter.IsMuted(speechMutedLogins, userLogin)) return;
 
             try
             {
@@ -1078,6 +1085,50 @@ namespace JTSA.Panels
             }
         }
 
+        private ParticipationUserForm WithResolvedSpeechMute(ParticipationUserForm user)
+        {
+            var login = ResolveParticipationLogin(user);
+            return user with
+            {
+                UserLogin = string.IsNullOrWhiteSpace(user.UserLogin) ? login : user.UserLogin,
+                IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, login)
+            };
+        }
+
+        private static string ResolveParticipationLogin(ParticipationUserForm user)
+        {
+            if (!string.IsNullOrWhiteSpace(user.UserLogin)) return user.UserLogin;
+            return DAO_ChatUser.SelectOneByUserId(user.UserId)?.LoginId
+                ?? DAO_User.SelectOneByUserId(user.UserId)?.LoginId
+                ?? string.Empty;
+        }
+
+        private void RefreshSpeechMuteFlags()
+        {
+            for (var index = 0; index < ParticipationUsers.Count; index++)
+                ParticipationUsers[index] = WithResolvedSpeechMute(ParticipationUsers[index]);
+            for (var index = 0; index < PlayingParticipationUsers.Count; index++)
+                PlayingParticipationUsers[index] = WithResolvedSpeechMute(PlayingParticipationUsers[index]);
+            foreach (var user in ChatUserFormList)
+                user.IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.UserName);
+        }
+
+        private void PersistSpeechMutedLogins()
+        {
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.SpeechMutedUserLogins,
+                SpeechMuteFilter.Serialize(speechMutedLogins));
+            RefreshSpeechMuteFlags();
+            if (Application.Current.MainWindow is MainWindow window)
+                window.SettingPanel.ReloadSpeechMutedLoginsText();
+        }
+
+        private void ToggleSpeechMute(string? userLogin)
+        {
+            if (string.IsNullOrWhiteSpace(userLogin)) return;
+            speechMutedLogins = SpeechMuteFilter.Toggle(speechMutedLogins, userLogin);
+            PersistSpeechMutedLogins();
+        }
 
         /// <summary>
         /// 
@@ -1220,7 +1271,8 @@ namespace JTSA.Panels
                 DisplayName = user.DisplayName,
                 ProfileImageUrl = user.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png") ?? "",
                 LastChatDateTime = DateTime.Now,
-                MessageCount = messageCount
+                MessageCount = messageCount,
+                IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.LoginId)
             });
         }
 
@@ -1463,7 +1515,42 @@ namespace JTSA.Panels
             {
                 menuItem.CommandTarget = contextMenu.PlacementTarget;
                 menuItem.CommandParameter = user;
+                if (menuItem.Tag as string == "SpeechMute")
+                {
+                    var login = user?.UserName;
+                    menuItem.IsEnabled = !string.IsNullOrWhiteSpace(login);
+                    menuItem.Header = SpeechMuteFilter.IsMuted(speechMutedLogins, login)
+                        ? "読み上げる" : "読み上げない";
+                }
             }
+        }
+
+        private void ParticipationSpeechMuteMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is not ContextMenu contextMenu) return;
+            var user = contextMenu.DataContext as ParticipationUserForm
+                ?? (contextMenu.PlacementTarget as FrameworkElement)?.DataContext as ParticipationUserForm;
+            foreach (var menuItem in contextMenu.Items.OfType<MenuItem>())
+            {
+                if (menuItem.Tag as string != "SpeechMute") continue;
+                var login = user is null ? string.Empty : ResolveParticipationLogin(user);
+                menuItem.IsEnabled = !string.IsNullOrWhiteSpace(login);
+                menuItem.Header = SpeechMuteFilter.IsMuted(speechMutedLogins, login)
+                    ? "読み上げる" : "読み上げない";
+            }
+        }
+
+        private void ToggleParticipationSpeechMute_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: ParticipationUserForm user }) return;
+            ToggleSpeechMute(ResolveParticipationLogin(user));
+        }
+
+        private void ToggleChatUserSpeechMute_Click(object sender, RoutedEventArgs e)
+        {
+            var user = (sender as FrameworkElement)?.DataContext as ChatUserForm
+                ?? ((sender as MenuItem)?.CommandParameter as ChatUserForm);
+            ToggleSpeechMute(user?.UserName);
         }
 
         private void AddChatUserToFriendCommand_Executed(object sender, ExecutedRoutedEventArgs e)
@@ -1493,8 +1580,10 @@ namespace JTSA.Panels
             {
                 var participant = new ParticipationUserForm(user.UserId, user.DisplayName, "", DateTime.Now)
                 {
+                    UserLogin = user.UserName,
                     ProfileImageUrl = user.ProfileImageUrl,
-                    ParticipationCount = ParticipationStore.GetParticipationCount(connectedBroadcasterId, user.UserId)
+                    ParticipationCount = ParticipationStore.GetParticipationCount(connectedBroadcasterId, user.UserId),
+                    IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.UserName)
                 };
                 ParticipationUsers.Add(participant);
                 SaveParticipation();

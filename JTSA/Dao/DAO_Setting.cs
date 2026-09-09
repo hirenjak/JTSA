@@ -82,6 +82,8 @@ namespace JTSA.Dao
             ChatTodoLists = 51,
             /// <summary>チャット画面の管理パネル開閉状態</summary>
             ChatManagementPanelVisibility = 52,
+            /// <summary>チャット読み上げをしないTwitchログイン名（改行区切り）</summary>
+            SpeechMutedUserLogins = 53,
         }
 
 

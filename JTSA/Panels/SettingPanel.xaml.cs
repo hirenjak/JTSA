@@ -50,6 +50,7 @@ namespace JTSA.Panels
             VoiceVoxEndpointTextBox.Text = DAO_Setting.SelectOneById(
                 DAO_Setting.SettingName.VoiceVoxEndpoint)?.Value
                 ?? VoiceVoxClient.DefaultEndpoint;
+            ReloadSpeechMutedLoginsText();
             ReloadRegisteredAccounts();
             Loaded += SettingPanel_Loaded;
         }
@@ -59,6 +60,13 @@ namespace JTSA.Panels
         public void SetBroadcasterStatus(bool isAvailable, string broadcasterId = "") { }
 
         public void SetTwitchUserName(string userName) { }
+
+        public void ReloadSpeechMutedLoginsText()
+        {
+            SpeechMutedUserLoginsTextBox.Text = SpeechMuteFilter.Serialize(
+                SpeechMuteFilter.Parse(
+                    DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMutedUserLogins)?.Value));
+        }
 
         public void ReloadRegisteredAccounts()
         {
@@ -149,6 +157,11 @@ namespace JTSA.Panels
             DAO_Setting.InsertUpdate(
                 DAO_Setting.SettingName.VoiceVoxSpeakerId,
                 ((int)VoiceVoxSpeakerComboBox.SelectedValue).ToString());
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.SpeechMutedUserLogins,
+                SpeechMuteFilter.Serialize(
+                    SpeechMuteFilter.Parse(SpeechMutedUserLoginsTextBox.Text)));
+            ReloadSpeechMutedLoginsText();
 
             mainWindow.ChatPanel.ReloadSpeechSettings();
             MessageBox.Show("読み上げ設定を保存しました。", "チャット読み上げ連携");
