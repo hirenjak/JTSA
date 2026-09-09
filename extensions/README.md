@@ -12,6 +12,17 @@ Extension は JTSA 本体とは別にビルド・配布します。JTSA 本体�
 
 プラグイン固有の依存 DLL がある場合は、同じサブフォルダへ配置してください。
 
+JTSAはExtensionを一時フォルダへシャドウコピーしてから読み込みます。そのためJTSAの起動中でも
+`Plugins` 内のDLLと関連ファイルを上書きでき、「再読み込み」で新しいバージョンへ切り替えられます。
+再読み込み時には、開いている対象Extensionのウィンドウはいったん閉じます。
+
+## ルーレットの配置
+
+1. `dotnet build extensions/JTSA.RoulettePlugin/JTSA.RoulettePlugin.csproj -c Release`
+2. 出力フォルダの `JTSA.RoulettePlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
+   `Plugins/Roulette/` へコピーします。
+3. JTSA の「Extension」タブで「再読み込み」を押します。
+
 ## 配信拡張への描画
 
 どの Extension からでも、`IJtsaPluginContext` の共通APIを使って既存の

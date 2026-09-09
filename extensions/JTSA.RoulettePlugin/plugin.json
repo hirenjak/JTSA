@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.roulette",
+  "name": "ルーレット",
+  "entryAssembly": "JTSA.RoulettePlugin.dll",
+  "entryType": "JTSA.RoulettePlugin.RoulettePlugin",
+  "apiVersion": 1
+}

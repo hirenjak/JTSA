@@ -10,12 +10,16 @@ public sealed class PluginManager : IDisposable
 {
     public const int SupportedApiVersion = 1;
     private readonly MainWindow mainWindow;
+    private readonly string shadowRoot;
     private bool disposed;
 
     public PluginManager(MainWindow mainWindow)
     {
         this.mainWindow = mainWindow;
         PluginRoot = Path.Combine(AppContext.BaseDirectory, "Plugins");
+        shadowRoot = Path.Combine(
+            Path.GetTempPath(), "JTSA", "PluginShadow",
+            $"{Environment.ProcessId}-{Guid.NewGuid():N}");
     }
 
     public string PluginRoot { get; }
@@ -69,8 +73,11 @@ public sealed class PluginManager : IDisposable
             if (!IsInsideDirectory(pluginDirectory, assemblyPath) || !File.Exists(assemblyPath))
                 throw new FileNotFoundException("エントリDLLがプラグインフォルダ内にありません。", assemblyPath);
 
-            loadContext = new PluginLoadContext(assemblyPath);
-            var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
+            var shadowDirectory = CreateShadowCopy(pluginDirectory);
+            var relativeAssemblyPath = Path.GetRelativePath(pluginDirectory, assemblyPath);
+            var shadowAssemblyPath = Path.Combine(shadowDirectory, relativeAssemblyPath);
+            loadContext = new PluginLoadContext(shadowAssemblyPath);
+            var assembly = loadContext.LoadFromAssemblyPath(shadowAssemblyPath);
             var pluginType = FindPluginType(assembly, manifest.EntryType);
             IJtsaPlugin plugin;
             using (loadContext.EnterContextualReflection())
@@ -89,7 +96,7 @@ public sealed class PluginManager : IDisposable
             var descriptor = new PluginDescriptor(plugin.Id, plugin.Name, plugin.Description, plugin.Version)
             {
                 Status = "利用可能",
-                LoadedPlugin = new LoadedPlugin(plugin, loadContext)
+                LoadedPlugin = new LoadedPlugin(plugin, loadContext, shadowDirectory)
             };
             Plugins.Add(descriptor);
             loadContext = null;
@@ -139,6 +146,19 @@ public sealed class PluginManager : IDisposable
         return path.StartsWith(root, StringComparison.OrdinalIgnoreCase);
     }
 
+    private string CreateShadowCopy(string pluginDirectory)
+    {
+        var destination = Path.Combine(shadowRoot, Guid.NewGuid().ToString("N"));
+        foreach (var sourcePath in Directory.EnumerateFiles(pluginDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(pluginDirectory, sourcePath);
+            var destinationPath = Path.Combine(destination, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.Copy(sourcePath, destinationPath, overwrite: true);
+        }
+        return destination;
+    }
+
     private void RecordError(string? source, Exception exception)
     {
         var message = $"{source ?? "不明"}: {exception.GetBaseException().Message}";
@@ -160,6 +180,22 @@ public sealed class PluginManager : IDisposable
             loaded.LoadContext.Unload();
             descriptor.LoadedPlugin = null;
         }
+
+        // Collectible context の解放後ならシャドウコピーを消せる。解放が遅れている場合は
+        // OS の一時ファイルとして残し、元の Plugins フォルダの更新は妨げない。
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        TryDeleteShadowRoot();
+    }
+
+    private void TryDeleteShadowRoot()
+    {
+        try
+        {
+            if (Directory.Exists(shadowRoot)) Directory.Delete(shadowRoot, recursive: true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     public void Dispose()
