@@ -42,6 +42,7 @@ namespace JTSA
 
 		private readonly ObsController mainObsController = new();
 		private readonly ObsController subObsController = new();
+        public VtsClient VtsClient { get; } = new();
         private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim twitchAccountTokenLock = new(1, 1);
@@ -332,6 +333,7 @@ namespace JTSA
                 pluginManager.Dispose();
                 mainObsController.Dispose();
                 subObsController.Dispose();
+                VtsClient.Dispose();
             };
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
@@ -688,6 +690,7 @@ namespace JTSA
             // OBSは補助機能なので、Twitch画面・チャットなど本体の初期化完了後、
             // UIが落ち着いてから低優先で自動接続する。
             _ = AutoConnectObsAfterStartupAsync();
+            _ = AutoConnectVtsAfterStartupAsync();
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -698,6 +701,42 @@ namespace JTSA
             await Task.Delay(TimeSpan.FromSeconds(2));
             await AutoConnectObsAsync();
         }
+
+        private async Task AutoConnectVtsAfterStartupAsync()
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value != "1")
+                return;
+
+            try
+            {
+                await ConnectVtsAsync(forceReconnect: false);
+            }
+            catch
+            {
+                // 自動接続失敗はステータス表示に任せ、起動を止めない。
+            }
+        }
+
+        public async Task ConnectVtsAsync(bool forceReconnect)
+        {
+            if (VtsClient.IsAuthenticated && !forceReconnect)
+                return;
+
+            if (forceReconnect)
+                await VtsClient.DisconnectAsync();
+
+            var url = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsWebSocketUrl)?.Value
+                ?? VtsProtocol.DefaultWebSocketUrl;
+            var token = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAuthToken)?.Value;
+            await VtsClient.ConnectAsync(url, token, persistToken: value =>
+            {
+                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.VtsAuthToken, value);
+                return Task.CompletedTask;
+            });
+        }
+
+        public Task DisconnectVtsAsync() => VtsClient.DisconnectAsync();
 
         private async Task AutoConnectObsAsync()
         {

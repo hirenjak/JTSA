@@ -88,6 +88,14 @@ namespace JTSA.Dao
             SpeechMaxChars = 54,
             /// <summary>同じスタンプ名の連続読み上げ上限（0は制限なし）</summary>
             SpeechMaxSameToken = 55,
+            /// <summary>VTube Studio WebSocket接続URL</summary>
+            VtsWebSocketUrl = 56,
+            /// <summary>VTube Studio プラグイン認証トークン</summary>
+            VtsAuthToken = 57,
+            /// <summary>起動時にVTube Studioへ自動接続するか</summary>
+            VtsAutoConnect = 58,
+            /// <summary>VTSトリガーとコマンドの対応ルール</summary>
+            VtsTriggerRules = 59,
         }
 
 
