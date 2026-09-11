@@ -1,5 +1,6 @@
 ﻿using JTSA.Models;
 using System;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -77,11 +78,11 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static M_User SelectOneByUserId(string userId)
+        public static M_User? SelectOneByUserId(string userId)
         {
             using var db = new AppDbContext();
 
-            return db.M_User.SingleOrDefault(x => x.UserId == userId);
+            return db.M_User.AsNoTracking().SingleOrDefault(x => x.UserId == userId);
         }
 
 
@@ -117,6 +118,7 @@ namespace JTSA.Dao
             using var db = new AppDbContext();
 
             var targetRecord = SelectOneByUserId(updateData.UserId);
+            if (targetRecord == null) return false;
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
             db.M_User.Update(updateData);
@@ -134,6 +136,7 @@ namespace JTSA.Dao
         public static bool UpdateLastUse(string broadcastId)
         {
             var targetRecord = SelectOneByUserId(broadcastId);
+            if (targetRecord == null) return false;
 
             targetRecord.LastUsedDateTime = DateTime.Now;
 

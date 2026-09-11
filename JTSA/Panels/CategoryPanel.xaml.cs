@@ -22,7 +22,7 @@ namespace JTSA.Panels
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
         /// <summary>  </summary>
-        public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
+        public JTSA.Utility.BatchObservableCollection<CategoryForm> CategoryFormList { get; } = new();
 
         /// <summary> カテゴリに紐づけられるチャンネルポイントプリセットの選択肢 </summary>
         public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = new();
@@ -115,7 +115,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            CategoryFormList.Clear();
+            var categories = new List<CategoryForm>();
 
             // プリセットの選択肢を先に用意する（カテゴリ行のComboBoxが参照するため）
             ReloadChannelPointPreset();
@@ -129,7 +129,7 @@ namespace JTSA.Panels
             foreach (var item in records)
             {
                 captureRules.TryGetValue(item.CategoryId, out var captureRule);
-                CategoryFormList.Add(new()
+                categories.Add(new()
                 {
                     CategoryId = item.CategoryId,
                     DisplayName = item.DisplayName,
@@ -149,6 +149,7 @@ namespace JTSA.Panels
                 });
             }
 
+            CategoryFormList.ReplaceAll(categories);
             mainWindow.StatusTextBlock.Text = "カテゴリリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }

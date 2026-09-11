@@ -12,7 +12,7 @@ namespace JTSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260804222945_chatuser")]
-    partial class chatuser
+    partial class ChatUser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

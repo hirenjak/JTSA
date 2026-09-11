@@ -8,6 +8,7 @@ internal static class StreamExpansionOverlayService
 {
     private static readonly object StateLock = new();
     private static long version;
+    private static string? cachedJson;
     private static readonly List<OverlayImage> Images = [];
     private static readonly Dictionary<string, ExpansionOverlayContent> PluginOverlays = [];
 
@@ -45,6 +46,7 @@ internal static class StreamExpansionOverlayService
                 settings.Height,
                 x,
                 y));
+            cachedJson = null;
         }
     }
 
@@ -53,7 +55,7 @@ internal static class StreamExpansionOverlayService
         lock (StateLock)
         {
             RemoveExpiredImages();
-            return JsonSerializer.Serialize(new
+            return cachedJson ??= JsonSerializer.Serialize(new
             {
                 images = Images.Select(image => new
                 {
@@ -88,12 +90,20 @@ internal static class StreamExpansionOverlayService
             Width = Math.Clamp(content.Width, 1, 1920),
             Height = Math.Clamp(content.Height, 1, 1080)
         };
-        lock (StateLock) PluginOverlays[key] = normalized;
+        lock (StateLock)
+        {
+            if (PluginOverlays.TryGetValue(key, out var existing) && existing == normalized) return;
+            PluginOverlays[key] = normalized;
+            cachedJson = null;
+        }
     }
 
     public static void RemovePluginOverlay(string pluginId, string id)
     {
-        lock (StateLock) PluginOverlays.Remove($"{pluginId}:{id}");
+        lock (StateLock)
+        {
+            if (PluginOverlays.Remove($"{pluginId}:{id}")) cachedJson = null;
+        }
     }
 
     public static (byte[] Data, string ContentType)? GetImage(long id)
@@ -120,7 +130,8 @@ internal static class StreamExpansionOverlayService
     private static void RemoveExpiredImages()
     {
         var now = DateTime.UtcNow;
-        Images.RemoveAll(image => now >= image.VisibleUntilUtc || !File.Exists(image.Path));
+        if (Images.RemoveAll(image => now >= image.VisibleUntilUtc || !File.Exists(image.Path)) > 0)
+            cachedJson = null;
     }
 
     public static string CreateHtml() => """
@@ -140,6 +151,8 @@ internal static class StreamExpansionOverlayService
             <div id="viewport"></div>
             <script>
                 const viewport = document.getElementById("viewport");
+                let previousPayload = null;
+                const renderedHtml = new WeakMap();
 
                 function resizeCanvas() {
                     const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
@@ -149,7 +162,10 @@ internal static class StreamExpansionOverlayService
                 async function refresh() {
                     try {
                         const response = await fetch("/expansion-data?t=" + Date.now(), { cache: "no-store" });
-                        const data = await response.json();
+                        if (!response.ok) return;
+                        const payload = await response.text();
+                        if (payload === previousPayload) return;
+                        const data = JSON.parse(payload);
                         const activeIds = new Set(data.images.map(item => String(item.id)));
                         viewport.querySelectorAll(".expansion-image").forEach(image => {
                             if (!activeIds.has(image.dataset.id)) image.remove();
@@ -187,8 +203,9 @@ internal static class StreamExpansionOverlayService
                                 element.dataset.id = id;
                                 viewport.appendChild(element);
                             }
-                            if (element.innerHTML !== item.html) {
+                            if (renderedHtml.get(element) !== item.html) {
                                 element.innerHTML = item.html;
+                                renderedHtml.set(element, item.html);
                                 element.querySelectorAll("[data-jtsa-spin-start]").forEach(target => {
                                     const start = Number(target.dataset.jtsaSpinStart);
                                     const duration = Number(target.dataset.jtsaSpinDuration);
@@ -205,16 +222,19 @@ internal static class StreamExpansionOverlayService
                             element.style.width = item.width + "px";
                             element.style.height = item.height + "px";
                         }
+                        previousPayload = payload;
                     }
                     catch {
                         // 一時的な通信失敗では表示中の画像を維持する
+                    }
+                    finally {
+                        setTimeout(refresh, 100);
                     }
                 }
 
                 resizeCanvas();
                 window.addEventListener("resize", resizeCanvas);
                 refresh();
-                setInterval(refresh, 100);
             </script>
         </body>
         </html>

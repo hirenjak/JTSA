@@ -914,7 +914,7 @@
                                                                 <ColumnDefinition Width="Auto"/>
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <Image Source="{Binding CategoryBoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
+                                                            <Image Source="{Binding CategoryBoxArtUrl, Converter={StaticResource CachedImageConverter}}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
 
                                                             <StackPanel Grid.Column="1" Margin="8,0,28,0">
                                                                 <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
@@ -1033,7 +1033,7 @@
                                                                 <ColumnDefinition Width="36"/>
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <Image Grid.Column="0" Source="{Binding BoxArtUrl}" Width="36" Height="48"/>
+                                                            <Image Grid.Column="0" Source="{Binding BoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="36" Height="48"/>
                                                             <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
                                                                 <TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/>
@@ -1130,7 +1130,7 @@
                 <TabItem Header="外部アプリ">
                     <panels:AppArrangePanel x:Name="AppArrangePanel"/>
                 </TabItem>
-                <TabItem Header="Extension">
+                <TabItem Header="プラグイン">
                     <panels:ExtensionsPanel x:Name="ExtensionsPanel"/>
                 </TabItem>
                 <TabItem Header="Tips" controls:SplitTabPanel.IsRightAligned="True">

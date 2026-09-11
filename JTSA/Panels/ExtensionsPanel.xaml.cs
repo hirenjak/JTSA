@@ -1,5 +1,7 @@
 using JTSA.Plugins;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -24,6 +26,17 @@ public partial class ExtensionsPanel : UserControl
     private void ReloadButton_Click(object sender, RoutedEventArgs e)
     {
         pluginManager?.Discover();
+    }
+
+    private void OpenPluginFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (pluginManager == null) return;
+
+        Directory.CreateDirectory(pluginManager.PluginRoot);
+        Process.Start(new ProcessStartInfo(pluginManager.PluginRoot)
+        {
+            UseShellExecute = true
+        });
     }
 
     private void OpenButton_Click(object sender, RoutedEventArgs e)

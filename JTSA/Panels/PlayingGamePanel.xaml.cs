@@ -40,11 +40,11 @@ namespace JTSA.Panels
             set { CurrentGamePlaylistIdTextBlock.Text = value.ToString(); }}
         public string CurrentGamePlaylistName { get { return GamePlayListTitleEdit.Text; } set { GamePlayListTitleEdit.Text = value; } }
 
-        public ObservableCollection<PlaylistItemForm> PlaylistItemFormList { get; } = new();
-        private ObservableCollection<PlaylistItemForm> playlistItemFormList => PlaylistItemFormList;
+        public BatchObservableCollection<PlaylistItemForm> PlaylistItemFormList { get; } = new();
+        private BatchObservableCollection<PlaylistItemForm> playlistItemFormList => PlaylistItemFormList;
 
         /// <summary>  </summary>
-        public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
+        public BatchObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
 
         private ObsHttpServer? server;
         private const long RecentPlaylistId = -1;
@@ -57,6 +57,7 @@ namespace JTSA.Panels
         private readonly System.Windows.Threading.DispatcherTimer recentTimer = new() { Interval = TimeSpan.FromSeconds(5) };
         private string recentSignature = "";
         private int itemReloadVersion;
+        private int headerReloadVersion;
         private long obsPlaylistId;
         private string obsPlaylistTitle = string.Empty;
         private IReadOnlyList<ObsPlaylistItem> obsPlaylistItems = [];
@@ -288,6 +289,10 @@ namespace JTSA.Panels
                 if (item.Status == GameStatus.Playing)
                 {
                     var categoryData = await TwitchHelper.GetCategoryByGameId(item.CategoryId);
+                    if (categoryData == null)
+                    {
+                        return;
+                    }
 
                     mainWindow.CurrentCategoryId = categoryData.Id;
                     mainWindow.CurrentCategoryName = categoryData.Name;
@@ -426,8 +431,6 @@ namespace JTSA.Panels
         /// <returns></returns>
         private T_GamePlaylistHeader FormConvertToPlaylistHeader()
         {
-            T_GamePlaylistHeader result = null;
-
             var playlistTitleText = CurrentGamePlaylistName;
 
             if (string.IsNullOrEmpty(playlistTitleText))
@@ -442,7 +445,7 @@ namespace JTSA.Panels
                 playlistId = JTSAHelper.GetCurrentUnixTimestampMillis();
             }
 
-            result = new T_GamePlaylistHeader
+            var result = new T_GamePlaylistHeader
             {
                 GamePlayListId = playlistId,
                 GamePlayListName = playlistTitleText,
@@ -488,12 +491,13 @@ namespace JTSA.Panels
 
         public async void ReloadPlaylistHeader()
         {
+            var version = ++headerReloadVersion;
             //　リストの初期化
-            playlistHeaderFormList.Clear();
+            var headers = new List<PlaylistHeaderForm>();
 
             // プレイリストヘッダ一覧の読込
             var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
-            if (gamePlayListHeaders.Count == 0) return;
+            if (gamePlayListHeaders.Count == 0) { playlistHeaderFormList.Clear(); return; }
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
@@ -506,8 +510,9 @@ namespace JTSA.Panels
                 var thumbnailUrl = firstItem == null
                     ? ""
                     : await ResolveBoxArtUrlByCategoryIdAsync(firstItem.CategoryId);
+                if (version != headerReloadVersion) return;
 
-                playlistHeaderFormList.Add(new PlaylistHeaderForm()
+                headers.Add(new PlaylistHeaderForm()
                 {
                     GamePlayListId = gamePlayListHeader.GamePlayListId,
                     GamePlayListName = gamePlayListHeader.GamePlayListName,
@@ -518,6 +523,7 @@ namespace JTSA.Panels
                 });
             }
 
+            playlistHeaderFormList.ReplaceAll(headers);
             if (obsPlaylistId == 0 || (obsPlaylistId != RecentPlaylistId &&
                 playlistHeaderFormList.All(x => x.GamePlayListId != obsPlaylistId)))
             {
@@ -566,7 +572,7 @@ namespace JTSA.Panels
                 return;
             }
             //　リストの初期化
-            playlistItemFormList.Clear();
+            var items = new List<PlaylistItemForm>();
 
             // 画面に設定されているプレイリストIDに紐づくプレイリストアイテムを取得
             var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
@@ -576,13 +582,14 @@ namespace JTSA.Panels
             {
                 var imageUrl = await ResolveThumbnailUrlByCategoryIdAsync(game.CategoryId);
                 if (version != itemReloadVersion) return;
-                playlistItemFormList.Add(new PlaylistItemForm()
+                items.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
                     ImageUrl = imageUrl,
                     Status = (GameStatus)game.Status
                 });
             }
+            playlistItemFormList.ReplaceAll(items);
         }
 
 
@@ -599,8 +606,7 @@ namespace JTSA.Panels
                 var signature = JsonSerializer.Serialize(items.Select(x => new { x.CategoryId, x.ImageUrl, x.DisplayLabel, x.Status }));
                 if (signature == recentSignature) return;
                 recentSignature = signature;
-                playlistItemFormList.Clear();
-                foreach (var item in items) playlistItemFormList.Add(item);
+                playlistItemFormList.ReplaceAll(items);
             }
             catch (Exception ex)
             {

@@ -147,7 +147,7 @@ namespace JTSA
                     mgr.ApplyUpdatesAndRestart(info);
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 window.ShowNotification("update-check", "更新を確認できませんでした", "通信状態を確認して再試行してください。", "再試行", async () =>
                 {

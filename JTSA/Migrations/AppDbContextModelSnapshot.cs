@@ -151,6 +151,19 @@ namespace JTSA.Migrations
                     b.ToTable("M_TwitchAccount");
                 });
 
+            modelBuilder.Entity("JTSA.Models.T_AppNotificationReceipt", b =>
+                {
+                    b.Property<string>("NotificationKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AcknowledgedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NotificationKey");
+
+                    b.ToTable("T_AppNotificationReceipt");
+                });
+
             modelBuilder.Entity("JTSA.Models.T_CalendarEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -418,6 +431,8 @@ namespace JTSA.Migrations
                     b.HasKey("StreamId", "UserId");
 
                     b.HasIndex("StreamId");
+
+                    b.HasIndex("UserId", "FirstChatDateTime");
 
                     b.ToTable("T_StreamChatUserCount");
                 });

@@ -12,9 +12,9 @@ namespace JTSA.Utility
 {
     public static class IgdbService
     {
-        private static HttpClient httpClient;
-        private static string clientId;
-        private static string accessToken;
+        private static HttpClient httpClient = null!;
+        private static string clientId = string.Empty;
+        private static string accessToken = string.Empty;
         private static long? japaneseRegionId;
 
         public static void Initialize(HttpClient _httpClient, string _clientID, string _accessToken)

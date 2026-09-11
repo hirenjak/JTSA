@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="JTSA.Panels.CategoryPanel"
+<UserControl x:Class="JTSA.Panels.CategoryPanel"
              xmlns:panels="clr-namespace:JTSA.Panels"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
@@ -82,7 +82,7 @@
                                                 </StackPanel>
                                             </Grid>
 
-                                            <Image Source="{Binding BoxArtUrl}" Grid.Row="1" Grid.Column="0" Width="48" Height="64" Margin="0,0,8,0"/>
+                                            <Image Source="{Binding BoxArtUrl, Converter={StaticResource CachedImageConverter}}" Grid.Row="1" Grid.Column="0" Width="48" Height="64" Margin="0,0,8,0"/>
 
                                             <Grid Margin="0" Height="Auto" Grid.Row="1" Grid.Column="1" >
                                                 <Grid.RowDefinitions>

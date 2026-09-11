@@ -38,6 +38,7 @@ namespace JTSA.Models
         public DbSet<T_ChatUser> T_ChatUser { get; set; }
         public DbSet<T_StreamChatUserCount> T_StreamChatUserCount { get; set; }
         public DbSet<T_StreamHistory> T_StreamHistory { get; set; }
+        public DbSet<T_AppNotificationReceipt> T_AppNotificationReceipt { get; set; }
         public DbSet<T_CalendarEntry> T_CalendarEntry { get; set; }
         public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
         public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
@@ -152,6 +153,9 @@ namespace JTSA.Models
 
             modelBuilder.Entity<T_StreamChatUserCount>()
                 .HasIndex(c => c.StreamId);
+
+            modelBuilder.Entity<T_StreamChatUserCount>()
+                .HasIndex(c => new { c.UserId, c.FirstChatDateTime });
 
             modelBuilder.Entity<T_StreamExpansionItem>()
                 .HasIndex(c => new { c.Id, c.HeaderId });

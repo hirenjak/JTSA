@@ -83,7 +83,7 @@
                                         <ColumnDefinition Width="40"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Image Source="{Binding BoxArtUrl}" Width="36" Height="48"/>
+                                    <Image Source="{Binding BoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="36" Height="48"/>
                                     <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/>

@@ -303,7 +303,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Ellipse Grid.Column="0" Width="42" Height="42">
                                         <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
+                                            <ImageBrush ImageSource="{Binding ProfielImageUrl, Converter={StaticResource CachedImageConverter}}" />
                                         </Ellipse.Fill>
                                     </Ellipse>
 
@@ -404,7 +404,7 @@
                                         </Grid.ColumnDefinitions>
                                         <Ellipse Grid.Column="0" Width="42" Height="42">
                                             <Ellipse.Fill>
-                                                <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
+                                                <ImageBrush ImageSource="{Binding ProfielImageUrl, Converter={StaticResource CachedImageConverter}}" />
                                             </Ellipse.Fill>
                                         </Ellipse>
 
@@ -619,7 +619,7 @@
                                         Style="{StaticResource OverviewDeleteButtonStyle}" Width="24"/>
                                 <Ellipse DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Top">
                                     <Ellipse.Fill>
-                                        <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                        <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}}"/>
                                     </Ellipse.Fill>
                                 </Ellipse>
                                 <StackPanel>
@@ -649,7 +649,7 @@
                                         Style="{StaticResource OverviewDeleteButtonStyle}" Width="24"/>
                                 <Ellipse DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Top">
                                     <Ellipse.Fill>
-                                        <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                        <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}}"/>
                                     </Ellipse.Fill>
                                 </Ellipse>
                                 <StackPanel>
@@ -729,7 +729,7 @@
 
                                     <Ellipse Grid.Column="0" Width="36" Height="36">
                                         <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                            <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}}"/>
                                         </Ellipse.Fill>
                                     </Ellipse>
 

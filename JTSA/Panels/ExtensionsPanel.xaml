@@ -8,16 +8,14 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <DockPanel Margin="0,0,0,10">
-            <Button DockPanel.Dock="Right" Content="再読み込み" Width="100" Height="28"
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+            <Button Content="プラグインフォルダ ↗" Width="150" Height="28" Margin="0,0,8,0"
+                    Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
+                    Click="OpenPluginFolderButton_Click"/>
+            <Button Content="再読み込み" Width="100" Height="28"
                     Foreground="White" Background="#FF565656" BorderBrush="#FF777777"
                     Click="ReloadButton_Click"/>
-            <StackPanel>
-                <TextBlock Text="Extension" Foreground="White" FontSize="18" FontWeight="SemiBold"/>
-                <TextBlock Text="Plugins フォルダに配置された拡張機能です。"
-                           Foreground="LightGray" Margin="0,3,0,0"/>
-            </StackPanel>
-        </DockPanel>
+        </StackPanel>
 
         <ListBox Grid.Row="1" ItemsSource="{Binding Plugins, RelativeSource={RelativeSource AncestorType=UserControl}}"
                  Background="#FF353535" BorderBrush="#FF606060" HorizontalContentAlignment="Stretch">

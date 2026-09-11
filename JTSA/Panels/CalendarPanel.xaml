@@ -46,7 +46,7 @@
                                     <Button Tag="{Binding}" Width="44" Height="26" Content="読込" Padding="0"
                                             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
                                             ToolTip="この予定を送信予定の情報へ反映" Click="ApplyEntryButton_Click"/>
-                                    <Image Grid.Column="1" Source="{Binding CategoryBoxArtUrl}" Width="36" Height="48" Stretch="UniformToFill"/>
+                                    <Image Grid.Column="1" Source="{Binding CategoryBoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="36" Height="48" Stretch="UniformToFill"/>
                                     <Border Grid.Column="2" Padding="6,4" Margin="0,0,10,0" Background="#FF285653" CornerRadius="4" VerticalAlignment="Top">
                                         <StackPanel>
                                             <TextBlock Text="{Binding CalendarDate, StringFormat={}{0:yyyy/MM/dd}}"
@@ -140,7 +140,7 @@
                                                                TextTrimming="CharacterEllipsis"/>
                                                 </Grid>
                                                 <Image x:Name="ScheduleBoxArt" Grid.Row="1"
-                                                       Source="{Binding CategoryBoxArtUrl}"
+                                                       Source="{Binding CategoryBoxArtUrl, Converter={StaticResource CachedImageConverter}}"
                                                        Width="28" Height="38" Margin="0,2,0,0"
                                                        HorizontalAlignment="Center" VerticalAlignment="Top"
                                                        Stretch="UniformToFill" Visibility="Collapsed"/>
@@ -203,7 +203,7 @@
                                 <Border Padding="5" BorderBrush="#FF4C4C4C" BorderThickness="0,0,0,1">
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="42"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <Image Source="{Binding CategoryBoxArtUrl}" Width="32" Height="43"
+                                        <Image Source="{Binding CategoryBoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="32" Height="43"
                                                VerticalAlignment="Top" Stretch="UniformToFill"/>
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="{Binding StartTimeDisplay}" Foreground="#FFFFC857"

@@ -15,7 +15,8 @@ public partial class AppArrangePanel : UserControl
 {
     public ObservableCollection<AppInfoForm> RegisteredApps { get; } = [];
 
-    private readonly DispatcherTimer statusTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly DispatcherTimer statusTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private bool updatingStatuses;
     private bool isLoadingAutoStartSetting;
     private bool hasAttemptedAutoStart;
 
@@ -27,10 +28,19 @@ public partial class AppArrangePanel : UserControl
         {
             ReloadRegisteredApps();
             LoadAutoStartSetting();
-            statusTimer.Start();
+            if (IsVisible) statusTimer.Start();
         };
         Unloaded += (_, _) => statusTimer.Stop();
-        statusTimer.Tick += (_, _) => UpdateStatuses();
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible && IsLoaded)
+            {
+                statusTimer.Start();
+                _ = UpdateStatusesAsync();
+            }
+            else statusTimer.Stop();
+        };
+        statusTimer.Tick += async (_, _) => await UpdateStatusesAsync();
     }
 
     private MainWindow? MainWindow => Application.Current.MainWindow as MainWindow;
@@ -56,15 +66,40 @@ public partial class AppArrangePanel : UserControl
         {
             RegisteredApps.Add(ToForm(item));
         }
-        UpdateStatuses();
+        _ = UpdateStatusesAsync();
     }
 
-    private void UpdateStatuses()
+    private async Task UpdateStatusesAsync()
     {
-        foreach (var app in RegisteredApps)
+        if (updatingStatuses || !IsVisible || !IsLoaded) return;
+        updatingStatuses = true;
+        var apps = RegisteredApps.ToArray();
+        try
         {
-            app.Status = IsAppRunning(app) ? "起動中" : "停止";
+            var running = await Task.Run(() =>
+            {
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var process in Process.GetProcesses())
+                {
+                    using (process)
+                    {
+                        try { names.Add(process.ProcessName); }
+                        catch (InvalidOperationException) { }
+                        catch (System.ComponentModel.Win32Exception) { }
+                    }
+                }
+                return names;
+            });
+            if (!IsVisible || !IsLoaded) return;
+            foreach (var app in apps)
+            {
+                if (!RegisteredApps.Contains(app)) continue;
+                var status = running.Contains(app.ProcessName) ? "起動中" : "停止";
+                if (app.Status != status) app.Status = status;
+            }
         }
+        catch (Exception ex) { Debug.WriteLine($"アプリ状態取得失敗: {ex.Message}"); }
+        finally { updatingStatuses = false; }
     }
 
     private static AppInfoForm ToForm(T_StreamWindow item) => new()

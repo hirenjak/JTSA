@@ -104,7 +104,7 @@ namespace JTSA.Utility
 
         public static async Task<TwitchUserIF?> GetBroadcasterIdAsync(string userName, string accessToken)
         {
-            TwitchUserIF result = null;
+            TwitchUserIF? result = null;
             try
             {
                 var accountApi = new TwitchAPI();
@@ -112,10 +112,9 @@ namespace JTSA.Utility
                 accountApi.Settings.AccessToken = accessToken;
                 var apiResponse = await accountApi.Helix.Users.GetUsersAsync(logins: new List<string>() { userName });
 
-                if (apiResponse?.Users != null)
+                var responseData = apiResponse?.Users?.FirstOrDefault();
+                if (responseData != null)
                 {
-                    var responseData = apiResponse.Users.FirstOrDefault();
-
                     result = new TwitchUserIF()
                     {
                         UserId = responseData.Id,
@@ -130,7 +129,7 @@ namespace JTSA.Utility
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
 
@@ -354,12 +353,12 @@ namespace JTSA.Utility
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        public static async Task<TwitchModifyChannelInformationIF> GetTwitchStreamInfo(string broadcasterId)
+        public static async Task<TwitchModifyChannelInformationIF?> GetTwitchStreamInfo(string broadcasterId)
             => await GetTwitchStreamInfo(broadcasterId, AccessToken);
 
-        public static async Task<TwitchModifyChannelInformationIF> GetTwitchStreamInfo(string broadcasterId, string accessToken)
+        public static async Task<TwitchModifyChannelInformationIF?> GetTwitchStreamInfo(string broadcasterId, string accessToken)
         {
-            TwitchModifyChannelInformationIF result = null;
+            TwitchModifyChannelInformationIF? result = null;
             try
             {
                 var accountApi = new TwitchAPI();
@@ -367,10 +366,9 @@ namespace JTSA.Utility
                 accountApi.Settings.AccessToken = accessToken;
                 var apiResponse = await accountApi.Helix.Channels.GetChannelInformationAsync(broadcasterId);
 
-                if (apiResponse?.Data != null)
+                var responseData = apiResponse?.Data?.FirstOrDefault();
+                if (responseData != null)
                 {
-                    var responseData = apiResponse.Data.FirstOrDefault();
-
                     result = new TwitchModifyChannelInformationIF()
                     {
                         title = responseData.Title,
@@ -381,7 +379,7 @@ namespace JTSA.Utility
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
 
@@ -442,7 +440,8 @@ namespace JTSA.Utility
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
 
-            return JsonSerializer.Deserialize<DeviceCodeResponseIF>(json);
+            return JsonSerializer.Deserialize<DeviceCodeResponseIF>(json)
+                ?? throw new JsonException("Twitch device-code response was empty or invalid.");
         }
 
 
@@ -580,7 +579,7 @@ namespace JTSA.Utility
         /// </summary>
         /// <param name="categoryName"></param>
         /// <returns></returns>
-        public static async Task<List<TwitchCategoryIF>>? SearchCategoriesByGameNameAsync(string categoryName)
+        public static async Task<List<TwitchCategoryIF>> SearchCategoriesByGameNameAsync(string categoryName)
         {
             List<TwitchCategoryIF> list = [];
             try
@@ -598,7 +597,7 @@ namespace JTSA.Utility
                     });
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
 
@@ -611,9 +610,9 @@ namespace JTSA.Utility
         /// </summary>
         /// <param name="gameId"></param>
         /// <returns></returns>
-        public static async Task<TwitchCategoryIF> GetCategoryByGameId(string gameId)
+        public static async Task<TwitchCategoryIF?> GetCategoryByGameId(string gameId)
         {
-            TwitchCategoryIF result = null;
+            TwitchCategoryIF? result = null;
             try
             {
                 var apiResponse = await api.Helix.Games.GetGamesAsync(gameIds: [gameId]);
@@ -630,7 +629,7 @@ namespace JTSA.Utility
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
             }

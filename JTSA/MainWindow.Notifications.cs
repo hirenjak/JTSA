@@ -12,7 +12,14 @@ namespace JTSA;
 
 public partial class MainWindow
 {
-    private sealed record Notice(string Key, string Title, string Message, string ActionLabel, Func<Task>? Action);
+    private const string ObsBrowserRefreshNotificationKey = "obs-browser-refresh-2026-09";
+    private sealed record Notice(
+        string Key,
+        string Title,
+        string Message,
+        string ActionLabel,
+        Func<Task>? Action,
+        Action? Dismissed = null);
     private readonly ObservableCollection<Notice> notices = new();
     private readonly Dictionary<string, string> oauthReauthenticationMessages = new();
     private Window? notificationWindow;
@@ -23,12 +30,24 @@ public partial class MainWindow
     {
         notices.CollectionChanged += (_, _) => RefreshNotifications();
         ShowTodaysCalendarNotification(DateTime.Today);
+        ShowObsBrowserRefreshNotification();
         Loaded += async (_, _) =>
         {
             if (updateCheckStarted) return;
             updateCheckStarted = true;
             await App.UpdateCheck(this);
         };
+    }
+
+    private void ShowObsBrowserRefreshNotification()
+    {
+        if (DAO_AppNotificationReceipt.IsAcknowledged(ObsBrowserRefreshNotificationKey)) return;
+
+        ShowNotification(
+            ObsBrowserRefreshNotificationKey,
+            "OBS側のブラウザ更新が必要です",
+            "今回のアップデート内容を反映するため、OBSのブラウザソースをリフレッシュしてください。この案内は確認後、再表示されません。",
+            dismissed: () => DAO_AppNotificationReceipt.Acknowledge(ObsBrowserRefreshNotificationKey));
     }
 
     private void ShowTodaysCalendarNotification(DateTime today)
@@ -60,16 +79,22 @@ public partial class MainWindow
         return $"{time}  {content}";
     }
 
-    public void ShowNotification(string key, string title, string message, string actionLabel = "", Func<Task>? action = null)
+    public void ShowNotification(
+        string key,
+        string title,
+        string message,
+        string actionLabel = "",
+        Func<Task>? action = null,
+        Action? dismissed = null)
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.BeginInvoke(new Action(() => ShowNotification(key, title, message, actionLabel, action)));
+            Dispatcher.BeginInvoke(new Action(() => ShowNotification(key, title, message, actionLabel, action, dismissed)));
             return;
         }
         var existing = notices.FirstOrDefault(x => x.Key == key);
-        if (existing != null) notices[notices.IndexOf(existing)] = new(key, title, message, actionLabel, action);
-        else notices.Add(new(key, title, message, actionLabel, action));
+        if (existing != null) notices[notices.IndexOf(existing)] = new(key, title, message, actionLabel, action, dismissed);
+        else notices.Add(new(key, title, message, actionLabel, action, dismissed));
     }
 
     public void RemoveNotification(string key)
@@ -191,7 +216,11 @@ public partial class MainWindow
                 BorderBrush = new SolidColorBrush(Color.FromRgb(119, 119, 119)),
                 Foreground = Brushes.White
             };
-            dismiss.Click += (_, _) => RemoveNotification(notice.Key);
+            dismiss.Click += (_, _) =>
+            {
+                notice.Dismissed?.Invoke();
+                RemoveNotification(notice.Key);
+            };
             buttons.Children.Add(dismiss);
             row.Children.Add(buttons);
             notificationRows.Children.Add(new Border

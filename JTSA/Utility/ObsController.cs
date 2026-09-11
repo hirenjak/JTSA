@@ -140,10 +140,11 @@ public sealed class ObsController : IDisposable
     public IReadOnlyList<ObsSceneSource> GetSceneSources(string sceneName)
     {
         EnsureConnected();
-        var sources = client.GetSceneItemList(sceneName)
+        var response = client.SendRequest("GetSceneItemList", new JObject { ["sceneName"] = sceneName });
+        var sources = (response["sceneItems"] as JArray ?? []).OfType<JObject>()
             .Select(item => new ObsSceneSource(
-                item.SourceName,
-                client.GetSceneItemEnabled(sceneName, item.ItemId),
+                item.Value<string>("sourceName") ?? string.Empty,
+                item.Value<bool?>("sceneItemEnabled") ?? false,
                 string.Empty))
             .ToList();
 

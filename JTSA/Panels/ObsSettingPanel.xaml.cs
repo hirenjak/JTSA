@@ -1131,18 +1131,26 @@ public partial class ObsSettingPanel : UserControl
                     ? mainWindow.GetConnectedObsController(group.Key)
                     : await mainWindow.EnsureObsConnectedAsync(group.Key);
                 if (controller is null) continue;
-                foreach (var preset in group)
+                using var concurrency = new SemaphoreSlim(4);
+                var states = await Task.WhenAll(group.GroupBy(preset => preset.SceneName).Select(async scene =>
                 {
+                    await concurrency.WaitAsync();
                     try
                     {
-                        preset.IsVisible = await Task.Run(() =>
-                            controller.GetSceneSourceEnabled(
-                                preset.SceneName, preset.SourceName, preset.ContainerName));
+                        var sources = await Task.Run(() => controller.GetSceneSources(scene.Key));
+                        return (Presets: scene.ToList(), Sources: sources);
                     }
                     catch
                     {
-                        preset.IsVisible = false;
+                        return (Presets: scene.ToList(), Sources: (IReadOnlyList<ObsSceneSource>)Array.Empty<ObsSceneSource>());
                     }
+                    finally { concurrency.Release(); }
+                }));
+                foreach (var state in states)
+                foreach (var preset in state.Presets)
+                {
+                    preset.IsVisible = state.Sources.FirstOrDefault(source =>
+                        source.SourceName == preset.SourceName && source.ContainerName == preset.ContainerName)?.IsEnabled ?? false;
                 }
             }
             catch { }
@@ -1373,6 +1381,9 @@ public partial class ObsSettingPanel : UserControl
         isRestoringCards = true;
         try
         {
+            var scenes = await Task.Run(controller.GetSceneNames);
+            var sourcesByScene = new Dictionary<string, IReadOnlyList<string>>();
+            var textBySource = new Dictionary<string, string>();
             foreach (var card in textSourceCards.Where(card =>
                          card.IsSub == isSub && card.SelectedScene is not null))
             {
@@ -1381,7 +1392,6 @@ public partial class ObsSettingPanel : UserControl
                 card.Controller = controller;
                 card.Status = "文言読込中...";
 
-                var scenes = await Task.Run(controller.GetSceneNames);
                 ReplaceItems(card.Scenes, scenes);
                 card.SelectedScene = sceneName;
                 if (sceneName is null || !card.Scenes.Contains(sceneName))
@@ -1390,7 +1400,8 @@ public partial class ObsSettingPanel : UserControl
                     continue;
                 }
 
-                var sources = await Task.Run(() => controller.GetTextSourceNames(sceneName));
+                if (!sourcesByScene.TryGetValue(sceneName, out var sources))
+                    sourcesByScene[sceneName] = sources = await Task.Run(() => controller.GetTextSourceNames(sceneName));
                 ReplaceItems(card.Sources, sources);
                 card.SelectedSource = sourceName;
                 if (sourceName is null || !card.Sources.Contains(sourceName))
@@ -1399,7 +1410,9 @@ public partial class ObsSettingPanel : UserControl
                     continue;
                 }
 
-                card.Text = await Task.Run(() => controller.GetTextSourceText(sourceName));
+                if (!textBySource.TryGetValue(sourceName, out var text))
+                    textBySource[sourceName] = text = await Task.Run(() => controller.GetTextSourceText(sourceName));
+                card.Text = text;
                 card.IsTextLoaded = true;
                 card.Status = "保存済み設定を読み込みました";
             }
@@ -1768,10 +1781,9 @@ public partial class ObsSettingPanel : UserControl
         }));
     }
 
-    private static void ReplaceItems(ObservableCollection<string> target, IEnumerable<string> values)
+    private static void ReplaceItems(BatchObservableCollection<string> target, IEnumerable<string> values)
     {
-        target.Clear();
-        foreach (var value in values) target.Add(value);
+        target.ReplaceAll(values);
     }
 
     private sealed class ObsTextSourceCard : INotifyPropertyChanged
@@ -1831,8 +1843,8 @@ public partial class ObsSettingPanel : UserControl
                 Notify();
             }
         }
-        public ObservableCollection<string> Scenes { get; } = [];
-        public ObservableCollection<string> Sources { get; } = [];
+        public BatchObservableCollection<string> Scenes { get; } = [];
+        public BatchObservableCollection<string> Sources { get; } = [];
         public string? SelectedScene
         {
             get => selectedScene;

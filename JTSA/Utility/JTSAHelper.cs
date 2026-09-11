@@ -46,6 +46,7 @@ namespace JTSA.Utility
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.DecodePixelWidth = 96;
             bitmap.StreamSource = ms;
             bitmap.EndInit();
             bitmap.Freeze();
@@ -55,7 +56,12 @@ namespace JTSA.Utility
 
         private static readonly HttpClient HttpClient = new();
 
-        public static async Task<BitmapImage> LoadBitmapAsync(string url)
+        private static readonly AsyncCache<(string Url, int Width), BitmapImage> BitmapCache = new(256, TimeSpan.FromMinutes(10));
+
+        public static Task<BitmapImage> LoadBitmapAsync(string url, int width = 96)
+            => BitmapCache.GetAsync((url, width), () => LoadBitmapCoreAsync(url, width));
+
+        private static async Task<BitmapImage> LoadBitmapCoreAsync(string url, int width)
         {
             byte[] imageData = await HttpClient.GetByteArrayAsync(url);
 
@@ -66,6 +72,7 @@ namespace JTSA.Utility
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
             bitmap.StreamSource = stream;
+            bitmap.DecodePixelWidth = width;
             bitmap.EndInit();
             bitmap.Freeze(); // 別スレッドでも使える
 

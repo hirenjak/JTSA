@@ -1,3 +1,4 @@
+using JTSA.Utility;
 using JTSA.Dao;
 using JTSA.Models;
 using System.Collections.ObjectModel;
@@ -49,9 +50,9 @@ public partial class CalendarPanel : UserControl
     private DateTime selectedDate = DateTime.Today;
     private DateTime displayedCalendarMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
 
-    public ObservableCollection<T_CalendarEntry> Entries { get; } = [];
-    public ObservableCollection<CalendarScheduleDayForm> CalendarDays { get; } = [];
-    public ObservableCollection<T_CalendarEntry> DayPopupEntries { get; } = [];
+    public BatchObservableCollection<T_CalendarEntry> Entries { get; } = [];
+    public BatchObservableCollection<CalendarScheduleDayForm> CalendarDays { get; } = [];
+    public BatchObservableCollection<T_CalendarEntry> DayPopupEntries { get; } = [];
     public event Action? AddRequested;
     public event Action<long>? EditRequested;
     public event Action<long>? DuplicateRequested;
@@ -85,13 +86,9 @@ public partial class CalendarPanel : UserControl
 
     private void ReloadEntries(DateTime? selectedDate = null)
     {
-        Entries.Clear();
-        foreach (var entry in DAO_Calendar.SelectAll()
+        Entries.ReplaceAll(DAO_Calendar.SelectAll()
                      .OrderBy(entry => entry.CalendarDate < DateTime.Today)
-                     .ThenBy(entry => entry.CalendarDate))
-        {
-            Entries.Add(entry);
-        }
+                     .ThenBy(entry => entry.CalendarDate));
 
         BuildCalendarDays();
         if (selectedDate.HasValue)
@@ -186,12 +183,10 @@ public partial class CalendarPanel : UserControl
     private void ShowDaySchedulePopup(DateTime date, UIElement? placementTarget)
     {
         dayPopupCloseTimer.Stop();
-        DayPopupEntries.Clear();
-        foreach (var entry in Entries
+        DayPopupEntries.ReplaceAll(Entries
                      .Where(entry => entry.CalendarDate.Date == date.Date)
                      .OrderBy(entry => entry.StartTime)
-                     .ThenBy(entry => entry.Id))
-            DayPopupEntries.Add(entry);
+                     .ThenBy(entry => entry.Id));
 
         DaySchedulePopupTitle.Text = date.ToString("M月d日（ddd）の予定", CultureInfo.GetCultureInfo("ja-JP"));
         DaySchedulePopupEmptyText.Visibility = DayPopupEntries.Count == 0
@@ -249,12 +244,12 @@ public partial class CalendarPanel : UserControl
                            ?? orderedEntries[^1];
                 });
 
-        CalendarDays.Clear();
+        var days = new List<CalendarScheduleDayForm>(42);
         for (var index = 0; index < 42; index++)
         {
             var date = calendarStart.AddDays(index);
             entriesByDate.TryGetValue(date, out var entry);
-            CalendarDays.Add(new CalendarScheduleDayForm
+            days.Add(new CalendarScheduleDayForm
             {
                 Date = date,
                 DisplayMonth = displayedCalendarMonth.Month,
@@ -264,7 +259,7 @@ public partial class CalendarPanel : UserControl
                 IsSelected = date == selectedDate
             });
         }
-
+        CalendarDays.ReplaceAll(days);
     }
 
     private void EntryDatePicker_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)

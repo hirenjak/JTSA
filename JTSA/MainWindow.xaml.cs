@@ -1,4 +1,4 @@
-﻿using JTSA.Dao;
+using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Forms.TwitchIF;
 using JTSA.Models;
@@ -220,7 +220,7 @@ namespace JTSA
 
 				try
 				{
-					SelectCategoryBoxArt.Source = new BitmapImage(new Uri(value));
+					SelectCategoryBoxArt.Source = CachedImageConverter.GetImage(value);
 				}
 				catch (Exception)
 				{
@@ -313,7 +313,19 @@ namespace JTSA
 
             Loaded += MainWindow_LoadedAsync;
             SizeChanged += MainWindow_SizeChanged;
-            Closing += (_, _) => SaveWindowPosition();
+            var chatShutdownComplete = false;
+            var chatShutdownStarted = false;
+            Closing += async (_, e) =>
+            {
+                if (chatShutdownComplete) return;
+                e.Cancel = true;
+                if (chatShutdownStarted) return;
+                chatShutdownStarted = true;
+                SaveWindowPosition();
+                await ChatPanel.StopChatProcessingAsync();
+                chatShutdownComplete = true;
+                Close();
+            };
             Closed += (_, _) =>
             {
                 hourlyTriggerTimer.Stop();
@@ -1638,7 +1650,7 @@ namespace JTSA
                 {
                     try
                     {
-                        SelectCategoryBoxArt.Source = new BitmapImage(new Uri(selectedItem.CategoryBoxArtUrl));
+                        SelectCategoryBoxArt.Source = CachedImageConverter.GetImage(selectedItem.CategoryBoxArtUrl);
                     }
                     catch
                     {
@@ -1899,7 +1911,7 @@ namespace JTSA
             CurrentCategoryId = dbCategoryData.CategoryId;
             CurrentCategoryName = dbCategoryData.DisplayName;
             CurrentCategoryBoxArtUrl = dbCategoryData.BoxArtUrl;
-            CurrentCategorySteamUrl = dbCategoryData.SteamUrl;
+            CurrentCategorySteamUrl = dbCategoryData.SteamUrl ?? string.Empty;
 
 
             // リスト読み込み処理

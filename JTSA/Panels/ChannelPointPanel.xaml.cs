@@ -19,11 +19,11 @@ namespace JTSA.Panels
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
         /// <summary> 画面に表示している報酬一覧 </summary>
-        public ObservableCollection<ChannelPointRewardForm> ChannelPointRewardFormList { get; } = [];
+        public BatchObservableCollection<ChannelPointRewardForm> ChannelPointRewardFormList { get; } = [];
 
-        public ObservableCollection<ChannelPointRewardForm> EnabledChannelPointRewardFormList { get; } = [];
-        public ObservableCollection<ChannelPointRewardForm> PausedChannelPointRewardFormList { get; } = [];
-        public ObservableCollection<ChannelPointRewardForm> DisabledChannelPointRewardFormList { get; } = [];
+        public BatchObservableCollection<ChannelPointRewardForm> EnabledChannelPointRewardFormList { get; } = [];
+        public BatchObservableCollection<ChannelPointRewardForm> PausedChannelPointRewardFormList { get; } = [];
+        public BatchObservableCollection<ChannelPointRewardForm> DisabledChannelPointRewardFormList { get; } = [];
 
         private Point _dragStartPoint;
         private ChannelPointRewardForm? _dragReward;
@@ -32,10 +32,10 @@ namespace JTSA.Panels
         private ListSortDirection _presetSortDirection = ListSortDirection.Ascending;
 
         /// <summary> プリセット一覧 </summary>
-        public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = [];
+        public BatchObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = [];
 
         /// <summary> 選択中プリセットの内訳 </summary>
-        public ObservableCollection<ChannelPointPresetItemForm> ChannelPointPresetItemFormList { get; } = [];
+        public BatchObservableCollection<ChannelPointPresetItemForm> ChannelPointPresetItemFormList { get; } = [];
 
         /// <summary>
         /// 報酬一覧の取得に成功しているか。
@@ -91,15 +91,10 @@ namespace JTSA.Panels
 
             var fetchResult = await ChannelPointService.FetchRewardsAsync();
 
-            ChannelPointRewardFormList.Clear();
+            ChannelPointRewardFormList.ReplaceAll(fetchResult?.Rewards ?? []);
 
             if (fetchResult != null)
             {
-                foreach (var reward in fetchResult.Rewards)
-                {
-                    ChannelPointRewardFormList.Add(reward);
-                }
-
                 CpManagementListView.SelectedItem =
                     ChannelPointRewardFormList.FirstOrDefault(x => x.RewardId == selectedRewardId)
                     ?? ChannelPointRewardFormList.FirstOrDefault();
@@ -234,19 +229,9 @@ namespace JTSA.Panels
 
         private void RefreshRewardStateLists()
         {
-            EnabledChannelPointRewardFormList.Clear();
-            PausedChannelPointRewardFormList.Clear();
-            DisabledChannelPointRewardFormList.Clear();
-
-            foreach (var reward in ChannelPointRewardFormList)
-            {
-                if (!reward.IsEnabled)
-                    DisabledChannelPointRewardFormList.Add(reward);
-                else if (reward.IsPaused)
-                    PausedChannelPointRewardFormList.Add(reward);
-                else
-                    EnabledChannelPointRewardFormList.Add(reward);
-            }
+            EnabledChannelPointRewardFormList.ReplaceAll(ChannelPointRewardFormList.Where(x => x.IsEnabled && !x.IsPaused));
+            PausedChannelPointRewardFormList.ReplaceAll(ChannelPointRewardFormList.Where(x => x.IsEnabled && x.IsPaused));
+            DisabledChannelPointRewardFormList.ReplaceAll(ChannelPointRewardFormList.Where(x => !x.IsEnabled));
         }
 
 

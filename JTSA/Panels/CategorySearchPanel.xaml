@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="JTSA.Panels.CategorySearchPanel"
+<UserControl x:Class="JTSA.Panels.CategorySearchPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -29,7 +29,7 @@
                 <DataTemplate>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="8, 0, 8, 0">
-                            <Image Source="{Binding BoxArtUrl}" Width="36" Height="48" Margin="0,0,8,0"/>
+                            <Image Source="{Binding BoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="36" Height="48" Margin="0,0,8,0"/>
                             <TextBlock Text="{Binding DisplayName}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
                         </StackPanel>
 

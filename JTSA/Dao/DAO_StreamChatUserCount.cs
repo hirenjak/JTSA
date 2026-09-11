@@ -13,11 +13,17 @@ namespace JTSA.Dao
             string displayName,
             string streamId = "")
         {
-            if (string.IsNullOrWhiteSpace(userId)) return;
+            IncrementBatch([new ChatCountEntry(chatDateTime, userId, loginId, displayName, streamId)]);
+        }
 
-            var resolvedStreamId = string.IsNullOrWhiteSpace(streamId)
-                ? $"untracked-{chatDateTime:yyyyMMdd}"
-                : streamId;
+        internal sealed record ChatCountEntry(DateTime Time, string UserId, string LoginId, string DisplayName, string StreamId);
+
+        internal static void IncrementBatch(IReadOnlyList<ChatCountEntry> entries)
+        {
+            var groups = entries.Where(x => !string.IsNullOrWhiteSpace(x.UserId))
+                .GroupBy(x => (StreamId: string.IsNullOrWhiteSpace(x.StreamId) ? $"untracked-{x.Time:yyyyMMdd}" : x.StreamId, x.UserId))
+                .ToList();
+            if (groups.Count == 0) return;
             var now = DateTime.Now;
             const int maxAttempts = 4;
 
@@ -26,19 +32,27 @@ namespace JTSA.Dao
                 try
                 {
                     using var db = new AppDbContext();
-                    db.Database.ExecuteSqlInterpolated($"""
-                        INSERT INTO "T_StreamChatUserCount"
-                            ("StreamId", "UserId", "LoginId", "DisplayName", "ChatCount", "FirstChatDateTime", "LastChatDateTime", "CreatedDateTime", "UpdatedDateTime")
-                        VALUES
-                            ({resolvedStreamId}, {userId}, {loginId}, {displayName}, 1, {chatDateTime}, {chatDateTime}, {now}, {now})
-                        ON CONFLICT ("StreamId", "UserId") DO UPDATE SET
-                            "LoginId" = excluded."LoginId",
-                            "DisplayName" = excluded."DisplayName",
-                            "ChatCount" = "T_StreamChatUserCount"."ChatCount" + 1,
-                            "FirstChatDateTime" = MIN("T_StreamChatUserCount"."FirstChatDateTime", excluded."FirstChatDateTime"),
-                            "LastChatDateTime" = MAX("T_StreamChatUserCount"."LastChatDateTime", excluded."LastChatDateTime"),
-                            "UpdatedDateTime" = excluded."UpdatedDateTime";
-                        """);
+                    using var transaction = db.Database.BeginTransaction();
+                    foreach (var group in groups)
+                    {
+                        var latest = group.Last();
+                        var first = group.Min(x => x.Time);
+                        var last = group.Max(x => x.Time);
+                        db.Database.ExecuteSqlInterpolated($"""
+                            INSERT INTO "T_StreamChatUserCount"
+                                ("StreamId", "UserId", "LoginId", "DisplayName", "ChatCount", "FirstChatDateTime", "LastChatDateTime", "CreatedDateTime", "UpdatedDateTime")
+                            VALUES
+                                ({group.Key.StreamId}, {group.Key.UserId}, {latest.LoginId}, {latest.DisplayName}, {group.Count()}, {first}, {last}, {now}, {now})
+                            ON CONFLICT ("StreamId", "UserId") DO UPDATE SET
+                                "LoginId" = excluded."LoginId",
+                                "DisplayName" = excluded."DisplayName",
+                                "ChatCount" = "T_StreamChatUserCount"."ChatCount" + excluded."ChatCount",
+                                "FirstChatDateTime" = MIN("T_StreamChatUserCount"."FirstChatDateTime", excluded."FirstChatDateTime"),
+                                "LastChatDateTime" = MAX("T_StreamChatUserCount"."LastChatDateTime", excluded."LastChatDateTime"),
+                                "UpdatedDateTime" = excluded."UpdatedDateTime";
+                            """);
+                    }
+                    transaction.Commit();
                     return;
                 }
                 catch (SqliteException ex) when (ex.SqliteErrorCode is 5 or 6 && attempt < maxAttempts)
@@ -61,6 +75,33 @@ namespace JTSA.Dao
             return db.T_StreamChatUserCount.AsNoTracking()
                 .Where(x => x.UserId == userId)
                 .OrderBy(x => x.FirstChatDateTime).ToList();
+        }
+
+        public static bool HasAny()
+        {
+            using var db = new AppDbContext();
+            return db.T_StreamChatUserCount.Any();
+        }
+
+        // 配信履歴があれば開始日、なければ初回発言日を集計日とする。
+        public static List<T_StreamChatUserCount> SelectByPeriod(DateTime? startDate, DateTime? endDate)
+        {
+            using var db = new AppDbContext();
+            var query = from count in db.T_StreamChatUserCount.AsNoTracking()
+                        join stream in db.T_StreamHistory on count.StreamId equals stream.StreamId into streams
+                        from stream in streams.DefaultIfEmpty()
+                        select new { Count = count, Date = stream == null ? count.FirstChatDateTime : stream.StartedAt };
+            if (startDate.HasValue)
+            {
+                var start = startDate.Value.Date;
+                query = query.Where(x => x.Date >= start);
+            }
+            if (endDate.HasValue && endDate.Value.Date < DateTime.MaxValue.Date)
+            {
+                var endExclusive = endDate.Value.Date.AddDays(1);
+                query = query.Where(x => x.Date < endExclusive);
+            }
+            return query.OrderByDescending(x => x.Count.LastChatDateTime).Select(x => x.Count).ToList();
         }
 
         public static List<T_StreamChatUserCount> SelectByStreamId(string streamId)

@@ -124,7 +124,7 @@ namespace JTSA.Panels
                     UserName = data.UserName,
                     UserLogin = data.UserLogin,
                     StreamTitle = data.Title,
-                    GameBoxArtUrl = StreamGameBoxArtUrl,
+                    GameBoxArtUrl = StreamGameBoxArtUrl ?? string.Empty,
                     StreamingTime = $"{totalHours}:{timeSpan:mm\\:ss}",
                     ThumbnailUrl = ThumbnailUrl
                 });

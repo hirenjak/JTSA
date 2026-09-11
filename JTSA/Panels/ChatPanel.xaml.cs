@@ -63,6 +63,17 @@ namespace JTSA.Panels
     public partial class ChatPanel : UserControl
     {
         private const int MaxDisplayedChatCount = 1000;
+        private readonly ChatCountWriter chatCountWriter = new();
+        private readonly AsyncCache<string, M_User?> chatUsers = new(1024, TimeSpan.FromMinutes(1));
+        private readonly HashSet<Task> pendingChats = [];
+        private bool stoppingChats;
+
+        public async Task StopChatProcessingAsync()
+        {
+            stoppingChats = true;
+            await Task.WhenAll(pendingChats.ToArray());
+            await chatCountWriter.CompleteAsync();
+        }
 
         public static readonly RoutedUICommand AddFriendCommand = new(
             "フレンドに追加", nameof(AddFriendCommand), typeof(ChatPanel));
@@ -844,8 +855,9 @@ namespace JTSA.Panels
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
             overlayAppearanceInitialized = true;
 
-            // 前回配信時のチャットユーザーをクリア
-            DAO_ChatUser.AllDelete();
+            // 切替前の保存・表示完了後に前回の入室記録をクリアする。
+            await Task.WhenAll(pendingChats.ToArray());
+            await Task.Run(DAO_ChatUser.AllDelete);
             ChatUserFormList.Clear();
             chatEntranceTracker.Clear();
             chatEntranceTracker.Restore(
@@ -1066,7 +1078,22 @@ namespace JTSA.Panels
         /// <param name="form"></param>
         /// <param name="isChannelPoint"></param>
         /// <param name="isFirstEntrance">現在の配信で最初のチャット入室か。</param>
-        private async Task ChatAddAsync(
+        private Task ChatAddAsync(TwitchChatForm form, bool isChannelPoint, bool isFirstEntrance)
+        {
+            if (stoppingChats) return Task.CompletedTask;
+            var task = ProcessChatAsync(form, isChannelPoint, isFirstEntrance);
+            pendingChats.Add(task);
+            _ = RemoveCompletedChatAsync(task);
+            return task;
+        }
+
+        private async Task RemoveCompletedChatAsync(Task task)
+        {
+            try { await task; }
+            finally { pendingChats.Remove(task); }
+        }
+
+        private async Task ProcessChatAsync(
             TwitchChatForm form,
             bool isChannelPoint,
             bool isFirstEntrance)
@@ -1078,50 +1105,60 @@ namespace JTSA.Panels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"チャット追加処理エラー: {ex}");
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"チャット保存・表示に失敗しました: {ex.GetBaseException().Message}");
             }
         }
 
         private async Task ChatAddCoreAsync(TwitchChatForm form, bool isChannelPoint, bool isFirstEntrance)
         {
-            DAO_StreamChatUserCount.Increment(
+            await chatCountWriter.RecordAsync(
                 DateTime.Now,
                 form.UserId,
                 form.UserName,
                 form.DisplayName,
                 TwitchHelper.CurrentStreamId);
 
-            var userData = DAO_User.SelectOneByUserId(form.UserId);
+            var userData = await chatUsers.GetAsync(form.UserId, async () =>
+            {
+                var userData = DAO_User.SelectOneByUserId(form.UserId);
+
+                if (userData == null)
+                {
+                    // 配信者情報取得
+                    var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(form.UserName);
+
+                    // データチェック
+                    if (streamerInfo == null) return null;
+                    if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return null;
+
+                    // データ作成
+                    var insertData = new M_User
+                    {
+                        UserId = streamerInfo.UserId,
+                        LoginId = streamerInfo.Login,
+                        DisplayName = streamerInfo.DisplayName,
+                        ProfielImageUrl = streamerInfo.ProfileImageUrl,
+                        IsFriend = false,
+                        LastUsedDateTime = DateTime.Now,
+                        CreatedDateTime = DateTime.Now,
+                        UpdatedDateTime = DateTime.Now
+                    };
+
+                    DAO_User.Insert(insertData);
+
+                    userData = insertData;
+                }
+                return userData;
+            });
 
             if (userData == null)
             {
-                // 配信者情報取得
-                var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(form.UserName);
-
-                // データチェック
-                if (streamerInfo == null) return;
-                if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return;
-
-                // データ作成
-                var insertData = new M_User
-                {
-                    UserId = streamerInfo.UserId,
-                    LoginId = streamerInfo.Login,
-                    DisplayName = streamerInfo.DisplayName,
-                    ProfielImageUrl = streamerInfo.ProfileImageUrl,
-                    IsFriend = false,
-                    LastUsedDateTime = DateTime.Now,
-                    CreatedDateTime = DateTime.Now,
-                    UpdatedDateTime = DateTime.Now
-                };
-
-                DAO_User.Insert(insertData);
-
-                userData = insertData;
+                chatUsers.Remove(form.UserId);
+                return;
             }
 
-            if (userData == null) return;
-
-            form.ProfielImageUrl = userData.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png");
+            form.ProfielImageUrl = userData.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png") ?? string.Empty;
             form.CreatedDateTime = DateTime.Now;
 
             if (isChannelPoint)
@@ -1140,7 +1177,7 @@ namespace JTSA.Panels
                     LastUsedDateTime = DateTime.Now
                 };
 
-                DAO_ChatUser.InsertUpdate(inserData);
+                await Task.Run(() => DAO_ChatUser.InsertUpdate(inserData));
             }
 
             UpdateChatUserList(form, userData);
@@ -1432,6 +1469,7 @@ namespace JTSA.Panels
 
             if (DAO_User.MarkAsFriend(user.UserId))
             {
+                chatUsers.Remove(user.UserId);
                 ((MainWindow)Application.Current.MainWindow).FriendPanel.ReloadFriend();
             }
 
@@ -1472,7 +1510,7 @@ namespace JTSA.Panels
             if (message != null)
             {
                 var user = DAO_User.SelectOneByUserId(message.UserId);
-                message.ProfielImageUrl = user?.ProfielImageUrl.Replace("-300x300.png", "-70x70.png") ?? "";
+                message.ProfielImageUrl = user?.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png") ?? string.Empty;
                 PinedTwitchChatFormList.Add(message);
             }
         }

@@ -194,7 +194,7 @@ public partial class CalendarRegistrationPanel : UserControl
         {
             SelectedCategoryBoxArt.Source = string.IsNullOrWhiteSpace(categoryBoxArtUrl)
                 ? null
-                : new BitmapImage(new Uri(categoryBoxArtUrl));
+                : JTSA.Utility.CachedImageConverter.GetImage(categoryBoxArtUrl);
         }
         catch
         {
