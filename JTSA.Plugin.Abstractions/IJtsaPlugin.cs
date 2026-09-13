@@ -19,12 +19,24 @@ public interface IJtsaPluginContext
     string PluginDirectory { get; }
     string DataDirectory { get; }
     nint MainWindowHandle { get; }
+    IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards();
+    event Action<ChannelPointRedemptionInfo>? ChannelPointRedeemed;
 
     void Log(string message);
     void LogError(string message, Exception? exception = null);
     void SetExpansionOverlay(ExpansionOverlayContent content);
     void RemoveExpansionOverlay(string id);
 }
+
+public sealed record ChannelPointRewardInfo(
+    string Id,
+    string Title,
+    bool IsUserInputRequired);
+
+public sealed record ChannelPointRedemptionInfo(
+    string RewardId,
+    string UserName,
+    string UserInput);
 
 /// <summary>既存の配信拡張ブラウザソース上に表示するプラグイン描画。</summary>
 public sealed record ExpansionOverlayContent(

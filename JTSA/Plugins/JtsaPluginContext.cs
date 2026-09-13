@@ -24,6 +24,19 @@ internal sealed class JtsaPluginContext : IJtsaPluginContext
     public string PluginDirectory { get; }
     public string DataDirectory { get; }
     public nint MainWindowHandle => new WindowInteropHelper(mainWindow).Handle;
+    public IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards() =>
+        mainWindow.ChannelPointPanel.ChannelPointRewardFormList
+            .Select(reward => new ChannelPointRewardInfo(
+                reward.RewardId,
+                reward.Title,
+                reward.IsUserInputRequired))
+            .ToArray();
+
+    public event Action<ChannelPointRedemptionInfo>? ChannelPointRedeemed
+    {
+        add => PluginChannelPointEventHub.ChannelPointRedeemed += value;
+        remove => PluginChannelPointEventHub.ChannelPointRedeemed -= value;
+    }
 
     public void Log(string message) =>
         mainWindow.AppLogPanel.Success("Extension", message);

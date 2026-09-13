@@ -1,6 +1,5 @@
 using JTSA.Plugin.Abstractions;
 using System.Windows;
-using System.Windows.Interop;
 
 namespace JTSA.TimerPlugin;
 
@@ -30,8 +29,6 @@ public sealed class TimerPlugin : IJtsaPlugin
         }
 
         window = new TimerWindow(context!);
-        if (context?.MainWindowHandle is { } ownerHandle && ownerHandle != nint.Zero)
-            new WindowInteropHelper(window).Owner = ownerHandle;
         window.Closed += (_, _) => window = null;
         window.Show();
     }

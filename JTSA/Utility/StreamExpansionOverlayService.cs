@@ -206,15 +206,10 @@ internal static class StreamExpansionOverlayService
                             if (renderedHtml.get(element) !== item.html) {
                                 element.innerHTML = item.html;
                                 renderedHtml.set(element, item.html);
-                                element.querySelectorAll("[data-jtsa-spin-start]").forEach(target => {
-                                    const start = Number(target.dataset.jtsaSpinStart);
-                                    const duration = Number(target.dataset.jtsaSpinDuration);
-                                    const angle = Number(target.dataset.jtsaSpinAngle);
-                                    if (!Number.isFinite(start) || !Number.isFinite(duration) || !Number.isFinite(angle)) return;
-                                    const animation = target.animate(
-                                        [{ transform: "rotate(0deg)" }, { transform: `rotate(${angle}deg)` }],
-                                        { duration, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" });
-                                    animation.currentTime = Math.max(0, Math.min(duration, Date.now() - start));
+                                element.querySelectorAll("[data-jtsa-animation-start]").forEach(target => {
+                                    const start = Number(target.dataset.jtsaAnimationStart);
+                                    if (!Number.isFinite(start)) return;
+                                    target.style.animationDelay = `${Math.min(0, start - Date.now())}ms`;
                                 });
                             }
                             element.style.left = item.x + "px";
