@@ -1,6 +1,8 @@
 using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Models;
+using JTSA.Plugin.Abstractions;
+using JTSA.Plugins;
 using JTSA.Utility;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -951,6 +953,11 @@ namespace JTSA.Panels
 
                 twitchEventSubService.ChannelPointRedeemed += channelPoint =>
                 {
+                    PluginChannelPointEventHub.Publish(new ChannelPointRedemptionInfo(
+                        channelPoint.RewardId,
+                        channelPoint.UserName,
+                        channelPoint.UserInput));
+
                     // Register independently of chat rendering and observe UI-thread failures.
                     Dispatcher.Invoke(() =>
                     {

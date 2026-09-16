@@ -12,7 +12,8 @@ namespace JTSA;
 
 public partial class MainWindow
 {
-    private const string ObsBrowserRefreshNotificationKey = "obs-browser-refresh-2026-09";
+    private const string ObsBrowserRefreshNotificationKey =
+        "stream-expansion-obs-overlay-refresh-2026-09-14";
     private sealed record Notice(
         string Key,
         string Title,
@@ -45,8 +46,8 @@ public partial class MainWindow
 
         ShowNotification(
             ObsBrowserRefreshNotificationKey,
-            "OBS側のブラウザ更新が必要です",
-            "今回のアップデート内容を反映するため、OBSのブラウザソースをリフレッシュしてください。この案内は確認後、再表示されません。",
+            "配信拡張用OBSオーバーレイの更新が必要です",
+            "今回のアップデート内容を反映するため、OBSに登録している配信拡張用ブラウザソースをリフレッシュしてください。この案内は確認後、再表示されません。",
             dismissed: () => DAO_AppNotificationReceipt.Acknowledge(ObsBrowserRefreshNotificationKey));
     }
 
