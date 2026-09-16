@@ -18,6 +18,19 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.4.30",
+                ReleaseDate = "2026/09/16",
+                Summary = "プラグイン機能の調整",
+                Changes =
+                [
+                    "※ブラウザソース（配信拡張系）を更新する必要あり",
+                    "【プラグイン】",
+                    "・チャンネルポイントを参照できるように修正",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.4.29",
                 ReleaseDate = "2026/09/11",
                 Summary = "チューニング作業およびプラグイン拡張対応",
