@@ -84,6 +84,10 @@ namespace JTSA.Dao
             ChatManagementPanelVisibility = 52,
             /// <summary>チャット読み上げをしないTwitchログイン名（改行区切り）</summary>
             SpeechMutedUserLogins = 53,
+            /// <summary>チャット読み上げの最大文字数（0は制限なし）</summary>
+            SpeechMaxChars = 54,
+            /// <summary>同じスタンプ名の連続読み上げ上限（0は制限なし）</summary>
+            SpeechMaxSameToken = 55,
         }
 
 

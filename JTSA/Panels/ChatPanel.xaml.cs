@@ -100,6 +100,8 @@ namespace JTSA.Panels
         private string voiceVoxEndpoint = VoiceVoxClient.DefaultEndpoint;
         private int voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
         private HashSet<string> speechMutedLogins = new(StringComparer.OrdinalIgnoreCase);
+        private int speechMaxChars = SpeechTextLimiter.DefaultMaxChars;
+        private int speechMaxSameToken = SpeechTextLimiter.DefaultMaxSameToken;
 
         private readonly StreamChatEntranceTracker chatEntranceTracker = new();
 
@@ -1063,6 +1065,12 @@ namespace JTSA.Panels
                 voiceVoxSpeakerId = VoiceVoxClient.DefaultSpeakerId;
             speechMutedLogins = SpeechMuteFilter.Parse(
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMutedUserLogins)?.Value);
+            speechMaxChars = SpeechTextLimiter.ParseNonNegative(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMaxChars)?.Value,
+                SpeechTextLimiter.DefaultMaxChars);
+            speechMaxSameToken = SpeechTextLimiter.ParseNonNegative(
+                DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMaxSameToken)?.Value,
+                SpeechTextLimiter.DefaultMaxSameToken);
             RefreshSpeechMuteFlags();
         }
 
@@ -1070,6 +1078,9 @@ namespace JTSA.Panels
         {
             if (speechEngine == "None" || string.IsNullOrWhiteSpace(message)) return;
             if (SpeechMuteFilter.IsMuted(speechMutedLogins, userLogin)) return;
+
+            message = SpeechTextLimiter.Limit(message, speechMaxChars, speechMaxSameToken);
+            if (string.IsNullOrWhiteSpace(message)) return;
 
             try
             {

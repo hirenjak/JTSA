@@ -34,6 +34,12 @@
     <TextBlock Text="棒読みちゃん HTTP URL" Margin="0,12,0,2" Foreground="LightGray"/><TextBox x:Name="BouyomiEndpointTextBox" Padding="4" Text="http://localhost:50080/" Foreground="White" Background="#FF4A4747" BorderBrush="White"/>
     <TextBlock Text="VOICEVOX Engine URL" Margin="0,10,0,2" Foreground="LightGray"/><TextBox x:Name="VoiceVoxEndpointTextBox" Padding="4" Text="http://localhost:50021/" Foreground="White" Background="#FF4A4747" BorderBrush="White"/>
     <TextBlock Text="VOICEVOX 話者" Margin="0,10,0,2" Foreground="LightGray"/><StackPanel Orientation="Horizontal"><ComboBox x:Name="VoiceVoxSpeakerComboBox" Width="240" DisplayMemberPath="DisplayName" SelectedValuePath="Id"/><Button Content="一覧を更新" Width="80" Height="22" Margin="8,0,0,0" Click="RefreshVoiceVoxSpeakersButton_Click"/></StackPanel>
+    <TextBlock Text="読み上げ最大文字数" Margin="0,12,0,2" Foreground="LightGray"/>
+    <TextBlock Text="0 で制限なし。スタンプ圧縮のあと、この文字数で切ります。" Foreground="DarkGray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+    <TextBox x:Name="SpeechMaxCharsTextBox" Width="80" Padding="4" HorizontalAlignment="Left" Foreground="White" Background="#FF4A4747" BorderBrush="White"/>
+    <TextBlock Text="同じスタンプの連続上限" Margin="0,12,0,2" Foreground="LightGray"/>
+    <TextBlock Text="0 で制限なし。空白区切りで同じ英字トークンが続くとき、この回数まで読み上げます。" Foreground="DarkGray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
+    <TextBox x:Name="SpeechMaxSameTokenTextBox" Width="80" Padding="4" HorizontalAlignment="Left" Foreground="White" Background="#FF4A4747" BorderBrush="White"/>
     <TextBlock Text="読み上げないアカウント" Margin="0,12,0,2" Foreground="LightGray"/>
     <TextBlock Text="Twitchのログイン名を1行に1つ。チャットタブの参加者リストからも切り替えできます。" Foreground="DarkGray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"/>
     <TextBox x:Name="SpeechMutedUserLoginsTextBox" MinHeight="90" Padding="4" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Foreground="White" Background="#FF4A4747" BorderBrush="White"/>
