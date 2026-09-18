@@ -209,10 +209,7 @@ namespace JTSA.Panels
 
         private void CreditLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri)
-            {
-                UseShellExecute = true
-            });
+            InAppBrowser.Open(e.Uri.AbsoluteUri, Window.GetWindow(this));
             e.Handled = true;
         }
 
@@ -229,7 +226,7 @@ namespace JTSA.Panels
                 var verificationUrl = string.IsNullOrWhiteSpace(deviceCodeResponse.verification_uri_complete)
                     ? deviceCodeResponse.verification_uri
                     : deviceCodeResponse.verification_uri_complete;
-                Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
+                InAppBrowser.Open(verificationUrl, Window.GetWindow(this));
 
                 var token = await TwitchHelper.PollDeviceTokenAsync(
                     deviceCodeResponse.device_code,
@@ -281,7 +278,7 @@ namespace JTSA.Panels
                 var verificationUrl = string.IsNullOrWhiteSpace(deviceCodeResponse.verification_uri_complete)
                     ? deviceCodeResponse.verification_uri
                     : deviceCodeResponse.verification_uri_complete;
-                Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
+                InAppBrowser.Open(verificationUrl, Window.GetWindow(this));
 
                 var token = await TwitchHelper.PollDeviceTokenAsync(
                     deviceCodeResponse.device_code,

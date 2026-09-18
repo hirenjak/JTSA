@@ -435,7 +435,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts channel:manage:vips")
+                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts channel:manage:vips user:manage:blocked_users moderator:manage:banned_users")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();
@@ -821,6 +821,118 @@ namespace JTSA.Utility
 
         #region ==================== チャット関連 ====================
 
+        public static async Task<bool> BlockUserAsync(string targetUserId, string accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(targetUserId) || string.IsNullOrWhiteSpace(accessToken))
+                return false;
+
+            return await SendModerationRequestAsync(
+                HttpMethod.Put,
+                $"https://api.twitch.tv/helix/users/blocks?target_user_id={Uri.EscapeDataString(targetUserId)}",
+                null,
+                accessToken,
+                "ユーザーのブロック",
+                "user:manage:blocked_users");
+        }
+
+        public static async Task<bool> DeleteChatMessageAsync(
+            string messageId,
+            string broadcasterId,
+            string accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(messageId) ||
+                string.IsNullOrWhiteSpace(broadcasterId) ||
+                string.IsNullOrWhiteSpace(accessToken))
+                return false;
+
+            return await SendModerationRequestAsync(
+                HttpMethod.Delete,
+                $"https://api.twitch.tv/helix/moderation/chat" +
+                $"?broadcaster_id={Uri.EscapeDataString(broadcasterId)}" +
+                $"&moderator_id={Uri.EscapeDataString(broadcasterId)}" +
+                $"&message_id={Uri.EscapeDataString(messageId)}",
+                null,
+                accessToken,
+                "チャットメッセージの削除",
+                "moderator:manage:chat_messages");
+        }
+
+        public static async Task<bool> TimeoutUserAsync(
+            string targetUserId,
+            int durationSeconds,
+            string broadcasterId,
+            string accessToken)
+        {
+            if (durationSeconds is < 1 or > 1_209_600) return false;
+
+            return await BanUserCoreAsync(
+                targetUserId, durationSeconds, broadcasterId, accessToken, "タイムアウト");
+        }
+
+        public static async Task<bool> BanUserAsync(
+            string targetUserId,
+            string broadcasterId,
+            string accessToken)
+            => await BanUserCoreAsync(targetUserId, null, broadcasterId, accessToken, "追放");
+
+        private static async Task<bool> BanUserCoreAsync(
+            string targetUserId,
+            int? durationSeconds,
+            string broadcasterId,
+            string accessToken,
+            string operationName)
+        {
+            if (string.IsNullOrWhiteSpace(targetUserId) ||
+                string.IsNullOrWhiteSpace(broadcasterId) ||
+                string.IsNullOrWhiteSpace(accessToken))
+                return false;
+
+            var data = new Dictionary<string, object> { ["user_id"] = targetUserId };
+            if (durationSeconds.HasValue) data["duration"] = durationSeconds.Value;
+
+            return await SendModerationRequestAsync(
+                HttpMethod.Post,
+                $"https://api.twitch.tv/helix/moderation/bans" +
+                $"?broadcaster_id={Uri.EscapeDataString(broadcasterId)}" +
+                $"&moderator_id={Uri.EscapeDataString(broadcasterId)}",
+                JsonContent.Create(new { data }),
+                accessToken,
+                operationName,
+                "moderator:manage:banned_users");
+        }
+
+        private static async Task<bool> SendModerationRequestAsync(
+            HttpMethod method,
+            string url,
+            HttpContent? content,
+            string accessToken,
+            string operationName,
+            string requiredScope)
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                client.DefaultRequestHeaders.Add("Client-Id", ClientID);
+                using var request = new HttpRequestMessage(method, url) { Content = content };
+                using var response = await client.SendAsync(request);
+
+                await TwitchPermissionNotifier.NotifyIfRequiredAsync(response, operationName, requiredScope);
+                if (response.IsSuccessStatusCode) return true;
+
+                var detail = await response.Content.ReadAsStringAsync();
+                mainWindow.AppLogPanel.Error(
+                    nameof(TwitchHelper),
+                    $"{operationName}失敗 ({(int)response.StatusCode} {response.StatusCode})：{detail}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), $"{operationName}失敗：{ex.Message}");
+                return false;
+            }
+        }
+
         public static async Task<bool> SendShoutout(string toBroadcasterId)
             => await SendShoutout(toBroadcasterId, BroadcasterId, AccessToken);
 
@@ -998,25 +1110,28 @@ namespace JTSA.Utility
 
 
         public static async Task<bool?> PinedChat(string chatId)
+            => await PinedChat(chatId, BroadcasterId, AccessToken);
+
+        public static async Task<bool?> PinedChat(
+            string chatId,
+            string broadcasterId,
+            string accessToken)
         {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
-            client.DefaultRequestHeaders.Add("Client-Id", ClientID);
-
-            var response = await client.PutAsync($"https://api.twitch.tv/helix/chat/pins" +
-                                                $"?broadcaster_id={BroadcasterId}" +
-                                                $"&moderator_id={BroadcasterId}" +
-                                                $"&message_id={chatId}", null);
-
-            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
-                response, "チャットのピン留め", "moderator:manage:chat_messages");
-            
-            if (!response.IsSuccessStatusCode)
-            {
+            if (string.IsNullOrWhiteSpace(chatId) ||
+                string.IsNullOrWhiteSpace(broadcasterId) ||
+                string.IsNullOrWhiteSpace(accessToken))
                 return false;
-            }
 
-            return true;
+            return await SendModerationRequestAsync(
+                HttpMethod.Put,
+                $"https://api.twitch.tv/helix/chat/pins" +
+                $"?broadcaster_id={Uri.EscapeDataString(broadcasterId)}" +
+                $"&moderator_id={Uri.EscapeDataString(broadcasterId)}" +
+                $"&message_id={Uri.EscapeDataString(chatId)}",
+                null,
+                accessToken,
+                "チャットのピン留め",
+                "moderator:manage:chat_messages");
         }
 
 

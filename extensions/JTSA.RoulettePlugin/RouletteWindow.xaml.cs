@@ -40,6 +40,8 @@ public partial class RouletteWindow : Window
         Color.FromRgb(131, 56, 236), Color.FromRgb(255, 127, 80),
         Color.FromRgb(76, 201, 240), Color.FromRgb(247, 37, 133)
     ];
+    private static readonly Color DefaultResultColor = Color.FromRgb(255, 209, 102);
+    private Color resultColor = DefaultResultColor;
     public ObservableCollection<RouletteCandidate> Candidates { get; } =
     [
         new("候補1", 1),
@@ -81,6 +83,7 @@ public partial class RouletteWindow : Window
         {
             ResultCaptionTextBlock.Text = "時間は0より大きく120秒以下で入力してください";
             ResultTextBlock.Text = "―";
+            SetResultColor(DefaultResultColor);
             return;
         }
         spinDuration = spinCruiseDuration + spinSlowdownDuration;
@@ -89,6 +92,7 @@ public partial class RouletteWindow : Window
         {
             ResultCaptionTextBlock.Text = "候補を2件以上入力してください";
             ResultTextBlock.Text = "―";
+            SetResultColor(DefaultResultColor);
             PublishOverlay("候補不足");
             return;
         }
@@ -99,6 +103,7 @@ public partial class RouletteWindow : Window
         DeleteResultAndRestartButton.IsEnabled = false;
         ResultCaptionTextBlock.Text = string.Empty;
         ResultTextBlock.Text = string.Empty;
+        SetResultColor(DefaultResultColor);
         ElapsedSpinTimeTextBlock.Text = $"残り時間 {spinDuration.TotalSeconds:0.0} 秒";
         spinEndsUtc = DateTime.UtcNow + spinDuration;
         finalIndex = ChooseWeightedIndex(spinningEntries);
@@ -137,6 +142,7 @@ public partial class RouletteWindow : Window
         var result = spinningEntries[finalIndex].Text;
         ResultCaptionTextBlock.Text = string.Empty;
         ResultTextBlock.Text = result;
+        SetResultColor(SliceColors[finalIndex % SliceColors.Length]);
         DrawWheel(spinningEntries);
         CandidatesEditorPanel.IsHitTestVisible = true;
         SpinButton.IsEnabled = true;
@@ -151,6 +157,7 @@ public partial class RouletteWindow : Window
         SpinButton.IsEnabled = true;
         ResultCaptionTextBlock.Text = string.Empty;
         ResultTextBlock.Text = "―";
+        SetResultColor(DefaultResultColor);
         UpdateRemainingTimeFromSetting();
         DeleteResultAndRestartButton.IsEnabled = false;
         wheelRotation = 0;
@@ -565,15 +572,15 @@ public partial class RouletteWindow : Window
                 return $"rgb({color.R},{color.G},{color.B}) {start:0.###}deg {end:0.###}deg";
             }));
         var labelWeight = 0;
-        var labels = entries.Count <= 16
-            ? string.Concat(entries.Select(entry =>
+        var labels = string.Concat(entries.Select(entry =>
             {
                 var angle = (labelWeight + entry.Weight / 2d) * 360 / totalWeight;
                 labelWeight += entry.Weight;
-                var label = WebUtility.HtmlEncode(entry.Text.Length > 12 ? entry.Text[..12] + "…" : entry.Text);
-                return $"<div style='position:absolute;inset:0;transform:rotate({angle:0.###}deg)'><span style='position:absolute;left:50%;top:34px;width:170px;margin-left:-85px;text-align:center;white-space:nowrap;transform:rotate(-90deg);font-size:22px;font-weight:800;color:#373737'>{label}</span></div>";
-            }))
-            : string.Empty;
+                var label = FormatWheelLabel(entry.Text);
+                var sliceAngle = entry.Weight * 360d / totalWeight;
+                var labelFontSize = Math.Clamp(sliceAngle * 0.45, 8, 22);
+                return $"<div style='position:absolute;inset:0;transform:rotate({angle:0.###}deg)'><span style='position:absolute;left:50%;top:44px;width:170px;margin-left:-85px;text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.05;transform:rotate(-90deg);font-size:{labelFontSize:0.##}px;font-weight:800;color:#373737'>{label}</span></div>";
+            }));
         var isSpinning = animationTimer?.IsEnabled == true;
         var elapsedMilliseconds = Math.Clamp(
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - spinStartedUnixMilliseconds,
@@ -653,6 +660,34 @@ public partial class RouletteWindow : Window
         return entries.Count - 1;
     }
 
+    private static string FormatWheelLabel(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length <= 8)
+            return WebUtility.HtmlEncode(trimmed);
+
+        var center = trimmed.Length / 2;
+        var splitCandidates = Enumerable.Range(1, trimmed.Length - 1)
+            .Where(index =>
+                char.IsWhiteSpace(trimmed[index]) ||
+                char.IsWhiteSpace(trimmed[index - 1]) ||
+                (char.IsLower(trimmed[index - 1]) && char.IsUpper(trimmed[index])))
+            .ToList();
+        var splitIndex = splitCandidates.Count > 0
+            ? splitCandidates.MinBy(index => Math.Abs(index - center))
+            : center;
+
+        var firstLine = trimmed[..splitIndex].TrimEnd();
+        var secondLine = trimmed[splitIndex..].TrimStart();
+        return $"{WebUtility.HtmlEncode(firstLine)}<br>{WebUtility.HtmlEncode(secondLine)}";
+    }
+
+    private void SetResultColor(Color color)
+    {
+        resultColor = color;
+        ResultTextBlock.Foreground = new SolidColorBrush(color);
+    }
+
     private void PublishOverlay(string caption)
     {
         if (ShowInExpansionCheckBox?.IsChecked != true)
@@ -685,15 +720,15 @@ public partial class RouletteWindow : Window
         }));
         var isSpinning = animationTimer?.IsEnabled == true;
         var labelWeight = 0;
-        var labels = entries.Count <= 16
-            ? string.Concat(entries.Select((entry, index) =>
+        var labels = string.Concat(entries.Select(entry =>
             {
                 var angle = (labelWeight + entry.Weight / 2d) * 360 / totalEntryWeight;
                 labelWeight += entry.Weight;
-                var label = WebUtility.HtmlEncode(entry.Text.Length > 12 ? entry.Text[..12] + "…" : entry.Text);
-                return $"<div style=\"position:absolute;inset:0;transform:rotate({angle}deg)\"><span style=\"position:absolute;left:50%;top:34px;width:170px;margin-left:-85px;text-align:center;white-space:nowrap;writing-mode:horizontal-tb;transform:rotate(-90deg);font-size:22px;font-weight:800;color:#373737;text-shadow:none\">{label}</span></div>";
-            }))
-            : string.Empty;
+                var label = FormatWheelLabel(entry.Text);
+                var sliceAngle = entry.Weight * 360d / totalEntryWeight;
+                var labelFontSize = Math.Clamp(sliceAngle * 0.45, 8, 22);
+                return $"<div style=\"position:absolute;inset:0;transform:rotate({angle}deg)\"><span style=\"position:absolute;left:50%;top:44px;width:170px;margin-left:-85px;text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.05;writing-mode:horizontal-tb;transform:rotate(-90deg);font-size:{labelFontSize:0.##}px;font-weight:800;color:#373737;text-shadow:none\">{label}</span></div>";
+            }));
         var wheelAnimationData = isSpinning
             ? $"data-jtsa-animation-start=\"{spinStartedUnixMilliseconds}\""
             : string.Empty;
@@ -707,10 +742,11 @@ public partial class RouletteWindow : Window
         var encodedCaption = WebUtility.HtmlEncode(caption);
         var result = ResultTextBlock?.Text ?? "―";
         var encodedResult = WebUtility.HtmlEncode(result);
+        var resultCssColor = $"#{resultColor.R:X2}{resultColor.G:X2}{resultColor.B:X2}";
         var resultFontSize = Math.Clamp(360d / Math.Max(1, result.Length), 20, 58);
         context.SetExpansionOverlay(new ExpansionOverlayContent(
             "roulette",
-            $"{animationDefinition}<div style=\"box-sizing:border-box;width:{baseOverlayWidth:0}px;height:{baseOverlayHeight:0}px;transform:scale({displayScale:0.#####});transform-origin:top left;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;color:white;font-family:'Segoe UI',sans-serif;text-shadow:0 3px 8px #000;overflow:hidden\"><div style=\"position:relative;width:{wheelSize:0.###}px;height:{wheelSize:0.###}px;flex:0 0 {wheelSize:0.###}px\"><div style=\"position:absolute;left:0;top:0;width:430px;height:430px;transform:scale({wheelScale:0.#####});transform-origin:top left\"><div style=\"position:absolute;z-index:3;left:195px;top:-8px;width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:42px solid #ffd166;filter:drop-shadow(0 3px 3px #000)\"></div><div {wheelAnimationData} style=\"position:absolute;inset:15px;border-radius:50%;background:conic-gradient(from 0deg,{gradient});{animationStyle}\">{labels}<div style=\"position:absolute;left:50%;top:50%;width:66px;height:66px;transform:translate(-50%,-50%);border-radius:50%;background:#555\"></div></div></div></div><div style=\"box-sizing:border-box;width:430px;height:150px;flex:0 0 150px;padding:16px 26px;background:rgba(20,20,20,.86);border:2px solid rgba(255,255,255,.42);border-radius:20px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center\"><div style=\"font-size:24px;line-height:1.2;color:#ddd\">{encodedCaption}</div><div style=\"width:100%;font-size:{resultFontSize:0.##}px;line-height:1.1;font-weight:800;color:#ffd166;margin-top:8px;white-space:nowrap;overflow:hidden\">{encodedResult}</div></div></div>",
+            $"{animationDefinition}<div style=\"box-sizing:border-box;width:{baseOverlayWidth:0}px;height:{baseOverlayHeight:0}px;transform:scale({displayScale:0.#####});transform-origin:top left;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;color:white;font-family:'Segoe UI',sans-serif;text-shadow:0 3px 8px #000;overflow:hidden\"><div style=\"position:relative;width:{wheelSize:0.###}px;height:{wheelSize:0.###}px;flex:0 0 {wheelSize:0.###}px\"><div style=\"position:absolute;left:0;top:0;width:430px;height:430px;transform:scale({wheelScale:0.#####});transform-origin:top left\"><div style=\"position:absolute;z-index:3;left:195px;top:-8px;width:0;height:0;border-left:20px solid transparent;border-right:20px solid transparent;border-top:42px solid #ffd166;filter:drop-shadow(0 3px 3px #000)\"></div><div {wheelAnimationData} style=\"position:absolute;inset:15px;border-radius:50%;background:conic-gradient(from 0deg,{gradient});{animationStyle}\">{labels}<div style=\"position:absolute;left:50%;top:50%;width:66px;height:66px;transform:translate(-50%,-50%);border-radius:50%;background:#555\"></div></div></div></div><div style=\"box-sizing:border-box;width:430px;height:150px;flex:0 0 150px;padding:16px 26px;background:rgba(20,20,20,.86);border:2px solid rgba(255,255,255,.42);border-radius:20px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center\"><div style=\"font-size:24px;line-height:1.2;color:#ddd\">{encodedCaption}</div><div style=\"width:100%;font-size:{resultFontSize:0.##}px;line-height:1.1;font-weight:800;color:{resultCssColor};margin-top:8px;white-space:nowrap;overflow:hidden\">{encodedResult}</div></div></div>",
             overlayX, overlayY, overlayWidth, overlayHeight));
     }
 }

@@ -38,6 +38,7 @@ internal static class DAO_StreamExpansion
             entity.IsBits = header.IsBits;
             entity.IsFirstChat = header.IsFirstChat;
             entity.IsFollow = header.IsFollow;
+            entity.IsStreamInfoApplied = header.IsStreamInfoApplied;
             entity.IsHourly = header.IsHourly;
             entity.AdAdvanceMinutes = header.AdAdvanceMinutes;
             entity.IsAdUpcoming = header.IsAdUpcoming;

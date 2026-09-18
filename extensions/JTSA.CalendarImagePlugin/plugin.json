@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.calendar-image",
+  "name": "カレンダー画像化",
+  "entryAssembly": "JTSA.CalendarImagePlugin.dll",
+  "entryType": "JTSA.CalendarImagePlugin.CalendarImagePlugin",
+  "apiVersion": 1
+}

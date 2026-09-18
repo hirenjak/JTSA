@@ -23,6 +23,16 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
    `Plugins/Roulette/` へコピーします。
 3. JTSA の「Extension」タブで「再読み込み」を押します。
 
+## カレンダー画像化の配置
+
+1. `dotnet build extensions/JTSA.CalendarImagePlugin/JTSA.CalendarImagePlugin.csproj -c Release`
+2. 出力フォルダの `JTSA.CalendarImagePlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
+   `Plugins/CalendarImage/` へコピーします。
+3. JTSA の「Extension」タブで「再読み込み」を押します。
+
+表示週を選び、JTSAに登録済みの予定を週ごとのカレンダー画像としてプレビューできます。
+「PNGで保存」から配信告知などに使える画像を書き出せます。
+
 ## 配信拡張への描画
 
 どの Extension からでも、`IJtsaPluginContext` の共通APIを使って既存の

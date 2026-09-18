@@ -772,7 +772,8 @@ namespace JTSA.Panels
 
             if (string.IsNullOrWhiteSpace(chatId)) return;
 
-            var result = await TwitchHelper.PinedChat(chatId);
+            var result = await TwitchHelper.PinedChat(
+                chatId, connectedBroadcasterId, connectedAccessToken);
 
             if (result == true)
             {
@@ -1769,5 +1770,124 @@ namespace JTSA.Panels
                 PinedTwitchChatFormList.Clear();
             }
         }
+
+        private static TwitchChatForm? GetContextChat(object sender)
+        {
+            if (sender is not MenuItem menuItem) return null;
+            ItemsControl? owner = ItemsControl.ItemsControlFromItemContainer(menuItem);
+            while (owner is MenuItem parentMenuItem)
+                owner = ItemsControl.ItemsControlFromItemContainer(parentMenuItem);
+            var contextMenu = owner as ContextMenu ?? menuItem.Parent as ContextMenu;
+            return (contextMenu?.PlacementTarget as FrameworkElement)?.DataContext as TwitchChatForm;
+        }
+
+        private void OpenChatUserPageMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (GetContextChat(sender) is { UserName.Length: > 0 } chat)
+                JTSAHelper.OpenTwitchChannel(chat.UserName);
+        }
+
+        private async void DeleteChatMessageMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.MessageId)) return;
+
+            var success = await TwitchHelper.DeleteChatMessageAsync(
+                chat.MessageId, connectedBroadcasterId, connectedAccessToken);
+            if (success)
+            {
+                TwitchChatFormList.Remove(chat);
+                return;
+            }
+
+            MessageBox.Show(
+                "メッセージを削除できませんでした。6時間以上前の投稿、配信者本人の投稿、またはTwitch権限を確認してください。",
+                "Twitchモデレーション",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        private async void PinChatMessageMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.MessageId)) return;
+
+            var success = await TwitchHelper.PinedChat(
+                chat.MessageId, connectedBroadcasterId, connectedAccessToken);
+            if (success == true)
+            {
+                await PinedChatLoad();
+                return;
+            }
+
+            MessageBox.Show(
+                "メッセージをピン留めできませんでした。対象メッセージとTwitch権限を確認してください。",
+                "Twitchモデレーション",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        private async void BlockChatUserMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.UserId)) return;
+            if (!ConfirmModeration(chat, "ブロック", "ブロックすると、このアカウントからのメッセージや通知が表示されなくなります。")) return;
+
+            var success = await TwitchHelper.BlockUserAsync(chat.UserId, connectedAccessToken);
+            ShowModerationResult(chat, "ブロック", success);
+        }
+
+        private async void TimeoutChatUserMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null) return;
+            if (chat.UserId == connectedBroadcasterId)
+            {
+                MessageBox.Show("配信者本人はタイムアウトできません。", "Twitchモデレーション");
+                return;
+            }
+
+            var dialog = new TimeoutDurationDialog(chat.DisplayName, chat.UserName)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var success = await TwitchHelper.TimeoutUserAsync(
+                chat.UserId, dialog.DurationSeconds, connectedBroadcasterId, connectedAccessToken);
+            ShowModerationResult(chat, "タイムアウト", success);
+        }
+
+        private async void BanChatUserMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.UserId)) return;
+            if (chat.UserId == connectedBroadcasterId)
+            {
+                MessageBox.Show("配信者本人は追放できません。", "Twitchモデレーション");
+                return;
+            }
+            if (!ConfirmModeration(chat, "追放", "追放は解除するまで継続します。")) return;
+
+            var success = await TwitchHelper.BanUserAsync(
+                chat.UserId, connectedBroadcasterId, connectedAccessToken);
+            ShowModerationResult(chat, "追放", success);
+        }
+
+        private static bool ConfirmModeration(TwitchChatForm chat, string operation, string detail)
+            => MessageBox.Show(
+                $"{chat.DisplayName}（{chat.UserName}）を{operation}しますか？\n\n{detail}",
+                "Twitchモデレーション",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning) == MessageBoxResult.Yes;
+
+        private static void ShowModerationResult(TwitchChatForm chat, string operation, bool success)
+            => MessageBox.Show(
+                success
+                    ? $"{chat.DisplayName}を{operation}しました。"
+                    : $"{chat.DisplayName}を{operation}できませんでした。アプリログとTwitch権限を確認してください。",
+                "Twitchモデレーション",
+                MessageBoxButton.OK,
+                success ? MessageBoxImage.Information : MessageBoxImage.Error);
     }
 }

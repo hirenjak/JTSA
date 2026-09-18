@@ -37,6 +37,7 @@ namespace JTSA
         private double overlayFontSize = DefaultFontSize;
         private bool scrollToBottomPending;
         private readonly Window mainWindow;
+        private readonly DispatcherTimer topmostGuardTimer;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -81,6 +82,12 @@ namespace JTSA
             mainWindow.Closed += MainWindow_Closed;
             InitializeComponent();
 
+            topmostGuardTimer = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            topmostGuardTimer.Tick += (_, _) => EnsureTopmost();
+
             OverlayTwitchChatListBox.AddHandler(
                 ScrollViewer.ScrollChangedEvent,
                 new ScrollChangedEventHandler(OverlayScrollViewer_ScrollChanged));
@@ -114,6 +121,7 @@ namespace JTSA
 
             Closed += (_, _) =>
             {
+                topmostGuardTimer.Stop();
                 SaveBounds();
                 mainWindow.Closed -= MainWindow_Closed;
                 TwitchChatFormList.CollectionChanged -=
@@ -192,6 +200,8 @@ namespace JTSA
             SetClickThrough(IsSettingEnabled);
             ResizeMode = ResizeMode.NoResize;
             QueueScrollToBottom();
+            EnsureTopmost();
+            topmostGuardTimer.Start();
 
             var settingChatOverlayPosX = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosX);
             var settingChatOverlayPosY = DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayPosY);
@@ -304,6 +314,10 @@ namespace JTSA
         private const int WsExTransparent = 0x00000020;
         private const int WsExLayered = 0x00080000;
         private const int WsExToolwindow = 0x00000080;
+        private static readonly IntPtr HwndTopmost = new(-1);
+        private const uint SwpNoSize = 0x0001;
+        private const uint SwpNoMove = 0x0002;
+        private const uint SwpNoActivate = 0x0010;
 
 
         private void ChatOverlayWindow_SourceInitialized(
@@ -322,6 +336,29 @@ namespace JTSA
                 hwnd,
                 GwlExstyle,
                 new IntPtr(extendedStyle));
+        }
+
+        /// <summary>
+        /// Windowsや他アプリの画面切替でZ順が崩れても、フォーカスを奪わずに
+        /// オーバーレイを最前面グループへ戻す。
+        /// </summary>
+        private void EnsureTopmost()
+        {
+            if (!IsLoaded || !IsVisible)
+                return;
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero)
+                return;
+
+            Win32Helper.SetWindowPos(
+                hwnd,
+                HwndTopmost,
+                0,
+                0,
+                0,
+                0,
+                SwpNoMove | SwpNoSize | SwpNoActivate);
         }
 
         [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]

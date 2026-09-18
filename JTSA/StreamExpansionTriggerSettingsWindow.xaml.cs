@@ -16,6 +16,7 @@ public partial class StreamExpansionTriggerSettingsWindow : Window
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsStreamInfoApplied { get; set; }
     public bool IsHourly { get; set; }
     public bool IsAdStart { get; set; }
     public bool IsAdEnd { get; set; }
@@ -41,6 +42,7 @@ public partial class StreamExpansionTriggerSettingsWindow : Window
         IsBits = target.IsBits;
         IsFirstChat = target.IsFirstChat;
         IsFollow = target.IsFollow;
+        IsStreamInfoApplied = target.IsStreamInfoApplied;
         IsHourly = target.IsHourly;
         AdAdvanceMinutes = target.AdAdvanceMinutes;
         IsAdUpcoming = target.IsAdUpcoming;
@@ -67,6 +69,7 @@ public partial class StreamExpansionTriggerSettingsWindow : Window
         target.IsBits = IsBits;
         target.IsFirstChat = IsFirstChat;
         target.IsFollow = IsFollow;
+        target.IsStreamInfoApplied = IsStreamInfoApplied;
         target.IsHourly = IsHourly;
         target.AdAdvanceMinutes = AdAdvanceMinutes;
         target.IsAdUpcoming = IsAdUpcoming;

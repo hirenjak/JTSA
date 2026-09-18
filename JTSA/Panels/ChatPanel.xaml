@@ -295,6 +295,52 @@
             <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
+                            <StackPanel.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="ユーザーページを開く"
+                                              Click="OpenChatUserPageMenuItem_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="このメッセージをピン留め"
+                                              Click="PinChatMessageMenuItem_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="{x:Null}">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="このメッセージを削除"
+                                              Click="DeleteChatMessageMenuItem_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="{x:Null}">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Twitchでタイムアウト..."
+                                              Click="TimeoutChatUserMenuItem_Click"/>
+                                    <MenuItem Header="Twitchで追放"
+                                              Click="BanChatUserMenuItem_Click"/>
+                                    <MenuItem Header="Twitchでブロック"
+                                              Click="BlockChatUserMenuItem_Click"/>
+                                </ContextMenu>
+                            </StackPanel.ContextMenu>
                             <StackPanel Margin="8, 4, 8, 0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>

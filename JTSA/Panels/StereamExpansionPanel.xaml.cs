@@ -25,6 +25,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsStreamInfoApplied { get; set; }
     public bool IsHourly { get; set; }
     public bool IsAdStart { get; set; }
     public bool IsAdEnd { get; set; }
@@ -56,6 +57,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
             if (IsBits) items.Add("ビッツ");
             if (IsFirstChat) items.Add("チャット入室");
             if (IsFollow) items.Add("フォロー");
+            if (IsStreamInfoApplied) items.Add("JTSAから配信情報反映");
             if (IsAdStart) items.Add("CM開始");
             if (IsAdEnd) items.Add("CM終了予定");
             if (IsAdUpcoming) items.Add($"CM開始{AdAdvanceMinutes}分前");
@@ -365,6 +367,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                 IsBits = x.IsBits,
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
+                IsStreamInfoApplied = x.IsStreamInfoApplied,
                 IsHourly = x.IsHourly,
                 AdAdvanceMinutes = x.AdAdvanceMinutes,
                 IsAdUpcoming = x.IsAdUpcoming,
@@ -847,6 +850,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             IsBits = header.IsBits,
             IsFirstChat = header.IsFirstChat,
             IsFollow = header.IsFollow,
+            IsStreamInfoApplied = header.IsStreamInfoApplied,
             IsHourly = header.IsHourly,
             AdAdvanceMinutes = header.AdAdvanceMinutes,
             IsAdUpcoming = header.IsAdUpcoming,
