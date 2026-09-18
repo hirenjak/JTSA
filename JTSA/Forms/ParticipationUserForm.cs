@@ -1,11 +1,17 @@
+using System.Text.Json.Serialization;
+
 namespace JTSA.Forms;
 
 public sealed record ParticipationUserForm(string UserId, string DisplayName, string UserInput, DateTime RedeemedAt)
 {
+    public string UserLogin { get; init; } = string.Empty;
     public string ProfileImageUrl { get; init; } = string.Empty;
     public int ParticipationCount { get; init; }
     public int MatchCount { get; init; }
     public Guid EntryKey { get; init; } = Guid.NewGuid();
+
+    [JsonIgnore]
+    public bool IsSpeechMuted { get; init; }
 
     public ParticipationUserForm AdjustMatches(int delta)
     {

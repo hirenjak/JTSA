@@ -11,6 +11,12 @@ public class T_StreamWindow : DBBase
 
     public required string AppExePath { get; set; }
 
+    public string WindowProcessName { get; set; } = "";
+
+    public WindowTitleMatchMode WindowTitleMatchMode { get; set; }
+
+    public int ListenPort { get; set; }
+
     public int X { get; set; }
 
     public int Y { get; set; }
@@ -20,4 +26,6 @@ public class T_StreamWindow : DBBase
     public int Height { get; set; }
 
     public bool IsAutoStart { get; set; } = true;
+
+    public bool IsMinimized { get; set; }
 }
