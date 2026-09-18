@@ -88,8 +88,9 @@ public sealed class VtsClient : IDisposable
             LastError = null;
             StateChanged?.Invoke();
         }
-        catch
+        catch (Exception ex)
         {
+            LastError ??= ex.Message;
             await DisconnectAsync();
             throw;
         }

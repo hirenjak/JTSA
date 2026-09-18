@@ -104,6 +104,7 @@ public partial class VtsPanel : UserControl
 
     public void RefreshConnectionUi()
     {
+        AttachClient();
         var client = ClientOrNull();
         if (client is null)
         {
@@ -148,6 +149,8 @@ public partial class VtsPanel : UserControl
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message, "VTube Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (VtsAutoConnectCheckBox.IsChecked == true)
+                window.StartVtsAutoConnectLoop();
         }
         RefreshConnectionUi();
     }
@@ -156,6 +159,7 @@ public partial class VtsPanel : UserControl
     {
         var window = Main();
         if (window is null) return;
+        window.StopVtsAutoConnectLoop();
         await window.DisconnectVtsAsync();
         RefreshConnectionUi();
     }
@@ -164,6 +168,12 @@ public partial class VtsPanel : UserControl
     {
         DAO_Setting.InsertUpdate(DAO_Setting.SettingName.VtsAutoConnect,
             VtsAutoConnectCheckBox.IsChecked == true ? "1" : "0");
+        var window = Main();
+        if (window is null) return;
+        if (VtsAutoConnectCheckBox.IsChecked == true)
+            window.StartVtsAutoConnectLoop();
+        else
+            window.StopVtsAutoConnectLoop();
     }
 
     private async void RefreshModelsButton_Click(object sender, RoutedEventArgs e)
@@ -520,7 +530,7 @@ public partial class VtsPanel : UserControl
     {
         var preserved = SnapshotSelections();
         isRestoringRules = true;
-        ReplaceKeeping(ChannelPoints,
+        VtsNamedOptionCatalog.ReplaceKeeping(ChannelPoints,
             DAO_ChannelPoint.SelectAll().Select(reward => new VtsNamedOption
             {
                 Id = reward.RewardId,
@@ -550,7 +560,7 @@ public partial class VtsPanel : UserControl
         {
             isRestoringRules = true;
             var models = await client.GetAvailableModelsAsync();
-            ReplaceKeeping(CatalogModels, (models["data"]?["availableModels"] as JArray)?
+            VtsNamedOptionCatalog.ReplaceKeeping(CatalogModels, (models["data"]?["availableModels"] as JArray)?
                 .Select(item => new VtsNamedOption
                 {
                     Id = item.Value<string>("modelID") ?? "",
@@ -559,7 +569,7 @@ public partial class VtsPanel : UserControl
                 preserved.Select(item => item.CommandValue));
 
             var hotkeys = await client.GetHotkeysAsync();
-            ReplaceKeeping(CatalogHotkeys, (hotkeys["data"]?["availableHotkeys"] as JArray)?
+            VtsNamedOptionCatalog.ReplaceKeeping(CatalogHotkeys, (hotkeys["data"]?["availableHotkeys"] as JArray)?
                 .Select(item => new VtsNamedOption
                 {
                     Id = item.Value<string>("hotkeyID") ?? "",
@@ -568,7 +578,7 @@ public partial class VtsPanel : UserControl
                 preserved.Select(item => item.CommandValue));
 
             var expressions = await client.GetExpressionsAsync();
-            ReplaceKeeping(CatalogExpressions, (expressions["data"]?["expressions"] as JArray)?
+            VtsNamedOptionCatalog.ReplaceKeeping(CatalogExpressions, (expressions["data"]?["expressions"] as JArray)?
                 .Select(item => new VtsNamedOption
                 {
                     Id = item.Value<string>("file") ?? "",
@@ -577,7 +587,7 @@ public partial class VtsPanel : UserControl
                 preserved.Select(item => item.CommandValue));
 
             var items = await client.GetItemsAsync(false, false, true);
-            ReplaceKeeping(CatalogItems, (items["data"]?["availableItemFiles"] as JArray)?
+            VtsNamedOptionCatalog.ReplaceKeeping(CatalogItems, (items["data"]?["availableItemFiles"] as JArray)?
                 .Select(item => new VtsNamedOption
                 {
                     Id = item.Value<string>("fileName") ?? "",
@@ -586,7 +596,7 @@ public partial class VtsPanel : UserControl
                 preserved.Select(item => item.CommandValue));
 
             var meshes = await client.GetArtMeshesAsync();
-            ReplaceKeeping(CatalogArtMeshes, (meshes["data"]?["artMeshNames"] as JArray)?
+            VtsNamedOptionCatalog.ReplaceKeeping(CatalogArtMeshes, (meshes["data"]?["artMeshNames"] as JArray)?
                 .Select(item => new VtsNamedOption
                 {
                     Id = item.Value<string>() ?? "",
@@ -595,7 +605,7 @@ public partial class VtsPanel : UserControl
                 preserved.Select(item => item.CommandValue));
 
             var post = await client.GetPostProcessingAsync();
-            ReplaceKeeping(CatalogPostProcessing, (post["data"]?["postProcessingEffects"] as JArray)?
+            VtsNamedOptionCatalog.ReplaceKeeping(CatalogPostProcessing, (post["data"]?["postProcessingEffects"] as JArray)?
                 .SelectMany(effect =>
                 {
                     var effectName = effect.Value<string>("enumID") ?? "";
@@ -652,69 +662,26 @@ public partial class VtsPanel : UserControl
         foreach (var form in triggerRules)
         {
             if (form.ShowChannelPointDetail)
-                EnsureOption(ChannelPoints, form.TriggerValue);
+                VtsNamedOptionCatalog.EnsureOption(ChannelPoints, form.TriggerValue);
             switch (form.CommandType)
             {
                 case VtsTriggerCommands.LoadModel:
-                    EnsureOption(CatalogModels, form.CommandValue); break;
+                    VtsNamedOptionCatalog.EnsureOption(CatalogModels, form.CommandValue); break;
                 case VtsTriggerCommands.TriggerHotkey:
-                    EnsureOption(CatalogHotkeys, form.CommandValue); break;
+                    VtsNamedOptionCatalog.EnsureOption(CatalogHotkeys, form.CommandValue); break;
                 case VtsTriggerCommands.ExpressionOn:
                 case VtsTriggerCommands.ExpressionOff:
-                    EnsureOption(CatalogExpressions, form.CommandValue); break;
+                    VtsNamedOptionCatalog.EnsureOption(CatalogExpressions, form.CommandValue); break;
                 case VtsTriggerCommands.LoadItem:
                 case VtsTriggerCommands.UnloadItem:
-                    EnsureOption(CatalogItems, form.CommandValue); break;
+                    VtsNamedOptionCatalog.EnsureOption(CatalogItems, form.CommandValue); break;
                 case VtsTriggerCommands.Tint:
-                    EnsureOption(CatalogArtMeshes, form.CommandValue); break;
+                    VtsNamedOptionCatalog.EnsureOption(CatalogArtMeshes, form.CommandValue); break;
                 case VtsTriggerCommands.PostProcessing:
-                    EnsureOption(CatalogPostProcessing, form.CommandValue); break;
+                    VtsNamedOptionCatalog.EnsureOption(CatalogPostProcessing, form.CommandValue); break;
             }
         }
         isRestoringRules = false;
-    }
-
-    private static void ReplaceKeeping(
-        ObservableCollection<VtsNamedOption> target,
-        IEnumerable<VtsNamedOption>? items,
-        IEnumerable<string> keepIds)
-    {
-        var next = (items ?? [])
-            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
-            .GroupBy(item => item.Id)
-            .Select(group => group.First())
-            .ToList();
-        var keep = keepIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
-
-        foreach (var id in keep)
-        {
-            if (next.Any(item => item.Id == id))
-                continue;
-            var existing = target.FirstOrDefault(item => item.Id == id);
-            next.Add(existing ?? new VtsNamedOption { Id = id, Name = id });
-        }
-
-        for (var index = target.Count - 1; index >= 0; index--)
-        {
-            if (next.All(item => item.Id != target[index].Id))
-                target.RemoveAt(index);
-        }
-
-        foreach (var item in next)
-        {
-            var current = target.FirstOrDefault(existing => existing.Id == item.Id);
-            if (current is null)
-                target.Add(item);
-        }
-    }
-
-    private static void EnsureOption(ObservableCollection<VtsNamedOption> list, string id)
-    {
-        if (string.IsNullOrWhiteSpace(id) || list.Any(item => item.Id == id))
-            return;
-        list.Add(new VtsNamedOption { Id = id, Name = id });
     }
 
     private sealed record NamedId(string Name, string Id)
