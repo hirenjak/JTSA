@@ -18,6 +18,22 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.4.32",
+                ReleaseDate = "2026/09/19",
+                Summary = "カレンダーおよびカテゴリ登録を改善",
+                Changes =
+                [
+                    "【カレンダー】",
+                    "・今後の予定を近い順、終了済みの予定を新しい順で表示するように改善",
+                    "・終了済みの予定の日付をグレーで表示し、判別しやすいように改善",
+                    "【カテゴリ】",
+                    "・カテゴリ追加時に補助サービスとの通信に失敗しても、検索結果から登録を続行できるように改善",
+                    "・カテゴリ登録が重複した場合の処理を改善",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.4.31",
                 ReleaseDate = "2026/09/18",
                 Summary = "チャット管理およびプラグイン機能を拡張",

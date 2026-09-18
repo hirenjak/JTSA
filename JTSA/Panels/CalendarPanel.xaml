@@ -47,7 +47,17 @@
                                             Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
                                             ToolTip="この予定を送信予定の情報へ反映" Click="ApplyEntryButton_Click"/>
                                     <Image Grid.Column="1" Source="{Binding CategoryBoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="36" Height="48" Stretch="UniformToFill"/>
-                                    <Border Grid.Column="2" Padding="6,4" Margin="0,0,10,0" Background="#FF285653" CornerRadius="4" VerticalAlignment="Top">
+                                    <Border x:Name="EntryDateBadge" Grid.Column="2" Padding="6,4" Margin="0,0,10,0" CornerRadius="4" VerticalAlignment="Top">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#FF285653"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPast}" Value="True">
+                                                        <Setter Property="Background" Value="#FF565656"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <StackPanel>
                                             <TextBlock Text="{Binding CalendarDate, StringFormat={}{0:yyyy/MM/dd}}"
                                                        Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center"/>

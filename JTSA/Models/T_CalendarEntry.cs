@@ -15,6 +15,9 @@ public class T_CalendarEntry : DBBaseTransaction
     [NotMapped]
     public string StartTimeDisplay => $"{StartTime:hh\\:mm}～";
 
+    [NotMapped]
+    public bool IsPast => CalendarDate.Date < DateTime.Today;
+
     public string Content { get; set; } = string.Empty;
 
     public string TitlePlaceholder { get; set; } = string.Empty;
