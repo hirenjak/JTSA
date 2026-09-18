@@ -1,4 +1,4 @@
-using JTSA.Dao;
+﻿using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Forms.TwitchIF;
 using JTSA.Models;
@@ -43,6 +43,8 @@ namespace JTSA
 		private readonly ObsController mainObsController = new();
 		private readonly ObsController subObsController = new();
         public VtsClient VtsClient { get; } = new();
+        private readonly SemaphoreSlim vtsConnectionLock = new(1, 1);
+        private CancellationTokenSource? vtsAutoConnectCts;
         private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim twitchAccountTokenLock = new(1, 1);
@@ -330,6 +332,7 @@ namespace JTSA
             Closed += (_, _) =>
             {
                 hourlyTriggerTimer.Stop();
+                vtsAutoConnectCts?.Cancel();
                 pluginManager.Dispose();
                 mainObsController.Dispose();
                 subObsController.Dispose();
@@ -690,7 +693,7 @@ namespace JTSA
             // OBSは補助機能なので、Twitch画面・チャットなど本体の初期化完了後、
             // UIが落ち着いてから低優先で自動接続する。
             _ = AutoConnectObsAfterStartupAsync();
-            _ = AutoConnectVtsAfterStartupAsync();
+            StartVtsAutoConnectLoop();
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -702,41 +705,111 @@ namespace JTSA
             await AutoConnectObsAsync();
         }
 
-        private async Task AutoConnectVtsAfterStartupAsync()
+        public void StartVtsAutoConnectLoop()
         {
-            await Task.Delay(TimeSpan.FromSeconds(2));
             if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value != "1")
                 return;
 
+            vtsAutoConnectCts?.Cancel();
+            vtsAutoConnectCts = new CancellationTokenSource();
+            _ = RunVtsAutoConnectLoopAsync(vtsAutoConnectCts.Token);
+        }
+
+        public void StopVtsAutoConnectLoop()
+        {
+            vtsAutoConnectCts?.Cancel();
+        }
+
+        private async Task RunVtsAutoConnectLoopAsync(CancellationToken cancellationToken)
+        {
+            var isFirstAttempt = true;
+            var retryDelay = VtsAutoConnectRetry.FirstRetryDelay;
+            while (!cancellationToken.IsCancellationRequested
+                && DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value == "1")
+            {
+                var wait = isFirstAttempt ? VtsAutoConnectRetry.InitialDelay : retryDelay;
+                try
+                {
+                    await Task.Delay(wait, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                if (VtsClient.IsAuthenticated)
+                    return;
+                if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value != "1")
+                    return;
+
+                try
+                {
+                    await ConnectVtsAsync(forceReconnect: false, cancellationToken);
+                    if (VtsClient.IsAuthenticated)
+                        return;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    AppLogPanel.Error(nameof(MainWindow), "VTube Studio 自動接続失敗：" + ex.Message);
+                }
+
+                if (!isFirstAttempt)
+                    retryDelay = VtsAutoConnectRetry.NextDelay(retryDelay);
+                isFirstAttempt = false;
+                RefreshVtsConnectionUi();
+            }
+        }
+
+        public async Task ConnectVtsAsync(bool forceReconnect, CancellationToken cancellationToken = default)
+        {
+            await vtsConnectionLock.WaitAsync(cancellationToken);
             try
             {
-                await ConnectVtsAsync(forceReconnect: false);
+                if (VtsClient.IsAuthenticated && !forceReconnect)
+                    return;
+
+                if (forceReconnect)
+                    await VtsClient.DisconnectAsync();
+
+                var url = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsWebSocketUrl)?.Value
+                    ?? VtsProtocol.DefaultWebSocketUrl;
+                var token = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAuthToken)?.Value;
+                await VtsClient.ConnectAsync(url, token, persistToken: value =>
+                {
+                    DAO_Setting.InsertUpdate(DAO_Setting.SettingName.VtsAuthToken, value);
+                    return Task.CompletedTask;
+                });
             }
-            catch
+            finally
             {
-                // 自動接続失敗はステータス表示に任せ、起動を止めない。
+                vtsConnectionLock.Release();
+                RefreshVtsConnectionUi();
             }
         }
 
-        public async Task ConnectVtsAsync(bool forceReconnect)
+        public async Task DisconnectVtsAsync()
         {
-            if (VtsClient.IsAuthenticated && !forceReconnect)
-                return;
-
-            if (forceReconnect)
-                await VtsClient.DisconnectAsync();
-
-            var url = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsWebSocketUrl)?.Value
-                ?? VtsProtocol.DefaultWebSocketUrl;
-            var token = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAuthToken)?.Value;
-            await VtsClient.ConnectAsync(url, token, persistToken: value =>
+            StopVtsAutoConnectLoop();
+            await vtsConnectionLock.WaitAsync();
+            try
             {
-                DAO_Setting.InsertUpdate(DAO_Setting.SettingName.VtsAuthToken, value);
-                return Task.CompletedTask;
-            });
+                await VtsClient.DisconnectAsync();
+            }
+            finally
+            {
+                vtsConnectionLock.Release();
+                RefreshVtsConnectionUi();
+            }
         }
 
-        public Task DisconnectVtsAsync() => VtsClient.DisconnectAsync();
+        private void RefreshVtsConnectionUi()
+        {
+            Dispatcher.BeginInvoke(() => VtsPanel.RefreshConnectionUi());
+        }
 
         private async Task AutoConnectObsAsync()
         {

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -9,6 +10,67 @@ public sealed class VtsNamedOption
 {
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
+}
+
+internal static class VtsNamedOptionCatalog
+{
+    private static readonly StringComparer IdComparer = StringComparer.OrdinalIgnoreCase;
+
+    public static void ReplaceKeeping(
+        ObservableCollection<VtsNamedOption> target,
+        IEnumerable<VtsNamedOption>? items,
+        IEnumerable<string> keepIds)
+    {
+        var next = (items ?? [])
+            .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+            .GroupBy(item => item.Id, IdComparer)
+            .Select(group => group.First())
+            .ToList();
+        var keep = keepIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(IdComparer);
+
+        foreach (var id in keep)
+        {
+            if (next.Any(item => IdComparer.Equals(item.Id, id)))
+                continue;
+            var existing = target.FirstOrDefault(item => IdComparer.Equals(item.Id, id));
+            next.Add(existing ?? new VtsNamedOption { Id = id, Name = id });
+        }
+
+        for (var index = target.Count - 1; index >= 0; index--)
+        {
+            if (next.All(item => !IdComparer.Equals(item.Id, target[index].Id)))
+                target.RemoveAt(index);
+        }
+
+        foreach (var item in next)
+        {
+            var currentIndex = IndexOfId(target, item.Id);
+            if (currentIndex < 0)
+                target.Add(item);
+            else if (target[currentIndex].Name != item.Name || target[currentIndex].Id != item.Id)
+                target[currentIndex] = item;
+        }
+    }
+
+    public static void EnsureOption(ObservableCollection<VtsNamedOption> list, string id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || IndexOfId(list, id) >= 0)
+            return;
+        list.Add(new VtsNamedOption { Id = id, Name = id });
+    }
+
+    private static int IndexOfId(ObservableCollection<VtsNamedOption> list, string id)
+    {
+        for (var index = 0; index < list.Count; index++)
+        {
+            if (IdComparer.Equals(list[index].Id, id))
+                return index;
+        }
+
+        return -1;
+    }
 }
 
 internal sealed class VtsTriggerRuleForm : INotifyPropertyChanged
