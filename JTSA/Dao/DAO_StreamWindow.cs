@@ -27,11 +27,15 @@ internal static class DAO_StreamWindow
         {
             entity.WindowTitle = window.WindowTitle;
             entity.AppExePath = window.AppExePath;
+            entity.WindowProcessName = window.WindowProcessName;
+            entity.WindowTitleMatchMode = window.WindowTitleMatchMode;
+            entity.ListenPort = window.ListenPort;
             entity.X = window.X;
             entity.Y = window.Y;
             entity.Width = window.Width;
             entity.Height = window.Height;
             entity.IsAutoStart = window.IsAutoStart;
+            entity.IsMinimized = window.IsMinimized;
             entity.UpdatedDateTime = now;
             entity.LastUsedDateTime = now;
         }

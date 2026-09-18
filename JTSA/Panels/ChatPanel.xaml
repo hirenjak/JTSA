@@ -609,10 +609,12 @@
                         <DataTemplate>
                             <DockPanel Margin="0,1">
                                 <DockPanel.ContextMenu>
-                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" Opened="ParticipationSpeechMuteMenu_Opened">
                                         <MenuItem Header="参加待ちに戻す" Click="ReturnParticipation_Click"/><Separator/>
                                         <MenuItem Header="試合数を1増やす" Tag="1" Click="AdjustIndividualParticipationCount_Click"/>
                                         <MenuItem Header="試合数を1減らす" Tag="-1" Click="AdjustIndividualParticipationCount_Click"/>
+                                        <Separator/>
+                                        <MenuItem Tag="SpeechMute" Header="読み上げない" Click="ToggleParticipationSpeechMute_Click"/>
                                     </ContextMenu>
                                 </DockPanel.ContextMenu>
                                 <Button DockPanel.Dock="Right" Content="×" ToolTip="参加者から外す" Click="RemoveParticipation_Click"
@@ -623,7 +625,11 @@
                                     </Ellipse.Fill>
                                 </Ellipse>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="読み上げなし" Foreground="Gray" FontSize="11" Margin="6,0,0,0"
+                                                   Visibility="{Binding IsSpeechMuted, Converter={StaticResource OverlaySettingsVisibilityConverter}}"/>
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding RedeemedAt, StringFormat={}{0:HH:mm}}" Foreground="LightSeaGreen" FontSize="11"/>
                                         <TextBlock Text="{Binding MatchCount, StringFormat={}{0}試合参加済み}" Foreground="LightSeaGreen" FontSize="11" Margin="8,0,0,0"/>
@@ -641,8 +647,10 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <DockPanel Margin="0,1"><DockPanel.ContextMenu>
-<ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+<ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" Opened="ParticipationSpeechMuteMenu_Opened">
 <MenuItem Header="一緒にプレイする" Click="StartParticipation_Click"/>
+<Separator/>
+<MenuItem Tag="SpeechMute" Header="読み上げない" Click="ToggleParticipationSpeechMute_Click"/>
 </ContextMenu>
 </DockPanel.ContextMenu>
                                 <Button DockPanel.Dock="Right" Content="×" ToolTip="参加者から外す" Click="RemoveParticipation_Click"
@@ -653,7 +661,11 @@
                                     </Ellipse.Fill>
                                 </Ellipse>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DisplayName}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="読み上げなし" Foreground="Gray" FontSize="11" Margin="6,0,0,0"
+                                                   Visibility="{Binding IsSpeechMuted, Converter={StaticResource OverlaySettingsVisibilityConverter}}"/>
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding RedeemedAt, StringFormat={}{0:HH:mm}}" Foreground="LightSeaGreen" FontSize="11"/>
                                         <TextBlock Text="{Binding ParticipationCount, StringFormat=参加 {0}回}" Foreground="LightSeaGreen" FontSize="11" Margin="8,0,0,0"/>
@@ -718,6 +730,8 @@
                                                   Command="{x:Static local:ChatPanel.AddParticipationCommand}"/>
                                         <MenuItem Header="フレンドに追加"
                                                   Command="{x:Static local:ChatPanel.AddFriendCommand}"/>
+                                        <MenuItem Tag="SpeechMute" Header="読み上げない"
+                                                  Click="ToggleChatUserSpeechMute_Click"/>
                                     </ContextMenu>
                                 </StackPanel.ContextMenu>
                                 <Grid Margin="8,5">
@@ -738,6 +752,10 @@
                                                    Foreground="White"
                                                    FontSize="13"
                                                    TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="読み上げなし"
+                                                   Foreground="Gray"
+                                                   FontSize="10"
+                                                   Visibility="{Binding IsSpeechMuted, Converter={StaticResource OverlaySettingsVisibilityConverter}}"/>
                                         <TextBlock Text="{Binding UserName, StringFormat=@{0}}"
                                                    Foreground="LightGray"
                                                    FontSize="10"
