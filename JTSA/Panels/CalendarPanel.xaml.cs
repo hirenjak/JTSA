@@ -86,13 +86,31 @@ public partial class CalendarPanel : UserControl
 
     private void ReloadEntries(DateTime? selectedDate = null)
     {
-        Entries.ReplaceAll(DAO_Calendar.SelectAll()
-                     .OrderBy(entry => entry.CalendarDate < DateTime.Today)
-                     .ThenBy(entry => entry.CalendarDate));
+        Entries.ReplaceAll(OrderEntries(DAO_Calendar.SelectAll(), DateTime.Today));
 
         BuildCalendarDays();
         if (selectedDate.HasValue)
             CalendarEntryListBox.SelectedItem = Entries.FirstOrDefault(x => x.CalendarDate.Date == selectedDate.Value.Date);
+    }
+
+    internal static IEnumerable<T_CalendarEntry> OrderEntries(
+        IEnumerable<T_CalendarEntry> entries,
+        DateTime today)
+    {
+        var boundary = today.Date;
+        var entryList = entries.ToList();
+
+        // これからの予定は近い順、終了済みの予定はその後ろへ新しい順で並べる。
+        return entryList
+            .Where(entry => entry.CalendarDate.Date >= boundary)
+            .OrderBy(entry => entry.CalendarDate)
+            .ThenBy(entry => entry.StartTime)
+            .ThenBy(entry => entry.Id)
+            .Concat(entryList
+                .Where(entry => entry.CalendarDate.Date < boundary)
+                .OrderByDescending(entry => entry.CalendarDate)
+                .ThenByDescending(entry => entry.StartTime)
+                .ThenByDescending(entry => entry.Id));
     }
 
     private static void MigrateLegacyMemos()
