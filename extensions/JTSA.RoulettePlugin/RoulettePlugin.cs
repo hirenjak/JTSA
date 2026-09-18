@@ -11,7 +11,7 @@ public sealed class RoulettePlugin : IJtsaPlugin
     public string Id => "jtsa.roulette";
     public string Name => "ルーレット";
     public string Description => "入力した候補からランダムに1件を抽選し、配信拡張にも表示します。";
-    public Version Version => new(1, 0, 0);
+    public Version Version => new(1, 0, 1);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {

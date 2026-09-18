@@ -41,6 +41,7 @@
       <CheckBox Content="チャット入室時" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsFirstChat}"/>
       <CheckBox Content="時報（毎時00分）" Foreground="White" Margin="0,0,20,8" IsChecked="{Binding IsHourly}" ToolTip="PCの時刻を基準に、JTSA起動中は配信状態にかかわらず毎時00分に実行します。"/>
       <CheckBox Content="フォロー時" Foreground="White" IsChecked="{Binding IsFollow}"/>
+      <CheckBox Content="JTSAから配信情報反映時" Foreground="White" Margin="20,0,0,0" IsChecked="{Binding IsStreamInfoApplied}"/>
      </WrapPanel>
      <Grid Grid.Row="3" Margin="0,0,0,10">
       <Grid.ColumnDefinitions><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

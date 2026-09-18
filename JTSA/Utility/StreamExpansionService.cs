@@ -6,7 +6,7 @@ using System.Windows;
 
 namespace JTSA.Utility;
 
-internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart, Hourly, ScheduledTime, AdStart, AdEnd, AdUpcoming }
+internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart, StreamInfoApplied, Hourly, ScheduledTime, AdStart, AdEnd, AdUpcoming }
 
 internal sealed record StreamExpansionChatUserContext(
     bool IsBroadcaster,
@@ -256,6 +256,9 @@ internal sealed class StreamExpansionService
                 return string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase)
                     ? rule.IsObsStreamStartSub
                     : rule.IsObsStreamStartMain;
+
+            case StreamExpansionTriggerType.StreamInfoApplied:
+                return rule.IsStreamInfoApplied;
         }
 
         return false;
@@ -467,6 +470,7 @@ internal sealed class StreamExpansionService
         StreamExpansionTriggerType.FirstChat => "first_chat",
         StreamExpansionTriggerType.ChannelPoint => "channel_point",
         StreamExpansionTriggerType.ObsStreamStart => "obs_stream_start",
+        StreamExpansionTriggerType.StreamInfoApplied => "stream_info_applied",
         _ => type.ToString().ToLowerInvariant()
     };
 

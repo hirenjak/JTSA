@@ -24,6 +24,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Interop;
@@ -247,6 +248,8 @@ namespace JTSA
 
             // WPF上の初期化処理
 			InitializeComponent();
+            if (OverviewCategoryFilterTextBox.FindResource("OverviewCategoryView") is CollectionViewSource overviewCategoryView)
+                overviewCategoryView.Source = CategoryPanel.CategoryFormList;
             DataContext = this;
             pluginManager = new PluginManager(this);
             ExtensionsPanel.Initialize(pluginManager);
@@ -800,7 +803,7 @@ namespace JTSA
             var verificationUrl = string.IsNullOrEmpty(deviceCodeResponse.verification_uri_complete)    // verification_uri_complete はユーザーコードを埋め込み済みのURL
                 ? deviceCodeResponse.verification_uri
                 : deviceCodeResponse.verification_uri_complete;
-            Process.Start(new ProcessStartInfo(verificationUrl) { UseShellExecute = true });
+            InAppBrowser.Open(verificationUrl, this);
 
             // アクセストークン取得
             var accessTokenResponse = await TwitchHelper.PollDeviceTokenAsync(deviceCodeResponse.device_code, deviceCodeResponse.interval, deviceCodeResponse.expires_in);
@@ -929,6 +932,15 @@ namespace JTSA
                 await ApplyChannelPointPresetForCategoryAsync(getCategory.Id);
 
             SetTwitchSettingApplied(titleApplied && categoryApplied);
+
+            if (titleApplied && categoryApplied)
+            {
+                await streamExpansionService.HandleAsync(
+                    StreamExpansionTriggerType.StreamInfoApplied,
+                    string.Empty,
+                    broadcasterId: target.Value.Account.BroadcasterId,
+                    accessToken: target.Value.AccessToken);
+            }
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -1363,15 +1375,14 @@ namespace JTSA
                     return;
                 }
 
-                Process.Start(new ProcessStartInfo(
-                    $"https://dashboard.twitch.tv/popout/u/{Uri.EscapeDataString(userName)}/stream-manager/edit-stream-info")
-                {
-                    UseShellExecute = true
-                });
+                InAppBrowser.Open(
+                    $"https://dashboard.twitch.tv/popout/u/{Uri.EscapeDataString(userName)}/stream-manager/edit-stream-info",
+                    this,
+                    dockToOwnerLeft: true);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                MessageBox.Show(this, $"アプリ内ブラウザを開けませんでした。{ex.GetBaseException().Message}",
                     "配信情報を編集", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -1391,15 +1402,13 @@ namespace JTSA
                     return;
                 }
 
-                Process.Start(new ProcessStartInfo(
-                    $"https://dashboard.twitch.tv/u/{Uri.EscapeDataString(userName)}/viewer-rewards/channel-points/rewards")
-                {
-                    UseShellExecute = true
-                });
+                InAppBrowser.Open(
+                    $"https://dashboard.twitch.tv/u/{Uri.EscapeDataString(userName)}/viewer-rewards/channel-points/rewards",
+                    this);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                MessageBox.Show(this, $"アプリ内ブラウザを開けませんでした。{ex.GetBaseException().Message}",
                     "報酬設定", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -1440,14 +1449,11 @@ namespace JTSA
                     return;
                 }
 
-                Process.Start(new ProcessStartInfo(createUrl(userName.Trim()))
-                {
-                    UseShellExecute = true
-                });
+                InAppBrowser.Open(createUrl(userName.Trim()), this);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                MessageBox.Show(this, $"アプリ内ブラウザを開けませんでした。{ex.GetBaseException().Message}",
                     linkName, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -1456,15 +1462,12 @@ namespace JTSA
         {
             try
             {
-                Process.Start(new ProcessStartInfo(
-                    "https://www.twitch.tv/popout/hiren_jak/guest-star")
-                {
-                    UseShellExecute = true
-                });
+                SupportedExternalBrowser.OpenChromeOrFirefox(
+                    "https://www.twitch.tv/popout/hiren_jak/guest-star");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"外部ブラウザを開けませんでした。{ex.GetBaseException().Message}",
+                MessageBox.Show(this, $"対応ブラウザを開けませんでした。{ex.GetBaseException().Message}",
                     "StreamTogether", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
@@ -1768,10 +1771,9 @@ namespace JTSA
             // URIエンコード
             var encodedText = WebUtility.UrlEncode(postText);
 
-            // ブラウザで認証ページを開く
-            Process.Start(new ProcessStartInfo
+            // Xの投稿画面は既定の外部ブラウザで開く。
+            Process.Start(new ProcessStartInfo(oauthUrl + encodedText)
             {
-                FileName = oauthUrl + encodedText,
                 UseShellExecute = true
             });
 
@@ -1998,6 +2000,28 @@ namespace JTSA
             CurrentCategorySteamUrl = selectedItem.SteamUrl;
 
             OverviewCategoryListBox.SelectedIndex = -1;
+        }
+
+        private void OverviewCategoryFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is FrameworkElement element
+                && element.FindResource("OverviewCategoryView") is CollectionViewSource viewSource)
+                viewSource.View.Refresh();
+        }
+
+        private void OverviewCategoryView_Filter(object sender, FilterEventArgs e)
+        {
+            e.Accepted = e.Item is CategoryForm category
+                && MatchesCategorySearch(category, OverviewCategoryFilterTextBox?.Text);
+        }
+
+        private static bool MatchesCategorySearch(CategoryForm category, string? searchText)
+        {
+            var query = searchText?.Trim() ?? string.Empty;
+            return query.Length == 0
+                || category.DisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+                || category.JapaneseDisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+                || category.CategoryId.Contains(query, StringComparison.OrdinalIgnoreCase);
         }
 
 

@@ -7,9 +7,6 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50">
-      <Private>false</Private>
-    </PackageReference>
     <ProjectReference Include="..\..\JTSA.Plugin.Abstractions\JTSA.Plugin.Abstractions.csproj">
       <Private>false</Private>
     </ProjectReference>

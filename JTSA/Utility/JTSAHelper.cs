@@ -133,7 +133,7 @@ namespace JTSA.Utility
         }
 
         /// <summary>
-        /// 指定したユーザーのTwitchチャンネルを既定のブラウザで開く
+        /// 指定したユーザーのTwitchチャンネルをアプリ内ブラウザで開く
         /// </summary>
         public static void OpenTwitchChannel(string loginName)
         {
@@ -141,11 +141,7 @@ namespace JTSA.Utility
 
             var url = $"https://www.twitch.tv/{Uri.EscapeDataString(loginName.Trim())}";
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
+            InAppBrowser.Open(url);
         }
     }
 }

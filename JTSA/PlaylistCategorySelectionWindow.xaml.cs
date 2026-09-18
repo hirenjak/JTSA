@@ -15,6 +15,9 @@ public partial class PlaylistCategorySelectionWindow : Window
 
     public ObservableCollection<CategoryForm> Categories { get; } = [];
     public string SelectedCategoryId { get; private set; } = string.Empty;
+    public string CustomGameName { get; private set; } = string.Empty;
+    public string CustomSteamUrl { get; private set; } = string.Empty;
+    public bool IsCustomGame { get; private set; }
 
     public PlaylistCategorySelectionWindow(bool selectionOnly = false)
     {
@@ -25,6 +28,7 @@ public partial class PlaylistCategorySelectionWindow : Window
 
         if (selectionOnly)
         {
+            AddCustomGameButton.Visibility = Visibility.Collapsed;
             Title = "カテゴリ選択";
             InstructionTextBlock.Text = "カテゴリを選択";
             ConfirmButton.Content = "選択";
@@ -63,6 +67,17 @@ public partial class PlaylistCategorySelectionWindow : Window
     }
 
     private void AddButton_Click(object sender, RoutedEventArgs e) => ConfirmSelection();
+
+    private void AddCustomGameButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new CustomPlaylistGameWindow { Owner = this };
+        if (window.ShowDialog() != true) return;
+
+        IsCustomGame = true;
+        CustomGameName = window.GameName;
+        CustomSteamUrl = window.SteamUrl;
+        DialogResult = true;
+    }
 
     private void CategoryListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e) => ConfirmSelection();
 

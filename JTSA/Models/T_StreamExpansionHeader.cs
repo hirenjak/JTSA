@@ -25,6 +25,7 @@ namespace JTSA.Models
         public bool IsFirstChat { get; set; }
 
         public bool IsFollow { get; set; }
+        public bool IsStreamInfoApplied { get; set; }
         public bool IsHourly { get; set; }
         public bool IsAdStart { get; set; }
         public bool IsAdEnd { get; set; }

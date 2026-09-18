@@ -28,6 +28,26 @@ public interface IJtsaPluginContext
     void RemoveExpansionOverlay(string id);
 }
 
+/// <summary>JTSA のカレンダー予定を参照するプラグイン向けの追加機能。</summary>
+/// <remarks>
+/// 既存プラグインとのバイナリ互換性を保つため、共通コンテキストとは別インターフェースです。
+/// 利用側は <c>context is IJtsaCalendarPluginContext</c> で対応状況を確認してください。
+/// </remarks>
+public interface IJtsaCalendarPluginContext
+{
+    IReadOnlyList<CalendarEntryInfo> GetCalendarEntries(DateTime from, DateTime toExclusive);
+}
+
+public sealed record CalendarEntryInfo(
+    long Id,
+    DateTime Date,
+    TimeSpan StartTime,
+    string Content,
+    string TitlePlaceholder,
+    string CategoryName,
+    string CategoryBoxArtUrl,
+    string ResolvedTitle);
+
 public sealed record ChannelPointRewardInfo(
     string Id,
     string Title,

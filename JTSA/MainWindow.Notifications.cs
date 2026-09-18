@@ -13,7 +13,9 @@ namespace JTSA;
 public partial class MainWindow
 {
     private const string ObsBrowserRefreshNotificationKey =
-        "stream-expansion-obs-overlay-refresh-2026-09-14";
+        "stream-expansion-obs-overlay-refresh-2026-09-18";
+    private const string TwitchReauthenticationNotificationKey =
+        "twitch-reauthentication-2026-09-18";
     private sealed record Notice(
         string Key,
         string Title,
@@ -32,6 +34,7 @@ public partial class MainWindow
         notices.CollectionChanged += (_, _) => RefreshNotifications();
         ShowTodaysCalendarNotification(DateTime.Today);
         ShowObsBrowserRefreshNotification();
+        ShowTwitchReauthenticationNotification();
         Loaded += async (_, _) =>
         {
             if (updateCheckStarted) return;
@@ -49,6 +52,24 @@ public partial class MainWindow
             "配信拡張用OBSオーバーレイの更新が必要です",
             "今回のアップデート内容を反映するため、OBSに登録している配信拡張用ブラウザソースをリフレッシュしてください。この案内は確認後、再表示されません。",
             dismissed: () => DAO_AppNotificationReceipt.Acknowledge(ObsBrowserRefreshNotificationKey));
+    }
+
+    private void ShowTwitchReauthenticationNotification()
+    {
+        if (DAO_AppNotificationReceipt.IsAcknowledged(TwitchReauthenticationNotificationKey)) return;
+
+        ShowNotification(
+            TwitchReauthenticationNotificationKey,
+            "Twitchの再認証が必要です",
+            "チャットのブロック・タイムアウト・追放に必要な権限が追加されました。設定画面から、使用するTwitchアカウントを再認証してください。この案内は確認後、再表示されません。",
+            "設定を開く",
+            () =>
+            {
+                OpenToolPanelWindow(SettingsPanelHost, SettingPanel, "設定");
+                notificationWindow?.Close();
+                return Task.CompletedTask;
+            },
+            () => DAO_AppNotificationReceipt.Acknowledge(TwitchReauthenticationNotificationKey));
     }
 
     private void ShowTodaysCalendarNotification(DateTime today)

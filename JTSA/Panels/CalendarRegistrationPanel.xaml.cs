@@ -4,6 +4,7 @@ using JTSA.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -115,6 +116,27 @@ public partial class CalendarRegistrationPanel : UserControl
         ShowSelectedCategory();
         StatusTextBlock.Text = $"カテゴリ：{category.DisplayName}";
         CategoryListBox.SelectedItem = null;
+    }
+
+    private void CalendarCategoryFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (FindResource("CalendarCategoryView") is CollectionViewSource viewSource)
+            viewSource.View.Refresh();
+    }
+
+    private void CalendarCategoryView_Filter(object sender, FilterEventArgs e)
+    {
+        if (e.Item is not CategoryForm category)
+        {
+            e.Accepted = false;
+            return;
+        }
+
+        var query = CalendarCategoryFilterTextBox?.Text.Trim() ?? string.Empty;
+        e.Accepted = query.Length == 0
+            || category.DisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+            || category.JapaneseDisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+            || category.CategoryId.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     private void AddCategoryButton_Click(object sender, RoutedEventArgs e)
