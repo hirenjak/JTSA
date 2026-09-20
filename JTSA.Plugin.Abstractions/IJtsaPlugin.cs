@@ -21,6 +21,7 @@ public interface IJtsaPluginContext
     nint MainWindowHandle { get; }
     IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards();
     event Action<ChannelPointRedemptionInfo>? ChannelPointRedeemed;
+    event Action<ExpansionTriggerInfo>? ExpansionTriggered;
 
     void Log(string message);
     void LogError(string message, Exception? exception = null);
@@ -37,6 +38,10 @@ public sealed record ChannelPointRedemptionInfo(
     string RewardId,
     string UserName,
     string UserInput);
+
+public sealed record ExpansionTriggerInfo(
+    string TriggerType,
+    string Value);
 
 /// <summary>既存の配信拡張ブラウザソース上に表示するプラグイン描画。</summary>
 public sealed record ExpansionOverlayContent(

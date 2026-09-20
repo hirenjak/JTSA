@@ -16,6 +16,21 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
 `Plugins` 内のDLLと関連ファイルを上書きでき、「再読み込み」で新しいバージョンへ切り替えられます。
 再読み込み時には、開いている対象Extensionのウィンドウはいったん閉じます。
 
+## nizima LIVE の配置
+
+この Extension は **ExpansionTriggered を公開している JTSA ホストとセット** です。
+対応していない古いホストでは読み込み時に実行時例外になります。
+
+1. `dotnet build extensions/JTSA.NizimaLivePlugin/JTSA.NizimaLivePlugin.csproj -c Release`
+2. 出力の `JTSA.NizimaLivePlugin.dll` と `plugin.json` を `Plugins/NizimaLive/` へコピーします。
+3. JTSA の「プラグイン」タブで「再読み込み」を押し、「開く」で設定画面を出します。
+4. nizima LIVE のプラグインマネージャーでポート（既定 22022）を合わせ、**JTSA を有効化**します。
+   接続成功だけでは API は使えません。有効化後にモデル操作が通ります。
+
+ウィンドウを閉じても接続は維持されます。再読み込み時に切断します。
+トークンは `%AppData%\JTSA\Plugins\jtsa.nizimalive\settings.json` に保存されます。
+プラグイン名は `JTSA` 固定です。nizima 側で削除すると InvalidToken となり再登録します。
+
 ## ルーレットの配置
 
 1. `dotnet build extensions/JTSA.RoulettePlugin/JTSA.RoulettePlugin.csproj -c Release`
