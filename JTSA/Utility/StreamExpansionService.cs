@@ -31,6 +31,8 @@ internal sealed class StreamExpansionService
     {
         try
         {
+            _ = VtsTriggerService.HandleAsync(type, value);
+
             var selectedContext = GetSelectedAccountContext();
             if (!string.IsNullOrWhiteSpace(selectedContext.BroadcasterId) &&
                 !string.IsNullOrWhiteSpace(selectedContext.AccessToken))

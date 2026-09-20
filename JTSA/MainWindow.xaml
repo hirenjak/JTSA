@@ -1126,6 +1126,10 @@
                     <panels:ObsSettingPanel x:Name="ObsSettingPanel"/>
                 </TabItem>
 
+                <TabItem Header="VTS">
+                    <panels:VtsPanel x:Name="VtsPanel"/>
+                </TabItem>
+
                 <TabItem Header="レイド">
                     <panels:RaidPanel x:Name="RaidPanel"/>
                 </TabItem>
