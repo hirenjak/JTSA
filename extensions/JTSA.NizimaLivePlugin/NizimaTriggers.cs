@@ -115,10 +115,10 @@ public static class NizimaTriggerRuleSummary
 {
     public static string Format(
         NizimaTriggerRule rule,
-        IReadOnlyList<NizimaNamedOption>? expressions = null,
-        IReadOnlyList<NizimaNamedOption>? motions = null,
+        NizimaRuleCatalogs? catalogs = null,
         IReadOnlyList<ChannelPointRewardInfo>? channelPoints = null)
     {
+        catalogs ??= NizimaRuleCatalogs.Empty;
         var enabled = rule.IsEnabled ? "ON" : "OFF";
         var trigger = NizimaTriggerTypes.LabelOf(rule.TriggerType);
         if (!string.IsNullOrWhiteSpace(rule.TriggerValue))
@@ -130,20 +130,20 @@ public static class NizimaTriggerRuleSummary
         }
 
         var command = NizimaTriggerCommands.LabelOf(rule.CommandType);
-        var value = CommandDisplay(rule, expressions, motions);
+        var value = CommandDisplay(rule, catalogs);
         if (!string.IsNullOrWhiteSpace(value))
             command += $" {value}";
 
         var text = $"{enabled} {trigger} → {command}";
         if (!string.IsNullOrWhiteSpace(rule.ModelId))
-            text += $"（モデル {rule.ModelId}）";
+            text += $"（モデル {DisplayName(catalogs.ModelsOnScreen, rule.ModelId) ?? rule.ModelId}）";
+        if (!string.IsNullOrWhiteSpace(rule.SceneId) &&
+            rule.CommandType is NizimaTriggerCommands.AddModel or NizimaTriggerCommands.AddItem)
+            text += $"（シーン {rule.SceneId}）";
         return text;
     }
 
-    private static string CommandDisplay(
-        NizimaTriggerRule rule,
-        IReadOnlyList<NizimaNamedOption>? expressions,
-        IReadOnlyList<NizimaNamedOption>? motions)
+    private static string CommandDisplay(NizimaTriggerRule rule, NizimaRuleCatalogs catalogs)
     {
         var raw = rule.CommandValue;
         if (string.IsNullOrWhiteSpace(raw))
@@ -161,13 +161,19 @@ public static class NizimaTriggerRuleSummary
 
         var catalog = rule.CommandType switch
         {
-            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => expressions,
-            NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => motions,
+            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => catalogs.Expressions,
+            NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => catalogs.Motions,
+            NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel => catalogs.RegisteredModels,
+            NizimaTriggerCommands.AddItem => catalogs.RegisteredItems,
+            NizimaTriggerCommands.RemoveItem => catalogs.ItemsOnScreen,
+            NizimaTriggerCommands.EffectOn or NizimaTriggerCommands.EffectOff => catalogs.EffectGroups,
             _ => null
         };
-        var name = catalog?.FirstOrDefault(item => item.Path == raw)?.Name;
-        return string.IsNullOrWhiteSpace(name) ? raw : name;
+        return DisplayName(catalog, raw) ?? raw;
     }
+
+    private static string? DisplayName(IReadOnlyList<NizimaNamedOption>? catalog, string path) =>
+        catalog?.FirstOrDefault(item => item.Path == path)?.Name;
 }
 
 public static class NizimaTriggerMatcher
@@ -239,6 +245,24 @@ public sealed record NizimaNamedOption(string Name, string Path)
                 continue;
             var name = item.TryGetProperty(nameProperty, out var nameNode) ? nameNode.GetString() ?? "" : "";
             list.Add(new NizimaNamedOption(name, path));
+        }
+
+        return list;
+    }
+
+    public static IReadOnlyList<NizimaNamedOption> FromScenes(System.Text.Json.JsonElement data)
+    {
+        if (!data.TryGetProperty("Scenes", out var array) ||
+            array.ValueKind != System.Text.Json.JsonValueKind.Array)
+            return [];
+
+        var list = new List<NizimaNamedOption>();
+        foreach (var item in array.EnumerateArray())
+        {
+            var sceneId = item.TryGetProperty("SceneId", out var idNode) ? idNode.GetString() : null;
+            if (string.IsNullOrWhiteSpace(sceneId))
+                continue;
+            list.Add(new NizimaNamedOption($"シーン {sceneId}", sceneId));
         }
 
         return list;

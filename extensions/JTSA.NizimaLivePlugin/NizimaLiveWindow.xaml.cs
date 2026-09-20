@@ -15,6 +15,7 @@ public partial class NizimaLiveWindow : Window
     private readonly ObservableCollection<NizimaNamedOption> expressions = [];
     private readonly ObservableCollection<NizimaNamedOption> motions = [];
     private readonly ObservableCollection<ChannelPointRewardInfo> channelPoints = [];
+    private NizimaRuleCatalogs ruleCatalogs = NizimaRuleCatalogs.Empty;
     private bool loading;
     private bool catalogsBusy;
 
@@ -68,16 +69,16 @@ public partial class NizimaLiveWindow : Window
         {
             if (!plugin.Client.CanSendMethods)
             {
+                ruleCatalogs = NizimaRuleCatalogs.Empty;
                 expressions.Clear();
                 motions.Clear();
                 return;
             }
 
             var modelId = ModelIdTextBox.Text.Trim();
-            var expressionList = await plugin.Client.GetExpressionsAsync(modelId, CancellationToken.None);
-            var motionList = await plugin.Client.GetMotionsAsync(modelId, CancellationToken.None);
-            Replace(expressions, expressionList);
-            Replace(motions, motionList);
+            ruleCatalogs = await plugin.Client.GetRuleCatalogsAsync(modelId, CancellationToken.None);
+            Replace(expressions, ruleCatalogs.Expressions);
+            Replace(motions, ruleCatalogs.Motions);
             ReloadRules();
         }
         catch (Exception ex)
@@ -107,7 +108,7 @@ public partial class NizimaLiveWindow : Window
     {
         rules.Clear();
         foreach (var rule in settings.Rules)
-            rules.Add(new RuleListItem(rule, NizimaTriggerRuleSummary.Format(rule, expressions, motions, channelPoints)));
+            rules.Add(new RuleListItem(rule, NizimaTriggerRuleSummary.Format(rule, ruleCatalogs, channelPoints)));
     }
 
     private void ReloadChannelPointsForRules()
@@ -181,7 +182,7 @@ public partial class NizimaLiveWindow : Window
             .Where(item => item.TriggerType == NizimaTriggerTypes.ChannelPoint)
             .Select(item => item.TriggerValue)
             .Append(rule.TriggerValue);
-        var dialog = new NizimaRuleDialog(rule, context, expressions, motions, keepIds)
+        var dialog = new NizimaRuleDialog(rule, context, ruleCatalogs, keepIds)
         {
             Owner = this
         };

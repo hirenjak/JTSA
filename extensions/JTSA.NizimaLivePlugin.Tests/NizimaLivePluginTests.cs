@@ -173,7 +173,7 @@ public class NizimaTriggerRuleSummaryTests
             CommandValue = "exp/smile.exp3.json"
         };
         var expressions = new[] { new NizimaNamedOption("笑顔", "exp/smile.exp3.json") };
-        var text = NizimaTriggerRuleSummary.Format(rule, expressions, []);
+        var text = NizimaTriggerRuleSummary.Format(rule, new NizimaRuleCatalogs { Expressions = expressions });
         Assert.Equal("ON チャンネルポイント:reward-1 → 表情をオン 笑顔", text);
         Assert.DoesNotContain("model=", text);
     }
