@@ -22,11 +22,12 @@ public sealed class NizimaRuleDialog : Window
     private readonly ComboBox commandType = new();
     private readonly ComboBox commandCombo = new()
     {
+        Height = 24,
         IsEditable = true,
         DisplayMemberPath = "Label",
         SelectedValuePath = "Path"
     };
-    private readonly TextBox commandHotkey = new() { Height = 28 };
+    private readonly TextBox commandHotkey = new() { Height = 24 };
     private readonly TextBlock commandValueLabel = new()
     {
         Foreground = System.Windows.Media.Brushes.LightGray,
@@ -50,7 +51,7 @@ public sealed class NizimaRuleDialog : Window
         this.keepChannelPointIds = keepChannelPointIds;
         Title = "トリガールール";
         Width = 480;
-        Height = 420;
+        SizeToContent = SizeToContent.Height;
         Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x30, 0x30, 0x30));
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
@@ -63,6 +64,7 @@ public sealed class NizimaRuleDialog : Window
         commandCombo.Text = rule.CommandValue;
         commandHotkey.Text = rule.CommandValue;
         NizimaHotkeyCapture.Attach(commandHotkey);
+        commandValueHost.Height = 24;
         commandValueHost.Children.Add(commandCombo);
         commandValueHost.Children.Add(commandHotkey);
         triggerType.SelectionChanged += (_, _) =>
@@ -78,7 +80,7 @@ public sealed class NizimaRuleDialog : Window
             commandHotkey.Visibility = isHotkey ? Visibility.Visible : Visibility.Collapsed;
             commandCombo.Visibility = isHotkey ? Visibility.Collapsed : Visibility.Visible;
             commandValueLabel.Text = isHotkey
-                ? "コマンド値（欄を選択してキーを押す。Win キー非対応）"
+                ? "コマンド値（欄を選択してキーを押す）"
                 : "コマンド値（表情・モーションは一覧から選択可）";
 
             if (isHotkey)
@@ -161,7 +163,7 @@ public sealed class NizimaRuleDialog : Window
         Add("SceneId", sceneId);
         Add("ModelPath / ItemPath", modelPath);
         panel.Children.Add(save);
-        Content = new ScrollViewer { Content = panel };
+        Content = panel;
     }
 
     private void ReloadChannelPoints(string selectedId)

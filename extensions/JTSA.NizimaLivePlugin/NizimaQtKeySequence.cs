@@ -114,14 +114,11 @@ internal static class NizimaHotkeyCapture
 
             if (!NizimaQtKeySequence.TryFormat(e.Key, Keyboard.Modifiers, out var sequence))
             {
-                if ((Keyboard.Modifiers & ModifierKeys.Windows) != 0)
-                    textBox.ToolTip = "Win キーは nizima LIVE では使えません。";
                 e.Handled = true;
                 return;
             }
 
             textBox.Text = sequence;
-            textBox.ToolTip = null;
             e.Handled = true;
         };
     }

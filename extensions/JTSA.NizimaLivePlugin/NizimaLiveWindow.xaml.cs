@@ -31,7 +31,6 @@ public partial class NizimaLiveWindow : Window
         RulesListBox.ItemsSource = rules;
         ExpressionComboBox.ItemsSource = expressions;
         MotionComboBox.ItemsSource = motions;
-        NizimaHotkeyCapture.Attach(HotkeyTextBox);
         ReloadRules();
         ReloadChannelPointsForRules();
         plugin.Client.StatusChanged += OnClientStatusChanged;
@@ -229,9 +228,6 @@ public partial class NizimaLiveWindow : Window
 
     private void AddModelButton_Click(object sender, RoutedEventArgs e) =>
         _ = RunManualAsync(BaseManual(NizimaTriggerCommands.AddModel, ModelPathTextBox.Text.Trim()));
-
-    private void HotkeyButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.TriggerHotkey, HotkeyTextBox.Text.Trim()));
 
     private void ExpressionOnButton_Click(object sender, RoutedEventArgs e) =>
         _ = RunManualAsync(BaseManual(NizimaTriggerCommands.ExpressionOn, SelectedPath(ExpressionComboBox)));

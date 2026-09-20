@@ -4,6 +4,85 @@
         Title="nizima LIVE 連携" Width="820" Height="640"
         MinWidth="640" MinHeight="480"
         WindowStartupLocation="CenterOwner" Background="#FF303030">
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF454545"/>
+            <Setter Property="BorderBrush" Value="#FF707070"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF454545"/>
+            <Setter Property="BorderBrush" Value="#FF707070"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF565656"/>
+            <Setter Property="BorderBrush" Value="#FF777777"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="#FF303030"/>
+            <Setter Property="BorderBrush" Value="#FF666666"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TabPanel Grid.Row="0" IsItemsHost="True" Background="#FF303030" Margin="0,0,0,-1"/>
+                            <Border Grid.Row="1" Background="#FF303030" BorderBrush="#FF666666" BorderThickness="1">
+                                <ContentPresenter ContentSource="SelectedContent"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="#FFD0D0D0"/>
+            <Setter Property="Background" Value="#FF3A3A3A"/>
+            <Setter Property="BorderBrush" Value="#FF666666"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#FF4A4A4A"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#FF454545"/>
+                                <Setter TargetName="TabBorder" Property="BorderBrush" Value="LightSeaGreen"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Panel.ZIndex" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <DockPanel Margin="12">
         <TextBlock DockPanel.Dock="Bottom" x:Name="FooterText"
                    Text="チャット部分一致は権限を見ません。誰のコメントでもモデルが動きます。"
@@ -12,7 +91,7 @@
             <TabItem Header="接続">
                 <StackPanel Margin="12">
                     <TextBlock x:Name="StatusText" Text="未接続" Foreground="White" FontSize="16" Margin="0,0,0,8"/>
-                    <TextBlock Text="WebSocket URL" Foreground="LightGray"/>
+                    <TextBlock Text="WebSocket URL" Foreground="#FFE8E8E8"/>
                     <TextBox x:Name="UrlTextBox" Margin="0,4,0,8" Height="28"/>
                     <TextBlock x:Name="LoopbackWarning" Foreground="#FFFF8A80" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <CheckBox x:Name="AutoConnectCheckBox" Content="起動時に自動接続" Foreground="White" Margin="0,0,0,8"
@@ -21,13 +100,13 @@
                         <Button Content="保存して接続" Width="120" Height="30" Margin="0,0,8,0" Click="ConnectButton_Click"/>
                         <Button Content="切断" Width="80" Height="30" Click="DisconnectButton_Click"/>
                     </StackPanel>
-                    <TextBlock TextWrapping="Wrap" Foreground="LightGray" Margin="0,16,0,0"
+                    <TextBlock TextWrapping="Wrap" Foreground="#FFE8E8E8" Margin="0,16,0,0"
                                Text="nizima LIVE のプラグインマネージャーでポートを合わせ、JTSA を有効化してください。有効化されるまで API は使えません。プラグイン名は JTSA 固定です。"/>
                 </StackPanel>
             </TabItem>
             <TabItem Header="トリガー">
                 <DockPanel Margin="8">
-                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="LightGray" Margin="0,0,0,8"
+                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#FFE8E8E8" Margin="0,0,0,8"
                                Text="ModelId が空なら GetCurrentModelId を使います。AddItem は SceneId 必須。ChangeModel は ModelId と Path の両方が必要です。"/>
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="追加" Width="80" Height="28" Margin="0,0,8,0" Click="AddRuleButton_Click"/>
@@ -39,11 +118,11 @@
             </TabItem>
             <TabItem Header="モデル">
                 <StackPanel Margin="12">
-                    <TextBlock Text="ModelId（空なら現在モデル）" Foreground="LightGray"/>
+                    <TextBlock Text="ModelId（空なら現在モデル）" Foreground="#FFE8E8E8"/>
                     <TextBox x:Name="ModelIdTextBox" Height="28" Margin="0,4,0,8"/>
-                    <TextBlock Text="ModelPath（ChangeModel / AddModel）" Foreground="LightGray"/>
+                    <TextBlock Text="ModelPath（ChangeModel / AddModel）" Foreground="#FFE8E8E8"/>
                     <TextBox x:Name="ModelPathTextBox" Height="28" Margin="0,4,0,8"/>
-                    <TextBlock Text="SceneId（AddModel 任意 / AddItem 必須）" Foreground="LightGray"/>
+                    <TextBlock Text="SceneId（AddModel 任意 / AddItem 必須）" Foreground="#FFE8E8E8"/>
                     <TextBox x:Name="SceneIdTextBox" Height="28" Margin="0,4,0,8"/>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="モデル変更" Width="100" Height="28" Margin="0,0,8,0" Click="ChangeModelButton_Click"/>
@@ -52,16 +131,9 @@
                     <TextBlock x:Name="ManualStatus" Foreground="#FF80CBC4" TextWrapping="Wrap" Margin="0,12,0,0"/>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="ホットキー">
-                <StackPanel Margin="12">
-                    <TextBlock Text="QKeySequence（例: Ctrl+A / F1）。欄を選択してキーを押してください。Win キーは非対応です。" Foreground="LightGray" TextWrapping="Wrap"/>
-                    <TextBox x:Name="HotkeyTextBox" Height="28" Margin="0,8,0,8"/>
-                    <Button Content="実行" Width="80" Height="28" HorizontalAlignment="Left" Click="HotkeyButton_Click"/>
-                </StackPanel>
-            </TabItem>
             <TabItem Header="表情">
                 <StackPanel Margin="12">
-                    <TextBlock Text="表情" Foreground="LightGray"/>
+                    <TextBlock Text="表情" Foreground="#FFE8E8E8"/>
                     <ComboBox x:Name="ExpressionComboBox" Height="28" Margin="0,4,0,8"
                               IsEditable="True" DisplayMemberPath="Label" SelectedValuePath="Path"/>
                     <StackPanel Orientation="Horizontal">
@@ -73,7 +145,7 @@
             </TabItem>
             <TabItem Header="モーション">
                 <StackPanel Margin="12">
-                    <TextBlock Text="モーション" Foreground="LightGray"/>
+                    <TextBlock Text="モーション" Foreground="#FFE8E8E8"/>
                     <ComboBox x:Name="MotionComboBox" Height="28" Margin="0,4,0,8"
                               IsEditable="True" DisplayMemberPath="Label" SelectedValuePath="Path"/>
                     <StackPanel Orientation="Horizontal">
@@ -85,7 +157,7 @@
             </TabItem>
             <TabItem Header="アイテム">
                 <StackPanel Margin="12">
-                    <TextBlock Text="ItemPath / ItemId" Foreground="LightGray"/>
+                    <TextBlock Text="ItemPath / ItemId" Foreground="#FFE8E8E8"/>
                     <TextBox x:Name="ItemTextBox" Height="28" Margin="0,4,0,8"/>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="追加" Width="80" Height="28" Margin="0,0,8,0" Click="AddItemButton_Click"/>
@@ -95,7 +167,7 @@
             </TabItem>
             <TabItem Header="色調">
                 <StackPanel Margin="12">
-                    <TextBlock Text="R G B A（0-255） Multiply。Screen にする場合はチェック。" Foreground="LightGray" TextWrapping="Wrap"/>
+                    <TextBlock Text="R G B A（0-255） Multiply。Screen にする場合はチェック。" Foreground="#FFE8E8E8" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8">
                         <TextBox x:Name="ColorR" Width="48" Text="255" Margin="0,0,6,0"/>
                         <TextBox x:Name="ColorG" Width="48" Text="255" Margin="0,0,6,0"/>
@@ -108,7 +180,7 @@
             </TabItem>
             <TabItem Header="エフェクト">
                 <StackPanel Margin="12">
-                    <TextBlock Text="GroupId（古い nizima では NotImplemented のことがあります）" Foreground="LightGray" TextWrapping="Wrap"/>
+                    <TextBlock Text="GroupId（古い nizima では NotImplemented のことがあります）" Foreground="#FFE8E8E8" TextWrapping="Wrap"/>
                     <TextBox x:Name="EffectTextBox" Height="28" Margin="0,4,0,8"/>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="有効" Width="80" Height="28" Margin="0,0,8,0" Click="EffectOnButton_Click"/>
