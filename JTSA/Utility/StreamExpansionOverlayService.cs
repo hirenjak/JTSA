@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using JTSA.Plugin.Abstractions;
 
 namespace JTSA.Utility;
 
@@ -7,7 +8,9 @@ internal static class StreamExpansionOverlayService
 {
     private static readonly object StateLock = new();
     private static long version;
+    private static string? cachedJson;
     private static readonly List<OverlayImage> Images = [];
+    private static readonly Dictionary<string, ExpansionOverlayContent> PluginOverlays = [];
 
     private sealed record OverlayImage(
         long Id,
@@ -43,6 +46,7 @@ internal static class StreamExpansionOverlayService
                 settings.Height,
                 x,
                 y));
+            cachedJson = null;
         }
     }
 
@@ -51,7 +55,7 @@ internal static class StreamExpansionOverlayService
         lock (StateLock)
         {
             RemoveExpiredImages();
-            return JsonSerializer.Serialize(new
+            return cachedJson ??= JsonSerializer.Serialize(new
             {
                 images = Images.Select(image => new
                 {
@@ -61,8 +65,44 @@ internal static class StreamExpansionOverlayService
                     height = image.Height,
                     x = image.X,
                     y = image.Y
+                }),
+                extensions = PluginOverlays.Select(item => new
+                {
+                    id = item.Key,
+                    html = item.Value.Html,
+                    x = item.Value.X,
+                    y = item.Value.Y,
+                    width = item.Value.Width,
+                    height = item.Value.Height
                 })
             });
+        }
+    }
+
+    public static void SetPluginOverlay(string pluginId, ExpansionOverlayContent content)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId) || string.IsNullOrWhiteSpace(content.Id)) return;
+        var key = $"{pluginId}:{content.Id}";
+        var normalized = content with
+        {
+            X = Math.Clamp(content.X, 0, 1920),
+            Y = Math.Clamp(content.Y, 0, 1080),
+            Width = Math.Clamp(content.Width, 1, 1920),
+            Height = Math.Clamp(content.Height, 1, 1080)
+        };
+        lock (StateLock)
+        {
+            if (PluginOverlays.TryGetValue(key, out var existing) && existing == normalized) return;
+            PluginOverlays[key] = normalized;
+            cachedJson = null;
+        }
+    }
+
+    public static void RemovePluginOverlay(string pluginId, string id)
+    {
+        lock (StateLock)
+        {
+            if (PluginOverlays.Remove($"{pluginId}:{id}")) cachedJson = null;
         }
     }
 
@@ -90,7 +130,8 @@ internal static class StreamExpansionOverlayService
     private static void RemoveExpiredImages()
     {
         var now = DateTime.UtcNow;
-        Images.RemoveAll(image => now >= image.VisibleUntilUtc || !File.Exists(image.Path));
+        if (Images.RemoveAll(image => now >= image.VisibleUntilUtc || !File.Exists(image.Path)) > 0)
+            cachedJson = null;
     }
 
     public static string CreateHtml() => """
@@ -103,12 +144,15 @@ internal static class StreamExpansionOverlayService
                 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
                 #viewport { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; }
                 .expansion-image { position: absolute; object-fit: contain; }
+                .extension-overlay { position: absolute; overflow: hidden; }
             </style>
         </head>
         <body>
             <div id="viewport"></div>
             <script>
                 const viewport = document.getElementById("viewport");
+                let previousPayload = null;
+                const renderedHtml = new WeakMap();
 
                 function resizeCanvas() {
                     const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
@@ -118,7 +162,10 @@ internal static class StreamExpansionOverlayService
                 async function refresh() {
                     try {
                         const response = await fetch("/expansion-data?t=" + Date.now(), { cache: "no-store" });
-                        const data = await response.json();
+                        if (!response.ok) return;
+                        const payload = await response.text();
+                        if (payload === previousPayload) return;
+                        const data = JSON.parse(payload);
                         const activeIds = new Set(data.images.map(item => String(item.id)));
                         viewport.querySelectorAll(".expansion-image").forEach(image => {
                             if (!activeIds.has(image.dataset.id)) image.remove();
@@ -140,16 +187,49 @@ internal static class StreamExpansionOverlayService
                             image.style.left = item.x + "px";
                             image.style.top = item.y + "px";
                         }
+
+                        const extensions = data.extensions || [];
+                        const activeExtensionIds = new Set(extensions.map(item => String(item.id)));
+                        viewport.querySelectorAll(".extension-overlay").forEach(element => {
+                            if (!activeExtensionIds.has(element.dataset.id)) element.remove();
+                        });
+
+                        for (const item of extensions) {
+                            const id = String(item.id);
+                            let element = viewport.querySelector(`.extension-overlay[data-id="${CSS.escape(id)}"]`);
+                            if (!element) {
+                                element = document.createElement("div");
+                                element.className = "extension-overlay";
+                                element.dataset.id = id;
+                                viewport.appendChild(element);
+                            }
+                            if (renderedHtml.get(element) !== item.html) {
+                                element.innerHTML = item.html;
+                                renderedHtml.set(element, item.html);
+                                element.querySelectorAll("[data-jtsa-animation-start]").forEach(target => {
+                                    const start = Number(target.dataset.jtsaAnimationStart);
+                                    if (!Number.isFinite(start)) return;
+                                    target.style.animationDelay = `${Math.min(0, start - Date.now())}ms`;
+                                });
+                            }
+                            element.style.left = item.x + "px";
+                            element.style.top = item.y + "px";
+                            element.style.width = item.width + "px";
+                            element.style.height = item.height + "px";
+                        }
+                        previousPayload = payload;
                     }
                     catch {
                         // 一時的な通信失敗では表示中の画像を維持する
+                    }
+                    finally {
+                        setTimeout(refresh, 100);
                     }
                 }
 
                 resizeCanvas();
                 window.addEventListener("resize", resizeCanvas);
                 refresh();
-                setInterval(refresh, 100);
             </script>
         </body>
         </html>

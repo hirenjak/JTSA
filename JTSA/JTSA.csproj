@@ -27,6 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
+	<ProjectReference Include="..\JTSA.Plugin.Abstractions\JTSA.Plugin.Abstractions.csproj" />
+
 	<PackageReference Include="Fody" Version="6.9.3" PrivateAssets="all" />
 	<PackageReference Include="Costura.Fody" Version="6.0.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
