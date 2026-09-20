@@ -100,7 +100,7 @@ public partial class RouletteWindow : Window
         Keyboard.ClearFocus();
         CandidatesEditorPanel.IsHitTestVisible = false;
         SpinButton.IsEnabled = false;
-        DeleteResultAndRestartButton.IsEnabled = false;
+        DeleteResultButton.IsEnabled = false;
         ResultCaptionTextBlock.Text = string.Empty;
         ResultTextBlock.Text = string.Empty;
         SetResultColor(DefaultResultColor);
@@ -146,7 +146,7 @@ public partial class RouletteWindow : Window
         DrawWheel(spinningEntries);
         CandidatesEditorPanel.IsHitTestVisible = true;
         SpinButton.IsEnabled = true;
-        DeleteResultAndRestartButton.IsEnabled = true;
+        DeleteResultButton.IsEnabled = true;
         PublishOverlay(string.Empty);
     }
 
@@ -159,13 +159,13 @@ public partial class RouletteWindow : Window
         ResultTextBlock.Text = "―";
         SetResultColor(DefaultResultColor);
         UpdateRemainingTimeFromSetting();
-        DeleteResultAndRestartButton.IsEnabled = false;
+        DeleteResultButton.IsEnabled = false;
         wheelRotation = 0;
         DrawWheel(ReadEntries());
         PublishOverlay("待機中");
     }
 
-    private void DeleteResultAndRestartButton_Click(object sender, RoutedEventArgs e)
+    private void DeleteResultButton_Click(object sender, RoutedEventArgs e)
     {
         if (animationTimer.IsEnabled) return;
 
@@ -179,7 +179,6 @@ public partial class RouletteWindow : Window
         RestoreRemovedCandidateButton.IsEnabled = true;
         RefreshCandidates();
         ClearButton_Click(sender, e);
-        SpinButton_Click(sender, e);
     }
 
     private void RestoreRemovedCandidateButton_Click(object sender, RoutedEventArgs e)

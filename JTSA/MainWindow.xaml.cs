@@ -2308,7 +2308,7 @@ namespace JTSA
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "SteamURLテキスト登録処理");
 
-            CurrentCategorySteamUrl = "";
+            CurrentCategorySteamUrl = DAO_Category.SelectOneById(categoryId)?.SteamUrl ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(categoryId))
             {
@@ -2316,10 +2316,13 @@ namespace JTSA
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(CurrentCategorySteamUrl)) return;
+
 			try
 			{
 				var result = await IgdbService.GetSteamUrlsAsync(categoryId);
-				CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
+				if (CurrentCategoryId == categoryId && string.IsNullOrWhiteSpace(CurrentCategorySteamUrl))
+					CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
 			}
 			catch (Exception)
 			{
@@ -2696,7 +2699,7 @@ namespace JTSA
                 SettingPanel.ReloadRegisteredAccounts();
             }
 
-            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, () => TwitchHelper.AccessToken);
 
             // 右上で選択されているアカウントの配信概要を読み込む。
             var selectedAccount = await GetSelectedTargetAccountAsync();

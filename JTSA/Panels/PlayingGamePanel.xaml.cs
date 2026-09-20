@@ -308,6 +308,9 @@ namespace JTSA.Panels
                     mainWindow.CurrentCategoryId = categoryData.Id;
                     mainWindow.CurrentCategoryName = categoryData.Name;
                     mainWindow.CurrentCategoryBoxArtUrl = categoryData.BoxArtUrl;
+                    mainWindow.CurrentCategorySteamUrl = item.IsCustomGame
+                        ? item.CustomSteamUrl
+                        : DAO_Category.SelectOneById(categoryData.Id)?.SteamUrl ?? string.Empty;
 
                     // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
                     await mainWindow.ApplyChannelPointPresetForCategoryAsync(categoryData.Id);
