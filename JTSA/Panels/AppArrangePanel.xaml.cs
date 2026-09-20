@@ -320,7 +320,7 @@ public partial class AppArrangePanel : UserControl
             {
                 ScheduleWindowMove(app);
             }
-            UpdateStatuses();
+            _ = UpdateStatusesAsync();
             ShowStatus($"アプリを起動しました: {app.ProcessName}");
             return true;
         }
@@ -402,7 +402,7 @@ public partial class AppArrangePanel : UserControl
 
         if (closedWindow || closedListen || closedLaunch)
         {
-            UpdateStatuses();
+            _ = UpdateStatusesAsync();
             ShowStatus($"アプリを停止しました: {app.ProcessName}");
             return;
         }
