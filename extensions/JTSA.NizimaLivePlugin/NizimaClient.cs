@@ -231,22 +231,13 @@ public sealed class NizimaClient : IDisposable
         var models = await SendRequestAsync("GetModels", new JsonObject(), cancellationToken).ConfigureAwait(false);
         var registeredModels = await SendRequestAsync("GetRegisteredModels", new JsonObject(), cancellationToken)
             .ConfigureAwait(false);
-        var scenes = await SendRequestAsync("GetScenes", new JsonObject(), cancellationToken).ConfigureAwait(false);
-        var registeredItems = await SendRequestAsync("GetRegisteredItems", new JsonObject(), cancellationToken)
-            .ConfigureAwait(false);
-        var items = await SendRequestAsync("GetItems", new JsonObject(), cancellationToken).ConfigureAwait(false);
-        var effects = await SendRequestAsync("GetEffectGroups", new JsonObject(), cancellationToken).ConfigureAwait(false);
 
         return new NizimaRuleCatalogs
         {
             Expressions = expressions,
             Motions = motions,
             ModelsOnScreen = NizimaNamedOption.FromArray(models, "Models", "Name", "ModelId"),
-            RegisteredModels = NizimaNamedOption.FromArray(registeredModels, "RegisteredModels", "Name", "ModelPath"),
-            Scenes = NizimaNamedOption.FromScenes(scenes),
-            RegisteredItems = NizimaNamedOption.FromArray(registeredItems, "RegisteredItems", "Name", "ItemPath"),
-            ItemsOnScreen = NizimaNamedOption.FromArray(items, "Items", "Name", "ItemId"),
-            EffectGroups = NizimaNamedOption.FromArray(effects, "EffectGroups", "Name", "GroupId")
+            RegisteredModels = NizimaNamedOption.FromArray(registeredModels, "RegisteredModels", "Name", "ModelPath")
         };
     }
 

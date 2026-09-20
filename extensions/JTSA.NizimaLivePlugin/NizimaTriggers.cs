@@ -44,36 +44,18 @@ public static class NizimaTriggerTypes
 public static class NizimaTriggerCommands
 {
     public const string ChangeModel = "ChangeModel";
-    public const string AddModel = "AddModel";
-    public const string TriggerHotkey = "TriggerHotkey";
     public const string ExpressionOn = "ExpressionOn";
     public const string ExpressionOff = "ExpressionOff";
     public const string StartMotion = "StartMotion";
     public const string StopMotion = "StopMotion";
-    public const string AddItem = "AddItem";
-    public const string RemoveItem = "RemoveItem";
-    public const string MoveModel = "MoveModel";
-    public const string SetModelColor = "SetModelColor";
-    public const string EffectOn = "EffectOn";
-    public const string EffectOff = "EffectOff";
-    public const string RawJson = "RawJson";
 
     public static IReadOnlyList<NizimaChoice> Choices { get; } =
     [
         new(ChangeModel, "モデルを切り替え"),
-        new(AddModel, "モデルを追加"),
-        new(TriggerHotkey, "ホットキーを実行"),
         new(ExpressionOn, "表情をオン"),
         new(ExpressionOff, "表情をオフ"),
         new(StartMotion, "モーションを開始"),
-        new(StopMotion, "モーションを停止"),
-        new(AddItem, "アイテムを追加"),
-        new(RemoveItem, "アイテムを削除"),
-        new(MoveModel, "モデルを移動"),
-        new(SetModelColor, "モデルの色を変更"),
-        new(EffectOn, "エフェクトをオン"),
-        new(EffectOff, "エフェクトをオフ"),
-        new(RawJson, "生JSONを送信")
+        new(StopMotion, "モーションを停止")
     ];
 
     public static string LabelOf(string id) =>
@@ -82,20 +64,7 @@ public static class NizimaTriggerCommands
 
 public sealed class NizimaTriggerCommandExtra
 {
-    public double X { get; set; }
-    public double Y { get; set; }
-    public double Rotation { get; set; }
-    public double Size { get; set; } = 1;
-    public bool Relative { get; set; } = true;
-    public int DelayMs { get; set; }
-    public int R { get; set; } = 255;
-    public int G { get; set; } = 255;
-    public int B { get; set; } = 255;
-    public int A { get; set; } = 255;
-    public bool UseScreen { get; set; }
-    public string RawJson { get; set; } = "";
     public string ModelPath { get; set; } = "";
-    public string ItemPath { get; set; } = "";
 }
 
 public sealed class NizimaTriggerRule
@@ -125,7 +94,7 @@ public static class NizimaTriggerRuleSummary
         {
             var triggerDetail = rule.TriggerType == NizimaTriggerTypes.ChannelPoint
                 ? NizimaChannelPointCatalog.TitleOf(channelPoints, rule.TriggerValue)
-                : rule.TriggerValue;
+                : NizimaTriggerUi.FormatTriggerValueForSummary(rule.TriggerType, rule.TriggerValue);
             trigger += $":{triggerDetail}";
         }
 
@@ -137,9 +106,6 @@ public static class NizimaTriggerRuleSummary
         var text = $"{enabled} {trigger} → {command}";
         if (!string.IsNullOrWhiteSpace(rule.ModelId))
             text += $"（モデル {DisplayName(catalogs.ModelsOnScreen, rule.ModelId) ?? rule.ModelId}）";
-        if (!string.IsNullOrWhiteSpace(rule.SceneId) &&
-            rule.CommandType is NizimaTriggerCommands.AddModel or NizimaTriggerCommands.AddItem)
-            text += $"（シーン {rule.SceneId}）";
         return text;
     }
 
@@ -147,14 +113,7 @@ public static class NizimaTriggerRuleSummary
     {
         var raw = rule.CommandValue;
         if (string.IsNullOrWhiteSpace(raw))
-        {
-            raw = rule.CommandType switch
-            {
-                NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel => rule.Extra.ModelPath,
-                NizimaTriggerCommands.AddItem => rule.Extra.ItemPath,
-                _ => ""
-            };
-        }
+            raw = rule.CommandType == NizimaTriggerCommands.ChangeModel ? rule.Extra.ModelPath : "";
 
         if (string.IsNullOrWhiteSpace(raw))
             return "";
@@ -163,10 +122,7 @@ public static class NizimaTriggerRuleSummary
         {
             NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => catalogs.Expressions,
             NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => catalogs.Motions,
-            NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel => catalogs.RegisteredModels,
-            NizimaTriggerCommands.AddItem => catalogs.RegisteredItems,
-            NizimaTriggerCommands.RemoveItem => catalogs.ItemsOnScreen,
-            NizimaTriggerCommands.EffectOn or NizimaTriggerCommands.EffectOff => catalogs.EffectGroups,
+            NizimaTriggerCommands.ChangeModel => catalogs.RegisteredModels,
             _ => null
         };
         return DisplayName(catalog, raw) ?? raw;
@@ -245,24 +201,6 @@ public sealed record NizimaNamedOption(string Name, string Path)
                 continue;
             var name = item.TryGetProperty(nameProperty, out var nameNode) ? nameNode.GetString() ?? "" : "";
             list.Add(new NizimaNamedOption(name, path));
-        }
-
-        return list;
-    }
-
-    public static IReadOnlyList<NizimaNamedOption> FromScenes(System.Text.Json.JsonElement data)
-    {
-        if (!data.TryGetProperty("Scenes", out var array) ||
-            array.ValueKind != System.Text.Json.JsonValueKind.Array)
-            return [];
-
-        var list = new List<NizimaNamedOption>();
-        foreach (var item in array.EnumerateArray())
-        {
-            var sceneId = item.TryGetProperty("SceneId", out var idNode) ? idNode.GetString() : null;
-            if (string.IsNullOrWhiteSpace(sceneId))
-                continue;
-            list.Add(new NizimaNamedOption($"シーン {sceneId}", sceneId));
         }
 
         return list;

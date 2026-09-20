@@ -185,12 +185,80 @@ public class NizimaTriggerRuleSummaryTests
         {
             TriggerType = NizimaTriggerTypes.ChannelPoint,
             TriggerValue = "cp-1",
-            CommandType = NizimaTriggerCommands.TriggerHotkey
+            CommandType = NizimaTriggerCommands.ChangeModel,
+            CommandValue = @"C:\models\a.model3.json",
+            ModelId = "model-1"
         };
         var rewards = new[] { new ChannelPointRewardInfo("cp-1", "にっこり", false) };
-        var text = NizimaTriggerRuleSummary.Format(rule, channelPoints: rewards);
+        var models = new[] { new NizimaNamedOption("MyModel", "model-1") };
+        var text = NizimaTriggerRuleSummary.Format(
+            rule,
+            new NizimaRuleCatalogs { ModelsOnScreen = models },
+            rewards);
         Assert.Contains("チャンネルポイント:にっこり", text);
+        Assert.Contains("モデルを切り替え", text);
         Assert.DoesNotContain("cp-1", text);
+    }
+
+    [Fact]
+    public void SummaryShowsFriendlyAdAndObsLabels()
+    {
+        var ad = new NizimaTriggerRule
+        {
+            TriggerType = NizimaTriggerTypes.AdUpcoming,
+            TriggerValue = "3",
+            CommandType = NizimaTriggerCommands.ExpressionOn
+        };
+        Assert.Contains("3 分前", NizimaTriggerRuleSummary.Format(ad));
+
+        var obs = new NizimaTriggerRule
+        {
+            TriggerType = NizimaTriggerTypes.ObsStreamStart,
+            TriggerValue = "main",
+            CommandType = NizimaTriggerCommands.ExpressionOn
+        };
+        Assert.Contains("メイン OBS", NizimaTriggerRuleSummary.Format(obs));
+    }
+}
+
+public class NizimaScheduledTimeFormatTests
+{
+    [Fact]
+    public void FormatsHourAndMinuteWithZeroPad()
+    {
+        Assert.True(NizimaTriggerUi.TryFormatScheduledTime(9, 5, out var formatted));
+        Assert.Equal("09:05", formatted);
+    }
+
+    [Fact]
+    public void ParsesStoredValue()
+    {
+        Assert.True(NizimaTriggerUi.TryParseScheduledTime("21:05", out var hour, out var minute));
+        Assert.Equal(21, hour);
+        Assert.Equal(5, minute);
+    }
+
+    [Fact]
+    public void PartsBuildCanonicalValue()
+    {
+        Assert.True(NizimaTriggerUi.TryParseScheduledParts("9", "5", out var value, out _));
+        Assert.Equal("09:05", value);
+    }
+
+    [Theory]
+    [InlineData("24", "0")]
+    [InlineData("0", "60")]
+    public void RejectsOutOfRange(string hour, string minute)
+    {
+        Assert.False(NizimaTriggerUi.TryParseScheduledParts(hour, minute, out _, out var error));
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
+
+    [Fact]
+    public void FollowIgnoresTriggerValue()
+    {
+        var rule = new NizimaTriggerRule { TriggerType = NizimaTriggerTypes.Follow, TriggerValue = "" };
+        Assert.True(NizimaTriggerMatcher.Matches(rule, NizimaTriggerTypes.Follow, "anything"));
     }
 }
 

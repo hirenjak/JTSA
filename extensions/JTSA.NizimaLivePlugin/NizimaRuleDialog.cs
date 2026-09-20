@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using JTSA.Plugin.Abstractions;
@@ -12,11 +13,34 @@ public sealed class NizimaRuleDialog : Window
     private readonly NizimaRuleCatalogs catalogs;
     private readonly IEnumerable<string> keepChannelPointIds;
     private readonly ComboBox triggerType = new();
-    private readonly TextBox triggerValue = new();
+    private readonly TextBox triggerValueChat = new() { Height = 24 };
     private readonly ComboBox triggerReward = new()
     {
         DisplayMemberPath = nameof(ChannelPointRewardInfo.Title),
-        SelectedValuePath = nameof(ChannelPointRewardInfo.Id)
+        SelectedValuePath = nameof(ChannelPointRewardInfo.Id),
+        Height = 24
+    };
+    private readonly TextBox scheduledHour = new() { Width = 36, Height = 24, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBox scheduledMinute = new() { Width = 36, Height = 24, VerticalAlignment = VerticalAlignment.Center };
+    private readonly ComboBox triggerAdUpcoming = new()
+    {
+        Height = 24,
+        DisplayMemberPath = nameof(NizimaChoice.Label),
+        SelectedValuePath = nameof(NizimaChoice.Id),
+        ItemsSource = NizimaTriggerUi.AdUpcomingChoices
+    };
+    private readonly ComboBox triggerObs = new()
+    {
+        Height = 24,
+        DisplayMemberPath = nameof(NizimaChoice.Label),
+        SelectedValuePath = nameof(NizimaChoice.Id),
+        ItemsSource = NizimaTriggerUi.ObsStreamChoices
+    };
+    private readonly TextBlock triggerValueNone = new()
+    {
+        Text = "—（この種別では指定不要）",
+        Foreground = System.Windows.Media.Brushes.Gray,
+        VerticalAlignment = VerticalAlignment.Center
     };
     private readonly ObservableCollection<ChannelPointRewardInfo> channelPoints = [];
     private readonly TextBlock triggerValueLabel = new();
@@ -29,13 +53,11 @@ public sealed class NizimaRuleDialog : Window
         DisplayMemberPath = "Label",
         SelectedValuePath = "Path"
     };
-    private readonly TextBox commandHotkey = new() { Height = 24 };
     private readonly TextBlock commandValueLabel = new()
     {
         Foreground = System.Windows.Media.Brushes.LightGray,
         Margin = new Thickness(0, 6, 0, 2)
     };
-    private readonly Grid commandValueHost = new() { Height = 24 };
     private readonly TextBlock modelTargetLabel = new()
     {
         Foreground = System.Windows.Media.Brushes.LightGray,
@@ -48,20 +70,8 @@ public sealed class NizimaRuleDialog : Window
         DisplayMemberPath = "Label",
         SelectedValuePath = "Path"
     };
-    private readonly TextBlock sceneLabel = new()
-    {
-        Foreground = System.Windows.Media.Brushes.LightGray,
-        Margin = new Thickness(0, 6, 0, 2)
-    };
-    private readonly ObservableCollection<NizimaNamedOption> sceneOptions = [];
-    private readonly ComboBox sceneCombo = new()
-    {
-        Height = 24,
-        IsEditable = true,
-        DisplayMemberPath = "Label",
-        SelectedValuePath = "Path"
-    };
     private readonly CheckBox enabled = new() { Content = "有効", Foreground = System.Windows.Media.Brushes.White, IsChecked = true };
+    private readonly StackPanel scheduledTimePanel;
 
     public NizimaRuleDialog(
         NizimaTriggerRule rule,
@@ -79,19 +89,41 @@ public sealed class NizimaRuleDialog : Window
         Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x30, 0x30, 0x30));
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
+        NizimaTriggerUi.AttachDigitsOnly(scheduledHour, 2);
+        NizimaTriggerUi.AttachDigitsOnly(scheduledMinute, 2);
+
+        scheduledTimePanel = new StackPanel { Orientation = Orientation.Horizontal };
+        scheduledTimePanel.Children.Add(new TextBlock
+        {
+            Text = "時",
+            Foreground = System.Windows.Media.Brushes.LightGray,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 4, 0)
+        });
+        scheduledTimePanel.Children.Add(scheduledHour);
+        scheduledTimePanel.Children.Add(new TextBlock
+        {
+            Text = " : ",
+            Foreground = System.Windows.Media.Brushes.White,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        scheduledTimePanel.Children.Add(scheduledMinute);
+        scheduledTimePanel.Children.Add(new TextBlock
+        {
+            Text = " 分",
+            Foreground = System.Windows.Media.Brushes.LightGray,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0)
+        });
+
         triggerReward.ItemsSource = channelPoints;
         triggerReward.DropDownOpened += (_, _) => ReloadChannelPoints(triggerReward.SelectedValue as string ?? rule.TriggerValue);
         commandCombo.ItemsSource = commandOptions;
         modelTargetCombo.ItemsSource = modelTargetOptions;
-        sceneCombo.ItemsSource = sceneOptions;
 
         BindChoiceCombo(triggerType, NizimaTriggerTypes.Choices, rule.TriggerType);
         BindChoiceCombo(commandType, NizimaTriggerCommands.Choices, rule.CommandType);
-        triggerValue.Text = rule.TriggerValue;
-        commandHotkey.Text = InitialCommandValue(rule);
-        NizimaHotkeyCapture.Attach(commandHotkey);
-        commandValueHost.Children.Add(commandCombo);
-        commandValueHost.Children.Add(commandHotkey);
+        triggerValueChat.Text = rule.TriggerType == NizimaTriggerTypes.Chat ? rule.TriggerValue : "";
         enabled.IsChecked = rule.IsEnabled;
 
         triggerType.SelectionChanged += (_, _) =>
@@ -125,17 +157,19 @@ public sealed class NizimaRuleDialog : Window
         panel.Children.Add(enabled);
         Add("トリガー種別", triggerType);
         panel.Children.Add(triggerValueLabel);
-        var triggerValueHost = new Grid();
+        var triggerValueHost = new Grid { MinHeight = 24 };
         triggerValueHost.Children.Add(triggerReward);
-        triggerValueHost.Children.Add(triggerValue);
+        triggerValueHost.Children.Add(triggerValueChat);
+        triggerValueHost.Children.Add(scheduledTimePanel);
+        triggerValueHost.Children.Add(triggerAdUpcoming);
+        triggerValueHost.Children.Add(triggerObs);
+        triggerValueHost.Children.Add(triggerValueNone);
         panel.Children.Add(triggerValueHost);
         Add("コマンド", commandType);
         panel.Children.Add(commandValueLabel);
-        panel.Children.Add(commandValueHost);
+        panel.Children.Add(commandCombo);
         panel.Children.Add(modelTargetLabel);
         panel.Children.Add(modelTargetCombo);
-        panel.Children.Add(sceneLabel);
-        panel.Children.Add(sceneCombo);
         panel.Children.Add(save);
         Content = panel;
     }
@@ -143,26 +177,24 @@ public sealed class NizimaRuleDialog : Window
     private bool TrySave()
     {
         var command = SelectedId(commandType) ?? NizimaTriggerCommands.ExpressionOn;
+        var trigger = SelectedId(triggerType) ?? NizimaTriggerTypes.ChannelPoint;
         rule.IsEnabled = enabled.IsChecked == true;
-        rule.TriggerType = SelectedId(triggerType) ?? NizimaTriggerTypes.ChannelPoint;
-        rule.TriggerValue = rule.TriggerType == NizimaTriggerTypes.ChannelPoint
-            ? (triggerReward.SelectedValue as string ?? "").Trim()
-            : triggerValue.Text.Trim();
+        rule.TriggerType = trigger;
+
+        if (!TryReadTriggerValue(trigger, out var triggerValue, out var triggerError))
+        {
+            MessageBox.Show(this, triggerError, Title);
+            return false;
+        }
+
+        rule.TriggerValue = triggerValue;
         rule.CommandType = command;
-        rule.CommandValue = NizimaCommandUi.UsesHotkey(command)
-            ? commandHotkey.Text.Trim()
-            : (commandCombo.SelectedValue as string ?? commandCombo.Text ?? "").Trim();
+        rule.CommandValue = (commandCombo.SelectedValue as string ?? commandCombo.Text ?? "").Trim();
         rule.ModelId = NizimaCommandUi.ShowsModelTarget(command)
             ? (modelTargetCombo.SelectedValue as string ?? modelTargetCombo.Text ?? "").Trim()
             : "";
-        rule.SceneId = NizimaCommandUi.ShowsScene(command)
-            ? (sceneCombo.SelectedValue as string ?? sceneCombo.Text ?? "").Trim()
-            : "";
-
-        rule.Extra.ModelPath = command is NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel
-            ? rule.CommandValue
-            : "";
-        rule.Extra.ItemPath = command == NizimaTriggerCommands.AddItem ? rule.CommandValue : "";
+        rule.SceneId = "";
+        rule.Extra.ModelPath = command == NizimaTriggerCommands.ChangeModel ? rule.CommandValue : "";
 
         if (command == NizimaTriggerCommands.ChangeModel &&
             (string.IsNullOrWhiteSpace(rule.ModelId) || string.IsNullOrWhiteSpace(rule.CommandValue)))
@@ -171,42 +203,66 @@ public sealed class NizimaRuleDialog : Window
             return false;
         }
 
-        if (command == NizimaTriggerCommands.AddItem &&
-            (string.IsNullOrWhiteSpace(rule.SceneId) || string.IsNullOrWhiteSpace(rule.CommandValue)))
+        if (command is NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+            or NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion &&
+            string.IsNullOrWhiteSpace(rule.CommandValue))
         {
-            MessageBox.Show(this, "アイテム追加には SceneId と ItemPath が必要です。", Title);
+            MessageBox.Show(this, "表情またはモーションを選択してください。", Title);
             return false;
         }
 
         return true;
     }
 
+    private bool TryReadTriggerValue(string triggerType, out string value, out string error)
+    {
+        value = "";
+        error = "";
+        switch (NizimaTriggerUi.InputMode(triggerType))
+        {
+            case NizimaTriggerValueInputMode.ChannelPoint:
+                value = (triggerReward.SelectedValue as string ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(value))
+                    error = "チャンネルポイント報酬を選択してください。";
+                return !string.IsNullOrWhiteSpace(value);
+            case NizimaTriggerValueInputMode.Chat:
+                value = triggerValueChat.Text.Trim();
+                if (string.IsNullOrWhiteSpace(value))
+                    error = "チャットの部分一致文字列を入力してください。";
+                return !string.IsNullOrWhiteSpace(value);
+            case NizimaTriggerValueInputMode.ScheduledTime:
+                if (!NizimaTriggerUi.TryParseScheduledParts(scheduledHour.Text, scheduledMinute.Text, out var formatted, out var parseError))
+                {
+                    error = parseError ?? "時刻が不正です。";
+                    return false;
+                }
+
+                value = formatted;
+                return true;
+            case NizimaTriggerValueInputMode.AdUpcoming:
+                value = SelectedId(triggerAdUpcoming) ?? "";
+                if (string.IsNullOrWhiteSpace(value))
+                    error = "CM 開始何分前か選択してください。";
+                return !string.IsNullOrWhiteSpace(value);
+            case NizimaTriggerValueInputMode.ObsStreamStart:
+                value = SelectedId(triggerObs) ?? "";
+                if (string.IsNullOrWhiteSpace(value))
+                    error = "メイン OBS またはサブ OBS を選択してください。";
+                return !string.IsNullOrWhiteSpace(value);
+            default:
+                value = "";
+                return true;
+        }
+    }
+
     private void SyncCommandValueUi()
     {
         var command = SelectedId(commandType);
-        var showsCommandValue = NizimaCommandUi.ShowsCommandValue(command);
-        commandValueLabel.Visibility = showsCommandValue ? Visibility.Visible : Visibility.Collapsed;
-        commandValueHost.Visibility = showsCommandValue ? Visibility.Visible : Visibility.Collapsed;
-
-        if (showsCommandValue)
-        {
-            if (NizimaCommandUi.UsesHotkey(command))
-            {
-                commandHotkey.Visibility = Visibility.Visible;
-                commandCombo.Visibility = Visibility.Collapsed;
-                commandValueLabel.Text = "コマンド値（欄を選択してキーを押す）";
-                if (string.IsNullOrWhiteSpace(commandHotkey.Text))
-                    commandHotkey.Text = InitialCommandValue(rule);
-            }
-            else
-            {
-                commandHotkey.Visibility = Visibility.Collapsed;
-                commandCombo.Visibility = Visibility.Visible;
-                commandValueLabel.Text = CommandValueLabel(command);
-                ReplaceCommandOptions(command);
-                NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, InitialCommandValue(rule));
-            }
-        }
+        commandValueLabel.Visibility = Visibility.Visible;
+        commandCombo.Visibility = Visibility.Visible;
+        commandValueLabel.Text = CommandValueLabel(command);
+        ReplaceCommandOptions(command);
+        NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, InitialCommandValue(rule));
 
         if (NizimaCommandUi.ShowsModelTarget(command))
         {
@@ -226,25 +282,6 @@ public sealed class NizimaRuleDialog : Window
             modelTargetLabel.Visibility = Visibility.Collapsed;
             modelTargetCombo.Visibility = Visibility.Collapsed;
         }
-
-        if (NizimaCommandUi.ShowsScene(command))
-        {
-            sceneLabel.Visibility = Visibility.Visible;
-            sceneCombo.Visibility = Visibility.Visible;
-            sceneLabel.Text = command == NizimaTriggerCommands.AddItem
-                ? "SceneId（必須）"
-                : "SceneId（空なら新規ウィンドウ）";
-            var scenes = command == NizimaTriggerCommands.AddModel
-                ? NizimaRuleCatalogs.WithNewWindowSceneOption(catalogs.Scenes)
-                : catalogs.Scenes;
-            NizimaNamedOptionCatalog.ReplaceAll(sceneOptions, scenes);
-            NizimaNamedOptionCatalog.SelectComboValue(sceneCombo, sceneOptions, rule.SceneId);
-        }
-        else
-        {
-            sceneLabel.Visibility = Visibility.Collapsed;
-            sceneCombo.Visibility = Visibility.Collapsed;
-        }
     }
 
     private static string CommandValueLabel(string? command) =>
@@ -252,10 +289,7 @@ public sealed class NizimaRuleDialog : Window
         {
             NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => "表情",
             NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => "モーション",
-            NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel => "登録モデル（ModelPath）",
-            NizimaTriggerCommands.AddItem => "登録アイテム（ItemPath）",
-            NizimaTriggerCommands.RemoveItem => "画面上のアイテム（ItemId）",
-            NizimaTriggerCommands.EffectOn or NizimaTriggerCommands.EffectOff => "エフェクト GroupId",
+            NizimaTriggerCommands.ChangeModel => "登録モデル（ModelPath）",
             _ => "コマンド値"
         };
 
@@ -265,10 +299,7 @@ public sealed class NizimaRuleDialog : Window
         {
             NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => catalogs.Expressions,
             NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => catalogs.Motions,
-            NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel => catalogs.RegisteredModels,
-            NizimaTriggerCommands.AddItem => catalogs.RegisteredItems,
-            NizimaTriggerCommands.RemoveItem => catalogs.ItemsOnScreen,
-            NizimaTriggerCommands.EffectOn or NizimaTriggerCommands.EffectOff => catalogs.EffectGroups,
+            NizimaTriggerCommands.ChangeModel => catalogs.RegisteredModels,
             _ => []
         };
         NizimaNamedOptionCatalog.ReplaceAll(commandOptions, items);
@@ -276,13 +307,9 @@ public sealed class NizimaRuleDialog : Window
     }
 
     private static string InitialCommandValue(NizimaTriggerRule rule) =>
-        rule.CommandType switch
-        {
-            NizimaTriggerCommands.ChangeModel or NizimaTriggerCommands.AddModel =>
-                FirstNonEmpty(rule.CommandValue, rule.Extra.ModelPath),
-            NizimaTriggerCommands.AddItem => FirstNonEmpty(rule.CommandValue, rule.Extra.ItemPath),
-            _ => rule.CommandValue
-        };
+        rule.CommandType == NizimaTriggerCommands.ChangeModel
+            ? FirstNonEmpty(rule.CommandValue, rule.Extra.ModelPath)
+            : rule.CommandValue;
 
     private static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
@@ -304,14 +331,43 @@ public sealed class NizimaRuleDialog : Window
 
     private void SyncTriggerUi()
     {
-        var isChannelPoint = SelectedId(triggerType) == NizimaTriggerTypes.ChannelPoint;
-        triggerReward.Visibility = isChannelPoint ? Visibility.Visible : Visibility.Collapsed;
-        triggerValue.Visibility = isChannelPoint ? Visibility.Collapsed : Visibility.Visible;
-        triggerValueLabel.Text = isChannelPoint
-            ? "チャンネルポイント報酬"
-            : "トリガー値（チャットは部分一致）";
-        if (isChannelPoint)
+        var type = SelectedId(triggerType);
+        var mode = NizimaTriggerUi.InputMode(type);
+        triggerValueLabel.Text = NizimaTriggerUi.ValueFieldLabel(type);
+        triggerValueLabel.Visibility = mode == NizimaTriggerValueInputMode.None
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+
+        triggerReward.Visibility = mode == NizimaTriggerValueInputMode.ChannelPoint ? Visibility.Visible : Visibility.Collapsed;
+        triggerValueChat.Visibility = mode == NizimaTriggerValueInputMode.Chat ? Visibility.Visible : Visibility.Collapsed;
+        scheduledTimePanel.Visibility = mode == NizimaTriggerValueInputMode.ScheduledTime ? Visibility.Visible : Visibility.Collapsed;
+        triggerAdUpcoming.Visibility = mode == NizimaTriggerValueInputMode.AdUpcoming ? Visibility.Visible : Visibility.Collapsed;
+        triggerObs.Visibility = mode == NizimaTriggerValueInputMode.ObsStreamStart ? Visibility.Visible : Visibility.Collapsed;
+        triggerValueNone.Visibility = mode == NizimaTriggerValueInputMode.None ? Visibility.Visible : Visibility.Collapsed;
+
+        if (mode == NizimaTriggerValueInputMode.ChannelPoint)
             ReloadChannelPoints(triggerReward.SelectedValue as string ?? rule.TriggerValue);
+        if (mode == NizimaTriggerValueInputMode.Chat && string.IsNullOrWhiteSpace(triggerValueChat.Text))
+            triggerValueChat.Text = type == rule.TriggerType ? rule.TriggerValue : "";
+        if (mode == NizimaTriggerValueInputMode.ScheduledTime)
+            LoadScheduledFields(type == rule.TriggerType ? rule.TriggerValue : "");
+        if (mode == NizimaTriggerValueInputMode.AdUpcoming)
+            triggerAdUpcoming.SelectedValue = type == rule.TriggerType ? rule.TriggerValue : null;
+        if (mode == NizimaTriggerValueInputMode.ObsStreamStart)
+            triggerObs.SelectedValue = type == rule.TriggerType ? rule.TriggerValue : null;
+    }
+
+    private void LoadScheduledFields(string stored)
+    {
+        if (NizimaTriggerUi.TryParseScheduledTime(stored, out var hour, out var minute))
+        {
+            scheduledHour.Text = hour.ToString(CultureInfo.InvariantCulture);
+            scheduledMinute.Text = minute.ToString(CultureInfo.InvariantCulture);
+            return;
+        }
+
+        scheduledHour.Text = "";
+        scheduledMinute.Text = "";
     }
 
     private static void BindChoiceCombo(ComboBox combo, IReadOnlyList<NizimaChoice> choices, string selectedId)

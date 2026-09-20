@@ -10,10 +10,6 @@ public sealed class NizimaRuleCatalogs
 
     public IReadOnlyList<NizimaNamedOption> ModelsOnScreen { get; init; } = [];
     public IReadOnlyList<NizimaNamedOption> RegisteredModels { get; init; } = [];
-    public IReadOnlyList<NizimaNamedOption> Scenes { get; init; } = [];
-    public IReadOnlyList<NizimaNamedOption> RegisteredItems { get; init; } = [];
-    public IReadOnlyList<NizimaNamedOption> ItemsOnScreen { get; init; } = [];
-    public IReadOnlyList<NizimaNamedOption> EffectGroups { get; init; } = [];
     public IReadOnlyList<NizimaNamedOption> Expressions { get; init; } = [];
     public IReadOnlyList<NizimaNamedOption> Motions { get; init; } = [];
 
@@ -22,44 +18,21 @@ public sealed class NizimaRuleCatalogs
         new NizimaNamedOption("（現在のモデル）", ""),
         .. items
     ];
-
-    public static IReadOnlyList<NizimaNamedOption> WithNewWindowSceneOption(IEnumerable<NizimaNamedOption> items) =>
-    [
-        new NizimaNamedOption("（新規ウィンドウ）", ""),
-        .. items
-    ];
 }
 
 internal static class NizimaCommandUi
 {
-    public static bool UsesHotkey(string? commandType) =>
-        commandType == NizimaTriggerCommands.TriggerHotkey;
-
-    public static bool ShowsCommandValue(string? commandType) =>
-        commandType switch
-        {
-            NizimaTriggerCommands.MoveModel or NizimaTriggerCommands.SetModelColor or NizimaTriggerCommands.RawJson => false,
-            _ => true
-        };
-
     public static bool ShowsModelTarget(string? commandType) =>
         commandType switch
         {
             NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
                 or NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion
-                or NizimaTriggerCommands.TriggerHotkey or NizimaTriggerCommands.ChangeModel
-                or NizimaTriggerCommands.MoveModel or NizimaTriggerCommands.SetModelColor => true,
+                or NizimaTriggerCommands.ChangeModel => true,
             _ => false
         };
 
     public static bool ModelTargetRequired(string? commandType) =>
         commandType == NizimaTriggerCommands.ChangeModel;
-
-    public static bool ShowsScene(string? commandType) =>
-        commandType is NizimaTriggerCommands.AddModel or NizimaTriggerCommands.AddItem;
-
-    public static bool SceneRequired(string? commandType) =>
-        commandType == NizimaTriggerCommands.AddItem;
 }
 
 internal static class NizimaNamedOptionCatalog

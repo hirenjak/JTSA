@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using JTSA.Plugin.Abstractions;
@@ -216,19 +215,14 @@ public partial class NizimaLiveWindow : Window
         CommandType = command,
         CommandValue = value,
         ModelId = ModelIdTextBox.Text.Trim(),
-        SceneId = SceneIdTextBox.Text.Trim(),
-        Extra = new NizimaTriggerCommandExtra
-        {
-            ModelPath = ModelPathTextBox.Text.Trim(),
-            ItemPath = ItemTextBox.Text.Trim()
-        }
+        Extra = new NizimaTriggerCommandExtra { ModelPath = ModelPathTextBox.Text.Trim() }
     };
 
-    private void ChangeModelButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.ChangeModel, ModelPathTextBox.Text.Trim()));
-
-    private void AddModelButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.AddModel, ModelPathTextBox.Text.Trim()));
+    private void ChangeModelButton_Click(object sender, RoutedEventArgs e)
+    {
+        var rule = BaseManual(NizimaTriggerCommands.ChangeModel, ModelPathTextBox.Text.Trim());
+        _ = RunManualAsync(rule);
+    }
 
     private void ExpressionOnButton_Click(object sender, RoutedEventArgs e) =>
         _ = RunManualAsync(BaseManual(NizimaTriggerCommands.ExpressionOn, SelectedPath(ExpressionComboBox)));
@@ -241,41 +235,6 @@ public partial class NizimaLiveWindow : Window
 
     private void MotionOffButton_Click(object sender, RoutedEventArgs e) =>
         _ = RunManualAsync(BaseManual(NizimaTriggerCommands.StopMotion, SelectedPath(MotionComboBox)));
-
-    private void AddItemButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.AddItem, ItemTextBox.Text.Trim()));
-
-    private void RemoveItemButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.RemoveItem, ItemTextBox.Text.Trim()));
-
-    private void ColorButton_Click(object sender, RoutedEventArgs e)
-    {
-        var rule = BaseManual(NizimaTriggerCommands.SetModelColor, "");
-        rule.Extra.R = ParseByte(ColorR.Text, 255);
-        rule.Extra.G = ParseByte(ColorG.Text, 255);
-        rule.Extra.B = ParseByte(ColorB.Text, 255);
-        rule.Extra.A = ParseByte(ColorA.Text, 255);
-        rule.Extra.UseScreen = ScreenColorCheckBox.IsChecked == true;
-        _ = RunManualAsync(rule);
-    }
-
-    private void EffectOnButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.EffectOn, EffectTextBox.Text.Trim()));
-
-    private void EffectOffButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.EffectOff, EffectTextBox.Text.Trim()));
-
-    private void RawJsonButton_Click(object sender, RoutedEventArgs e)
-    {
-        var rule = BaseManual(NizimaTriggerCommands.RawJson, "");
-        rule.Extra.RawJson = RawJsonTextBox.Text;
-        _ = RunManualAsync(rule);
-    }
-
-    private static int ParseByte(string text, int fallback) =>
-        int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
-            ? Math.Clamp(value, 0, 255)
-            : fallback;
 }
 
 public sealed class RuleListItem(NizimaTriggerRule rule, string summary)
