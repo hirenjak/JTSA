@@ -31,6 +31,7 @@ public partial class NizimaLiveWindow : Window
         RulesListBox.ItemsSource = rules;
         ExpressionComboBox.ItemsSource = expressions;
         MotionComboBox.ItemsSource = motions;
+        NizimaHotkeyCapture.Attach(HotkeyTextBox);
         ReloadRules();
         ReloadChannelPointsForRules();
         plugin.Client.StatusChanged += OnClientStatusChanged;

@@ -26,6 +26,13 @@ public sealed class NizimaRuleDialog : Window
         DisplayMemberPath = "Label",
         SelectedValuePath = "Path"
     };
+    private readonly TextBox commandHotkey = new() { Height = 28 };
+    private readonly TextBlock commandValueLabel = new()
+    {
+        Foreground = System.Windows.Media.Brushes.LightGray,
+        Margin = new Thickness(0, 6, 0, 2)
+    };
+    private readonly Grid commandValueHost = new();
     private readonly TextBox modelId = new();
     private readonly TextBox sceneId = new();
     private readonly TextBox modelPath = new();
@@ -54,15 +61,37 @@ public sealed class NizimaRuleDialog : Window
         BindChoiceCombo(commandType, NizimaTriggerCommands.Choices, rule.CommandType);
         triggerValue.Text = rule.TriggerValue;
         commandCombo.Text = rule.CommandValue;
+        commandHotkey.Text = rule.CommandValue;
+        NizimaHotkeyCapture.Attach(commandHotkey);
+        commandValueHost.Children.Add(commandCombo);
+        commandValueHost.Children.Add(commandHotkey);
         triggerType.SelectionChanged += (_, _) =>
         {
             SyncTriggerUi();
-            SyncCommandCatalog();
+            SyncCommandValueUi();
         };
-        commandType.SelectionChanged += (_, _) => SyncCommandCatalog();
-        void SyncCommandCatalog()
+        commandType.SelectionChanged += (_, _) => SyncCommandValueUi();
+        void SyncCommandValueUi()
         {
             var selected = SelectedId(commandType);
+            var isHotkey = selected == NizimaTriggerCommands.TriggerHotkey;
+            commandHotkey.Visibility = isHotkey ? Visibility.Visible : Visibility.Collapsed;
+            commandCombo.Visibility = isHotkey ? Visibility.Collapsed : Visibility.Visible;
+            commandValueLabel.Text = isHotkey
+                ? "コマンド値（欄を選択してキーを押す。Win キー非対応）"
+                : "コマンド値（表情・モーションは一覧から選択可）";
+
+            if (isHotkey)
+            {
+                commandCombo.ItemsSource = null;
+                if (string.IsNullOrWhiteSpace(commandHotkey.Text))
+                    commandHotkey.Text = (commandCombo.Text ?? "").Trim();
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(commandHotkey.Text))
+                commandCombo.Text = commandHotkey.Text.Trim();
+
             commandCombo.ItemsSource = selected is NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
                 ? expressions
                 : selected is NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion
@@ -73,7 +102,7 @@ public sealed class NizimaRuleDialog : Window
             else
                 commandCombo.SelectedValue = rule.CommandValue;
         }
-        SyncCommandCatalog();
+        SyncCommandValueUi();
         ReloadChannelPoints(rule.TriggerValue);
         SyncTriggerUi();
         modelId.Text = rule.ModelId;
@@ -90,7 +119,9 @@ public sealed class NizimaRuleDialog : Window
                 ? (triggerReward.SelectedValue as string ?? "").Trim()
                 : triggerValue.Text.Trim();
             rule.CommandType = SelectedId(commandType) ?? NizimaTriggerCommands.ExpressionOn;
-            rule.CommandValue = (commandCombo.SelectedValue as string ?? commandCombo.Text ?? "").Trim();
+            rule.CommandValue = rule.CommandType == NizimaTriggerCommands.TriggerHotkey
+                ? commandHotkey.Text.Trim()
+                : (commandCombo.SelectedValue as string ?? commandCombo.Text ?? "").Trim();
             rule.ModelId = modelId.Text.Trim();
             rule.SceneId = sceneId.Text.Trim();
             rule.Extra.ModelPath = modelPath.Text.Trim();
@@ -124,7 +155,8 @@ public sealed class NizimaRuleDialog : Window
         triggerValueHost.Children.Add(triggerValue);
         panel.Children.Add(triggerValueHost);
         Add("コマンド", commandType);
-        Add("コマンド値（表情・モーションは一覧から選択可）", commandCombo);
+        panel.Children.Add(commandValueLabel);
+        panel.Children.Add(commandValueHost);
         Add("ModelId（空なら現在モデル）", modelId);
         Add("SceneId", sceneId);
         Add("ModelPath / ItemPath", modelPath);

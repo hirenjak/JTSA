@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Windows.Input;
 using JTSA.Plugin.Abstractions;
 using Xunit;
 
@@ -190,5 +191,31 @@ public class NizimaTriggerRuleSummaryTests
         var text = NizimaTriggerRuleSummary.Format(rule, channelPoints: rewards);
         Assert.Contains("チャンネルポイント:にっこり", text);
         Assert.DoesNotContain("cp-1", text);
+    }
+}
+
+public class NizimaQtKeySequenceTests
+{
+    [Theory]
+    [InlineData(Key.A, ModifierKeys.Control, "Ctrl+A")]
+    [InlineData(Key.F1, ModifierKeys.None, "F1")]
+    [InlineData(Key.F5, ModifierKeys.Shift, "Shift+F5")]
+    [InlineData(Key.Return, ModifierKeys.Control | ModifierKeys.Shift, "Ctrl+Shift+Return")]
+    public void FormatsPortableSequence(Key key, ModifierKeys modifiers, string expected)
+    {
+        Assert.True(NizimaQtKeySequence.TryFormat(key, modifiers, out var sequence));
+        Assert.Equal(expected, sequence);
+    }
+
+    [Fact]
+    public void RejectsWindowsModifier()
+    {
+        Assert.False(NizimaQtKeySequence.TryFormat(Key.A, ModifierKeys.Control | ModifierKeys.Windows, out _));
+    }
+
+    [Fact]
+    public void RejectsModifierKeyAlone()
+    {
+        Assert.False(NizimaQtKeySequence.TryFormat(Key.LeftCtrl, ModifierKeys.Control, out _));
     }
 }

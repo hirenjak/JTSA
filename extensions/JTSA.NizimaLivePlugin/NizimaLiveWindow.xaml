@@ -54,7 +54,7 @@
             </TabItem>
             <TabItem Header="ホットキー">
                 <StackPanel Margin="12">
-                    <TextBlock Text="QKeySequence（例: Ctrl+A / F1）。モデル未選択時は失敗します。" Foreground="LightGray" TextWrapping="Wrap"/>
+                    <TextBlock Text="QKeySequence（例: Ctrl+A / F1）。欄を選択してキーを押してください。Win キーは非対応です。" Foreground="LightGray" TextWrapping="Wrap"/>
                     <TextBox x:Name="HotkeyTextBox" Height="28" Margin="0,8,0,8"/>
                     <Button Content="実行" Width="80" Height="28" HorizontalAlignment="Left" Click="HotkeyButton_Click"/>
                 </StackPanel>
