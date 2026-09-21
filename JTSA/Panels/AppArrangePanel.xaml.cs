@@ -1,4 +1,3 @@
-using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Models;
 using System.Collections.ObjectModel;
@@ -8,6 +7,7 @@ using System.Management;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Text.Json;
 
 namespace JTSA.Panels;
 
@@ -19,9 +19,20 @@ public partial class AppArrangePanel : UserControl
     private bool updatingStatuses;
     private bool isLoadingAutoStartSetting;
     private bool hasAttemptedAutoStart;
+    private readonly string settingsPath;
+    private bool autoStartRegisteredApps;
+    private readonly Action<string, bool>? statusReporter;
 
-    public AppArrangePanel()
+    public AppArrangePanel() : this(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "JTSA", "Plugins", "jtsa.external-apps", "external-apps-settings.json"))
     {
+    }
+
+    public AppArrangePanel(string settingsPath, Action<string, bool>? statusReporter = null)
+    {
+        this.settingsPath = settingsPath;
+        this.statusReporter = statusReporter;
         InitializeComponent();
         DataContext = this;
         Loaded += (_, _) =>
@@ -43,13 +54,10 @@ public partial class AppArrangePanel : UserControl
         statusTimer.Tick += async (_, _) => await UpdateStatusesAsync();
     }
 
-    private MainWindow? MainWindow => Application.Current.MainWindow as MainWindow;
-
     private void LoadAutoStartSetting()
     {
         isLoadingAutoStartSetting = true;
-        var setting = DAO_Setting.SelectOneById(DAO_Setting.SettingName.AutoStartRegisteredApps);
-        AutoStartCheckBox.IsChecked = bool.TryParse(setting?.Value, out var enabled) && enabled;
+        AutoStartCheckBox.IsChecked = autoStartRegisteredApps;
         isLoadingAutoStartSetting = false;
 
         if (AutoStartCheckBox.IsChecked == true && !hasAttemptedAutoStart)
@@ -62,9 +70,11 @@ public partial class AppArrangePanel : UserControl
     private void ReloadRegisteredApps()
     {
         RegisteredApps.Clear();
-        foreach (var item in DAO_StreamWindow.SelectAll())
+        var settings = LoadSettings();
+        autoStartRegisteredApps = settings.AutoStartRegisteredApps;
+        foreach (var item in settings.Apps.OrderBy(item => item.ProcessName, StringComparer.OrdinalIgnoreCase))
         {
-            RegisteredApps.Add(ToForm(item));
+            RegisteredApps.Add(item);
         }
         _ = UpdateStatusesAsync();
     }
@@ -76,47 +86,25 @@ public partial class AppArrangePanel : UserControl
         var apps = RegisteredApps.ToArray();
         try
         {
-            var running = await Task.Run(() =>
-            {
-                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var process in Process.GetProcesses())
+            var running = await Task.Run(() => apps.ToDictionary(
+                app => app,
+                app =>
                 {
-                    using (process)
-                    {
-                        try { names.Add(process.ProcessName); }
-                        catch (InvalidOperationException) { }
-                        catch (System.ComponentModel.Win32Exception) { }
-                    }
-                }
-                return names;
-            });
+                    try { return IsAppRunning(app); }
+                    catch (InvalidOperationException) { return false; }
+                    catch (System.ComponentModel.Win32Exception) { return false; }
+                }));
             if (!IsVisible || !IsLoaded) return;
             foreach (var app in apps)
             {
                 if (!RegisteredApps.Contains(app)) continue;
-                var status = running.Contains(app.ProcessName) ? "起動中" : "停止";
+                var status = running.GetValueOrDefault(app) ? "起動中" : "停止";
                 if (app.Status != status) app.Status = status;
             }
         }
         catch (Exception ex) { Debug.WriteLine($"アプリ状態取得失敗: {ex.Message}"); }
         finally { updatingStatuses = false; }
     }
-
-    private static AppInfoForm ToForm(T_StreamWindow item) => new()
-    {
-        ProcessName = item.ProcessName,
-        WindowTitle = item.WindowTitle,
-        AppExePath = item.AppExePath,
-        WindowProcessName = item.WindowProcessName,
-        WindowTitleMatchMode = item.WindowTitleMatchMode,
-        ListenPort = item.ListenPort,
-        X = item.X,
-        Y = item.Y,
-        Width = item.Width,
-        Height = item.Height,
-        IsAutoStart = item.IsAutoStart,
-        IsMinimized = item.IsMinimized
-    };
 
     private static bool IsAppRunning(AppInfoForm app)
     {
@@ -125,6 +113,12 @@ public partial class AppArrangePanel : UserControl
         if (!string.IsNullOrWhiteSpace(app.WindowTitle))
         {
             return Win32Helper.TryFindUniqueWindow(app, out _, out _);
+        }
+
+        if (AppInfoForm.IsBatchPath(app.AppExePath) && GetCmdCommandLines().Any(item =>
+                CommandLineRefersTo(item.CommandLine, app.AppExePath)))
+        {
+            return true;
         }
 
         var processes = GetRuntimeProcesses(app);
@@ -261,25 +255,40 @@ public partial class AppArrangePanel : UserControl
         return true;
     }
 
-    private static void Save(AppInfoForm app) => DAO_StreamWindow.Save(new T_StreamWindow
+    private void Save(AppInfoForm app)
     {
-        ProcessName = app.ProcessName,
-        WindowTitle = app.WindowTitle,
-        AppExePath = app.AppExePath,
-        WindowProcessName = AppInfoForm.NormalizeWindowProcessName(
-            app.WindowProcessName, app.ProcessName, app.AppExePath),
-        WindowTitleMatchMode = app.WindowTitleMatchMode,
-        ListenPort = app.ListenPort,
-        X = app.X ?? 0,
-        Y = app.Y ?? 0,
-        Width = app.Width ?? 0,
-        Height = app.Height ?? 0,
-        IsAutoStart = app.IsAutoStart,
-        IsMinimized = app.IsMinimized,
-        CreatedDateTime = DateTime.Now,
-        UpdatedDateTime = DateTime.Now,
-        LastUsedDateTime = DateTime.Now
-    });
+        app.WindowProcessName = AppInfoForm.NormalizeWindowProcessName(
+            app.WindowProcessName, app.ProcessName, app.AppExePath);
+        var settings = LoadSettings();
+        settings.Apps.RemoveAll(item =>
+            string.Equals(item.ProcessName, app.ProcessName, StringComparison.OrdinalIgnoreCase));
+        settings.Apps.Add(app);
+        SaveSettings(settings);
+    }
+
+    private ExternalAppsSettings LoadSettings()
+    {
+        if (!File.Exists(settingsPath)) return new();
+        try
+        {
+            return JsonSerializer.Deserialize<ExternalAppsSettings>(File.ReadAllText(settingsPath)) ?? new();
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            Debug.WriteLine($"外部アプリ設定読込失敗: {ex.Message}");
+            return new();
+        }
+    }
+
+    private void SaveSettings(ExternalAppsSettings settings)
+    {
+        var directory = Path.GetDirectoryName(settingsPath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        File.WriteAllText(settingsPath, JsonSerializer.Serialize(settings, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        }));
+    }
 
     private bool Start(AppInfoForm app)
     {
@@ -414,9 +423,8 @@ public partial class AppArrangePanel : UserControl
 
     private void ShowStatus(string message, bool success = true)
     {
-        if (MainWindow is null) return;
-        MainWindow.StatusTextBlock.Text = message;
-        MainWindow.StatusTextBlock.Foreground = success ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.OrangeRed;
+        statusReporter?.Invoke(message, success);
+        Debug.WriteLine(message);
     }
 
     private void OpenAppRegistrationButton_Click(object sender, RoutedEventArgs e)
@@ -447,15 +455,15 @@ public partial class AppArrangePanel : UserControl
         if ((sender as Button)?.DataContext is not AppInfoForm app) return;
         if (IsAppRunning(app))
         {
-            if (string.IsNullOrWhiteSpace(app.WindowTitle))
-            {
-                ShowStatus($"すでに起動しています: {app.ProcessName}");
-                return;
-            }
-            Move(app);
+            Stop(app);
             return;
         }
         Start(app);
+    }
+
+    private void MoveButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is AppInfoForm app) Move(app);
     }
 
     private void SavePositionButton_Click(object sender, RoutedEventArgs e)
@@ -491,7 +499,10 @@ public partial class AppArrangePanel : UserControl
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.DataContext is not AppInfoForm app) return;
-        DAO_StreamWindow.Delete(app.ProcessName);
+        var settings = LoadSettings();
+        settings.Apps.RemoveAll(item =>
+            string.Equals(item.ProcessName, app.ProcessName, StringComparison.OrdinalIgnoreCase));
+        SaveSettings(settings);
         ReloadRegisteredApps();
         ShowStatus($"登録を削除しました: {app.ProcessName}");
     }
@@ -540,11 +551,18 @@ public partial class AppArrangePanel : UserControl
     private void AutoStartCheckBox_Changed(object sender, RoutedEventArgs e)
     {
         if (isLoadingAutoStartSetting) return;
-        DAO_Setting.InsertUpdate(
-            DAO_Setting.SettingName.AutoStartRegisteredApps,
-            (AutoStartCheckBox.IsChecked == true).ToString());
+        autoStartRegisteredApps = AutoStartCheckBox.IsChecked == true;
+        var settings = LoadSettings();
+        settings.AutoStartRegisteredApps = autoStartRegisteredApps;
+        SaveSettings(settings);
         ShowStatus(AutoStartCheckBox.IsChecked == true
             ? "登録済みアプリの自動起動を有効にしました。"
             : "登録済みアプリの自動起動を無効にしました。");
+    }
+
+    private sealed class ExternalAppsSettings
+    {
+        public bool AutoStartRegisteredApps { get; set; }
+        public List<AppInfoForm> Apps { get; set; } = [];
     }
 }

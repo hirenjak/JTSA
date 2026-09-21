@@ -9,7 +9,11 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace JTSA.Forms
 {
@@ -147,9 +151,13 @@ namespace JTSA.Forms
                 {
                     _appExePath = value;
                     OnPropertyChanged(nameof(AppExePath));
+                    OnPropertyChanged(nameof(AppIcon));
                 }
             }
         }
+
+        [JsonIgnore]
+        public ImageSource AppIcon => ExternalAppIconLoader.Get(AppExePath);
 
         private string? _windowProcessName;
         public string WindowProcessName
@@ -282,5 +290,78 @@ namespace JTSA.Forms
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged(string propertyName)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    internal static class ExternalAppIconLoader
+    {
+        private const uint ShgfiIcon = 0x000000100;
+        private const uint ShgfiSmallIcon = 0x000000001;
+        private const uint ShgfiUseFileAttributes = 0x000000010;
+        private const uint FileAttributeNormal = 0x00000080;
+        private static readonly Dictionary<string, ImageSource> Cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly object Sync = new();
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct ShFileInfo
+        {
+            public IntPtr IconHandle;
+            public int IconIndex;
+            public uint Attributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string DisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)] public string TypeName;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SHGetFileInfo(
+            string path, uint fileAttributes, out ShFileInfo fileInfo, uint fileInfoSize, uint flags);
+
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr iconHandle);
+
+        public static ImageSource Get(string path)
+        {
+            var key = "__fallback__";
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                try { key = Path.GetFullPath(path); }
+                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+                {
+                    key = path.Trim();
+                }
+            }
+            lock (Sync)
+            {
+                if (Cache.TryGetValue(key, out var cached)) return cached;
+            }
+
+            var source = Load(path) ?? Load("app.exe", useFileAttributes: true) ?? new DrawingImage();
+            if (source.CanFreeze) source.Freeze();
+            lock (Sync) Cache[key] = source;
+            return source;
+        }
+
+        private static ImageSource? Load(string path, bool useFileAttributes = false)
+        {
+            var flags = ShgfiIcon | ShgfiSmallIcon;
+            if (useFileAttributes || !File.Exists(path)) flags |= ShgfiUseFileAttributes;
+            var result = SHGetFileInfo(
+                path ?? string.Empty,
+                FileAttributeNormal,
+                out var info,
+                (uint)Marshal.SizeOf<ShFileInfo>(),
+                flags);
+            if (result == IntPtr.Zero || info.IconHandle == IntPtr.Zero) return null;
+            try
+            {
+                return Imaging.CreateBitmapSourceFromHIcon(
+                    info.IconHandle,
+                    System.Windows.Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
+            }
+            finally
+            {
+                DestroyIcon(info.IconHandle);
+            }
+        }
     }
 }

@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.external-apps",
+  "name": "外部アプリ",
+  "entryAssembly": "JTSA.ExternalAppsPlugin.dll",
+  "entryType": "JTSA.ExternalAppsPlugin.ExternalAppsPlugin",
+  "apiVersion": 1
+}

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Text.Json;
 using System.IO;
+using JTSA.Dao;
 
 namespace JTSA.Plugins;
 
@@ -32,12 +33,16 @@ public sealed class PluginManager : IDisposable
         Plugins.Clear();
         LoadErrors.Clear();
         Directory.CreateDirectory(PluginRoot);
+        var autoStartPluginIds = LoadAutoStartPluginIds();
 
         foreach (var manifestPath in Directory.EnumerateFiles(
                      PluginRoot, "plugin.json", SearchOption.AllDirectories))
         {
-            TryLoad(manifestPath);
+            TryLoad(manifestPath, autoStartPluginIds);
         }
+
+        foreach (var descriptor in Plugins.Where(item => item.IsAutoStart).ToList())
+            mainWindow.Dispatcher.BeginInvoke(() => Open(descriptor));
     }
 
     public void Open(PluginDescriptor descriptor)
@@ -57,7 +62,7 @@ public sealed class PluginManager : IDisposable
         }
     }
 
-    private void TryLoad(string manifestPath)
+    private void TryLoad(string manifestPath, IReadOnlySet<string> autoStartPluginIds)
     {
         PluginLoadContext? loadContext = null;
         try
@@ -93,7 +98,13 @@ public sealed class PluginManager : IDisposable
 
             using (loadContext.EnterContextualReflection())
                 plugin.Initialize(new JtsaPluginContext(mainWindow, pluginDirectory, plugin.Id));
-            var descriptor = new PluginDescriptor(plugin.Id, plugin.Name, plugin.Description, plugin.Version)
+            var descriptor = new PluginDescriptor(
+                plugin.Id,
+                plugin.Name,
+                plugin.Description,
+                plugin.Version,
+                autoStartPluginIds.Contains(plugin.Id),
+                SetAutoStart)
             {
                 Status = "利用可能",
                 LoadedPlugin = new LoadedPlugin(plugin, loadContext, shadowDirectory)
@@ -106,6 +117,35 @@ public sealed class PluginManager : IDisposable
             loadContext?.Unload();
             RecordError(Path.GetFileName(Path.GetDirectoryName(manifestPath)), ex);
         }
+    }
+
+    private static HashSet<string> LoadAutoStartPluginIds()
+    {
+        var json = DAO_Setting.SelectOneById(DAO_Setting.SettingName.AutoStartPlugins)?.Value;
+        if (string.IsNullOrWhiteSpace(json))
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            return (JsonSerializer.Deserialize<List<string>>(json) ?? [])
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private void SetAutoStart(PluginDescriptor descriptor, bool enabled)
+    {
+        var ids = LoadAutoStartPluginIds();
+        if (enabled)
+            ids.Add(descriptor.Id);
+        else
+            ids.Remove(descriptor.Id);
+        DAO_Setting.InsertUpdate(
+            DAO_Setting.SettingName.AutoStartPlugins,
+            JsonSerializer.Serialize(ids.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)));
     }
 
     private static void ValidateManifest(PluginManifest manifest)

@@ -25,7 +25,7 @@ namespace JTSA.Dao
             ChatOverlayHeight = 13,
             ChatOverlayShowUserIcon = 14,
             ChatOverlayFontSize = 15,
-            AutoStartRegisteredApps = 16,
+            // 16 は旧・外部アプリ自動起動設定（現在はプラグイン側JSONへ移行）
             BouyomiEnabled = 17,
             BouyomiEndpoint = 18,
             SpeechEngine = 19,
@@ -96,6 +96,8 @@ namespace JTSA.Dao
             VtsAutoConnect = 58,
             /// <summary>VTSトリガーとコマンドの対応ルール</summary>
             VtsTriggerRules = 59,
+            /// <summary>JTSA起動時に開くプラグインID一覧</summary>
+            AutoStartPlugins = 60,
         }
 
 

@@ -376,6 +376,17 @@ internal sealed class StreamExpansionService
                 }
                 break;
 
+            case "VtsHotkey":
+                try
+                {
+                    await VtsTriggerService.ExecuteHotkeyAsync(item.Content);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"VTSホットキー実行失敗（{item.Content}）：{ex.GetBaseException().Message}");
+                }
+                break;
+
             case "Image":
                 StreamExpansionOverlayService.ShowImage(StreamExpansionImageSettings.Decode(item.Content));
                 break;
