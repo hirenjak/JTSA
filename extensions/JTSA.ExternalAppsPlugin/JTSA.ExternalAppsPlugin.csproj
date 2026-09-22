@@ -24,11 +24,5 @@
   </ItemGroup>
   <Target Name="CopyPluginManifest" AfterTargets="Build">
     <Copy SourceFiles="plugin.json" DestinationFolder="$(TargetDir)" />
-    <PropertyGroup>
-      <HostPluginDir>$(MSBuildThisFileDirectory)..\..\JTSA\bin\$(Configuration)\net8.0-windows\Plugins\ExternalApps</HostPluginDir>
-    </PropertyGroup>
-    <MakeDir Directories="$(HostPluginDir)" />
-    <ItemGroup><PluginFiles Include="$(TargetDir)*.*" /></ItemGroup>
-    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(HostPluginDir)" />
   </Target>
 </Project>

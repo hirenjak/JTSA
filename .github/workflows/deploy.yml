@@ -84,7 +84,7 @@ jobs:
           --mainExe JTSA.exe
           --packTitle JTSA
           --releaseNotes .github/release-notes.md
-          --exclude '(?i)JTSA\.db$'
+          --exclude '(?i)(JTSA\.db$|(^|[\\/])Plugins[\\/])'
           --noPortable
 
       - name: Publish GitHub release

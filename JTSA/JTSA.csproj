@@ -28,8 +28,6 @@
 
   <ItemGroup>
 	<ProjectReference Include="..\JTSA.Plugin.Abstractions\JTSA.Plugin.Abstractions.csproj" />
-	<ProjectReference Include="..\extensions\JTSA.ExternalAppsPlugin\JTSA.ExternalAppsPlugin.csproj"
-	                  ReferenceOutputAssembly="false" />
 
 	<PackageReference Include="Fody" Version="6.9.3" PrivateAssets="all" />
 	<PackageReference Include="Costura.Fody" Version="6.0.0" PrivateAssets="all" />
@@ -78,17 +76,5 @@
   <ItemGroup>
     <Folder Include="Migrations\" />
   </ItemGroup>
-
-  <Target Name="CopyBundledPluginsToPublish" AfterTargets="Publish">
-    <PropertyGroup>
-      <ExternalAppsPluginOutput>$(MSBuildThisFileDirectory)..\extensions\JTSA.ExternalAppsPlugin\bin\$(Configuration)\net8.0-windows\</ExternalAppsPluginOutput>
-      <ExternalAppsPublishDirectory>$(PublishDir)Plugins\ExternalApps\</ExternalAppsPublishDirectory>
-    </PropertyGroup>
-    <ItemGroup>
-      <ExternalAppsPluginFiles Include="$(ExternalAppsPluginOutput)*.*" />
-    </ItemGroup>
-    <MakeDir Directories="$(ExternalAppsPublishDirectory)" />
-    <Copy SourceFiles="@(ExternalAppsPluginFiles)" DestinationFolder="$(ExternalAppsPublishDirectory)" />
-  </Target>
 
 </Project>
