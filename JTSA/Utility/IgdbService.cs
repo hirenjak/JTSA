@@ -14,14 +14,14 @@ namespace JTSA.Utility
     {
         private static HttpClient httpClient = null!;
         private static string clientId = string.Empty;
-        private static string accessToken = string.Empty;
+        private static Func<string> accessTokenProvider = () => string.Empty;
         private static long? japaneseRegionId;
 
-        public static void Initialize(HttpClient _httpClient, string _clientID, string _accessToken)
+        public static void Initialize(HttpClient _httpClient, string _clientID, Func<string> _accessTokenProvider)
         {
             httpClient = _httpClient;
             clientId = _clientID;
-            accessToken = _accessToken;
+            accessTokenProvider = _accessTokenProvider;
         }
 
         public sealed class TwitchGameResponse
@@ -127,7 +127,7 @@ namespace JTSA.Utility
         {
             var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.igdb.com/v4/{endpoint}");
             request.Headers.Add("Client-ID", clientId);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessTokenProvider());
             request.Content = new StringContent(query, Encoding.UTF8, "text/plain");
             return request;
         }
@@ -159,7 +159,7 @@ namespace JTSA.Utility
 
             request.Headers.Add("Client-Id", clientId);
             request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
+                new AuthenticationHeaderValue("Bearer", accessTokenProvider());
 
             using var response = await httpClient.SendAsync(request);
 
@@ -183,7 +183,7 @@ namespace JTSA.Utility
 
             request.Headers.Add("Client-ID", clientId);
             request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
+                new AuthenticationHeaderValue("Bearer", accessTokenProvider());
 
             // external_game_source = 1 はSteam
             var query = $"""

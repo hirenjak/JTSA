@@ -88,19 +88,24 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
-    public void StreamExpansionClip_RoundTripsWithOtherActions()
+    public void StreamExpansionClipAndVtsHotkey_RoundTripWithOtherActions()
     {
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader { Name = "Clips", IsActive = true, UpdatedDateTime = DateTime.Now },
         [
             new T_StreamExpansionItem { ActionType = "ObsClip", Content = "{chat_login}", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now },
-            new T_StreamExpansionItem { ActionType = "ObsText", Content = "Hello", ObsSourceName = "title", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now }
+            new T_StreamExpansionItem { ActionType = "ObsText", Content = "Hello", ObsSourceName = "title", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now },
+            new T_StreamExpansionItem { ActionType = "VtsHotkey", Content = "hotkey-1", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now }
         ]);
         var items = DAO_StreamExpansion.SelectItems(id);
-        Assert.Equal(2, items.Count);
+        Assert.Equal(3, items.Count);
         var clip = Assert.Single(items, item => item.ActionType == "ObsClip");
         Assert.Equal("{chat_login}", clip.Content);
         Assert.Equal(2, clip.SortNumber);
         Assert.Equal(3, clip.Weight);
+        var hotkey = Assert.Single(items, item => item.ActionType == "VtsHotkey");
+        Assert.Equal("hotkey-1", hotkey.Content);
+        Assert.Equal(2, hotkey.SortNumber);
+        Assert.Equal(3, hotkey.Weight);
     }
 
     [Fact]

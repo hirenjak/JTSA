@@ -2,6 +2,7 @@ using JTSA.Dao;
 using JTSA.Models;
 using JTSA.Utility;
 using Microsoft.Win32;
+using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -123,6 +124,7 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     private bool isChatSettingsExpanded;
     private bool isTwitchSettingsExpanded;
     private bool isObsSettingsExpanded;
+    private bool isVtsSettingsExpanded;
     private string imageContent = string.Empty;
     private string audioContent = string.Empty;
     private string chatContent = string.Empty;
@@ -216,8 +218,19 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     public bool IsChatSettingsExpanded { get => isChatSettingsExpanded; set { isChatSettingsExpanded = value; Changed(); } }
     public bool IsTwitchSettingsExpanded { get => isTwitchSettingsExpanded; set { isTwitchSettingsExpanded = value; Changed(); } }
     public bool IsObsSettingsExpanded { get => isObsSettingsExpanded; set { isObsSettingsExpanded = value; Changed(); } }
+    public bool IsVtsSettingsExpanded { get => isVtsSettingsExpanded; set { isVtsSettingsExpanded = value; Changed(); } }
     public ObservableCollection<StreamExpansionObsTextForm> ObsTextForms { get; } = [];
+    public ObservableCollection<StreamExpansionVtsHotkeyForm> VtsHotkeyForms { get; } = [];
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
+}
+
+public class StreamExpansionVtsHotkeyForm : INotifyPropertyChanged
+{
+    private string hotkeyId = string.Empty;
+    public string HotkeyId { get => hotkeyId; set { hotkeyId = value ?? string.Empty; Changed(); } }
+    public ObservableCollection<VtsNamedOption> Hotkeys { get; } = [];
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
@@ -501,6 +514,12 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             ToggleExclusiveSettings(item, nameof(item.IsObsSettingsExpanded));
     }
 
+    private void VtsSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsVtsSettingsExpanded));
+    }
+
     private static void ToggleExclusiveSettings(StreamExpansionItemForm item, string targetProperty)
     {
         var shouldOpen = targetProperty switch
@@ -510,6 +529,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             nameof(item.IsChatSettingsExpanded) => !item.IsChatSettingsExpanded,
             nameof(item.IsTwitchSettingsExpanded) => !item.IsTwitchSettingsExpanded,
             nameof(item.IsObsSettingsExpanded) => !item.IsObsSettingsExpanded,
+            nameof(item.IsVtsSettingsExpanded) => !item.IsVtsSettingsExpanded,
             _ => false
         };
 
@@ -518,6 +538,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         item.IsChatSettingsExpanded = false;
         item.IsTwitchSettingsExpanded = false;
         item.IsObsSettingsExpanded = false;
+        item.IsVtsSettingsExpanded = false;
 
         if (!shouldOpen) return;
         switch (targetProperty)
@@ -527,6 +548,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             case nameof(item.IsChatSettingsExpanded): item.IsChatSettingsExpanded = true; break;
             case nameof(item.IsTwitchSettingsExpanded): item.IsTwitchSettingsExpanded = true; break;
             case nameof(item.IsObsSettingsExpanded): item.IsObsSettingsExpanded = true; break;
+            case nameof(item.IsVtsSettingsExpanded): item.IsVtsSettingsExpanded = true; break;
         }
     }
 
@@ -594,6 +616,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                                 SourceName = item.ObsSourceName,
                                 TextTemplate = item.Content
                             });
+                            break;
+                        case "VtsHotkey":
+                            var hotkey = new StreamExpansionVtsHotkeyForm { HotkeyId = item.Content };
+                            VtsNamedOptionCatalog.EnsureOption(hotkey.Hotkeys, item.Content);
+                            form.VtsHotkeyForms.Add(hotkey);
                             break;
                         default:
                             form.IsAudio = true;
@@ -789,6 +816,70 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }
     }
 
+    private async void AddVtsHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not StreamExpansionItemForm item) return;
+        var form = new StreamExpansionVtsHotkeyForm();
+        item.VtsHotkeyForms.Add(form);
+        await ReloadVtsHotkeysAsync(form, showError: false);
+        SaveCurrent();
+    }
+
+    private void DeleteVtsHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is StreamExpansionItemForm item &&
+            (sender as Button)?.DataContext is StreamExpansionVtsHotkeyForm hotkey)
+        {
+            item.VtsHotkeyForms.Remove(hotkey);
+            SaveCurrent();
+        }
+    }
+
+    private async void ReloadVtsHotkeysButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionVtsHotkeyForm hotkey)
+            await ReloadVtsHotkeysAsync(hotkey, showError: true);
+    }
+
+    private async void TestVtsHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not StreamExpansionVtsHotkeyForm hotkey ||
+            string.IsNullOrWhiteSpace(hotkey.HotkeyId)) return;
+        try
+        {
+            await VtsTriggerService.ExecuteHotkeyAsync(hotkey.HotkeyId);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"VTSホットキーを実行できませんでした。\n{ex.GetBaseException().Message}", "VTS連携");
+        }
+    }
+
+    private static async Task ReloadVtsHotkeysAsync(StreamExpansionVtsHotkeyForm form, bool showError)
+    {
+        try
+        {
+            if (Application.Current.MainWindow is not MainWindow mainWindow || !mainWindow.VtsClient.IsAuthenticated)
+                throw new InvalidOperationException("VTSに接続されていません。");
+            var response = await mainWindow.VtsClient.GetHotkeysAsync();
+            var options = (response["data"]?["availableHotkeys"] as JArray)?
+                .OfType<JObject>()
+                .Select(item => new VtsNamedOption
+                {
+                    Id = item.Value<string>("hotkeyID") ?? string.Empty,
+                    Name = item.Value<string>("name") ?? item.Value<string>("hotkeyID") ?? string.Empty
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                .ToList() ?? [];
+            VtsNamedOptionCatalog.ReplaceKeeping(form.Hotkeys, options, [form.HotkeyId]);
+        }
+        catch (Exception ex)
+        {
+            if (showError)
+                MessageBox.Show($"VTSホットキー一覧を取得できませんでした。\n{ex.GetBaseException().Message}", "VTS連携");
+        }
+    }
+
 
     /// <summary>
     /// 
@@ -838,6 +929,9 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                     UpdatedDateTime = DateTime.Now
                 });
             }
+            foreach (var hotkey in form.VtsHotkeyForms)
+                AddSaveItem(saveItems, !string.IsNullOrWhiteSpace(hotkey.HotkeyId), "VtsHotkey",
+                    hotkey.HotkeyId.Trim(), form.Weight, 100, groupIndex);
         }
 
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader

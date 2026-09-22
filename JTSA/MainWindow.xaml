@@ -1126,6 +1126,10 @@
                     <panels:ObsSettingPanel x:Name="ObsSettingPanel"/>
                 </TabItem>
 
+                <TabItem Header="VTS">
+                    <panels:VtsPanel x:Name="VtsPanel"/>
+                </TabItem>
+
                 <TabItem Header="レイド">
                     <panels:RaidPanel x:Name="RaidPanel"/>
                 </TabItem>
@@ -1150,9 +1154,6 @@
                     <panels:StereamExpansionPanel x:Name="StereamExpansionPanel"/>
                 </TabItem>
 
-                <TabItem Header="外部アプリ">
-                    <panels:AppArrangePanel x:Name="AppArrangePanel"/>
-                </TabItem>
                 <TabItem Header="プラグイン">
                     <panels:ExtensionsPanel x:Name="ExtensionsPanel"/>
                 </TabItem>

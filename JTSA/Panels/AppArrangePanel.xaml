@@ -27,19 +27,19 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="一括起動" Width="88" Margin="0,0,6,0" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="StartAllButton_Click"/>
-            <Button Content="一括配置" Width="88" Margin="0,0,6,0" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="MoveAllButton_Click"/>
-            <Button Content="一括停止" Width="88" Margin="0,0,12,0" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="StopAllButton_Click"/>
-            <CheckBox x:Name="AutoStartCheckBox"
-                      Content="JTSA起動時に登録済みアプリを自動起動"
-                      Foreground="White"
-                      VerticalAlignment="Center"
-                      Margin="0,0,16,0"
-                      Checked="AutoStartCheckBox_Changed"
-                      Unchecked="AutoStartCheckBox_Changed"/>
-            <TextBlock Text="「アプリを登録」から起動中のウィンドウを選択できます" Foreground="LightGray" VerticalAlignment="Center"/>
-        </StackPanel>
+        <Grid Margin="0,0,0,8">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <WrapPanel>
+                <Button Content="一括起動" Width="88" Height="28" Margin="0,0,6,0" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="StartAllButton_Click"/>
+                <Button Content="一括配置" Width="88" Height="28" Margin="0,0,6,0" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="MoveAllButton_Click"/>
+                <Button Content="一括停止" Width="88" Height="28" Margin="0,0,12,0" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="StopAllButton_Click"/>
+                <CheckBox x:Name="AutoStartCheckBox" Content="JTSA起動時に自動起動" Foreground="White"
+                          VerticalAlignment="Center" Checked="AutoStartCheckBox_Changed" Unchecked="AutoStartCheckBox_Changed"/>
+            </WrapPanel>
+            <TextBlock Grid.Row="1" Margin="0,5,0,0"
+                       Text="起動中ウィンドウを選択するか、起動ファイルのPathを直接指定できます。"
+                       Foreground="LightGray" FontSize="11" TextWrapping="Wrap"/>
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -65,36 +65,97 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="6">
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="64"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel>
+                                <Border Width="52" Height="52" Margin="0,2,12,0" VerticalAlignment="Top"
+                                        Background="#FF353535" BorderBrush="#FF555555" BorderThickness="1">
+                                    <Image Source="{Binding AppIcon}" Width="44" Height="44" Stretch="Uniform"/>
+                                </Border>
+                                <StackPanel Grid.Column="1">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding ProcessName}" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding Status, StringFormat=  [{0}]}" Foreground="LightGreen" FontSize="12" VerticalAlignment="Center"/>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding WindowTitle}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding WindowTitle, StringFormat=タイトル: {0}}" Foreground="LightGray" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding AppExePath, StringFormat=Path: {0}}"
                                                Foreground="Silver"
                                                FontSize="11"
                                                TextTrimming="CharacterEllipsis"
                                                ToolTip="{Binding AppExePath}"/>
+                                    <TextBlock Text="{Binding WindowProcessDisplay}"
+                                               Foreground="Silver"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding WindowProcessDisplay}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding ListenPortDisplay}"
+                                               Foreground="Silver"
+                                               FontSize="11">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ListenPortDisplay}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                     <TextBlock Foreground="DarkGray" FontSize="11">
                                         <Run Text="位置: "/><Run Text="{Binding X}"/><Run Text=", "/><Run Text="{Binding Y}"/>
                                         <Run Text="  サイズ: "/><Run Text="{Binding Width}"/><Run Text=" × "/><Run Text="{Binding Height}"/>
+                                        <Run Text="  起動時: "/><Run Text="{Binding WindowStateText, Mode=OneWay}"/>
+                                        <Run Text="  一致: "/><Run Text="{Binding TitleMatchModeText, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <CheckBox Content="自動起動" Margin="4,0,10,0" Foreground="White"
-                                              VerticalAlignment="Center" IsChecked="{Binding IsAutoStart, Mode=TwoWay}"
-                                              Click="AppAutoStartCheckBox_Click"/>
-                                    <Button Content="起動/配置" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewPrimaryButtonStyle}" Click="StartOrMoveButton_Click"/>
-                                    <Button Content="位置保存" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SavePositionButton_Click"/>
-                                    <Button Content="Path" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SetPathButton_Click"/>
-                                    <Button Content="停止" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="StopButton_Click"/>
-                                    <Button Content="削除" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewDeleteButtonStyle}" Click="DeleteButton_Click"/>
-                                </StackPanel>
+                                <Grid Grid.Column="2" Grid.RowSpan="2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <CheckBox Content="自動起動" Margin="0,4,10,0" Foreground="White"
+                                                  VerticalAlignment="Top" IsChecked="{Binding IsAutoStart, Mode=TwoWay}"
+                                                  Click="AppAutoStartCheckBox_Click"/>
+                                        <CheckBox Content="最小化して起動" Margin="0,4,10,0" Foreground="White"
+                                                  VerticalAlignment="Top" IsChecked="{Binding IsMinimized, Mode=TwoWay}"
+                                                  Click="AppStartMinimizedCheckBox_Click"/>
+                                        <Button Width="24" Height="24" Padding="0" Margin="2,0,0,0"
+                                                FontSize="18" Content="×" ToolTip="登録を削除"
+                                                Style="{StaticResource OverviewDeleteButtonStyle}"
+                                                Click="DeleteButton_Click"/>
+                                    </StackPanel>
+                                    <WrapPanel Grid.Row="1" Margin="0,8,0,0" HorizontalAlignment="Right">
+                                        <Button Margin="4,0" Padding="10,3" Click="StartOrMoveButton_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource OverviewPrimaryButtonStyle}">
+                                                    <Setter Property="Content" Value="起動"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="起動中">
+                                                            <Setter Property="Content" Value="停止"/>
+                                                            <Setter Property="Background" Value="#FF7A3038"/>
+                                                            <Setter Property="BorderBrush" Value="#FFFF6F78"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button Content="配置" Margin="4,0" Padding="10,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="MoveButton_Click"/>
+                                        <Button Content="位置保存" Margin="4,0" Padding="7,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="SavePositionButton_Click"/>
+                                        <Button Content="設定" Margin="4,0" Padding="10,3" Style="{StaticResource OverviewSecondaryButtonStyle}" Click="EditAppSettingsButton_Click"/>
+                                    </WrapPanel>
+                                </Grid>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

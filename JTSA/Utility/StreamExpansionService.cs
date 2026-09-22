@@ -31,6 +31,8 @@ internal sealed class StreamExpansionService
     {
         try
         {
+            _ = VtsTriggerService.HandleAsync(type, value);
+
             var selectedContext = GetSelectedAccountContext();
             if (!string.IsNullOrWhiteSpace(selectedContext.BroadcasterId) &&
                 !string.IsNullOrWhiteSpace(selectedContext.AccessToken))
@@ -371,6 +373,17 @@ internal sealed class StreamExpansionService
                 catch (Exception ex)
                 {
                     LogError($"OBSテキストソース変更失敗（{item.ObsSourceName}）：{ex.GetBaseException().Message}");
+                }
+                break;
+
+            case "VtsHotkey":
+                try
+                {
+                    await VtsTriggerService.ExecuteHotkeyAsync(item.Content);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"VTSホットキー実行失敗（{item.Content}）：{ex.GetBaseException().Message}");
                 }
                 break;
 

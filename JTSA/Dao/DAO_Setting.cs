@@ -25,7 +25,7 @@ namespace JTSA.Dao
             ChatOverlayHeight = 13,
             ChatOverlayShowUserIcon = 14,
             ChatOverlayFontSize = 15,
-            AutoStartRegisteredApps = 16,
+            // 16 は旧・外部アプリ自動起動設定（現在はプラグイン側JSONへ移行）
             BouyomiEnabled = 17,
             BouyomiEndpoint = 18,
             SpeechEngine = 19,
@@ -82,6 +82,22 @@ namespace JTSA.Dao
             ChatTodoLists = 51,
             /// <summary>チャット画面の管理パネル開閉状態</summary>
             ChatManagementPanelVisibility = 52,
+            /// <summary>チャット読み上げをしないTwitchログイン名（改行区切り）</summary>
+            SpeechMutedUserLogins = 53,
+            /// <summary>チャット読み上げの最大文字数（0は制限なし）</summary>
+            SpeechMaxChars = 54,
+            /// <summary>同じスタンプ名の連続読み上げ上限（0は制限なし）</summary>
+            SpeechMaxSameToken = 55,
+            /// <summary>VTube Studio WebSocket接続URL</summary>
+            VtsWebSocketUrl = 56,
+            /// <summary>VTube Studio プラグイン認証トークン</summary>
+            VtsAuthToken = 57,
+            /// <summary>起動時にVTube Studioへ自動接続するか</summary>
+            VtsAutoConnect = 58,
+            /// <summary>VTSトリガーとコマンドの対応ルール</summary>
+            VtsTriggerRules = 59,
+            /// <summary>JTSA起動時に開くプラグインID一覧</summary>
+            AutoStartPlugins = 60,
         }
 
 

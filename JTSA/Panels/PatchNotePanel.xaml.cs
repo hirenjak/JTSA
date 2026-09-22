@@ -18,6 +18,23 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "v1.5.33",
+                ReleaseDate = "2026/09/22",
+                Summary = "配信拡張およびプラグイン機能を拡張",
+                Changes =
+                [
+                    "【配信拡張】",
+                    "・抽選アイテムからVTube Studioのホットキーを実行できる機能を追加",
+                    "・VTube Studioからホットキー一覧を取得し、追加・削除・テスト実行できるように対応",
+                    "【プラグイン】",
+                    "・プラグインごとにJTSA起動時の自動起動を設定できる機能を追加",
+                    "【外部アプリ】",
+                    "・外部アプリ管理をプラグインへ移行",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.4.32",
                 ReleaseDate = "2026/09/19",
                 Summary = "カレンダーおよびカテゴリ登録を改善",

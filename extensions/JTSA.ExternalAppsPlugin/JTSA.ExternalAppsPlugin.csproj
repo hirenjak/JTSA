@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\JTSA.Plugin.Abstractions\JTSA.Plugin.Abstractions.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\JTSA\Panels\AppArrangePanel.xaml.cs" Link="Panels\AppArrangePanel.xaml.cs" />
+    <Compile Include="..\..\JTSA\AppRegistrationWindow.xaml.cs" Link="AppRegistrationWindow.xaml.cs" />
+    <Compile Include="..\..\JTSA\Forms\AppInfoForm.cs" Link="Forms\AppInfoForm.cs" />
+    <Compile Include="..\..\JTSA\Models\WindowTitleMatchMode.cs" Link="Models\WindowTitleMatchMode.cs" />
+    <Compile Include="..\..\JTSA\TcpListenHelper.cs" Link="TcpListenHelper.cs" />
+    <Compile Include="..\..\JTSA\Win32Helper.cs" Link="Win32Helper.cs" />
+    <Page Include="..\..\JTSA\Panels\AppArrangePanel.xaml" Link="Panels\AppArrangePanel.xaml" />
+    <Page Include="..\..\JTSA\AppRegistrationWindow.xaml" Link="AppRegistrationWindow.xaml" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+  <Target Name="CopyPluginManifest" AfterTargets="Build">
+    <Copy SourceFiles="plugin.json" DestinationFolder="$(TargetDir)" />
+    <PropertyGroup>
+      <HostPluginDir>$(MSBuildThisFileDirectory)..\..\JTSA\bin\$(Configuration)\net8.0-windows\Plugins\ExternalApps</HostPluginDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(HostPluginDir)" />
+    <ItemGroup><PluginFiles Include="$(TargetDir)*.*" /></ItemGroup>
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(HostPluginDir)" />
+  </Target>
+</Project>

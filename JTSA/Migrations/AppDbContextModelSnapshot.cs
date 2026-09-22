@@ -660,48 +660,6 @@ namespace JTSA.Migrations
                     b.ToTable("T_StreamHistory");
                 });
 
-            modelBuilder.Entity("JTSA.Models.T_StreamWindow", b =>
-                {
-                    b.Property<string>("ProcessName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AppExePath")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Height")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsAutoStart")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("LastUsedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedDateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Width")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("WindowTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("X")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Y")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("ProcessName");
-
-                    b.ToTable("T_StreamWindow");
-                });
-
             modelBuilder.Entity("M_Category", b =>
                 {
                     b.Property<string>("CategoryId")

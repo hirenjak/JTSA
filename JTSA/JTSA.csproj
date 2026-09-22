@@ -28,6 +28,8 @@
 
   <ItemGroup>
 	<ProjectReference Include="..\JTSA.Plugin.Abstractions\JTSA.Plugin.Abstractions.csproj" />
+	<ProjectReference Include="..\extensions\JTSA.ExternalAppsPlugin\JTSA.ExternalAppsPlugin.csproj"
+	                  ReferenceOutputAssembly="false" />
 
 	<PackageReference Include="Fody" Version="6.9.3" PrivateAssets="all" />
 	<PackageReference Include="Costura.Fody" Version="6.0.0" PrivateAssets="all" />
@@ -44,6 +46,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
     <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="NAudio" Version="2.3.0" />
     <PackageReference Include="obs-websocket-dotnet" Version="5.0.1" />
     <PackageReference Include="TwitchLib.Api" Version="3.10.1-preview.199.347b75c" />

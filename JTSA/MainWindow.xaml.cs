@@ -1,4 +1,4 @@
-using JTSA.Dao;
+﻿using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Forms.TwitchIF;
 using JTSA.Models;
@@ -43,6 +43,9 @@ namespace JTSA
 
 		private readonly ObsController mainObsController = new();
 		private readonly ObsController subObsController = new();
+        public VtsClient VtsClient { get; } = new();
+        private readonly SemaphoreSlim vtsConnectionLock = new(1, 1);
+        private CancellationTokenSource? vtsAutoConnectCts;
         private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim twitchAccountTokenLock = new(1, 1);
@@ -332,9 +335,11 @@ namespace JTSA
             Closed += (_, _) =>
             {
                 hourlyTriggerTimer.Stop();
+                vtsAutoConnectCts?.Cancel();
                 pluginManager.Dispose();
                 mainObsController.Dispose();
                 subObsController.Dispose();
+                VtsClient.Dispose();
             };
             SteamUrlTextBlock.MouseLeftButtonUp += SteamUrlTextBlock_MouseLeftButtonUp;
 
@@ -691,6 +696,7 @@ namespace JTSA
             // OBSは補助機能なので、Twitch画面・チャットなど本体の初期化完了後、
             // UIが落ち着いてから低優先で自動接続する。
             _ = AutoConnectObsAfterStartupAsync();
+            StartVtsAutoConnectLoop();
 
             //【プロセス終了ログ】
             processLog.EventEndLogWrite();
@@ -700,6 +706,112 @@ namespace JTSA
         {
             await Task.Delay(TimeSpan.FromSeconds(2));
             await AutoConnectObsAsync();
+        }
+
+        public void StartVtsAutoConnectLoop()
+        {
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value != "1")
+                return;
+
+            vtsAutoConnectCts?.Cancel();
+            vtsAutoConnectCts = new CancellationTokenSource();
+            _ = RunVtsAutoConnectLoopAsync(vtsAutoConnectCts.Token);
+        }
+
+        public void StopVtsAutoConnectLoop()
+        {
+            vtsAutoConnectCts?.Cancel();
+        }
+
+        private async Task RunVtsAutoConnectLoopAsync(CancellationToken cancellationToken)
+        {
+            var isFirstAttempt = true;
+            var retryDelay = VtsAutoConnectRetry.FirstRetryDelay;
+            while (!cancellationToken.IsCancellationRequested
+                && DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value == "1")
+            {
+                var wait = isFirstAttempt ? VtsAutoConnectRetry.InitialDelay : retryDelay;
+                try
+                {
+                    await Task.Delay(wait, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                if (VtsClient.IsAuthenticated)
+                    return;
+                if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAutoConnect)?.Value != "1")
+                    return;
+
+                try
+                {
+                    await ConnectVtsAsync(forceReconnect: false, cancellationToken);
+                    if (VtsClient.IsAuthenticated)
+                        return;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    AppLogPanel.Error(nameof(MainWindow), "VTube Studio 自動接続失敗：" + ex.Message);
+                }
+
+                if (!isFirstAttempt)
+                    retryDelay = VtsAutoConnectRetry.NextDelay(retryDelay);
+                isFirstAttempt = false;
+                RefreshVtsConnectionUi();
+            }
+        }
+
+        public async Task ConnectVtsAsync(bool forceReconnect, CancellationToken cancellationToken = default)
+        {
+            await vtsConnectionLock.WaitAsync(cancellationToken);
+            try
+            {
+                if (VtsClient.IsAuthenticated && !forceReconnect)
+                    return;
+
+                if (forceReconnect)
+                    await VtsClient.DisconnectAsync();
+
+                var url = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsWebSocketUrl)?.Value
+                    ?? VtsProtocol.DefaultWebSocketUrl;
+                var token = DAO_Setting.SelectOneById(DAO_Setting.SettingName.VtsAuthToken)?.Value;
+                await VtsClient.ConnectAsync(url, token, persistToken: value =>
+                {
+                    DAO_Setting.InsertUpdate(DAO_Setting.SettingName.VtsAuthToken, value);
+                    return Task.CompletedTask;
+                });
+            }
+            finally
+            {
+                vtsConnectionLock.Release();
+                RefreshVtsConnectionUi();
+            }
+        }
+
+        public async Task DisconnectVtsAsync()
+        {
+            StopVtsAutoConnectLoop();
+            await vtsConnectionLock.WaitAsync();
+            try
+            {
+                await VtsClient.DisconnectAsync();
+            }
+            finally
+            {
+                vtsConnectionLock.Release();
+                RefreshVtsConnectionUi();
+            }
+        }
+
+        private void RefreshVtsConnectionUi()
+        {
+            Dispatcher.BeginInvoke(() => VtsPanel.RefreshConnectionUi());
         }
 
         private async Task AutoConnectObsAsync()
@@ -2196,7 +2308,7 @@ namespace JTSA
         {
             ProcessLog processLog = new ProcessLog(AppLogPanel, GetType().Name, "SteamURLテキスト登録処理");
 
-            CurrentCategorySteamUrl = "";
+            CurrentCategorySteamUrl = DAO_Category.SelectOneById(categoryId)?.SteamUrl ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(categoryId))
             {
@@ -2204,10 +2316,13 @@ namespace JTSA
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(CurrentCategorySteamUrl)) return;
+
 			try
 			{
 				var result = await IgdbService.GetSteamUrlsAsync(categoryId);
-				CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
+				if (CurrentCategoryId == categoryId && string.IsNullOrWhiteSpace(CurrentCategorySteamUrl))
+					CurrentCategorySteamUrl = result.FirstOrDefault() ?? "";
 			}
 			catch (Exception)
 			{
@@ -2584,7 +2699,7 @@ namespace JTSA
                 SettingPanel.ReloadRegisteredAccounts();
             }
 
-            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, TwitchHelper.AccessToken);
+            IgdbService.Initialize(new HttpClient(), TwitchHelper.ClientID, () => TwitchHelper.AccessToken);
 
             // 右上で選択されているアカウントの配信概要を読み込む。
             var selectedAccount = await GetSelectedTargetAccountAsync();

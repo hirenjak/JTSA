@@ -235,10 +235,10 @@
                         <Button x:Name="SpinButton" Content="ルーレット開始" Height="36"
                                 Style="{StaticResource PluginPrimaryButtonStyle}"
                                 Click="SpinButton_Click"/>
-                        <Button x:Name="DeleteResultAndRestartButton" Content="結果を削除してから再開"
+                        <Button x:Name="DeleteResultButton" Content="結果を削除"
                                 Height="36" Margin="0,8,0,0" IsEnabled="False"
                                 Style="{StaticResource PluginPrimaryButtonStyle}"
-                                Click="DeleteResultAndRestartButton_Click"/>
+                                Click="DeleteResultButton_Click"/>
                         <Button x:Name="RestoreRemovedCandidateButton" Content="削除した項目を戻す"
                                 Height="36" Margin="0,8,0,0" IsEnabled="False"
                                 Style="{StaticResource PluginSecondaryButtonStyle}"
