@@ -17,7 +17,10 @@ public sealed class PluginManager : IDisposable
     public PluginManager(MainWindow mainWindow)
     {
         this.mainWindow = mainWindow;
-        PluginRoot = Path.Combine(AppContext.BaseDirectory, "Plugins");
+        PluginRoot = GetPersistentPluginRoot();
+        CopyPluginsWithoutDeleting(
+            Path.Combine(AppContext.BaseDirectory, "Plugins"),
+            PluginRoot);
         shadowRoot = Path.Combine(
             Path.GetTempPath(), "JTSA", "PluginShadow",
             $"{Environment.ProcessId}-{Guid.NewGuid():N}");
@@ -26,6 +29,29 @@ public sealed class PluginManager : IDisposable
     public string PluginRoot { get; }
     public ObservableCollection<PluginDescriptor> Plugins { get; } = new();
     public ObservableCollection<string> LoadErrors { get; } = new();
+
+    private static string GetPersistentPluginRoot() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "JTSA", "Plugins");
+
+    private static void CopyPluginsWithoutDeleting(string sourceRoot, string destinationRoot)
+    {
+        Directory.CreateDirectory(destinationRoot);
+        if (!Directory.Exists(sourceRoot) ||
+            string.Equals(
+                Path.GetFullPath(sourceRoot).TrimEnd(Path.DirectorySeparatorChar),
+                Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase))
+            return;
+
+        foreach (var sourcePath in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceRoot, sourcePath);
+            var destinationPath = Path.Combine(destinationRoot, relativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+            File.Copy(sourcePath, destinationPath, overwrite: true);
+        }
+    }
 
     public void Discover()
     {
