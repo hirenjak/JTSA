@@ -85,7 +85,14 @@ jobs:
           --packTitle JTSA
           --releaseNotes .github/release-notes.md
           --exclude '(?i)(JTSA\.db$|(^|[\\/])Plugins[\\/])'
+          --delta None
           --noPortable
+
+      - name: Add legacy migration to automatic updates
+        shell: pwsh
+        run: >-
+          ./.github/scripts/pack-update-bridge.ps1
+          -Version ${{ steps.version.outputs.version }}
 
       - name: Add legacy plugin migration to the single installer
         shell: pwsh
