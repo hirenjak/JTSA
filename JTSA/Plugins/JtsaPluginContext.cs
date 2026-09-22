@@ -16,10 +16,7 @@ internal sealed class JtsaPluginContext : IJtsaPluginContext, IJtsaCalendarPlugi
         this.mainWindow = mainWindow;
         this.pluginId = pluginId;
         PluginDirectory = pluginDirectory;
-        DataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JTSA", "Plugins", pluginId);
-        Directory.CreateDirectory(DataDirectory);
+        DataDirectory = PluginStorage.GetDataDirectory(pluginId);
     }
 
     public string PluginDirectory { get; }
