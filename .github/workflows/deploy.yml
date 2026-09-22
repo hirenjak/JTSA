@@ -87,6 +87,21 @@ jobs:
           --exclude '(?i)(JTSA\.db$|(^|[\\/])Plugins[\\/])'
           --noPortable
 
+      - name: Add legacy plugin migration to the single installer
+        shell: pwsh
+        run: |
+          $installer = (Resolve-Path -LiteralPath 'Releases/JTSA-win-Setup.exe').Path
+          dotnet publish installer/JTSA.SetupBootstrapper/JTSA.SetupBootstrapper.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output setup-bootstrapper `
+            "-p:Version=${{ steps.version.outputs.version }}" `
+            "-p:VelopackSetupPath=$installer"
+          if ($LASTEXITCODE -ne 0) { throw 'Bootstrapper publish failed.' }
+          $wrapper = (Resolve-Path -LiteralPath 'setup-bootstrapper/JTSA-win-Setup.exe').Path
+          Copy-Item -LiteralPath $wrapper -Destination $installer -Force
+
       - name: Publish GitHub release
         run: >-
           vpk upload github

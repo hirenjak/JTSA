@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\JTSA\JTSA.csproj" />
+    <ProjectReference Include="..\installer\JTSA.SetupBootstrapper\JTSA.SetupBootstrapper.csproj" />
   </ItemGroup>
 </Project>
