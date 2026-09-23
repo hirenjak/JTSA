@@ -16,12 +16,20 @@ public sealed class CachedImageConverter : IValueConverter
         {
             var key = (url, width);
             if (Images.TryGetValue(key, out var cached)) return cached;
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.DecodePixelWidth = width;
-            bitmap.UriSource = new Uri(url, UriKind.Absolute);
-            bitmap.EndInit();
-            bitmap.DownloadFailed += (_, _) => { lock (Images) Images.Remove(key); };
+            BitmapImage bitmap;
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.DecodePixelWidth = width;
+                bitmap.UriSource = uri;
+                bitmap.EndInit();
+                bitmap.DownloadFailed += (_, _) => { lock (Images) Images.Remove(key); };
+            }
+            else
+            {
+                bitmap = JTSAHelper.Base64ToBitmap(url, width);
+            }
             if (bitmap.CanFreeze) bitmap.Freeze();
             if (Images.Count >= 256) Images.Remove(Images.Keys.First());
             Images[key] = bitmap;
@@ -34,7 +42,7 @@ public sealed class CachedImageConverter : IValueConverter
         if (value is ImageSource source) return source;
         if (value is not string url || string.IsNullOrWhiteSpace(url)) return null;
         try { return GetImage(url, int.TryParse(parameter?.ToString(), out var width) ? width : 144); }
-        catch (Exception ex) when (ex is UriFormatException or ArgumentException or System.IO.IOException) { return null; }
+        catch (Exception ex) when (ex is UriFormatException or ArgumentException or FormatException or System.IO.IOException) { return null; }
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

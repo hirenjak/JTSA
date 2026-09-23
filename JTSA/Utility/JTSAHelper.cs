@@ -37,7 +37,7 @@ namespace JTSA.Utility
             return Convert.ToBase64String(ms.ToArray());
         }
 
-        public static BitmapImage Base64ToBitmap(string base64)
+        public static BitmapImage Base64ToBitmap(string base64, int width = 96)
         {
             byte[] bytes = Convert.FromBase64String(base64);
 
@@ -46,7 +46,7 @@ namespace JTSA.Utility
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.DecodePixelWidth = 96;
+            bitmap.DecodePixelWidth = width;
             bitmap.StreamSource = ms;
             bitmap.EndInit();
             bitmap.Freeze();

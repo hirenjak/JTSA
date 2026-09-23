@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.multi-platform",
+  "name": "YouTube・Kick連携",
+  "entryAssembly": "JTSA.MultiPlatformPlugin.dll",
+  "entryType": "JTSA.MultiPlatformPlugin.MultiPlatformPlugin",
+  "apiVersion": 1
+}

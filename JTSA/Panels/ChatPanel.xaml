@@ -726,7 +726,7 @@
             </DockPanel>
         </Border>
 
-        <!-- この配信中に発言したユーザー。最新発言者を先頭に表示する。 -->
+        <!-- 発言者と、Twitchのチャットに接続中のユーザーを切り替えて表示する。 -->
         <Border Grid.Row="0"
                 Grid.RowSpan="3"
                 Grid.Column="3"
@@ -738,6 +738,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="36"/>
+                    <RowDefinition Height="28"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -747,7 +748,7 @@
                             ToolTip="ユーザー一覧を閉じる" AutomationProperties.Name="ユーザー一覧を閉じる"
                             Style="{StaticResource OverviewDangerButtonStyle}"
                             Click="ChatUserListToggleButton_Click"/>
-                <TextBlock
+                <TextBlock x:Name="ChatUserListHeading"
                            Text="{Binding ChatUserFormList.Count, StringFormat=チャットユーザー ({0})}"
                            Foreground="White"
                            FontSize="14"
@@ -756,7 +757,17 @@
                            VerticalAlignment="Center"/>
                 </DockPanel>
 
-                <ListBox Grid.Row="1"
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="8,0,8,4">
+                    <Button x:Name="ChatSpeakersButton" Content="発言者" Width="92" Height="22"
+                            Style="{StaticResource OverviewPrimaryButtonStyle}"
+                            Click="ChatUserSourceButton_Click"/>
+                    <Button x:Name="ConnectedChattersButton" Content="接続中" Width="92" Height="22" Margin="4,0,0,0"
+                            ToolTip="チャットに接続中のユーザー。動画を見ているかは判別できません"
+                            Style="{StaticResource OverviewSecondaryButtonStyle}"
+                            Click="ChatUserSourceButton_Click"/>
+                </StackPanel>
+
+                <ListBox Grid.Row="2" x:Name="ChatUserListBox"
                          ItemsSource="{Binding ChatUserFormList}"
                          Background="Transparent"
                          BorderThickness="0"
@@ -767,6 +778,18 @@
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         </Style>
                     </ListBox.ItemContainerStyle>
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FF24242B" Padding="8,4" Margin="0,5,0,1">
+                                        <TextBlock Text="{Binding Name}" Foreground="White"
+                                                   FontSize="11" FontWeight="SemiBold"/>
+                                    </Border>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
@@ -780,35 +803,96 @@
                                                   Click="ToggleChatUserSpeechMute_Click"/>
                                     </ContextMenu>
                                 </StackPanel.ContextMenu>
-                                <Grid Margin="8,5">
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Margin" Value="8,5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                    <Setter Property="Margin" Value="8,1"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <Ellipse Grid.Column="0" Width="36" Height="36">
+                                    <Ellipse Grid.Column="0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Width" Value="36"/>
+                                                <Setter Property="Height" Value="36"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                        <Setter Property="Width" Value="18"/>
+                                                        <Setter Property="Height" Value="18"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
                                         <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}}"/>
+                                            <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}, ConverterParameter=48}"/>
                                         </Ellipse.Fill>
                                     </Ellipse>
 
-                                    <StackPanel Grid.Column="1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Margin" Value="11,0,0,0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                        <Setter Property="Margin" Value="2,0,0,0"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
                                         <TextBlock Text="{Binding DisplayName}"
                                                    Foreground="White"
-                                                   FontSize="13"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontSize" Value="13"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                            <Setter Property="FontSize" Value="10"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                         <TextBlock Text="読み上げなし"
                                                    Foreground="Gray"
                                                    FontSize="10"
                                                    Visibility="{Binding IsSpeechMuted, Converter={StaticResource OverlaySettingsVisibilityConverter}}"/>
                                         <TextBlock Text="{Binding UserName, StringFormat=@{0}}"
                                                    Foreground="LightGray"
-                                                   FontSize="10"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontSize" Value="10"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                            <Setter Property="FontSize" Value="8.5"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
                                         <TextBlock Text="{Binding MessageCount, StringFormat={}{0}件}"
                                                    Foreground="LightSeaGreen"
                                                    FontSize="11"

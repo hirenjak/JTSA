@@ -77,10 +77,16 @@ namespace JTSA
         private DateTime? currentStreamStartedAtUtc;
         private int? currentViewerCount;
         private bool isViewerCountHidden;
-        private const int SecretPanelClickCount = 10;
-        private static readonly TimeSpan SecretPanelClickInterval = TimeSpan.FromSeconds(2);
-        private int viewerCountConsecutiveClicks;
-        private DateTime lastViewerCountClickUtc;
+        private readonly HttpClient chattersHttpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+        private readonly TwitchChattersClient chattersClient;
+        private readonly TwitchChatterRolesClient chatterRolesClient;
+        private readonly TwitchUsersClient usersClient;
+        private long? chattersUnauthorizedAccountId;
+        private string? chattersUnauthorizedToken;
+        private long? chatterRolesUnauthorizedAccountId;
+        private string? chatterRolesUnauthorizedToken;
+        private readonly DispatcherTimer viewerCountHoldTimer;
+        private bool isViewerCountHeld;
         private readonly DispatcherTimer twitchStatusHoldTimer;
         private bool isTwitchStatusHeld;
 		private string currentCategoryId = string.Empty;
@@ -251,6 +257,9 @@ namespace JTSA
 
             // WPF上の初期化処理
 			InitializeComponent();
+            chattersClient = new TwitchChattersClient(chattersHttpClient);
+            chatterRolesClient = new TwitchChatterRolesClient(chattersHttpClient);
+            usersClient = new TwitchUsersClient(chattersHttpClient);
             if (OverviewCategoryFilterTextBox.FindResource("OverviewCategoryView") is CollectionViewSource overviewCategoryView)
                 overviewCategoryView.Source = CategoryPanel.CategoryFormList;
             DataContext = this;
@@ -260,6 +269,8 @@ namespace JTSA
             CalendarPanel.AddRequested += CalendarPanel_AddRequested;
             CalendarPanel.EditRequested += CalendarPanel_EditRequested;
             CalendarPanel.DuplicateRequested += CalendarPanel_DuplicateRequested;
+            viewerCountHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            viewerCountHoldTimer.Tick += ViewerCountHoldTimer_Tick;
             twitchStatusHoldTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             twitchStatusHoldTimer.Tick += TwitchStatusHoldTimer_Tick;
             RestoreWindowPosition();
@@ -283,7 +294,7 @@ namespace JTSA
             accessTokenRefreshTimer.Tick += AccessTokenRefreshTimer_TickAsync;
             accessTokenRefreshTimer.Start();
 
-            streamStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+            streamStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
             streamStatusTimer.Tick += async (_, _) => await UpdateStreamStatusAsync();
 
             hourlyTriggerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -1405,6 +1416,9 @@ namespace JTSA
 
         private async void TargetAccountComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            var chatPanel = ChatPanel;
+            if (chatPanel is null) return;
+            chatPanel.ClearConnectedChatters();
             if (TargetAccountComboBox.SelectedValue is long id)
                 DAO_Setting.InsertUpdate(DAO_Setting.SettingName.SelectedTwitchAccountId, id.ToString());
             await RefreshObsControlTargetAsync();
@@ -1424,7 +1438,7 @@ namespace JTSA
                     TargetAccountComboBox.SelectedValue is long selectedId &&
                     selectedId == target.Value.Account.Id)
                 {
-                    await ChatPanel.InitializeAsync(
+                    await chatPanel.InitializeAsync(
                         target.Value.Account.UserName,
                         target.Value.Account.BroadcasterId,
                         target.Value.AccessToken);
@@ -2399,13 +2413,19 @@ namespace JTSA
 				return TitleTextTagReplace(titleText);
 			}
 
-			var friendText = FriendPanel.FriendPrefixWordTextBox.Text;
-			foreach(var friendItem in FriendPanel.SelectedFriendFormList)
+			var friendText = string.Empty;
+			if (FriendPanel.SelectedFriendFormList.Count > 0)
 			{
-			 	friendText += " " + friendItem.TitlePlaceholderName;
+				friendText = FriendPanel.FriendPrefixWordTextBox.Text;
+				foreach (var friendItem in FriendPanel.SelectedFriendFormList)
+				{
+					friendText += " " + friendItem.TitlePlaceholderName;
+				}
+
+				friendText += " ";
 			}
 
-            titleText = titleText.Replace("${friend}", friendText + " ");
+            titleText = titleText.Replace("${friend}", friendText);
 
 			return TitleTextTagReplace(titleText);
 		}
@@ -2416,14 +2436,15 @@ namespace JTSA
         /// </summary>
         private string TitleTextFriendTagToXReplace(string titleText)
         {
-            var friendText = FriendPanel.FriendPrefixWordTextBox.Text;
-            foreach (var friendItem in FriendPanel.SelectedFriendFormList)
+            var friendText = string.Empty;
+            if (FriendPanel.SelectedFriendFormList.Count > 0)
             {
-                friendText += friendItem.DisplayName + "、";
-            }
+                friendText = FriendPanel.FriendPrefixWordTextBox.Text;
+                foreach (var friendItem in FriendPanel.SelectedFriendFormList)
+                {
+                    friendText += friendItem.DisplayName + "、";
+                }
 
-			if(friendText.Length > 0)
-            {
                 friendText = friendText.Substring(0, friendText.Length - 1);
             }
 
@@ -2487,6 +2508,7 @@ namespace JTSA
                     StreamStatusTextBlock.Text = "オフライン";
                     StreamDurationTextBlock.Text = "--:--:--";
                     ViewerCountTextBlock.Text = "-- 人";
+                    await UpdateConnectedChattersAsync(selectedAccount);
                     return;
                 }
 
@@ -2511,6 +2533,7 @@ namespace JTSA
                 UpdateDisplayedStreamDuration();
                 currentViewerCount = stream.ViewerCount;
                 UpdateDisplayedViewerCount();
+                await UpdateConnectedChattersAsync(selectedAccount);
             }
             finally
             {
@@ -2553,28 +2576,161 @@ namespace JTSA
                 : duration.ToString(@"hh\:mm\:ss");
         }
 
-        private async void ViewerCountTextBlock_MouseLeftButtonDown(
+        private void ViewerCountTextBlock_MouseLeftButtonDown(
             object sender,
             System.Windows.Input.MouseButtonEventArgs e)
         {
-            var clickedAtUtc = DateTime.UtcNow;
-            viewerCountConsecutiveClicks = clickedAtUtc - lastViewerCountClickUtc <= SecretPanelClickInterval
-                ? viewerCountConsecutiveClicks + 1
-                : 1;
-            lastViewerCountClickUtc = clickedAtUtc;
-
             isViewerCountHidden = !isViewerCountHidden;
             UpdateDisplayedViewerCount();
 
-            if (viewerCountConsecutiveClicks < SecretPanelClickCount)
+            isViewerCountHeld = true;
+            ViewerCountTextBlock.CaptureMouse();
+            viewerCountHoldTimer.Stop();
+            viewerCountHoldTimer.Start();
+            e.Handled = true;
+        }
+
+        /// <summary>視聴者数と同じ周期でチャット接続者を取得する。</summary>
+        private async Task UpdateConnectedChattersAsync(M_TwitchAccount selectedAccount)
+        {
+            var connected = ChatPanel.GetConnectedAccountContext();
+            var accessToken = string.Equals(
+                connected.BroadcasterId, selectedAccount.BroadcasterId, StringComparison.Ordinal)
+                    ? connected.AccessToken
+                    : selectedAccount.IsPrimary
+                        ? TwitchHelper.AccessToken
+                        : (await GetAccountAccessTokenAsync(
+                            selectedAccount.Id, "チャット接続者取得"))?.AccessToken;
+
+            if (TargetAccountComboBox.SelectedValue is not long currentAccountId ||
+                currentAccountId != selectedAccount.Id)
                 return;
 
-            viewerCountConsecutiveClicks = 0;
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                ChatPanel.ClearConnectedChatters();
+                return;
+            }
+
+            if (chattersUnauthorizedAccountId == selectedAccount.Id &&
+                chattersUnauthorizedToken == accessToken)
+                return;
+
+            var result = await chattersClient.GetAsync(
+                selectedAccount.BroadcasterId, accessToken, TwitchHelper.ClientID);
+            if (TargetAccountComboBox.SelectedValue is not long selectedId ||
+                selectedId != selectedAccount.Id)
+                return;
+
+            if (result.IsSuccess && result.Data is not null)
+            {
+                chattersUnauthorizedAccountId = null;
+                chattersUnauthorizedToken = null;
+                var chatters = result.Data;
+                if (chatterRolesUnauthorizedAccountId == selectedAccount.Id &&
+                    chatterRolesUnauthorizedToken == accessToken)
+                    return;
+
+                var roles = await chatterRolesClient.GetAsync(
+                    selectedAccount.BroadcasterId, accessToken, TwitchHelper.ClientID);
+                if (TargetAccountComboBox.SelectedValue is not long rolesAccountId ||
+                    rolesAccountId != selectedAccount.Id)
+                    return;
+                if (!roles.IsSuccess || roles.Data is null)
+                {
+                    if (roles.ErrorKind == TwitchApiErrorKind.Unauthorized)
+                    {
+                        chatterRolesUnauthorizedAccountId = selectedAccount.Id;
+                        chatterRolesUnauthorizedToken = accessToken;
+                        ShowOAuthReauthenticationNotification(
+                            selectedAccount.Id.ToString(CultureInfo.InvariantCulture),
+                            $"{selectedAccount.UserName} の役割別チャット接続者一覧には moderation:read 権限が必要です。設定から再認証してください。");
+                    }
+                    else
+                        AppLogPanel.Error(GetType().Name, roles.ErrorMessage);
+                    return;
+                }
+                chatterRolesUnauthorizedAccountId = null;
+                chatterRolesUnauthorizedToken = null;
+                var cachedImages = await Task.Run(() => DAO_User.SelectCachedProfileImages(
+                    chatters.Select(x => x.UserId)));
+                if (TargetAccountComboBox.SelectedValue is not long accountId ||
+                    accountId != selectedAccount.Id)
+                    return;
+
+                ChatPanel.SetConnectedChatters(
+                    selectedAccount.BroadcasterId, chatters, cachedImages, roles.Data);
+
+                var missingIds = chatters.Select(x => x.UserId)
+                    .Where(x => !cachedImages.ContainsKey(x))
+                    .ToArray();
+                if (missingIds.Length == 0) return;
+
+                var profiles = await usersClient.GetByIdsAsync(
+                    missingIds, accessToken, TwitchHelper.ClientID);
+                if (!profiles.IsSuccess || profiles.Data is null)
+                {
+                    AppLogPanel.Error(GetType().Name, profiles.ErrorMessage);
+                    return;
+                }
+
+                await Task.Run(() => DAO_User.CacheProfileImages(profiles.Data));
+                if (TargetAccountComboBox.SelectedValue is not long activeAccountId ||
+                    activeAccountId != selectedAccount.Id)
+                    return;
+
+                ChatPanel.UpdateConnectedChatterImages(profiles.Data
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ProfileImageUrl))
+                    .ToDictionary(x => x.UserId, x => x.ProfileImageUrl, StringComparer.Ordinal));
+                return;
+            }
+
+            ChatPanel.ClearConnectedChatters();
+            if (result.ErrorKind == TwitchApiErrorKind.Unauthorized)
+            {
+                chattersUnauthorizedAccountId = selectedAccount.Id;
+                chattersUnauthorizedToken = accessToken;
+                ShowOAuthReauthenticationNotification(
+                    selectedAccount.Id.ToString(CultureInfo.InvariantCulture),
+                    $"{selectedAccount.UserName} のチャット接続者一覧には moderator:read:chatters 権限が必要です。設定から再認証してください。");
+            }
+            else
+            {
+                AppLogPanel.Error(GetType().Name, result.ErrorMessage);
+            }
+        }
+
+        private void ViewerCountTextBlock_MouseLeftButtonUp(
+            object sender,
+            System.Windows.Input.MouseButtonEventArgs e)
+        {
+            CancelViewerCountHold();
+            e.Handled = true;
+        }
+
+        private async void ViewerCountHoldTimer_Tick(object? sender, EventArgs e)
+        {
+            viewerCountHoldTimer.Stop();
+            if (!isViewerCountHeld || System.Windows.Input.Mouse.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+            {
+                CancelViewerCountHold();
+                return;
+            }
+
+            isViewerCountHeld = false;
+            ViewerCountTextBlock.ReleaseMouseCapture();
             await ChatStatisticsPanel.SyncArchivedStreamsAsync();
             ChatStatisticsPanel.ReloadStatisticsForSelectedPeriod();
             ChatStatisticsTabItem.Visibility = Visibility.Visible;
             MainTabControl.SelectedItem = ChatStatisticsTabItem;
-            e.Handled = true;
+        }
+
+        private void CancelViewerCountHold()
+        {
+            isViewerCountHeld = false;
+            viewerCountHoldTimer.Stop();
+            if (ViewerCountTextBlock.IsMouseCaptured)
+                ViewerCountTextBlock.ReleaseMouseCapture();
         }
 
         private void ChatStatisticsPanel_CloseRequested(object sender, RoutedEventArgs e)

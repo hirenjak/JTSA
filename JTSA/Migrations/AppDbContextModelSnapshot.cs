@@ -788,6 +788,9 @@ namespace JTSA.Migrations
 
             modelBuilder.Entity("M_User", b =>
                 {
+                    b.Property<long>("AppPoints")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("UserId")
                         .HasColumnType("TEXT");
 

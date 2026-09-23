@@ -278,7 +278,8 @@
                             <TextBlock x:Name="ViewerCountTextBlock" Text="-- 人" Foreground="White"
                                        Margin="6,0,0,0" VerticalAlignment="Center" Cursor="Hand"
                                        ToolTip="クリックで視聴者数の表示／非表示を切り替え"
-                                       MouseLeftButtonDown="ViewerCountTextBlock_MouseLeftButtonDown"/>
+                                       MouseLeftButtonDown="ViewerCountTextBlock_MouseLeftButtonDown"
+                                       MouseLeftButtonUp="ViewerCountTextBlock_MouseLeftButtonUp"/>
                             <TextBlock x:Name="ViewerCountUpdateCountdownTextBlock" Text="次回更新 --:--"
                                        Foreground="DarkGray" FontSize="10" Margin="8,0,0,0"
                                        VerticalAlignment="Bottom"/>
