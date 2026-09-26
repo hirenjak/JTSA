@@ -74,6 +74,7 @@ public partial class AppArrangePanel : UserControl
         autoStartRegisteredApps = settings.AutoStartRegisteredApps;
         foreach (var item in settings.Apps.OrderBy(item => item.ProcessName, StringComparer.OrdinalIgnoreCase))
         {
+            if (item.IsJtsaApplication()) continue;
             RegisteredApps.Add(item);
         }
         _ = UpdateStatusesAsync();
@@ -257,6 +258,7 @@ public partial class AppArrangePanel : UserControl
 
     private void Save(AppInfoForm app)
     {
+        if (app.IsJtsaApplication()) return;
         app.WindowProcessName = AppInfoForm.NormalizeWindowProcessName(
             app.WindowProcessName, app.ProcessName, app.AppExePath);
         var settings = LoadSettings();

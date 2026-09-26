@@ -15,6 +15,13 @@ public partial class AppRegistrationWindow : Window
 
     private readonly AppInfoForm? editingApp;
 
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+    private void Window_StateChanged(object? sender, EventArgs e) =>
+        MaximizeButton.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE922";
+
     public AppRegistrationWindow(AppInfoForm? existingApp = null)
     {
         editingApp = existingApp;
@@ -42,12 +49,13 @@ public partial class AppRegistrationWindow : Window
         RunningApps.Clear();
         foreach (var window in Win32Helper.ListTopLevelWindows())
         {
-            RunningApps.Add(new AppInfoForm
+            var app = new AppInfoForm
             {
                 ProcessName = window.ProcessName,
                 WindowTitle = window.Title,
                 AppExePath = window.AppExePath
-            });
+            };
+            if (!app.IsJtsaApplication()) RunningApps.Add(app);
         }
     }
 
@@ -132,7 +140,7 @@ public partial class AppRegistrationWindow : Window
                 IsAutoStart = editingApp.IsAutoStart,
                 IsMinimized = editingApp.IsMinimized
             };
-            DialogResult = true;
+            CompleteSelection();
             return;
         }
 
@@ -146,7 +154,7 @@ public partial class AppRegistrationWindow : Window
             app.WindowProcessName = AppInfoForm.NormalizeWindowProcessName(
                 windowProcessName, app.ProcessName, app.AppExePath);
             SelectedApp = app;
-            DialogResult = true;
+            CompleteSelection();
             return;
         }
 
@@ -173,6 +181,19 @@ public partial class AppRegistrationWindow : Window
             ListenPort = listenPort,
             WindowProcessName = AppInfoForm.NormalizeWindowProcessName(windowProcessName, newProcessName, path)
         };
+        CompleteSelection();
+    }
+
+    private void CompleteSelection()
+    {
+        if (SelectedApp is null) return;
+        if (SelectedApp.IsJtsaApplication())
+        {
+            SelectedApp = null;
+            MessageBox.Show(this, "JTSA本体は外部アプリとして登録できません。",
+                Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         DialogResult = true;
     }
 

@@ -232,6 +232,28 @@ namespace JTSA.Forms
             return !string.Equals(windowProcessName, launchName, StringComparison.OrdinalIgnoreCase);
         }
 
+        public bool IsJtsaApplication()
+        {
+            // Process names also cover registrations without an executable path.
+            var hostName = string.Equals(
+                System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name,
+                "JTSA", StringComparison.OrdinalIgnoreCase)
+                ? Path.GetFileNameWithoutExtension(Environment.ProcessPath)
+                : null;
+            bool IsHostName(string value)
+            {
+                var name = Path.GetFileName(value.Trim());
+                if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    name = Path.GetFileNameWithoutExtension(name);
+                return string.Equals(name, "JTSA", StringComparison.OrdinalIgnoreCase)
+                    || (!string.IsNullOrEmpty(hostName)
+                        && string.Equals(name, hostName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return IsHostName(ProcessName) || IsHostName(WindowProcessName)
+                || IsHostName(AppExePath);
+        }
+
         public static string NormalizeWindowProcessName(string windowProcessName, string processName, string appExePath)
         {
             var trimmed = (windowProcessName ?? "").Trim();
