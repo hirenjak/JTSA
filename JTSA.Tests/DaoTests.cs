@@ -1,5 +1,6 @@
 using JTSA.Dao;
 using JTSA.Models;
+using JTSA.TwitchIF;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -68,6 +69,53 @@ public sealed class DaoTests : IDisposable
         Assert.Equal("ニコニコ生放送", friend.StreamingPlatform);
         Assert.Equal("https://example.test/live/video-user", friend.StreamingUrl);
         Assert.Null(friend.ProfielImageUrl);
+    }
+
+    [Fact]
+    public void UserDao_AppPoints_PersistAndSurviveFriendProfileUpdate()
+    {
+        DAO_User.InsertUpdateFriend(null, "point-user", "ポイント利用者", null, "YouTube", "");
+        var user = Assert.Single(DAO_User.SelectAllOrderbyLastUser());
+        Assert.Equal(0L, user.AppPoints);
+
+        user.AppPoints = 123;
+        Assert.True(DAO_User.Update(user));
+
+        DAO_User.InsertUpdateFriend(null, "point-user", "更新後の利用者", null, "YouTube", "");
+
+        var updated = Assert.Single(DAO_User.SelectAllOrderbyLastUser());
+        Assert.Equal(123L, updated.AppPoints);
+        Assert.Equal(123L, DAO_User.SelectOneByUserId(updated.UserId)!.AppPoints);
+    }
+
+    [Fact]
+    public void UserDao_CacheProfileImages_FillsMissingImagesWithoutChangingPointsOrFriends()
+    {
+        var now = DateTime.Now;
+        DAO_User.Insert(new M_User
+        {
+            UserId = "existing",
+            LoginId = "existing",
+            DisplayName = "Existing",
+            IsFriend = true,
+            AppPoints = 42,
+            CreatedDateTime = now,
+            UpdatedDateTime = now,
+            LastUsedDateTime = now
+        });
+
+        DAO_User.CacheProfileImages([
+            new TwitchUserIF { UserId = "existing", Login = "existing", DisplayName = "Existing", ProfileImageUrl = "https://example.test/existing.png" },
+            new TwitchUserIF { UserId = "new", Login = "new", DisplayName = "New", ProfileImageUrl = "https://example.test/new.png" }
+        ]);
+
+        var images = DAO_User.SelectCachedProfileImages(["existing", "new"]);
+        Assert.Equal("https://example.test/existing.png", images["existing"]);
+        Assert.Equal("https://example.test/new.png", images["new"]);
+        var existing = DAO_User.SelectOneByUserId("existing")!;
+        Assert.True(existing.IsFriend);
+        Assert.Equal(42L, existing.AppPoints);
+        Assert.False(DAO_User.SelectOneByUserId("new")!.IsFriend);
     }
 
     [Fact]

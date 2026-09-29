@@ -110,6 +110,7 @@ namespace JTSA.Utility
         private Task OnAdBreakBegin(object? sender, ChannelAdBreakBeginArgs e)
         {
             var ad = e.Payload.Event;
+            LogSuccess($"CM開始通知を受信：{ad.DurationSeconds}秒、開始時刻 {ad.StartedAt:O}");
             adMonitor.OnBegin(ad.StartedAt, ad.DurationSeconds);
             return Task.CompletedTask;
         }
@@ -198,16 +199,19 @@ namespace JTSA.Utility
             LogSuccess($"EventSub購読開始：{GetTokenDiagnostics()}");
             try
             {
-                await twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                var adResult = await twitchApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
                     type: "channel.ad_break.begin", version: "1", condition: condition,
                     method: EventSubTransportMethod.Websocket,
                     websocketSessionId: eventSubClient.SessionId,
                     accessToken: twitchApi.Settings.AccessToken);
-                LogSuccess("CM開始のEventSub購読が完了しました");
+                if (adResult.Subscriptions.Any())
+                    LogSuccess("CM開始のEventSub購読が完了しました");
+                else
+                    LogError("CM開始のEventSub購読結果が空でした");
             }
             catch (Exception ex)
             {
-                LogError($"CM開始の購読失敗：{ex.GetType().Name}。Twitchを再認証し channel:read:ads を許可してください。");
+                LogError($"CM開始の購読失敗：{ex.GetType().Name}（{ex.Message}）。Twitchを再認証し channel:read:ads を許可してください。");
             }
             // 権限不足でもチャネポなどの購読を妨げない。
             try

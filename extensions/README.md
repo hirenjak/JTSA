@@ -33,6 +33,21 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
 表示週を選び、JTSAに登録済みの予定を週ごとのカレンダー画像としてプレビューできます。
 「PNGで保存」から配信告知などに使える画像を書き出せます。
 
+## 外部プラットフォーム連携の配置
+
+1. `dotnet build extensions/JTSA.MultiPlatformPlugin/JTSA.MultiPlatformPlugin.csproj -c Release`
+2. 出力フォルダの `JTSA.MultiPlatformPlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
+   `Plugins/MultiPlatform/` へコピーします。
+3. JTSA の「Extension」タブで「再読み込み」を押します。
+
+JTSAで編集中のタイトルを取り込み、YouTubeとKickへタイトル・カテゴリを反映できます。
+YouTubeは `youtube` または `youtube.force-ssl`、Kickは `channel:write` 権限を持つ
+ユーザーアクセストークンを起動中だけ入力します。トークンは設定ファイルへ保存しません。
+
+コメント取得を開始すると、YouTubeまたはKickのコメントがJTSA本体のチャット欄へ流れます。
+YouTubeは公式Live Chat APIを利用します。Kickはデスクトップだけで受信できる公開Webチャット接続を
+利用する簡易対応のため、Kick側の仕様変更時には更新が必要になる場合があります。
+
 ## 配信拡張への描画
 
 どの Extension からでも、`IJtsaPluginContext` の共通APIを使って既存の
@@ -57,3 +72,9 @@ context.RemoveExpansionOverlay("status");
 ```
 
 描画IDはプラグインIDごとに分離されるため、別のExtensionと同じ名前を使っても衝突しません。
+
+## Desktop Wall 連携
+
+JTSAの予定をDesktopWallManagerへ共有するExtensionを追加しました。
+導入手順・切断時の保存動作は [Desktop Wall 連携](JTSA.DesktopWallPlugin/README.md) を参照してください。
+JTSA連携に対応したDesktopWallManagerが必要です。

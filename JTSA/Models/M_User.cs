@@ -16,6 +16,9 @@ public class M_User : DBBase
 
     public string StreamingUrl { get; set; } = string.Empty;
 
+    /// <summary>JTSA内で管理するユーザー固有のポイント。</summary>
+    public long AppPoints { get; set; }
+
     /// <summary>フレンド一覧へ明示的に登録されているか。</summary>
     public bool IsFriend { get; set; } = false;
 }

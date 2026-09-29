@@ -4,6 +4,7 @@ using JTSA.Models;
 using JTSA.Plugin.Abstractions;
 using JTSA.Plugins;
 using JTSA.Utility;
+using JTSA.TwitchIF;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Data;
 using NAudio.Wave;
 using TwitchLib.Api;
 using System.Threading;
@@ -112,7 +114,37 @@ namespace JTSA.Panels
 
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
 
+        public void AddExternalChatMessage(ExternalChatMessageInfo message)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(() => AddExternalChatMessage(message));
+                return;
+            }
+
+            var platform = string.IsNullOrWhiteSpace(message.Platform) ? "External" : message.Platform.Trim();
+            TwitchChatFormList.Insert(0, new TwitchChatForm
+            {
+                Channel = platform,
+                MessageId = message.MessageId,
+                UserId = $"{platform}:{message.UserId}",
+                UserName = platform,
+                DisplayName = message.DisplayName,
+                Message = message.Message,
+                ProfielImageUrl = message.ProfileImageUrl,
+                HexColor = string.IsNullOrWhiteSpace(message.UserColor) ? "#FFFFFF" : message.UserColor,
+                MessageColor = "#FFFFFF",
+                CreatedDateTime = DateTime.Now,
+                MessageParts = [new TwitchChatPart { Text = message.Message }]
+            });
+            while (TwitchChatFormList.Count > MaxDisplayedChatCount)
+                TwitchChatFormList.RemoveAt(TwitchChatFormList.Count - 1);
+        }
+
         public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
+        public BatchObservableCollection<ChatUserForm> ConnectedChatUserFormList { get; } = new();
+        private ICollectionView? connectedChatUserView;
+        private bool showConnectedChatters;
         public ObservableCollection<ParticipationUserForm> ParticipationUsers { get; } = new();
         public ObservableCollection<ParticipationUserForm> PlayingParticipationUsers { get; } = new();
         public ObservableCollection<TodoItemForm> TodoItems { get; } = new();
@@ -867,6 +899,8 @@ namespace JTSA.Panels
             await Task.WhenAll(pendingChats.ToArray());
             await Task.Run(DAO_ChatUser.AllDelete);
             ChatUserFormList.Clear();
+            if (!string.IsNullOrEmpty(connectedBroadcasterId))
+                ClearConnectedChatters();
             chatEntranceTracker.Clear();
             chatEntranceTracker.Restore(
                 TwitchHelper.CurrentStreamId,
@@ -941,8 +975,10 @@ namespace JTSA.Panels
 
                 };
 
-                twitchChatService.SubscriptionReceived += () =>
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+                twitchChatService.SubscriptionDetailReceived += subscription =>
+                    _ = streamExpansionService.HandleAsync(
+                        subscription.IsGift ? StreamExpansionTriggerType.GiftSubscription : StreamExpansionTriggerType.Subscribe,
+                        string.Empty, subscription: subscription);
 
                 twitchChatService.HealthCheck += () =>
                     _ = Dispatcher.InvokeAsync(async () => await PinedChatLoad());
@@ -1002,18 +1038,21 @@ namespace JTSA.Panels
                         }, true, isFirstEntrance);
                     });
 
+                    var channelPointPlaceholders = new ChatPlaceholderValues(
+                        channelPoint.UserName,
+                        channelPoint.UserLogin);
                     _ = streamExpansionService.HandleAsync(
                         StreamExpansionTriggerType.ChannelPoint,
                         channelPoint.RewardId,
+                        chatPlaceholders: channelPointPlaceholders,
                         channelPointInput: channelPoint.UserInput);
 
                     if (isFirstEntrance)
                     {
-                        var chatPlaceholders = new ChatPlaceholderValues(channelPoint.UserName, channelPoint.UserLogin);
                         _ = streamExpansionService.HandleAsync(
                             StreamExpansionTriggerType.FirstChat,
                             channelPoint.UserLogin,
-                            chatPlaceholders);
+                            channelPointPlaceholders);
                     }
                 };
 
@@ -1286,6 +1325,88 @@ namespace JTSA.Panels
                 MessageCount = messageCount,
                 IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.LoginId)
             });
+        }
+
+        /// <summary>選択中チャンネルのチャット接続者一覧を更新する。</summary>
+        internal void SetConnectedChatters(
+            string broadcasterId,
+            IReadOnlyList<TwitchChatterIF> chatters,
+            IReadOnlyDictionary<string, string> cachedImages,
+            ChatterRoles roles)
+        {
+            if (!string.IsNullOrEmpty(connectedBroadcasterId) &&
+                !string.Equals(connectedBroadcasterId, broadcasterId, StringComparison.Ordinal))
+                return;
+
+            var speakers = ChatUserFormList.ToDictionary(x => x.UserId, StringComparer.Ordinal);
+            ConnectedChatUserFormList.ReplaceAll(chatters
+                .Where(x => !string.IsNullOrWhiteSpace(x.UserId))
+                .DistinctBy(x => x.UserId)
+                .OrderBy(x => GetChatterCategoryOrder(x.UserId, broadcasterId, roles))
+                .ThenBy(x => x.UserName, StringComparer.OrdinalIgnoreCase)
+                .Select(x => new ChatUserForm
+                {
+                    UserId = x.UserId,
+                    UserName = x.UserLogin,
+                    DisplayName = x.UserName,
+                    ProfileImageUrl = cachedImages.TryGetValue(x.UserId, out var image)
+                        ? image : speakers.TryGetValue(x.UserId, out var speaker)
+                            ? speaker.ProfileImageUrl : string.Empty,
+                    LastChatDateTime = DateTime.MinValue,
+                    MessageCount = 0,
+                    CategoryName = GetChatterCategoryName(x.UserId, broadcasterId, roles),
+                    IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, x.UserLogin)
+                }));
+        }
+
+        private static int GetChatterCategoryOrder(string userId, string broadcasterId, ChatterRoles roles)
+            => userId == broadcasterId ? 0
+                : roles.ModeratorIds.Contains(userId) ? 1
+                : roles.VipIds.Contains(userId) ? 2 : 3;
+
+        private static string GetChatterCategoryName(string userId, string broadcasterId, ChatterRoles roles)
+            => GetChatterCategoryOrder(userId, broadcasterId, roles) switch
+            {
+                0 => "配信者",
+                1 => "モデレーター",
+                2 => "VIP",
+                _ => "視聴者"
+            };
+
+        public void UpdateConnectedChatterImages(IReadOnlyDictionary<string, string> images)
+        {
+            foreach (var user in ConnectedChatUserFormList)
+            {
+                if (images.TryGetValue(user.UserId, out var image) &&
+                    !string.IsNullOrWhiteSpace(image))
+                    user.ProfileImageUrl = image;
+            }
+        }
+
+        public void ClearConnectedChatters() => ConnectedChatUserFormList.ReplaceAll([]);
+
+        private void ChatUserSourceButton_Click(object sender, RoutedEventArgs e)
+        {
+            showConnectedChatters = ReferenceEquals(sender, ConnectedChattersButton);
+            if (showConnectedChatters && connectedChatUserView is null)
+            {
+                connectedChatUserView = CollectionViewSource.GetDefaultView(ConnectedChatUserFormList);
+                connectedChatUserView.GroupDescriptions?.Add(
+                    new PropertyGroupDescription(nameof(ChatUserForm.CategoryName)));
+            }
+            ChatUserListBox.ItemsSource = showConnectedChatters
+                ? connectedChatUserView : ChatUserFormList;
+            ChatUserListHeading.SetBinding(TextBlock.TextProperty, new Binding(
+                showConnectedChatters
+                    ? "ConnectedChatUserFormList.Count" : "ChatUserFormList.Count")
+            {
+                StringFormat = showConnectedChatters
+                    ? "チャット接続中 ({0})" : "チャットユーザー ({0})"
+            });
+            ChatSpeakersButton.Style = (Style)FindResource(showConnectedChatters
+                ? "OverviewSecondaryButtonStyle" : "OverviewPrimaryButtonStyle");
+            ConnectedChattersButton.Style = (Style)FindResource(showConnectedChatters
+                ? "OverviewPrimaryButtonStyle" : "OverviewSecondaryButtonStyle");
         }
 
         /// <summary>参加管理エリアとOBSの参加一覧の表示・非表示を切り替える。</summary>
@@ -1572,6 +1693,21 @@ namespace JTSA.Panels
                 ?? (e.Source as FrameworkElement)?.DataContext as ChatUserForm;
 
             if (user == null) return;
+
+            if (DAO_User.SelectOneByUserId(user.UserId) is null)
+            {
+                var now = DateTime.Now;
+                DAO_User.Insert(new M_User
+                {
+                    UserId = user.UserId,
+                    LoginId = user.UserName,
+                    DisplayName = user.DisplayName,
+                    IsFriend = false,
+                    CreatedDateTime = now,
+                    UpdatedDateTime = now,
+                    LastUsedDateTime = now
+                });
+            }
 
             if (DAO_User.MarkAsFriend(user.UserId))
             {

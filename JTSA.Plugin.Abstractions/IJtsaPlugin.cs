@@ -38,6 +38,36 @@ public interface IJtsaCalendarPluginContext
     IReadOnlyList<CalendarEntryInfo> GetCalendarEntries(DateTime from, DateTime toExclusive);
 }
 
+/// <summary>JTSA で編集中の配信情報を参照するプラグイン向けの追加機能。</summary>
+/// <remarks>
+/// 既存プラグインとのバイナリ互換性を保つため、共通コンテキストとは別インターフェースです。
+/// </remarks>
+public interface IJtsaStreamMetadataPluginContext
+{
+    StreamMetadataInfo GetCurrentStreamMetadata();
+}
+
+/// <summary>外部サービスのコメントを JTSA のチャット欄へ渡すプラグイン向けの追加機能。</summary>
+public interface IJtsaExternalChatPluginContext
+{
+    void AddExternalChatMessage(ExternalChatMessageInfo message);
+}
+
+public sealed record StreamMetadataInfo(
+    string Title,
+    string CategoryId,
+    string CategoryName);
+
+public sealed record ExternalChatMessageInfo(
+    string Platform,
+    string MessageId,
+    string UserId,
+    string UserName,
+    string DisplayName,
+    string Message,
+    string ProfileImageUrl = "",
+    string UserColor = "#FFFFFF");
+
 public sealed record CalendarEntryInfo(
     long Id,
     DateTime Date,

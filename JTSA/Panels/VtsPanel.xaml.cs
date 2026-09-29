@@ -50,6 +50,7 @@ public partial class VtsPanel : UserControl
             new VtsNamedOption { Id = VtsTriggerTypes.Follow, Name = "フォロー" },
             new VtsNamedOption { Id = VtsTriggerTypes.Raid, Name = "レイド" },
             new VtsNamedOption { Id = VtsTriggerTypes.Subscribe, Name = "サブスク" },
+            new VtsNamedOption { Id = VtsTriggerTypes.GiftSubscription, Name = "サブギフ" },
             new VtsNamedOption { Id = VtsTriggerTypes.Bits, Name = "Bits" },
             new VtsNamedOption { Id = VtsTriggerTypes.Hourly, Name = "毎時" },
             new VtsNamedOption { Id = VtsTriggerTypes.ScheduledTime, Name = "指定時刻" },

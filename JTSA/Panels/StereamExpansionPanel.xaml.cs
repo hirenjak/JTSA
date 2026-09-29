@@ -16,13 +16,18 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
 {
     private string headerName = string.Empty;
     private bool isActive;
+    private long? folderId;
+    private string folderDisplayName = "フォルダなし";
     private bool doShoutout;
     private bool doGrantVip;
     public long HeaderId { get; set; }
     public string HeaderName { get => headerName; set { headerName = value; Changed(); } }
+    public long? FolderId { get => folderId; set { folderId = value; Changed(); } }
+    public string FolderDisplayName { get => folderDisplayName; set { folderDisplayName = value; Changed(); } }
     public bool IsActive { get => isActive; set { isActive = value; Changed(); } }
     public bool IsRaid { get; set; }
     public bool IsSubscribe { get; set; }
+    public bool IsGiftSubscription { get; set; }
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
@@ -55,6 +60,7 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
             var items = new List<string>();
             if (IsRaid) items.Add("レイド");
             if (IsSubscribe) items.Add("サブスク");
+            if (IsGiftSubscription) items.Add("サブギフ");
             if (IsBits) items.Add("ビッツ");
             if (IsFirstChat) items.Add("チャット入室");
             if (IsFollow) items.Add("フォロー");
@@ -258,6 +264,12 @@ public class StreamExpansionChannelPointForm
     public string DisplayName { get; set; } = string.Empty;
 }
 
+public class StreamExpansionFolderOption
+{
+    public long? Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
 public partial class StereamExpansionPanel : UserControl , INotifyPropertyChanged
 {
     private StreamExpansionHeaderForm? selectedHeader;
@@ -269,6 +281,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     private StreamExpansionPlaceholderHelpWindow? placeholderHelpWindow;
 
     public ObservableCollection<StreamExpansionHeaderForm> HeaderFormList { get; } = [];
+    public ObservableCollection<StreamExpansionFolderOption> FolderOptions { get; } = [];
     public ObservableCollection<StreamExpansionItemForm> ItemFormList { get; } = [];
     public ObservableCollection<StreamExpansionChannelPointForm> ChannelPointFormList { get; } = [];
 
@@ -284,6 +297,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         InitializeComponent();
         ImplementationTabControl.Items.Remove(PlaceholderHelpTab);
         DataContext = this;
+        System.Windows.Data.CollectionViewSource.GetDefaultView(HeaderFormList).GroupDescriptions.Add(
+            new System.Windows.Data.PropertyGroupDescription(nameof(StreamExpansionHeaderForm.FolderDisplayName)));
 
 
         Loaded += StereamExpansionPanel_Loaded;
@@ -363,6 +378,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         isReloading = true;
         try
         {
+        FolderOptions.Clear();
+        FolderOptions.Add(new() { Name = "フォルダなし" });
+        foreach (var folder in DAO_StreamExpansion.SelectFolders())
+            FolderOptions.Add(new() { Id = folder.Id, Name = folder.Name });
+
         // ヘッダーリストの初期化
         HeaderFormList.Clear();
 
@@ -374,9 +394,12 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             {
                 HeaderId = x.Id,
                 HeaderName = x.Name,
+                FolderId = x.FolderId,
+                FolderDisplayName = FolderOptions.FirstOrDefault(f => f.Id == x.FolderId)?.Name ?? "フォルダなし",
                 IsActive = x.IsActive,
                 IsRaid = x.IsRaid,
                 IsSubscribe = x.IsSubscribe,
+                IsGiftSubscription = x.IsGiftSubscription,
                 IsBits = x.IsBits,
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
@@ -429,6 +452,46 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         HeaderFormList.Add(item); SelectedHeader = item; StreamExpansionListBox.SelectedItem = item; ClearItemForms();
         SaveCurrent();
+    }
+
+    private void AddFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        var input = new TextBox { Margin = new Thickness(12), MinWidth = 240 };
+        var ok = new Button { Content = "追加", Width = 80, Height = 28, Margin = new Thickness(12, 0, 12, 12), HorizontalAlignment = HorizontalAlignment.Right, IsDefault = true };
+        var layout = new StackPanel();
+        layout.Children.Add(input);
+        layout.Children.Add(ok);
+        var dialog = new Window { Title = "フォルダを追加", Content = layout, SizeToContent = SizeToContent.WidthAndHeight,
+            ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = Window.GetWindow(this) };
+        ok.Click += (_, _) =>
+        {
+            var name = input.Text.Trim();
+            if (string.IsNullOrWhiteSpace(name)) return;
+            if (FolderOptions.Any(x => x.Id.HasValue && x.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                MessageBox.Show(dialog, "同じ名前のフォルダがあります。", "配信拡張");
+                return;
+            }
+            dialog.DialogResult = true;
+        };
+        if (dialog.ShowDialog() != true) return;
+        var id = DAO_StreamExpansion.AddFolder(input.Text);
+        FolderOptions.Add(new() { Id = id, Name = input.Text.Trim() });
+        RefreshFolderGroups();
+    }
+
+    private void FolderSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (isReloading || isSwitchingHeader || SelectedHeader is null) return;
+        (sender as ComboBox)?.GetBindingExpression(ComboBox.SelectedValueProperty)?.UpdateSource();
+        SelectedHeader.FolderDisplayName = FolderOptions.FirstOrDefault(x => x.Id == SelectedHeader.FolderId)?.Name ?? "フォルダなし";
+        RefreshFolderGroups();
+        SaveCurrent();
+    }
+
+    private void RefreshFolderGroups()
+    {
+        System.Windows.Data.CollectionViewSource.GetDefaultView(HeaderFormList).Refresh();
     }
 
     private void OpenTriggerSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -938,9 +1001,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         {
             Id = header.HeaderId,
             Name = header.HeaderName.Trim(),
+            FolderId = header.FolderId,
             IsActive = header.IsActive,
             IsRaid = header.IsRaid,
             IsSubscribe = header.IsSubscribe,
+            IsGiftSubscription = header.IsGiftSubscription,
             IsBits = header.IsBits,
             IsFirstChat = header.IsFirstChat,
             IsFollow = header.IsFollow,

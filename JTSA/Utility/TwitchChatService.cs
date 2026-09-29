@@ -21,6 +21,7 @@ public sealed class TwitchChatService
 
     public event Action<ChatMessage>? MessageReceived;
     public event Action? SubscriptionReceived;
+    internal event Action<JTSA.Utility.StreamExpansionSubscriptionInfo>? SubscriptionDetailReceived;
     public event Action? HealthCheck;
 
     public TwitchChatService(string channelName) : this(channelName, new TwitchClient()) { }
@@ -219,21 +220,25 @@ public sealed class TwitchChatService
 
     private Task Client_OnNewSubscriber(object? sender, OnNewSubscriberArgs e)
     {
+        var months = Math.Max(1, GetInt(e.Subscriber, 1, "MsgParamCumulativeMonths"));
         JTSA.Utility.StreamSupportTracker.AddSubscription(
             GetString(e.Subscriber, "DisplayName", "Login"),
-            Math.Max(1, GetInt(e.Subscriber, 1, "MsgParamCumulativeMonths")),
+            months,
             GetString(e.Subscriber, "MsgParamSubPlan"));
         SubscriptionReceived?.Invoke();
+        SubscriptionDetailReceived?.Invoke(new(false, months));
         return Task.CompletedTask;
     }
 
     private Task Client_OnReSubscriber(object? sender, OnReSubscriberArgs e)
     {
+        var months = Math.Max(1, GetInt(e.ReSubscriber, 1, "MsgParamCumulativeMonths"));
         JTSA.Utility.StreamSupportTracker.AddSubscription(
             GetString(e.ReSubscriber, "DisplayName", "Login"),
-            Math.Max(1, GetInt(e.ReSubscriber, 1, "MsgParamCumulativeMonths")),
+            months,
             GetString(e.ReSubscriber, "MsgParamSubPlan"));
         SubscriptionReceived?.Invoke();
+        SubscriptionDetailReceived?.Invoke(new(false, months));
         return Task.CompletedTask;
     }
 
@@ -241,7 +246,8 @@ public sealed class TwitchChatService
     {
         var gift = e.GiftedSubscription;
         RecordGift(gift.Id, GetGiftOrigin(gift.MsgParamOriginId, gift.UndocumentedTags), gift.IsAnonymous,
-            gift.Login, gift.DisplayName, GetSubscriptionTier(gift.MsgParamSubPlan), false, 1);
+            gift.Login, gift.DisplayName, GetSubscriptionTier(gift.MsgParamSubPlan), false, 1,
+            GetOptionalString(gift, "MsgParamRecipientDisplayName", "MsgParamRecipientUserName"));
         return Task.CompletedTask;
     }
 
@@ -258,7 +264,8 @@ public sealed class TwitchChatService
         !string.IsNullOrWhiteSpace(originId) ? originId : tags?.GetValueOrDefault("msg-param-origin-id");
 
     private void RecordGift(string? id, string? originId, bool anonymous,
-        string? login, string? displayName, string tier, bool community, int amount)
+        string? login, string? displayName, string tier, bool community, int amount,
+        string recipient = "")
     {
         try
         {
@@ -269,6 +276,7 @@ public sealed class TwitchChatService
                 !string.IsNullOrWhiteSpace(displayName) ? displayName : "不明なユーザー";
             JTSA.Utility.StreamSupportTracker.AddGiftSubscription(name, tier, added);
             SubscriptionReceived?.Invoke();
+            SubscriptionDetailReceived?.Invoke(new(true, Sender: name, Recipient: recipient));
         }
         catch (Exception ex)
         {
@@ -285,6 +293,16 @@ public sealed class TwitchChatService
         TwitchLib.Client.Enums.SubscriptionPlan.Prime => "Prime",
         _ => "不明"
     };
+
+    private static string GetOptionalString(object source, params string[] propertyNames)
+    {
+        foreach (var propertyName in propertyNames)
+        {
+            var value = source.GetType().GetProperty(propertyName)?.GetValue(source)?.ToString();
+            if (!string.IsNullOrWhiteSpace(value)) return value;
+        }
+        return string.Empty;
+    }
 
     private static string GetString(object source, params string[] propertyNames)
     {

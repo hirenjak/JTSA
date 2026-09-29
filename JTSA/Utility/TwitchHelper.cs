@@ -435,7 +435,7 @@ namespace JTSA.Utility
             var content = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("client_id", ClientID),
-                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts channel:manage:vips user:manage:blocked_users moderator:manage:banned_users")
+                new KeyValuePair<string, string>("scope", "channel:read:ads bits:read user:edit:broadcast user:read:broadcast channel:manage:redemptions user:read:follows moderator:read:followers moderator:read:chatters moderation:read channel:manage:raids user:write:chat moderator:manage:chat_messages moderator:manage:shoutouts channel:manage:vips user:manage:blocked_users moderator:manage:banned_users")
             });
             var response = await client.PostAsync("https://id.twitch.tv/oauth2/device", content);
             var json = await response.Content.ReadAsStringAsync();

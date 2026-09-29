@@ -37,6 +37,7 @@
      <WrapPanel Grid.Row="2" Margin="8,0,0,10">
       <CheckBox Content="レイド起動" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsRaid}"/>
       <CheckBox Content="サブスク起動" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsSubscribe}"/>
+      <CheckBox Content="サブギフ起動" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsGiftSubscription}"/>
       <CheckBox Content="ビッツ起動" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsBits}"/>
       <CheckBox Content="チャット入室時" Foreground="White" Margin="0,0,20,0" IsChecked="{Binding IsFirstChat}"/>
       <CheckBox Content="時報（毎時00分）" Foreground="White" Margin="0,0,20,8" IsChecked="{Binding IsHourly}" ToolTip="PCの時刻を基準に、JTSA起動中は配信状態にかかわらず毎時00分に実行します。"/>

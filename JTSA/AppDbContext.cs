@@ -44,6 +44,7 @@ namespace JTSA.Models
         public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
         public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
         internal DbSet<T_StreamExpansionHeader> T_StreamExpansionHeader { get; set; }
+        internal DbSet<T_StreamExpansionFolder> T_StreamExpansionFolder { get; set; }
         internal DbSet<T_StreamExpansionItem> T_StreamExpansionItem { get; set; }
 
         /// <summary>

@@ -35,6 +35,20 @@ public class TwitchChatServiceTests
     }
 
     [Fact]
+    public async Task IndividualGiftReportsSenderAndRecipient()
+    {
+        StreamSupportTracker.Reset();
+        var client = new TwitchClient();
+        var service = new TwitchChatService("channel", client);
+        StreamExpansionSubscriptionInfo? received = null;
+        service.SubscriptionDetailReceived += info => received = info;
+
+        await client.OnReadLineTestAsync(GiftLine("recipient-test", "subgift", "origin-recipient"));
+
+        Assert.Equal(new StreamExpansionSubscriptionInfo(true, Sender: "gifter", Recipient: "Receiver"), received);
+    }
+
+    [Fact]
     public async Task AnonymousGiftAndHandlerFailureDoNotLoseFollowingGift()
     {
         StreamSupportTracker.Reset();

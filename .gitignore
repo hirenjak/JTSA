@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /JTSA/JTSA.db
 /JTSA.db
+/.codex-build/

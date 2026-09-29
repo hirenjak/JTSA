@@ -11,6 +11,7 @@ internal static class VtsTriggerTypes
     public const string Follow = nameof(StreamExpansionTriggerType.Follow);
     public const string Raid = nameof(StreamExpansionTriggerType.Raid);
     public const string Subscribe = nameof(StreamExpansionTriggerType.Subscribe);
+    public const string GiftSubscription = nameof(StreamExpansionTriggerType.GiftSubscription);
     public const string Bits = nameof(StreamExpansionTriggerType.Bits);
     public const string Hourly = nameof(StreamExpansionTriggerType.Hourly);
     public const string ScheduledTime = nameof(StreamExpansionTriggerType.ScheduledTime);

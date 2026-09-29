@@ -6,7 +6,11 @@ using System.IO;
 
 namespace JTSA.Plugins;
 
-internal sealed class JtsaPluginContext : IJtsaPluginContext, IJtsaCalendarPluginContext
+internal sealed class JtsaPluginContext :
+    IJtsaPluginContext,
+    IJtsaCalendarPluginContext,
+    IJtsaStreamMetadataPluginContext,
+    IJtsaExternalChatPluginContext
 {
     private readonly MainWindow mainWindow;
     private readonly string pluginId;
@@ -22,6 +26,14 @@ internal sealed class JtsaPluginContext : IJtsaPluginContext, IJtsaCalendarPlugi
     public string PluginDirectory { get; }
     public string DataDirectory { get; }
     public nint MainWindowHandle => new WindowInteropHelper(mainWindow).Handle;
+    public StreamMetadataInfo GetCurrentStreamMetadata() => new(
+        mainWindow.CurrentTitleText,
+        mainWindow.CurrentCategoryId,
+        mainWindow.CurrentCategoryName);
+
+    public void AddExternalChatMessage(ExternalChatMessageInfo message) =>
+        mainWindow.ChatPanel.AddExternalChatMessage(message);
+
     public IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards() =>
         mainWindow.ChannelPointPanel.ChannelPointRewardFormList
             .Select(reward => new ChannelPointRewardInfo(
