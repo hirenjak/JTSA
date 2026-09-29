@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.desktop-wall",
+  "name": "Desktop Wall 連携",
+  "entryAssembly": "JTSA.DesktopWallPlugin.dll",
+  "entryType": "JTSA.DesktopWallPlugin.DesktopWallPlugin",
+  "apiVersion": 1
+}

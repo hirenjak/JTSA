@@ -9,14 +9,14 @@ public sealed class MultiPlatformPlugin : IJtsaPlugin
     private MultiPlatformWindow? window;
 
     public string Id => "jtsa.multi-platform";
-    public string Name => "YouTube・Kick連携";
+    public string Name => "外部プラットフォーム連携";
     public string Description => "YouTubeとKickの配信タイトル・カテゴリ設定とコメント取得をまとめます。";
-    public Version Version => new(1, 0, 0);
+    public Version Version => new(1, 1, 0);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {
         context = pluginContext;
-        context.Log("YouTube・Kick連携を読み込みました。");
+        context.Log("外部プラットフォーム連携を読み込みました。");
     }
 
     public void Open()

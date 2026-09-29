@@ -141,11 +141,19 @@
         <Grid Grid.Column="0">
           <Border Background="#FF404040" BorderBrush="#FF606060" BorderThickness="1">
            <DockPanel>
-            <Button DockPanel.Dock="Top"
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,1">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Button Grid.Column="0"
                 Content="＋ 一覧を追加" Height="30" Margin="0,0,0,1" Padding="8,0"
                 HorizontalContentAlignment="Left" Foreground="White"
                 Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
                 Click="AddButton_Click"/>
+            <Button Grid.Column="1"
+                Content="＋ フォルダを追加" Height="30" Margin="2,0,0,1" Padding="8,0"
+                HorizontalContentAlignment="Left" Foreground="White"
+                Background="#FF285653" BorderBrush="LightSeaGreen" BorderThickness="1"
+                Click="AddFolderButton_Click"/>
+            </Grid>
             <ListBox
                 x:Name="StreamExpansionListBox"
                 ItemsSource="{Binding HeaderFormList}"
@@ -158,6 +166,28 @@
                 HorizontalContentAlignment="Stretch"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="GroupItem">
+                                            <Expander IsExpanded="True" Background="Transparent"
+                                                      Foreground="LightSeaGreen" Margin="2,4,2,0">
+                                                <Expander.Header>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                </Expander.Header>
+                                                <ItemsPresenter/>
+                                            </Expander>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
 
                 <ListBox.ItemTemplate>
                     <DataTemplate>
@@ -238,10 +268,19 @@
                 <Grid Margin="0,0,8,4">
                     <StackPanel>
                     <Grid Height="44">
-                        <StackPanel>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
                             <TextBlock Text="実装名" Foreground="White" FontSize="11"/>
                             <TextBox Height="20" FontSize="12"
                                      Text="{Binding HeaderName, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="フォルダ" Foreground="White" FontSize="11"/>
+                            <ComboBox Height="20" FontSize="12"
+                                      ItemsSource="{Binding DataContext.FolderOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      DisplayMemberPath="Name" SelectedValuePath="Id"
+                                      SelectedValue="{Binding FolderId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectionChanged="FolderSelectionChanged"/>
                         </StackPanel>
                     </Grid>
 

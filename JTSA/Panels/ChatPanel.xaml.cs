@@ -975,8 +975,10 @@ namespace JTSA.Panels
 
                 };
 
-                twitchChatService.SubscriptionReceived += () =>
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+                twitchChatService.SubscriptionDetailReceived += subscription =>
+                    _ = streamExpansionService.HandleAsync(
+                        subscription.IsGift ? StreamExpansionTriggerType.GiftSubscription : StreamExpansionTriggerType.Subscribe,
+                        string.Empty, subscription: subscription);
 
                 twitchChatService.HealthCheck += () =>
                     _ = Dispatcher.InvokeAsync(async () => await PinedChatLoad());

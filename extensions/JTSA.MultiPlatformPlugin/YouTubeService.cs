@@ -11,6 +11,24 @@ internal sealed class YouTubeService(HttpClient httpClient)
 {
     private const string ApiRoot = "https://www.googleapis.com/youtube/v3";
 
+    public async Task<IReadOnlyList<PlatformCategory>> GetCategoriesAsync(
+        string accessToken, CancellationToken cancellationToken)
+    {
+        Require(accessToken, "YouTubeアクセストークン");
+        using var request = CreateRequest(HttpMethod.Get,
+            $"{ApiRoot}/videoCategories?part=snippet&regionCode=JP&hl=ja", accessToken);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        var root = await ReadSuccessAsync(response, cancellationToken);
+        return (root["items"]?.AsArray() ?? [])
+            .Where(node => node?["snippet"]?["assignable"]?.GetValue<bool>() != false)
+            .Select(node => new PlatformCategory(
+                node?["id"]?.GetValue<string>() ?? string.Empty,
+                node?["snippet"]?["title"]?.GetValue<string>() ?? string.Empty))
+            .Where(item => item.Id.Length > 0 && item.Name.Length > 0)
+            .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
     public async Task<string> UpdateMetadataAsync(
         string accessToken, string broadcastId, string title, string categoryId, CancellationToken cancellationToken)
     {

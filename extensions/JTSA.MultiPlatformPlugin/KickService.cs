@@ -10,6 +10,30 @@ namespace JTSA.MultiPlatformPlugin;
 
 internal sealed class KickService(HttpClient httpClient)
 {
+    public async Task<IReadOnlyList<PlatformCategory>> SearchCategoriesAsync(
+        string accessToken, string searchText, CancellationToken cancellationToken)
+    {
+        Require(accessToken, "Kickアクセストークン");
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Trim().Length < 3)
+            throw new InvalidOperationException("Kickカテゴリは3文字以上で検索してください。");
+
+        var url = "https://api.kick.com/public/v2/categories?limit=100&name=" +
+                  Uri.EscapeDataString(searchText.Trim());
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Trim());
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        var text = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Kickカテゴリ取得エラー ({(int)response.StatusCode}): {text}");
+        var root = JsonNode.Parse(text)?.AsObject();
+        return (root?["data"]?.AsArray() ?? [])
+            .Select(node => new PlatformCategory(
+                node?["id"]?.ToString() ?? string.Empty,
+                node?["name"]?.GetValue<string>() ?? string.Empty))
+            .Where(item => item.Id.Length > 0 && item.Name.Length > 0)
+            .ToArray();
+    }
+
     public async Task UpdateMetadataAsync(
         string accessToken, string title, string categoryId, CancellationToken cancellationToken)
     {

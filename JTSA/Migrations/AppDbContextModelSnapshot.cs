@@ -449,6 +449,21 @@ namespace JTSA.Migrations
                     b.ToTable("T_StreamChatUserCount");
                 });
 
+            modelBuilder.Entity("JTSA.Models.T_StreamExpansionFolder", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("T_StreamExpansionFolder");
+                });
+
             modelBuilder.Entity("JTSA.Models.T_StreamExpansionHeader", b =>
                 {
                     b.Property<long>("Id")
@@ -480,6 +495,9 @@ namespace JTSA.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("DoShoutout")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("FolderId")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
@@ -525,6 +543,9 @@ namespace JTSA.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsSubscribe")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsGiftSubscription")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("LastUsedDateTime")

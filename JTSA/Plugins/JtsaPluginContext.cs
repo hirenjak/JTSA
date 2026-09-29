@@ -33,6 +33,7 @@ internal sealed class JtsaPluginContext :
 
     public void AddExternalChatMessage(ExternalChatMessageInfo message) =>
         mainWindow.ChatPanel.AddExternalChatMessage(message);
+
     public IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards() =>
         mainWindow.ChannelPointPanel.ChannelPointRewardFormList
             .Select(reward => new ChannelPointRewardInfo(

@@ -33,7 +33,7 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
 表示週を選び、JTSAに登録済みの予定を週ごとのカレンダー画像としてプレビューできます。
 「PNGで保存」から配信告知などに使える画像を書き出せます。
 
-## YouTube・Kick連携の配置
+## 外部プラットフォーム連携の配置
 
 1. `dotnet build extensions/JTSA.MultiPlatformPlugin/JTSA.MultiPlatformPlugin.csproj -c Release`
 2. 出力フォルダの `JTSA.MultiPlatformPlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
@@ -72,3 +72,9 @@ context.RemoveExpansionOverlay("status");
 ```
 
 描画IDはプラグインIDごとに分離されるため、別のExtensionと同じ名前を使っても衝突しません。
+
+## Desktop Wall 連携
+
+JTSAの予定をDesktopWallManagerへ共有するExtensionを追加しました。
+導入手順・切断時の保存動作は [Desktop Wall 連携](JTSA.DesktopWallPlugin/README.md) を参照してください。
+JTSA連携に対応したDesktopWallManagerが必要です。

@@ -13,7 +13,11 @@ public sealed record StreamExpansionTriggerValues(
     string StreamBitsUsers = "",
     string StreamSubscribeUsers = "",
     string StreamRaidUsers = "",
-    string StreamFollowUsers = "");
+    string StreamFollowUsers = "",
+    string BitsAmount = "",
+    string SubscriptionMonths = "",
+    string GiftSender = "",
+    string GiftRecipient = "");
 
 public static class StreamExpansionPlaceholderReplacer
 {
@@ -34,6 +38,10 @@ public static class StreamExpansionPlaceholderReplacer
     public const string StreamRaidUsersPlaceholder = "{stream_raid_users}";
     public const string StreamFollowUsersPlaceholder = "{stream_follow_users}";
     public const string ChannelPointInputPlaceholder = "{channel_point_input}";
+    public const string BitsAmountPlaceholder = "{bits_amount}";
+    public const string SubscriptionMonthsPlaceholder = "{subscription_months}";
+    public const string GiftSenderPlaceholder = "{gift_sender}";
+    public const string GiftRecipientPlaceholder = "{gift_recipient}";
 
     public static string Replace(
         string content,
@@ -62,7 +70,11 @@ public static class StreamExpansionPlaceholderReplacer
             .Replace(StreamSubscribeUsersPlaceholder, trigger?.StreamSubscribeUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(StreamRaidUsersPlaceholder, trigger?.StreamRaidUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace(StreamFollowUsersPlaceholder, trigger?.StreamFollowUsers ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace(ChannelPointInputPlaceholder, trigger?.ChannelPointInput ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            .Replace(ChannelPointInputPlaceholder, trigger?.ChannelPointInput ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(BitsAmountPlaceholder, trigger?.BitsAmount ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(SubscriptionMonthsPlaceholder, trigger?.SubscriptionMonths ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(GiftSenderPlaceholder, trigger?.GiftSender ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace(GiftRecipientPlaceholder, trigger?.GiftRecipient ?? string.Empty, StringComparison.OrdinalIgnoreCase);
 
         return content;
     }

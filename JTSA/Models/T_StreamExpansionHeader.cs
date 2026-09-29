@@ -13,12 +13,14 @@ namespace JTSA.Models
         public long Id { get; set; }
 
         public string Name { get; set; } = string.Empty;
+        public long? FolderId { get; set; }
 
         public bool IsActive { get; set; }
 
         public bool IsRaid { get; set; }
 
         public bool IsSubscribe { get; set; }
+        public bool IsGiftSubscription { get; set; }
 
         public bool IsBits { get; set; }
 
