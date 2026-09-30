@@ -274,6 +274,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 {
     private StreamExpansionHeaderForm? selectedHeader;
     private StreamExpansionHeaderForm? editingHeader;
+    private long? editingFolderId;
     private bool isReloading;
     private bool isSwitchingHeader;
     private bool isSaving;
@@ -482,8 +483,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
     private void FolderSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (isReloading || isSwitchingHeader || SelectedHeader is null) return;
+        if (isReloading || isSwitchingHeader || SelectedHeader is null ||
+            SelectedHeader != editingHeader) return;
         (sender as ComboBox)?.GetBindingExpression(ComboBox.SelectedValueProperty)?.UpdateSource();
+        if (SelectedHeader.FolderId == editingFolderId) return;
+        editingFolderId = SelectedHeader.FolderId;
         SelectedHeader.FolderDisplayName = FolderOptions.FirstOrDefault(x => x.Id == SelectedHeader.FolderId)?.Name ?? "フォルダなし";
         RefreshFolderGroups();
         SaveCurrent();
@@ -639,6 +643,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         {
             ClearItemForms();
             editingHeader = SelectedHeader;
+            editingFolderId = editingHeader?.FolderId;
 
             if (editingHeader is null || editingHeader.HeaderId == 0) return;
             foreach (var group in DAO_StreamExpansion.SelectItems(editingHeader.HeaderId).GroupBy(x => x.SortNumber))

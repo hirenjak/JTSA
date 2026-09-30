@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>JTSA スマホパネル</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #17191d; color: #f5f5f5; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; max-width: 100%; overflow: hidden; }
+    body { margin: 0; }
+    header { height: 58px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #252831; }
+    header strong { font-size: 18px; }
+    #status { font-size: 12px; color: #aab0bb; }
+    nav { display: flex; background: #252831; }
+    nav button { width: 50%; border: 0; border-bottom: 3px solid transparent; padding: 13px; color: #adb4c1; background: transparent; font-size: 15px; }
+    nav button.active { color: white; border-color: #68cbb4; }
+    main { display: flex; width: 100%; height: calc(100dvh - 107px); transition: transform .2s ease; }
+    main.todo { transform: translateX(-100vw); }
+    section { flex: 0 0 100%; width: 100%; height: 100%; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
+    .chat { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; background: #24272e; border-radius: 12px; margin: 0 0 8px; padding: 11px 13px; overflow-wrap: anywhere; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #3b3f48; }
+    .chatBody { min-width: 0; }
+    .chat b { display: block; margin-bottom: 4px; padding-right: 48px; }
+    .chat small { float: right; color: #9ca4b1; }
+    .row { display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid #363942; }
+    .row span { flex: 1; overflow-wrap: anywhere; }
+    .row.done span { color: #969ba4; text-decoration: line-through; }
+    input[type=text] { flex: 1; min-width: 0; font-size: 16px; background: #30343d; color: white; border: 1px solid #565b66; border-radius: 8px; padding: 10px; }
+    input[type=checkbox], input[type=radio] { width: 22px; height: 22px; accent-color: #68cbb4; }
+    button.action { border: 0; border-radius: 8px; padding: 10px 13px; background: #397d70; color: white; font-size: 14px; }
+    button.delete { background: #653b43; }
+    #todoHead { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 10px; }
+    #todoHead h2 { margin: 0; font-size: 16px; }
+    #addForm { display: flex; gap: 7px; margin-bottom: 10px; }
+    .empty { text-align: center; color: #9ca4b1; margin-top: 35px; }
+    #pairScreen { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 5; display: grid; place-items: center; overflow: hidden; background: #17191d; padding: 20px; }
+    #pairScreen.hidden { display: none; }
+    #pairBox { width: min(100%, 320px); background: #252831; padding: 20px; border-radius: 16px; text-align: center; }
+    #pairBox h1 { font-size: 21px; margin: 0 0 8px; }
+    #pairBox p { color: #adb4c1; }
+    #pairForm { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: 100%; margin-top: 18px; }
+    #pairInput { width: 100%; text-align: center; letter-spacing: .15em; }
+    #pairError { color: #ff9fa9; min-height: 1.4em; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div id="pairScreen">
+  <div id="pairBox">
+    <h1>接続コードを入力</h1>
+    <p>PCのスマホパネルに表示された6桁の数字を入力してください。</p>
+    <form id="pairForm"><input id="pairInput" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required><button class="action">接続</button></form>
+    <div id="pairError" role="alert"></div>
+  </div>
+</div>
+<header><strong>JTSA</strong><span id="status">接続中…</span></header>
+<nav><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
+<main id="pages">
+  <section id="chatPage"><div class="empty">チャットを読み込み中…</div></section>
+  <section>
+    <div id="todoHead"><h2 id="category">ToDo</h2><button id="clearDone" class="action delete">完了済みを削除</button></div>
+    <form id="addForm"><input id="todoText" type="text" maxlength="300" placeholder="ToDoを追加"><button class="action">追加</button></form>
+    <div class="row"><input id="noCurrent" type="radio" name="current"><span>現在のToDoなし</span></div>
+    <div id="todos"></div>
+  </section>
+</main>
+<script>
+  let key = localStorage.getItem('jtsa-panel-key');
+  const pairScreen = document.getElementById('pairScreen');
+  const pairError = document.getElementById('pairError');
+  const pages = document.getElementById('pages');
+  const status = document.getElementById('status');
+  let active = 0, busy = false;
+  document.getElementById('pairForm').onsubmit = async event => {
+    event.preventDefault();
+    const pin = document.getElementById('pairInput').value;
+    pairError.textContent = '';
+    try {
+      const response = await fetch('/controls/api/pair', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      if (!response.ok) {
+        pairError.textContent = response.status === 429
+          ? '試行回数が多すぎます。1分後にもう一度試してください。'
+          : '接続コードが違います。';
+        return;
+      }
+      key = (await response.json()).key;
+      localStorage.setItem('jtsa-panel-key', key);
+      document.getElementById('pairInput').value = '';
+      await refresh();
+    } catch (_) { pairError.textContent = 'PCに接続できません。Wi-Fiを確認してください。'; }
+  };
+  function show(index) {
+    active = index;
+    pages.classList.toggle('todo', index === 1);
+    document.getElementById('chatTab').classList.toggle('active', index === 0);
+    document.getElementById('todoTab').classList.toggle('active', index === 1);
+  }
+  document.getElementById('chatTab').onclick = () => show(0);
+  document.getElementById('todoTab').onclick = () => show(1);
+  let touchX = 0, touchY = 0;
+  pages.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; touchY = event.touches[0].clientY; }, {passive:true});
+  pages.addEventListener('touchend', event => {
+    const dx = event.changedTouches[0].clientX - touchX;
+    const dy = event.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4) show(dx < 0 ? 1 : 0);
+  }, {passive:true});
+  async function api(path, options = {}) {
+    const response = await fetch(path, { cache: 'no-store', ...options, headers: { 'X-JTSA-Key': key, ...(options.headers || {}) } });
+    if (!response.ok) {
+      const error = new Error('通信エラー ' + response.status);
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  }
+  async function change(action, id, value, text) {
+    if (busy) return;
+    busy = true;
+    try {
+      await api('/controls/api/todo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, id, value, text }) });
+      await refresh();
+    } catch (error) { status.textContent = error.message; }
+    finally { busy = false; }
+  }
+  document.getElementById('addForm').onsubmit = event => {
+    event.preventDefault();
+    const input = document.getElementById('todoText');
+    const text = input.value.trim();
+    if (text) { change('add', null, null, text); input.value = ''; }
+  };
+  document.getElementById('clearDone').onclick = () => change('clearCompleted');
+  document.getElementById('noCurrent').onchange = () => change('clearCurrent');
+  function renderChat(items) {
+    const parent = document.getElementById('chatPage');
+    parent.replaceChildren();
+    if (!items.length) { parent.innerHTML = '<div class="empty">チャットはまだありません</div>'; return; }
+    for (const item of items) {
+      const card = document.createElement('div'); card.className = 'chat';
+      const avatar = document.createElement('img'); avatar.className = 'avatar'; avatar.alt = '';
+      avatar.loading = 'lazy'; avatar.referrerPolicy = 'no-referrer';
+      if (item.ProfileImageUrl) avatar.src = item.ProfileImageUrl;
+      avatar.onerror = () => avatar.removeAttribute('src');
+      const body = document.createElement('div'); body.className = 'chatBody';
+      const time = document.createElement('small');
+      time.textContent = new Date(item.Time).toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'});
+      const name = document.createElement('b'); name.textContent = item.User;
+      if (/^#[0-9a-fA-F]{6}$/.test(item.Color)) name.style.color = item.Color;
+      const message = document.createElement('div'); message.textContent = item.Message;
+      body.append(time, name, message); card.append(avatar, body); parent.append(card);
+    }
+  }
+  function renderTodos(items) {
+    const parent = document.getElementById('todos'); parent.replaceChildren();
+    document.getElementById('noCurrent').checked = !items.some(item => item.IsCurrent);
+    for (const item of items) {
+      const row = document.createElement('div'); row.className = 'row' + (item.IsCompleted ? ' done' : '');
+      const current = document.createElement('input'); current.type = 'radio'; current.name = 'current'; current.checked = item.IsCurrent;
+      current.setAttribute('aria-label', '現在のToDoにする'); current.onchange = () => change('current', item.Id);
+      const done = document.createElement('input'); done.type = 'checkbox'; done.checked = item.IsCompleted;
+      done.setAttribute('aria-label', '完了'); done.onchange = () => change('complete', item.Id, done.checked);
+      const label = document.createElement('span'); label.textContent = item.Text;
+      const remove = document.createElement('button'); remove.className = 'action delete'; remove.textContent = '削除';
+      remove.onclick = () => change('remove', item.Id);
+      row.append(current, done, label, remove); parent.append(row);
+    }
+  }
+  async function refresh() {
+    if (!key) return;
+    try {
+      const data = await api('/controls/api/snapshot');
+      status.textContent = '接続中';
+      pairScreen.classList.add('hidden');
+      document.getElementById('category').textContent = data.Category + ' のToDo';
+      renderChat(data.Chat); renderTodos(data.Todos);
+    } catch (error) {
+      status.textContent = error.message;
+      if (error.status === 403) {
+        key = null;
+        localStorage.removeItem('jtsa-panel-key');
+        pairError.textContent = '接続コードを入力してください。';
+        pairScreen.classList.remove('hidden');
+      }
+    }
+  }
+  if (key) refresh();
+  else status.textContent = '接続コードを入力してください';
+  setInterval(refresh, 1500);
+</script>
+</body>
+</html>

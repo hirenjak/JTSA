@@ -11,7 +11,7 @@ public sealed class ExternalAppsPlugin : IJtsaPlugin
     public string Id => "jtsa.external-apps";
     public string Name => "外部アプリ";
     public string Description => "登録した外部アプリの起動、配置、停止をまとめて管理します。";
-    public Version Version => new(1, 0, 0);
+    public Version Version => new(1, 0, 20260929);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {

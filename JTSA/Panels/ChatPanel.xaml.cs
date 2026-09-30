@@ -148,6 +148,49 @@ namespace JTSA.Panels
         public ObservableCollection<ParticipationUserForm> ParticipationUsers { get; } = new();
         public ObservableCollection<ParticipationUserForm> PlayingParticipationUsers { get; } = new();
         public ObservableCollection<TodoItemForm> TodoItems { get; } = new();
+
+        internal RemotePanelSnapshot GetRemotePanelSnapshot() => new(
+            TodoCategoryTextBlock.Text,
+            TwitchChatFormList.Take(100).Select(item => new RemoteChatInfo(
+                item.MessageId, item.DisplayName, item.Message, item.HexColor,
+                item.CreatedDateTime, item.ProfielImageUrl)).ToArray(),
+            TodoItems.Select(item => new RemoteTodoInfo(
+                item.Id, item.Text, item.IsCurrent, item.IsCompleted)).ToArray());
+
+        internal bool ApplyTodoChange(TodoChange change)
+        {
+            if (string.IsNullOrEmpty(connectedBroadcasterId)) return false;
+            var item = TodoItems.FirstOrDefault(x => x.Id == change.Id);
+            switch (change.Action)
+            {
+                case "add":
+                    var text = change.Text?.Trim();
+                    if (string.IsNullOrEmpty(text) || text.Length > 300) return false;
+                    TodoItems.Add(new TodoItemForm { Text = text });
+                    break;
+                case "current" when item != null:
+                    foreach (var todo in TodoItems) todo.IsCurrent = ReferenceEquals(todo, item);
+                    item.IsCompleted = false;
+                    break;
+                case "clearCurrent":
+                    foreach (var todo in TodoItems) todo.IsCurrent = false;
+                    break;
+                case "complete" when item != null && change.Value.HasValue:
+                    item.IsCompleted = change.Value.Value;
+                    if (item.IsCompleted) item.IsCurrent = false;
+                    break;
+                case "remove" when item != null:
+                    TodoItems.Remove(item);
+                    break;
+                case "clearCompleted":
+                    foreach (var todo in TodoItems.Where(x => x.IsCompleted).ToList()) TodoItems.Remove(todo);
+                    break;
+                default: return false;
+            }
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+            return true;
+        }
         private readonly HashSet<string> participationRedemptions = new();
         private readonly Queue<string> participationRedemptionOrder = new();
         private string participationRewardId = "";

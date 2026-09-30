@@ -11,7 +11,7 @@ public sealed class CalendarImagePlugin : IJtsaPlugin
     public string Id => "jtsa.calendar-image";
     public string Name => "カレンダー画像化";
     public string Description => "JTSAの月間予定を配信用のPNG画像として保存します。";
-    public Version Version => new(1, 0, 0);
+    public Version Version => new(1, 0, 20260929);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {

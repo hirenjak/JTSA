@@ -331,6 +331,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -501,7 +502,15 @@
                 </Button.Template>
             </Button>
 
-            <Button x:Name="LaunchSteamGameButton" Grid.Column="4"
+            <Button Grid.Column="4" Content="スマホ"
+                    Width="72" Height="22" Margin="8,0,0,0"
+                    Padding="0" FontSize="11" VerticalAlignment="Center"
+                    Foreground="White" Background="#FF285653"
+                    BorderBrush="LightSeaGreen" BorderThickness="1" Cursor="Hand"
+                    ToolTip="スマホ用のチャット・ToDo画面を共有します"
+                    Click="OpenRemotePanelButton_Click"/>
+
+            <Button x:Name="LaunchSteamGameButton" Grid.Column="5"
                     Content="ゲーム起動" Width="88" Height="22"
                     Padding="6,0" HorizontalAlignment="Right"
                     IsEnabled="False"

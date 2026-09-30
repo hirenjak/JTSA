@@ -11,7 +11,7 @@ public sealed class MultiPlatformPlugin : IJtsaPlugin
     public string Id => "jtsa.multi-platform";
     public string Name => "外部プラットフォーム連携";
     public string Description => "YouTubeとKickの配信タイトル・カテゴリ設定とコメント取得をまとめます。";
-    public Version Version => new(1, 1, 0);
+    public Version Version => new(1, 1, 20260929);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {

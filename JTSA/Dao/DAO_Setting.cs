@@ -98,6 +98,10 @@ namespace JTSA.Dao
             VtsTriggerRules = 59,
             /// <summary>JTSA起動時に開くプラグインID一覧</summary>
             AutoStartPlugins = 60,
+            /// <summary>JTSA起動時にスマホパネル用サーバーを起動するか</summary>
+            RemotePanelAutoStart = 61,
+            /// <summary>スマホパネルでペアリング済み端末を識別するキー</summary>
+            RemotePanelAccessKey = 62,
         }
 
 

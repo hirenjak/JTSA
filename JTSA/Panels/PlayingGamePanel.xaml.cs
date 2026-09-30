@@ -514,7 +514,9 @@ namespace JTSA.Panels
         #endregion
 
 
-        public async void ReloadPlaylistHeader()
+        public async void ReloadPlaylistHeader() => await ReloadPlaylistHeaderAsync();
+
+        public async Task ReloadPlaylistHeaderAsync()
         {
             var version = ++headerReloadVersion;
             //　リストの初期化
@@ -587,7 +589,9 @@ namespace JTSA.Panels
         /// プレイリスト一覧画面の再読み込み
         /// </summary>
         /// <returns></returns>
-        public async void ReloadGamePlaylistItem()
+        public async void ReloadGamePlaylistItem() => await ReloadGamePlaylistItemAsync();
+
+        public async Task ReloadGamePlaylistItemAsync()
         {
             var version = ++itemReloadVersion;
             GamePlayListTitleEdit.IsReadOnly = IsRecentPlaylist;

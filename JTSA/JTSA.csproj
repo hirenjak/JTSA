@@ -46,6 +46,7 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="obs-websocket-dotnet" Version="5.0.1" />
     <PackageReference Include="TwitchLib.Api" Version="3.10.1-preview.199.347b75c" />
     <PackageReference Include="TwitchLib.Client" Version="4.0.1" />
@@ -56,6 +57,7 @@
 
   <ItemGroup>
     <Resource Include="Resources\jtsa.ico" />
+    <EmbeddedResource Include="Resources\RemotePanel.html" LogicalName="JTSA.RemotePanel.html" />
   </ItemGroup>
 
   <ItemGroup>

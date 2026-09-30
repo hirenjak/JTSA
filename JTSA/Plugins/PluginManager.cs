@@ -13,6 +13,7 @@ public sealed class PluginManager : IDisposable
     private readonly MainWindow mainWindow;
     private readonly string shadowRoot;
     private bool disposed;
+    private bool autoStartPluginsStarted;
 
     public PluginManager(MainWindow mainWindow)
     {
@@ -41,9 +42,15 @@ public sealed class PluginManager : IDisposable
         {
             TryLoad(manifestPath, autoStartPluginIds);
         }
+    }
+
+    public void StartAutoStartPlugins()
+    {
+        if (autoStartPluginsStarted || disposed) return;
+        autoStartPluginsStarted = true;
 
         foreach (var descriptor in Plugins.Where(item => item.IsAutoStart).ToList())
-            mainWindow.Dispatcher.BeginInvoke(() => Open(descriptor));
+            Open(descriptor);
     }
 
     public void Open(PluginDescriptor descriptor)

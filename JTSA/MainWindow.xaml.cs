@@ -92,6 +92,23 @@ namespace JTSA
 		private string currentCategoryId = string.Empty;
         private readonly Dictionary<FrameworkElement, ToolPanelWindow> toolPanelWindows = new();
         private readonly PluginManager pluginManager;
+        private readonly RemotePanelController remotePanelController;
+        private RemotePanelWindow? remotePanelWindow;
+
+        private void OpenRemotePanelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (remotePanelWindow is { IsLoaded: true })
+            {
+                remotePanelWindow.Activate();
+                return;
+            }
+            remotePanelWindow = new RemotePanelWindow(remotePanelController)
+            {
+                Owner = this
+            };
+            remotePanelWindow.Closed += (_, _) => remotePanelWindow = null;
+            remotePanelWindow.Show();
+        }
 
         protected override void OnSourceInitialized(EventArgs e)
         {
@@ -257,6 +274,10 @@ namespace JTSA
 
             // WPF上の初期化処理
 			InitializeComponent();
+            remotePanelController = new RemotePanelController(
+                ChatPanel,
+                Dispatcher,
+                ex => AppLogPanel.Error("スマホパネル", $"通信に失敗しました。 {ex.GetBaseException().Message}"));
             chattersClient = new TwitchChattersClient(chattersHttpClient);
             chatterRolesClient = new TwitchChatterRolesClient(chattersHttpClient);
             usersClient = new TwitchUsersClient(chattersHttpClient);
@@ -348,6 +369,7 @@ namespace JTSA
                 hourlyTriggerTimer.Stop();
                 vtsAutoConnectCts?.Cancel();
                 pluginManager.Dispose();
+                remotePanelController.Dispose();
                 mainObsController.Dispose();
                 subObsController.Dispose();
                 VtsClient.Dispose();
@@ -2879,8 +2901,8 @@ namespace JTSA
             CategoryPanel.Initialize();
             await ChannelPointPanel.Initialize();
 
-            PlayingGamePanel.ReloadPlaylistHeader();
-            PlayingGamePanel.ReloadGamePlaylistItem();
+            await PlayingGamePanel.ReloadPlaylistHeaderAsync();
+            await PlayingGamePanel.ReloadGamePlaylistItemAsync();
 
             // ロード画面を非表示
             LoadPanelTextBlock.Text = "Loading Now...";
@@ -2888,6 +2910,17 @@ namespace JTSA
             LoadSubPanel.Visibility = Visibility.Collapsed;
 
             processLog.SuccessLogWrite("処理完了");
+            if (DAO_Setting.SelectOneById(DAO_Setting.SettingName.RemotePanelAutoStart)?.Value == "1")
+            {
+                try { remotePanelController.Start(); }
+                catch (Exception ex)
+                {
+                    AppLogPanel.Error("スマホパネル", $"自動起動に失敗しました。 {ex.GetBaseException().Message}");
+                }
+            }
+            _ = Dispatcher.BeginInvoke(
+                () => pluginManager.StartAutoStartPlugins(),
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
 
 

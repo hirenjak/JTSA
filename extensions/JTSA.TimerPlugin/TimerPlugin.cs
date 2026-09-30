@@ -11,7 +11,7 @@ public sealed class TimerPlugin : IJtsaPlugin
     public string Id => "jtsa.timer";
     public string Name => "タイマー";
     public string Description => "配信中に使える独立ウィンドウのカウントダウンタイマーです。";
-    public Version Version => new(1, 0, 0);
+    public Version Version => new(1, 0, 20260929);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {

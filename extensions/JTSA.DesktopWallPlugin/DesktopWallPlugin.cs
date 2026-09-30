@@ -15,7 +15,7 @@ public sealed class DesktopWallPlugin : IJtsaPlugin
     public string Id => "jtsa.desktop-wall";
     public string Name => "Desktop Wall 連携";
     public string Description => "同じPCのDesktop WallにJTSAのカレンダー予定を共有します。";
-    public Version Version => new(1, 0, 0);
+    public Version Version => new(1, 0, 20260929);
 
     public void Initialize(IJtsaPluginContext pluginContext)
     {
