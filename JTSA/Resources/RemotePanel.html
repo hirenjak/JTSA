@@ -17,13 +17,10 @@
     nav button { width: 33.333%; border: 0; border-bottom: 3px solid transparent; padding: 13px 5px; color: #adb4c1; background: transparent; font-size: 15px; }
     nav button.active { color: white; border-color: #68cbb4; }
     main { display: flex; width: 100%; height: calc(100dvh - 107px); transition: transform .2s ease; }
-    main.obs { transform: translateX(0); }
-    main.chat { transform: translateX(-100vw); }
-    main.todo { transform: translateX(-200vw); }
+    main.page-obs { transform: translateX(0); }
+    main.page-chat { transform: translateX(-100vw); }
+    main.page-todo { transform: translateX(-200vw); }
     section { flex: 0 0 100%; width: 100%; height: 100%; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
-    #obsPage { order: 0; }
-    #chatPage { order: 1; }
-    #todoPage { order: 2; }
     .chat { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; background: #24272e; border-radius: 12px; margin: 0 0 8px; padding: 11px 13px; overflow-wrap: anywhere; }
     .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #3b3f48; }
     .chatBody { min-width: 0; }
@@ -69,19 +66,19 @@
 </div>
 <header><strong>JTSA</strong><span id="status">接続中…</span></header>
 <nav><button id="obsTab">OBS</button><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
-<main id="pages" class="chat">
+<main id="pages" class="page-chat">
+  <section id="obsPage">
+    <h2 class="obsHeading">シーン選択</h2>
+    <div id="scenes"></div>
+    <h2 class="obsHeading sources">ソース表示切替</h2>
+    <div id="sources"></div>
+  </section>
   <section id="chatPage"><div class="empty">チャットを読み込み中…</div></section>
   <section id="todoPage">
     <div id="todoHead"><h2 id="category">ToDo</h2><button id="clearDone" class="action delete">完了済みを削除</button></div>
     <form id="addForm"><input id="todoText" type="text" maxlength="300" placeholder="ToDoを追加"><button class="action">追加</button></form>
     <div class="row"><input id="noCurrent" type="radio" name="current"><span>現在のToDoなし</span></div>
     <div id="todos"></div>
-  </section>
-  <section id="obsPage">
-    <h2 class="obsHeading">シーン選択</h2>
-    <div id="scenes"></div>
-    <h2 class="obsHeading sources">ソース表示切替</h2>
-    <div id="sources"></div>
   </section>
 </main>
 <script>
@@ -115,9 +112,9 @@
   };
   function show(index) {
     active = index;
-    pages.classList.toggle('obs', index === 0);
-    pages.classList.toggle('chat', index === 1);
-    pages.classList.toggle('todo', index === 2);
+    pages.classList.toggle('page-obs', index === 0);
+    pages.classList.toggle('page-chat', index === 1);
+    pages.classList.toggle('page-todo', index === 2);
     document.getElementById('obsTab').classList.toggle('active', index === 0);
     document.getElementById('chatTab').classList.toggle('active', index === 1);
     document.getElementById('todoTab').classList.toggle('active', index === 2);
