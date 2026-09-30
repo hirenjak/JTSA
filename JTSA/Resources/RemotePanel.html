@@ -14,11 +14,16 @@
     header strong { font-size: 18px; }
     #status { font-size: 12px; color: #aab0bb; }
     nav { display: flex; background: #252831; }
-    nav button { width: 50%; border: 0; border-bottom: 3px solid transparent; padding: 13px; color: #adb4c1; background: transparent; font-size: 15px; }
+    nav button { width: 33.333%; border: 0; border-bottom: 3px solid transparent; padding: 13px 5px; color: #adb4c1; background: transparent; font-size: 15px; }
     nav button.active { color: white; border-color: #68cbb4; }
     main { display: flex; width: 100%; height: calc(100dvh - 107px); transition: transform .2s ease; }
-    main.todo { transform: translateX(-100vw); }
+    main.obs { transform: translateX(0); }
+    main.chat { transform: translateX(-100vw); }
+    main.todo { transform: translateX(-200vw); }
     section { flex: 0 0 100%; width: 100%; height: 100%; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
+    #obsPage { order: 0; }
+    #chatPage { order: 1; }
+    #todoPage { order: 2; }
     .chat { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; background: #24272e; border-radius: 12px; margin: 0 0 8px; padding: 11px 13px; overflow-wrap: anywhere; }
     .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #3b3f48; }
     .chatBody { min-width: 0; }
@@ -34,6 +39,14 @@
     #todoHead { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 10px; }
     #todoHead h2 { margin: 0; font-size: 16px; }
     #addForm { display: flex; gap: 7px; margin-bottom: 10px; }
+    .obsHeading { margin: 4px 4px 10px; font-size: 16px; }
+    .obsHeading.sources { margin-top: 22px; }
+    .obsGroup { margin-bottom: 14px; }
+    .obsGroup h3 { margin: 0 4px 7px; color: #adb4c1; font-size: 13px; font-weight: 500; }
+    .obsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .obsButton { min-height: 50px; border: 1px solid #4b505a; border-radius: 9px; padding: 9px; background: #292d35; color: #f5f5f5; font-size: 14px; overflow-wrap: anywhere; }
+    .obsButton.active { border-color: #68cbb4; background: #2f655b; box-shadow: inset 0 0 0 1px #68cbb4; }
+    .obsButton small { display: block; margin-top: 4px; color: #aab0bb; font-size: 11px; }
     .empty { text-align: center; color: #9ca4b1; margin-top: 35px; }
     #pairScreen { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 5; display: grid; place-items: center; overflow: hidden; background: #17191d; padding: 20px; }
     #pairScreen.hidden { display: none; }
@@ -55,14 +68,20 @@
   </div>
 </div>
 <header><strong>JTSA</strong><span id="status">接続中…</span></header>
-<nav><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
-<main id="pages">
+<nav><button id="obsTab">OBS</button><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
+<main id="pages" class="chat">
   <section id="chatPage"><div class="empty">チャットを読み込み中…</div></section>
-  <section>
+  <section id="todoPage">
     <div id="todoHead"><h2 id="category">ToDo</h2><button id="clearDone" class="action delete">完了済みを削除</button></div>
     <form id="addForm"><input id="todoText" type="text" maxlength="300" placeholder="ToDoを追加"><button class="action">追加</button></form>
     <div class="row"><input id="noCurrent" type="radio" name="current"><span>現在のToDoなし</span></div>
     <div id="todos"></div>
+  </section>
+  <section id="obsPage">
+    <h2 class="obsHeading">シーン選択</h2>
+    <div id="scenes"></div>
+    <h2 class="obsHeading sources">ソース表示切替</h2>
+    <div id="sources"></div>
   </section>
 </main>
 <script>
@@ -71,7 +90,7 @@
   const pairError = document.getElementById('pairError');
   const pages = document.getElementById('pages');
   const status = document.getElementById('status');
-  let active = 0, busy = false;
+  let active = 1, busy = false;
   document.getElementById('pairForm').onsubmit = async event => {
     event.preventDefault();
     const pin = document.getElementById('pairInput').value;
@@ -96,18 +115,23 @@
   };
   function show(index) {
     active = index;
-    pages.classList.toggle('todo', index === 1);
-    document.getElementById('chatTab').classList.toggle('active', index === 0);
-    document.getElementById('todoTab').classList.toggle('active', index === 1);
+    pages.classList.toggle('obs', index === 0);
+    pages.classList.toggle('chat', index === 1);
+    pages.classList.toggle('todo', index === 2);
+    document.getElementById('obsTab').classList.toggle('active', index === 0);
+    document.getElementById('chatTab').classList.toggle('active', index === 1);
+    document.getElementById('todoTab').classList.toggle('active', index === 2);
   }
-  document.getElementById('chatTab').onclick = () => show(0);
-  document.getElementById('todoTab').onclick = () => show(1);
+  document.getElementById('obsTab').onclick = () => show(0);
+  document.getElementById('chatTab').onclick = () => show(1);
+  document.getElementById('todoTab').onclick = () => show(2);
   let touchX = 0, touchY = 0;
   pages.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; touchY = event.touches[0].clientY; }, {passive:true});
   pages.addEventListener('touchend', event => {
     const dx = event.changedTouches[0].clientX - touchX;
     const dy = event.changedTouches[0].clientY - touchY;
-    if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4) show(dx < 0 ? 1 : 0);
+    if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4)
+      show(Math.max(0, Math.min(2, active + (dx < 0 ? 1 : -1))));
   }, {passive:true});
   async function api(path, options = {}) {
     const response = await fetch(path, { cache: 'no-store', ...options, headers: { 'X-JTSA-Key': key, ...(options.headers || {}) } });
@@ -169,6 +193,50 @@
       row.append(current, done, label, remove); parent.append(row);
     }
   }
+  async function obsChange(action, item) {
+    if (busy) return;
+    busy = true;
+    try {
+      await api('/controls/api/obs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, accountId: item.AccountId, isSub: item.IsSub,
+          sceneName: item.SceneName, sourceName: item.SourceName ?? '',
+          containerName: item.ContainerName ?? '' })
+      });
+      await refresh();
+    } catch (error) { status.textContent = error.message; }
+    finally { busy = false; }
+  }
+  function renderObsGroup(parent, items, action) {
+    for (const [isSub, title] of [[false, 'メインOBS'], [true, 'サブOBS']]) {
+      const groupItems = items.filter(item => item.IsSub === isSub);
+      if (!groupItems.length) continue;
+      const group = document.createElement('div'); group.className = 'obsGroup';
+      const heading = document.createElement('h3'); heading.textContent = title;
+      const grid = document.createElement('div'); grid.className = 'obsGrid';
+      for (const item of groupItems) {
+        const button = document.createElement('button');
+        const selected = action === 'scene' ? item.IsCurrent : item.IsVisible;
+        button.className = 'obsButton' + (selected ? ' active' : '');
+        button.textContent = item.DisplayName;
+        if (action === 'source') {
+          const detail = document.createElement('small'); detail.textContent = item.DetailText;
+          button.append(detail);
+        }
+        button.onclick = () => obsChange(action, item);
+        grid.append(button);
+      }
+      group.append(heading, grid); parent.append(group);
+    }
+  }
+  function renderObs(scenes, sources) {
+    const sceneParent = document.getElementById('scenes'); sceneParent.replaceChildren();
+    const sourceParent = document.getElementById('sources'); sourceParent.replaceChildren();
+    if (!scenes.length) sceneParent.innerHTML = '<div class="empty">登録済みのシーンがありません</div>';
+    else renderObsGroup(sceneParent, scenes, 'scene');
+    if (!sources.length) sourceParent.innerHTML = '<div class="empty">登録済みのソースがありません</div>';
+    else renderObsGroup(sourceParent, sources, 'source');
+  }
   async function refresh() {
     if (!key) return;
     try {
@@ -176,7 +244,7 @@
       status.textContent = '接続中';
       pairScreen.classList.add('hidden');
       document.getElementById('category').textContent = data.Category + ' のToDo';
-      renderChat(data.Chat); renderTodos(data.Todos);
+      renderChat(data.Chat); renderTodos(data.Todos); renderObs(data.Scenes, data.Sources);
     } catch (error) {
       status.textContent = error.message;
       if (error.status === 403) {

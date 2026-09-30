@@ -155,7 +155,9 @@ namespace JTSA.Panels
                 item.MessageId, item.DisplayName, item.Message, item.HexColor,
                 item.CreatedDateTime, item.ProfielImageUrl)).ToArray(),
             TodoItems.Select(item => new RemoteTodoInfo(
-                item.Id, item.Text, item.IsCurrent, item.IsCompleted)).ToArray());
+                item.Id, item.Text, item.IsCurrent, item.IsCompleted)).ToArray(),
+            [],
+            []);
 
         internal bool ApplyTodoChange(TodoChange change)
         {

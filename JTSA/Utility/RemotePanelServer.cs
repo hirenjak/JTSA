@@ -17,6 +17,7 @@ internal sealed class RemotePanelServer : IDisposable
     private readonly SemaphoreSlim connectionSlots = new(16);
     private readonly Func<RemotePanelSnapshot> getSnapshot;
     private readonly Func<TodoChange, bool> applyTodoChange;
+    private readonly Func<RemoteObsChange, Task<bool>> applyObsChange;
     private readonly Dispatcher dispatcher;
     private readonly Action<Exception> onError;
     private readonly Task serving;
@@ -34,6 +35,7 @@ internal sealed class RemotePanelServer : IDisposable
     public RemotePanelServer(
         Func<RemotePanelSnapshot> getSnapshot,
         Func<TodoChange, bool> applyTodoChange,
+        Func<RemoteObsChange, Task<bool>> applyObsChange,
         Dispatcher dispatcher,
         string key,
         int port,
@@ -41,6 +43,7 @@ internal sealed class RemotePanelServer : IDisposable
     {
         this.getSnapshot = getSnapshot;
         this.applyTodoChange = applyTodoChange;
+        this.applyObsChange = applyObsChange;
         this.dispatcher = dispatcher;
         this.onError = onError;
         Key = key;
@@ -130,6 +133,22 @@ internal sealed class RemotePanelServer : IDisposable
                     catch (JsonException) { change = null; }
                     if (change == null || !await dispatcher.InvokeAsync(() => applyTodoChange(change),
                             DispatcherPriority.Background, token).Task)
+                    {
+                        await ReplyAsync(stream, 400, "text/plain; charset=utf-8", "Invalid change"u8.ToArray(), token);
+                        return;
+                    }
+                    await ReplyAsync(stream, 200, "application/json; charset=utf-8", "{}"u8.ToArray(), token);
+                    return;
+                }
+                if (request.Method == "POST" && request.Path == "/controls/api/obs")
+                {
+                    RemoteObsChange? change;
+                    try { change = JsonSerializer.Deserialize<RemoteObsChange>(request.Body,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
+                    catch (JsonException) { change = null; }
+                    var applied = change != null && await (await dispatcher.InvokeAsync(
+                        () => applyObsChange(change), DispatcherPriority.Background, token).Task);
+                    if (!applied)
                     {
                         await ReplyAsync(stream, 400, "text/plain; charset=utf-8", "Invalid change"u8.ToArray(), token);
                         return;
@@ -227,5 +246,13 @@ internal sealed class RemotePanelServer : IDisposable
 
 internal sealed record RemoteChatInfo(string Id, string User, string Message, string Color, DateTime Time, string ProfileImageUrl);
 internal sealed record RemoteTodoInfo(Guid Id, string Text, bool IsCurrent, bool IsCompleted);
-internal sealed record RemotePanelSnapshot(string Category, IReadOnlyList<RemoteChatInfo> Chat, IReadOnlyList<RemoteTodoInfo> Todos);
+internal sealed record RemoteObsSceneInfo(long AccountId, bool IsSub, string SceneName, string DisplayName, bool IsCurrent);
+internal sealed record RemoteObsSourceInfo(long AccountId, bool IsSub, string SceneName, string SourceName, string ContainerName, string DisplayName, string DetailText, bool IsVisible);
+internal sealed record RemotePanelSnapshot(
+    string Category,
+    IReadOnlyList<RemoteChatInfo> Chat,
+    IReadOnlyList<RemoteTodoInfo> Todos,
+    IReadOnlyList<RemoteObsSceneInfo> Scenes,
+    IReadOnlyList<RemoteObsSourceInfo> Sources);
 internal sealed record TodoChange(string Action, Guid? Id = null, string? Text = null, bool? Value = null);
+internal sealed record RemoteObsChange(string Action, long AccountId, bool IsSub, string SceneName, string? SourceName = null, string? ContainerName = null);

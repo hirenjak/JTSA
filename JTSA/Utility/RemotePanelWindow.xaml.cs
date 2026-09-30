@@ -16,6 +16,8 @@ internal sealed class RemotePanelController : IDisposable
 {
     private const int Port = 8027;
     private readonly ChatPanel chatPanel;
+    private readonly ObsSettingPanel obsSettingPanel;
+    private readonly Func<long?> getAccountId;
     private readonly System.Windows.Threading.Dispatcher dispatcher;
     private readonly Action<Exception> onError;
     private readonly string accessKey;
@@ -25,9 +27,16 @@ internal sealed class RemotePanelController : IDisposable
     public string Pin => server?.Pin ?? string.Empty;
     public IReadOnlyList<RemotePanelAddress> Addresses { get; private set; } = [];
 
-    public RemotePanelController(ChatPanel chatPanel, System.Windows.Threading.Dispatcher dispatcher, Action<Exception> onError)
+    public RemotePanelController(
+        ChatPanel chatPanel,
+        ObsSettingPanel obsSettingPanel,
+        Func<long?> getAccountId,
+        System.Windows.Threading.Dispatcher dispatcher,
+        Action<Exception> onError)
     {
         this.chatPanel = chatPanel;
+        this.obsSettingPanel = obsSettingPanel;
+        this.getAccountId = getAccountId;
         this.dispatcher = dispatcher;
         this.onError = onError;
         var savedKey = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RemotePanelAccessKey)?.Value;
@@ -44,8 +53,9 @@ internal sealed class RemotePanelController : IDisposable
         try
         {
             var started = new RemotePanelServer(
-                chatPanel.GetRemotePanelSnapshot,
+                GetSnapshot,
                 chatPanel.ApplyTodoChange,
+                ApplyObsChangeAsync,
                 dispatcher,
                 accessKey,
                 Port,
@@ -81,6 +91,47 @@ internal sealed class RemotePanelController : IDisposable
     }
 
     public void RegeneratePin() => server?.RegeneratePin();
+
+    private RemotePanelSnapshot GetSnapshot()
+    {
+        var snapshot = chatPanel.GetRemotePanelSnapshot();
+        var accountId = getAccountId();
+        if (accountId is null) return snapshot;
+        var scenes = obsSettingPanel.GetSceneSwitchPresets(accountId)
+            .Select(item => new RemoteObsSceneInfo(item.AccountId, item.IsSub, item.SceneName,
+                item.ShortcutDisplayName, item.IsCurrentScene)).ToArray();
+        var sources = obsSettingPanel.GetSourceSwitchPresets(accountId)
+            .Select(item => new RemoteObsSourceInfo(item.AccountId, item.IsSub, item.SceneName, item.SourceName,
+                item.ContainerName, item.ShortcutDisplayName, item.DetailText, item.IsVisible)).ToArray();
+        return snapshot with { Scenes = scenes, Sources = sources };
+    }
+
+    private async Task<bool> ApplyObsChangeAsync(RemoteObsChange change)
+    {
+        var accountId = getAccountId();
+        if (accountId is null || accountId.Value != change.AccountId) return false;
+        if (change.Action == "scene")
+        {
+            var preset = obsSettingPanel.GetSceneSwitchPresets(change.AccountId).FirstOrDefault(item =>
+                item.IsSub == change.IsSub &&
+                string.Equals(item.SceneName, change.SceneName, StringComparison.Ordinal));
+            if (preset == null) return false;
+            await obsSettingPanel.ExecuteSceneSwitchPresetAsync(preset);
+            return true;
+        }
+        if (change.Action == "source")
+        {
+            var preset = obsSettingPanel.GetSourceSwitchPresets(change.AccountId).FirstOrDefault(item =>
+                item.IsSub == change.IsSub &&
+                string.Equals(item.SceneName, change.SceneName, StringComparison.Ordinal) &&
+                string.Equals(item.SourceName, change.SourceName ?? string.Empty, StringComparison.Ordinal) &&
+                string.Equals(item.ContainerName, change.ContainerName ?? string.Empty, StringComparison.Ordinal));
+            if (preset == null) return false;
+            await obsSettingPanel.ExecuteSourceSwitchPresetAsync(preset);
+            return true;
+        }
+        return false;
+    }
 
     public void Dispose() => Stop();
 }

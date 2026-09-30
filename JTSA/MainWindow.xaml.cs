@@ -276,6 +276,8 @@ namespace JTSA
 			InitializeComponent();
             remotePanelController = new RemotePanelController(
                 ChatPanel,
+                ObsSettingPanel,
+                () => SelectedTargetAccountId,
                 Dispatcher,
                 ex => AppLogPanel.Error("スマホパネル", $"通信に失敗しました。 {ex.GetBaseException().Message}"));
             chattersClient = new TwitchChattersClient(chattersHttpClient);
