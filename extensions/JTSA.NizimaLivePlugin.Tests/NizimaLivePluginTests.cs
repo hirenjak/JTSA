@@ -179,6 +179,32 @@ public class NizimaTriggerRuleSummaryTests
     }
 
     [Fact]
+    public void ShowsAutoOffOnlyForSupportedCommands()
+    {
+        var rule = new NizimaTriggerRule
+        {
+            TriggerType = NizimaTriggerTypes.Follow,
+            CommandType = NizimaTriggerCommands.ExpressionOn,
+            CommandValue = "smile",
+            AutoOffValue = 10,
+            AutoOffUnit = NizimaAutoOffUnits.Minutes
+        };
+        Assert.Equal("ON フォロー → 表情をオン smile（10分後に解除）", NizimaTriggerRuleSummary.Format(rule));
+
+        rule.CommandType = NizimaTriggerCommands.ExpressionToggle;
+        Assert.DoesNotContain("解除", NizimaTriggerRuleSummary.Format(rule));
+    }
+
+    [Fact]
+    public void AutoOffUnitsConvertToTimeSpan()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(30), NizimaAutoOffUnits.ToTimeSpan(30, NizimaAutoOffUnits.Seconds));
+        Assert.Equal(TimeSpan.FromMinutes(5), NizimaAutoOffUnits.ToTimeSpan(5, NizimaAutoOffUnits.Minutes));
+        Assert.Equal(NizimaAutoOffUnits.Max, NizimaAutoOffUnits.ToTimeSpan(24, NizimaAutoOffUnits.Hours));
+        Assert.True(NizimaAutoOffUnits.ToTimeSpan(1441, NizimaAutoOffUnits.Minutes) > NizimaAutoOffUnits.Max);
+    }
+
+    [Fact]
     public void ChannelPointTriggerShowsRewardTitle()
     {
         var rule = new NizimaTriggerRule

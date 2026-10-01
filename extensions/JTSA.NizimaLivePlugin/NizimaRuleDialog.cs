@@ -12,6 +12,7 @@ public sealed class NizimaRuleDialog : Window
     private readonly IJtsaPluginContext context;
     private readonly NizimaRuleCatalogs catalogs;
     private readonly IEnumerable<string> keepChannelPointIds;
+    private readonly bool channelPointOnly;
     private readonly ComboBox triggerType = new();
     private readonly TextBox triggerValueChat = new() { Height = 24 };
     private readonly ComboBox triggerReward = new()
@@ -70,19 +71,47 @@ public sealed class NizimaRuleDialog : Window
         DisplayMemberPath = "Label",
         SelectedValuePath = "Path"
     };
+    private readonly TextBlock itemTargetLabel = new()
+    {
+        Text = "対象アイテム",
+        Foreground = System.Windows.Media.Brushes.LightGray,
+        Margin = new Thickness(0, 6, 0, 2)
+    };
+    private readonly ObservableCollection<NizimaNamedOption> itemTargetOptions = [];
+    private readonly ComboBox itemTargetCombo = new()
+    {
+        Height = 24,
+        DisplayMemberPath = "Label",
+        SelectedValuePath = "Path"
+    };
+    private readonly TextBlock autoOffLabel = new()
+    {
+        Text = "自動解除（空または 0 で無効・24 時間以内）",
+        Foreground = System.Windows.Media.Brushes.LightGray,
+        Margin = new Thickness(0, 6, 0, 2)
+    };
+    private readonly TextBox autoOffValue = new() { Width = 60, Height = 24, VerticalAlignment = VerticalAlignment.Center };
+    private readonly ComboBox autoOffUnit = new() { Width = 80, Height = 24, Margin = new Thickness(6, 0, 0, 0) };
+    private readonly StackPanel autoOffPanel = new() { Orientation = Orientation.Horizontal };
     private readonly CheckBox enabled = new() { Content = "有効", Foreground = System.Windows.Media.Brushes.White, IsChecked = true };
+    private readonly NizimaClient client;
     private readonly StackPanel scheduledTimePanel;
+    private bool suppressTargetReload;
 
     public NizimaRuleDialog(
         NizimaTriggerRule rule,
         IJtsaPluginContext context,
         NizimaRuleCatalogs catalogs,
-        IEnumerable<string> keepChannelPointIds)
+        IEnumerable<string> keepChannelPointIds,
+        bool channelPointOnly,
+        NizimaClient client)
     {
         this.rule = rule;
         this.context = context;
         this.catalogs = catalogs;
         this.keepChannelPointIds = keepChannelPointIds;
+        this.channelPointOnly = channelPointOnly;
+        this.client = client;
         Title = "トリガールール";
         Width = 480;
         SizeToContent = SizeToContent.Height;
@@ -91,6 +120,11 @@ public sealed class NizimaRuleDialog : Window
 
         NizimaTriggerUi.AttachDigitsOnly(scheduledHour, 2);
         NizimaTriggerUi.AttachDigitsOnly(scheduledMinute, 2);
+        NizimaTriggerUi.AttachDigitsOnly(autoOffValue, 5);
+        autoOffPanel.Children.Add(autoOffValue);
+        autoOffPanel.Children.Add(autoOffUnit);
+        BindChoiceCombo(autoOffUnit, NizimaAutoOffUnits.Choices, rule.AutoOffUnit);
+        autoOffValue.Text = rule.AutoOffValue > 0 ? rule.AutoOffValue.ToString(CultureInfo.InvariantCulture) : "";
 
         scheduledTimePanel = new StackPanel { Orientation = Orientation.Horizontal };
         scheduledTimePanel.Children.Add(new TextBlock
@@ -120,6 +154,9 @@ public sealed class NizimaRuleDialog : Window
         triggerReward.DropDownOpened += (_, _) => ReloadChannelPoints(triggerReward.SelectedValue as string ?? rule.TriggerValue);
         commandCombo.ItemsSource = commandOptions;
         modelTargetCombo.ItemsSource = modelTargetOptions;
+        itemTargetCombo.ItemsSource = itemTargetOptions;
+        modelTargetCombo.SelectionChanged += async (_, _) => await ReloadCommandOptionsForTargetAsync();
+        itemTargetCombo.SelectionChanged += async (_, _) => await ReloadCommandOptionsForTargetAsync();
 
         BindChoiceCombo(triggerType, NizimaTriggerTypes.Choices, rule.TriggerType);
         BindChoiceCombo(commandType, NizimaTriggerCommands.Choices, rule.CommandType);
@@ -155,7 +192,8 @@ public sealed class NizimaRuleDialog : Window
         triggerValueLabel.Foreground = System.Windows.Media.Brushes.LightGray;
         triggerValueLabel.Margin = new Thickness(0, 6, 0, 2);
         panel.Children.Add(enabled);
-        Add("トリガー種別", triggerType);
+        if (!channelPointOnly)
+            Add("トリガー種別", triggerType);
         panel.Children.Add(triggerValueLabel);
         var triggerValueHost = new Grid { MinHeight = 24 };
         triggerValueHost.Children.Add(triggerReward);
@@ -166,10 +204,14 @@ public sealed class NizimaRuleDialog : Window
         triggerValueHost.Children.Add(triggerValueNone);
         panel.Children.Add(triggerValueHost);
         Add("コマンド", commandType);
-        panel.Children.Add(commandValueLabel);
-        panel.Children.Add(commandCombo);
         panel.Children.Add(modelTargetLabel);
         panel.Children.Add(modelTargetCombo);
+        panel.Children.Add(itemTargetLabel);
+        panel.Children.Add(itemTargetCombo);
+        panel.Children.Add(commandValueLabel);
+        panel.Children.Add(commandCombo);
+        panel.Children.Add(autoOffLabel);
+        panel.Children.Add(autoOffPanel);
         panel.Children.Add(save);
         Content = panel;
     }
@@ -177,7 +219,9 @@ public sealed class NizimaRuleDialog : Window
     private bool TrySave()
     {
         var command = SelectedId(commandType) ?? NizimaTriggerCommands.ExpressionOn;
-        var trigger = SelectedId(triggerType) ?? NizimaTriggerTypes.ChannelPoint;
+        var trigger = channelPointOnly
+            ? NizimaTriggerTypes.ChannelPoint
+            : SelectedId(triggerType) ?? NizimaTriggerTypes.ChannelPoint;
         rule.IsEnabled = enabled.IsChecked == true;
         rule.TriggerType = trigger;
 
@@ -190,9 +234,11 @@ public sealed class NizimaRuleDialog : Window
         rule.TriggerValue = triggerValue;
         rule.CommandType = command;
         rule.CommandValue = (commandCombo.SelectedValue as string ?? commandCombo.Text ?? "").Trim();
-        rule.ModelId = NizimaCommandUi.ShowsModelTarget(command)
-            ? (modelTargetCombo.SelectedValue as string ?? modelTargetCombo.Text ?? "").Trim()
-            : "";
+        rule.ModelId = NizimaCommandUi.ShowsItemTarget(command)
+            ? (itemTargetCombo.SelectedValue as string ?? "").Trim()
+            : NizimaCommandUi.ShowsModelTarget(command)
+                ? (modelTargetCombo.SelectedValue as string ?? modelTargetCombo.Text ?? "").Trim()
+                : "";
         rule.SceneId = "";
         rule.Extra.ModelPath = command == NizimaTriggerCommands.ChangeModel ? rule.CommandValue : "";
 
@@ -204,12 +250,41 @@ public sealed class NizimaRuleDialog : Window
         }
 
         if (command is NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
-            or NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion &&
-            string.IsNullOrWhiteSpace(rule.CommandValue))
+            or NizimaTriggerCommands.ExpressionToggle
+            or NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion
+            or NizimaTriggerCommands.ItemExpressionOn or NizimaTriggerCommands.ItemExpressionOff
+            or NizimaTriggerCommands.ItemExpressionToggle
+            && string.IsNullOrWhiteSpace(rule.CommandValue))
         {
             MessageBox.Show(this, "表情またはモーションを選択してください。", Title);
             return false;
         }
+
+        if (NizimaCommandUi.ShowsItemTarget(command) &&
+            string.IsNullOrWhiteSpace(rule.ModelId))
+        {
+            MessageBox.Show(this, "対象アイテムを選択してください。", Title);
+            return false;
+        }
+
+        var autoOffText = autoOffValue.Text.Trim();
+        var autoOff = 0;
+        if (NizimaAutoOffUnits.Supports(command) && autoOffText.Length > 0 &&
+            !int.TryParse(autoOffText, NumberStyles.None, CultureInfo.InvariantCulture, out autoOff))
+        {
+            MessageBox.Show(this, "自動解除は半角数字で入力してください。", Title);
+            return false;
+        }
+
+        var unit = SelectedId(autoOffUnit) ?? NizimaAutoOffUnits.Seconds;
+        if (NizimaAutoOffUnits.ToTimeSpan(autoOff, unit) > NizimaAutoOffUnits.Max)
+        {
+            MessageBox.Show(this, "自動解除は 24 時間以内で指定してください。", Title);
+            return false;
+        }
+
+        rule.AutoOffValue = autoOff;
+        rule.AutoOffUnit = unit;
 
         return true;
     }
@@ -261,9 +336,9 @@ public sealed class NizimaRuleDialog : Window
         commandValueLabel.Visibility = Visibility.Visible;
         commandCombo.Visibility = Visibility.Visible;
         commandValueLabel.Text = CommandValueLabel(command);
-        ReplaceCommandOptions(command);
-        NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, InitialCommandValue(rule));
-
+        var autoOffVisibility = NizimaAutoOffUnits.Supports(command) ? Visibility.Visible : Visibility.Collapsed;
+        autoOffLabel.Visibility = autoOffVisibility;
+        autoOffPanel.Visibility = autoOffVisibility;
         if (NizimaCommandUi.ShowsModelTarget(command))
         {
             modelTargetLabel.Visibility = Visibility.Visible;
@@ -274,20 +349,85 @@ public sealed class NizimaRuleDialog : Window
             var models = NizimaCommandUi.ModelTargetRequired(command)
                 ? catalogs.ModelsOnScreen
                 : NizimaRuleCatalogs.WithCurrentModelOption(catalogs.ModelsOnScreen);
+            suppressTargetReload = true;
             NizimaNamedOptionCatalog.ReplaceAll(modelTargetOptions, models);
             NizimaNamedOptionCatalog.SelectComboValue(modelTargetCombo, modelTargetOptions, rule.ModelId);
+            suppressTargetReload = false;
         }
         else
         {
             modelTargetLabel.Visibility = Visibility.Collapsed;
             modelTargetCombo.Visibility = Visibility.Collapsed;
         }
+
+        if (NizimaCommandUi.ShowsItemTarget(command))
+        {
+            itemTargetLabel.Visibility = Visibility.Visible;
+            itemTargetCombo.Visibility = Visibility.Visible;
+            suppressTargetReload = true;
+            NizimaNamedOptionCatalog.ReplaceAll(itemTargetOptions, catalogs.Live2DItems);
+            NizimaNamedOptionCatalog.SelectComboValue(itemTargetCombo, itemTargetOptions, rule.ModelId);
+            suppressTargetReload = false;
+        }
+        else
+        {
+            itemTargetLabel.Visibility = Visibility.Collapsed;
+            itemTargetCombo.Visibility = Visibility.Collapsed;
+        }
+
+        ReplaceCommandOptions(command);
+        NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, InitialCommandValue(rule));
+        _ = ReloadCommandOptionsForTargetAsync();
+    }
+
+    private async Task ReloadCommandOptionsForTargetAsync()
+    {
+        if (suppressTargetReload || client is null)
+            return;
+        var command = SelectedId(commandType);
+        var selected = commandCombo.SelectedValue as string ?? commandCombo.Text;
+        try
+        {
+            IReadOnlyList<NizimaNamedOption> items = command switch
+            {
+                NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+                    or NizimaTriggerCommands.ExpressionToggle =>
+                    await client.GetExpressionsAsync(modelTargetCombo.SelectedValue as string, CancellationToken.None),
+                NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion =>
+                    await client.GetMotionsAsync(modelTargetCombo.SelectedValue as string, CancellationToken.None),
+                NizimaTriggerCommands.ItemExpressionOn or NizimaTriggerCommands.ItemExpressionOff
+                    or NizimaTriggerCommands.ItemExpressionToggle =>
+                    string.IsNullOrWhiteSpace(itemTargetCombo.SelectedValue as string)
+                        ? []
+                        : await client.GetExpressionsAsync(itemTargetCombo.SelectedValue as string, CancellationToken.None),
+                _ => []
+            };
+            if (items.Count == 0 && command is not (
+                NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+                or NizimaTriggerCommands.ExpressionToggle
+                or NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion
+                or NizimaTriggerCommands.ItemExpressionOn or NizimaTriggerCommands.ItemExpressionOff
+                or NizimaTriggerCommands.ItemExpressionToggle))
+                return;
+            if (command is NizimaTriggerCommands.ChangeModel)
+                return;
+            NizimaNamedOptionCatalog.ReplaceAll(commandOptions, items);
+            NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, selected);
+            commandCombo.IsEditable = false;
+        }
+        catch
+        {
+            // 未接続時はカタログのままにする。
+        }
     }
 
     private static string CommandValueLabel(string? command) =>
         command switch
         {
-            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => "表情",
+            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+                or NizimaTriggerCommands.ExpressionToggle
+                or NizimaTriggerCommands.ItemExpressionOn or NizimaTriggerCommands.ItemExpressionOff
+                or NizimaTriggerCommands.ItemExpressionToggle => "表情",
             NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => "モーション",
             NizimaTriggerCommands.ChangeModel => "登録モデル（ModelPath）",
             _ => "コマンド値"
@@ -297,13 +437,16 @@ public sealed class NizimaRuleDialog : Window
     {
         IReadOnlyList<NizimaNamedOption> items = command switch
         {
-            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => catalogs.Expressions,
+            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+                or NizimaTriggerCommands.ExpressionToggle => catalogs.Expressions,
+            NizimaTriggerCommands.ItemExpressionOn or NizimaTriggerCommands.ItemExpressionOff
+                or NizimaTriggerCommands.ItemExpressionToggle => [],
             NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => catalogs.Motions,
             NizimaTriggerCommands.ChangeModel => catalogs.RegisteredModels,
             _ => []
         };
         NizimaNamedOptionCatalog.ReplaceAll(commandOptions, items);
-        commandCombo.IsEditable = items.Count == 0;
+        commandCombo.IsEditable = command is NizimaTriggerCommands.ChangeModel && items.Count == 0;
     }
 
     private static string InitialCommandValue(NizimaTriggerRule rule) =>
@@ -331,7 +474,9 @@ public sealed class NizimaRuleDialog : Window
 
     private void SyncTriggerUi()
     {
-        var type = SelectedId(triggerType);
+        var type = channelPointOnly
+            ? NizimaTriggerTypes.ChannelPoint
+            : SelectedId(triggerType);
         var mode = NizimaTriggerUi.InputMode(type);
         triggerValueLabel.Text = NizimaTriggerUi.ValueFieldLabel(type);
         triggerValueLabel.Visibility = mode == NizimaTriggerValueInputMode.None

@@ -46,20 +46,58 @@ public static class NizimaTriggerCommands
     public const string ChangeModel = "ChangeModel";
     public const string ExpressionOn = "ExpressionOn";
     public const string ExpressionOff = "ExpressionOff";
+    public const string ExpressionToggle = "ExpressionToggle";
     public const string StartMotion = "StartMotion";
     public const string StopMotion = "StopMotion";
+    public const string ItemExpressionOn = "ItemExpressionOn";
+    public const string ItemExpressionOff = "ItemExpressionOff";
+    public const string ItemExpressionToggle = "ItemExpressionToggle";
 
     public static IReadOnlyList<NizimaChoice> Choices { get; } =
     [
         new(ChangeModel, "モデルを切り替え"),
         new(ExpressionOn, "表情をオン"),
         new(ExpressionOff, "表情をオフ"),
+        new(ExpressionToggle, "表情を切り替え"),
         new(StartMotion, "モーションを開始"),
-        new(StopMotion, "モーションを停止")
+        new(StopMotion, "モーションを停止"),
+        new(ItemExpressionOn, "アイテムの表情をオン"),
+        new(ItemExpressionOff, "アイテムの表情をオフ"),
+        new(ItemExpressionToggle, "アイテムの表情を切り替え")
     ];
 
     public static string LabelOf(string id) =>
         Choices.FirstOrDefault(item => item.Id == id)?.Label ?? id;
+}
+
+public static class NizimaAutoOffUnits
+{
+    public const string Seconds = "Seconds";
+    public const string Minutes = "Minutes";
+    public const string Hours = "Hours";
+
+    public static TimeSpan Max { get; } = TimeSpan.FromHours(24);
+
+    public static IReadOnlyList<NizimaChoice> Choices { get; } =
+    [
+        new(Seconds, "秒"),
+        new(Minutes, "分"),
+        new(Hours, "時間")
+    ];
+
+    public static bool Supports(string? commandType) =>
+        commandType is NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ItemExpressionOn;
+
+    public static TimeSpan ToTimeSpan(int value, string? unit) =>
+        unit switch
+        {
+            Minutes => TimeSpan.FromMinutes(value),
+            Hours => TimeSpan.FromHours(value),
+            _ => TimeSpan.FromSeconds(value)
+        };
+
+    public static string LabelOf(string? id) =>
+        Choices.FirstOrDefault(item => item.Id == id)?.Label ?? "秒";
 }
 
 public sealed class NizimaTriggerCommandExtra
@@ -77,6 +115,8 @@ public sealed class NizimaTriggerRule
     public string CommandValue { get; set; } = "";
     public string ModelId { get; set; } = "";
     public string SceneId { get; set; } = "";
+    public int AutoOffValue { get; set; }
+    public string AutoOffUnit { get; set; } = NizimaAutoOffUnits.Seconds;
     public NizimaTriggerCommandExtra Extra { get; set; } = new();
 }
 
@@ -102,10 +142,18 @@ public static class NizimaTriggerRuleSummary
         var value = CommandDisplay(rule, catalogs);
         if (!string.IsNullOrWhiteSpace(value))
             command += $" {value}";
+        if (NizimaAutoOffUnits.Supports(rule.CommandType) && rule.AutoOffValue > 0)
+            command += $"（{rule.AutoOffValue}{NizimaAutoOffUnits.LabelOf(rule.AutoOffUnit)}後に解除）";
 
         var text = $"{enabled} {trigger} → {command}";
         if (!string.IsNullOrWhiteSpace(rule.ModelId))
-            text += $"（モデル {DisplayName(catalogs.ModelsOnScreen, rule.ModelId) ?? rule.ModelId}）";
+        {
+            var targetCatalog = NizimaCommandUi.ShowsItemTarget(rule.CommandType)
+                ? catalogs.Live2DItems
+                : catalogs.ModelsOnScreen;
+            var targetLabel = NizimaCommandUi.ShowsItemTarget(rule.CommandType) ? "アイテム" : "モデル";
+            text += $"（{targetLabel} {DisplayName(targetCatalog, rule.ModelId) ?? rule.ModelId}）";
+        }
         return text;
     }
 
@@ -120,7 +168,11 @@ public static class NizimaTriggerRuleSummary
 
         var catalog = rule.CommandType switch
         {
-            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff => catalogs.Expressions,
+            NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+                or NizimaTriggerCommands.ExpressionToggle => catalogs.Expressions,
+            NizimaTriggerCommands.ItemExpressionOn or NizimaTriggerCommands.ItemExpressionOff
+                or NizimaTriggerCommands.ItemExpressionToggle =>
+                catalogs.ItemExpressions.TryGetValue(rule.ModelId, out var itemExpressions) ? itemExpressions : null,
             NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion => catalogs.Motions,
             NizimaTriggerCommands.ChangeModel => catalogs.RegisteredModels,
             _ => null
@@ -129,7 +181,10 @@ public static class NizimaTriggerRuleSummary
     }
 
     private static string? DisplayName(IReadOnlyList<NizimaNamedOption>? catalog, string path) =>
-        catalog?.FirstOrDefault(item => item.Path == path)?.Name;
+        catalog?.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase)) is { } match &&
+        !string.IsNullOrWhiteSpace(match.Name)
+            ? match.Name
+            : null;
 }
 
 public static class NizimaTriggerMatcher
@@ -201,6 +256,28 @@ public sealed record NizimaNamedOption(string Name, string Path)
                 continue;
             var name = item.TryGetProperty(nameProperty, out var nameNode) ? nameNode.GetString() ?? "" : "";
             list.Add(new NizimaNamedOption(name, path));
+        }
+
+        return list;
+    }
+
+    public static IReadOnlyList<NizimaNamedOption> FromLive2DItems(System.Text.Json.JsonElement data)
+    {
+        if (!data.TryGetProperty("Items", out var array) ||
+            array.ValueKind != System.Text.Json.JsonValueKind.Array)
+            return [];
+
+        var list = new List<NizimaNamedOption>();
+        foreach (var item in array.EnumerateArray())
+        {
+            var type = item.TryGetProperty("ItemType", out var typeNode) ? typeNode.GetString() : null;
+            if (!string.Equals(type, "Live2D", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var id = item.TryGetProperty("ItemId", out var idNode) ? idNode.GetString() : null;
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+            var name = item.TryGetProperty("Name", out var nameNode) ? nameNode.GetString() ?? "" : "";
+            list.Add(new NizimaNamedOption(name, id));
         }
 
         return list;

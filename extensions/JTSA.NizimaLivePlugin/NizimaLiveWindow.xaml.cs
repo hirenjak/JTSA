@@ -10,19 +10,29 @@ public partial class NizimaLiveWindow : Window
     private readonly NizimaLivePlugin plugin;
     private readonly IJtsaPluginContext context;
     private readonly NizimaLiveSettings settings;
+    private readonly bool channelPointOnly;
     private readonly ObservableCollection<RuleListItem> rules = [];
     private readonly ObservableCollection<NizimaNamedOption> expressions = [];
     private readonly ObservableCollection<NizimaNamedOption> motions = [];
+    private readonly ObservableCollection<NizimaNamedOption> expressionModels = [];
+    private readonly ObservableCollection<NizimaNamedOption> motionModels = [];
+    private readonly ObservableCollection<NizimaNamedOption> live2DItems = [];
+    private readonly ObservableCollection<NizimaNamedOption> itemExpressions = [];
     private readonly ObservableCollection<ChannelPointRewardInfo> channelPoints = [];
     private NizimaRuleCatalogs ruleCatalogs = NizimaRuleCatalogs.Empty;
     private bool loading;
     private bool catalogsBusy;
 
-    public NizimaLiveWindow(NizimaLivePlugin plugin, IJtsaPluginContext context, NizimaLiveSettings settings)
+    public NizimaLiveWindow(
+        NizimaLivePlugin plugin,
+        IJtsaPluginContext context,
+        NizimaLiveSettings settings,
+        bool channelPointOnly)
     {
         this.plugin = plugin;
         this.context = context;
         this.settings = settings;
+        this.channelPointOnly = channelPointOnly;
         InitializeComponent();
         UrlTextBox.Text = settings.WebSocketUrl;
         loading = true;
@@ -31,6 +41,10 @@ public partial class NizimaLiveWindow : Window
         RulesListBox.ItemsSource = rules;
         ExpressionComboBox.ItemsSource = expressions;
         MotionComboBox.ItemsSource = motions;
+        ExpressionModelComboBox.ItemsSource = expressionModels;
+        MotionModelComboBox.ItemsSource = motionModels;
+        ItemComboBox.ItemsSource = live2DItems;
+        ItemExpressionComboBox.ItemsSource = itemExpressions;
         ReloadRules();
         ReloadChannelPointsForRules();
         plugin.Client.StatusChanged += OnClientStatusChanged;
@@ -71,13 +85,20 @@ public partial class NizimaLiveWindow : Window
                 ruleCatalogs = NizimaRuleCatalogs.Empty;
                 expressions.Clear();
                 motions.Clear();
+                expressionModels.Clear();
+                motionModels.Clear();
+                live2DItems.Clear();
+                itemExpressions.Clear();
                 return;
             }
 
-            var modelId = ModelIdTextBox.Text.Trim();
-            ruleCatalogs = await plugin.Client.GetRuleCatalogsAsync(modelId, CancellationToken.None);
-            Replace(expressions, ruleCatalogs.Expressions);
-            Replace(motions, ruleCatalogs.Motions);
+            ruleCatalogs = await plugin.Client.GetRuleCatalogsAsync(null, CancellationToken.None);
+            Replace(expressionModels, NizimaRuleCatalogs.WithCurrentModelOption(ruleCatalogs.ModelsOnScreen));
+            Replace(motionModels, NizimaRuleCatalogs.WithCurrentModelOption(ruleCatalogs.ModelsOnScreen));
+            Replace(live2DItems, ruleCatalogs.Live2DItems);
+            await ReloadExpressionListAsync();
+            await ReloadMotionListAsync();
+            await ReloadItemExpressionListAsync();
             ReloadRules();
         }
         catch (Exception ex)
@@ -97,6 +118,52 @@ public partial class NizimaLiveWindow : Window
             target.Add(item);
     }
 
+    private async void ExpressionModelComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
+        await ReloadExpressionListAsync();
+
+    private async void MotionModelComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
+        await ReloadMotionListAsync();
+
+    private async void ItemComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) =>
+        await ReloadItemExpressionListAsync();
+
+    private async Task ReloadExpressionListAsync()
+    {
+        if (!plugin.Client.CanSendMethods)
+            return;
+        var selected = SelectedPath(ExpressionComboBox);
+        var list = await plugin.Client.GetExpressionsAsync(SelectedPath(ExpressionModelComboBox), CancellationToken.None);
+        Replace(expressions, list);
+        NizimaNamedOptionCatalog.SelectComboValue(ExpressionComboBox, expressions, selected);
+    }
+
+    private async Task ReloadMotionListAsync()
+    {
+        if (!plugin.Client.CanSendMethods)
+            return;
+        var selected = SelectedPath(MotionComboBox);
+        var list = await plugin.Client.GetMotionsAsync(SelectedPath(MotionModelComboBox), CancellationToken.None);
+        Replace(motions, list);
+        NizimaNamedOptionCatalog.SelectComboValue(MotionComboBox, motions, selected);
+    }
+
+    private async Task ReloadItemExpressionListAsync()
+    {
+        if (!plugin.Client.CanSendMethods)
+            return;
+        var itemId = SelectedPath(ItemComboBox);
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            itemExpressions.Clear();
+            return;
+        }
+
+        var selected = SelectedPath(ItemExpressionComboBox);
+        var list = await plugin.Client.GetExpressionsAsync(itemId, CancellationToken.None);
+        Replace(itemExpressions, list);
+        NizimaNamedOptionCatalog.SelectComboValue(ItemExpressionComboBox, itemExpressions, selected);
+    }
+
     private string SelectedPath(System.Windows.Controls.ComboBox combo) =>
         combo.SelectedValue as string ?? combo.Text?.Trim() ?? "";
 
@@ -106,7 +173,7 @@ public partial class NizimaLiveWindow : Window
     private void ReloadRules()
     {
         rules.Clear();
-        foreach (var rule in settings.Rules)
+        foreach (var rule in VisibleRules())
             rules.Add(new RuleListItem(rule, NizimaTriggerRuleSummary.Format(rule, ruleCatalogs, channelPoints)));
     }
 
@@ -181,7 +248,7 @@ public partial class NizimaLiveWindow : Window
             .Where(item => item.TriggerType == NizimaTriggerTypes.ChannelPoint)
             .Select(item => item.TriggerValue)
             .Append(rule.TriggerValue);
-        var dialog = new NizimaRuleDialog(rule, context, ruleCatalogs, keepIds)
+        var dialog = new NizimaRuleDialog(rule, context, ruleCatalogs, keepIds, channelPointOnly, plugin.Client)
         {
             Owner = this
         };
@@ -193,8 +260,14 @@ public partial class NizimaLiveWindow : Window
         ReloadChannelPointsForRules();
     }
 
+    private IEnumerable<NizimaTriggerRule> VisibleRules() =>
+        channelPointOnly
+            ? settings.Rules.Where(rule => rule.TriggerType == NizimaTriggerTypes.ChannelPoint)
+            : settings.Rules;
+
     private Task RunManualAsync(NizimaTriggerRule rule) =>
-        RunSafeAsync(() => NizimaTriggerExecutor.ExecuteAsync(plugin.Client, rule, CancellationToken.None));
+        RunSafeAsync(() => NizimaTriggerExecutor.ExecuteAsync(
+            plugin.Client, rule, CancellationToken.None, (message, exception) => context.LogError(message, exception)));
 
     private async Task RunSafeAsync(Func<Task> action)
     {
@@ -225,16 +298,29 @@ public partial class NizimaLiveWindow : Window
     }
 
     private void ExpressionOnButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.ExpressionOn, SelectedPath(ExpressionComboBox)));
+        _ = RunManualAsync(ManualFor(NizimaTriggerCommands.ExpressionOn, SelectedPath(ExpressionComboBox), SelectedPath(ExpressionModelComboBox)));
 
     private void ExpressionOffButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.ExpressionOff, SelectedPath(ExpressionComboBox)));
+        _ = RunManualAsync(ManualFor(NizimaTriggerCommands.ExpressionOff, SelectedPath(ExpressionComboBox), SelectedPath(ExpressionModelComboBox)));
 
     private void MotionOnButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.StartMotion, SelectedPath(MotionComboBox)));
+        _ = RunManualAsync(ManualFor(NizimaTriggerCommands.StartMotion, SelectedPath(MotionComboBox), SelectedPath(MotionModelComboBox)));
 
     private void MotionOffButton_Click(object sender, RoutedEventArgs e) =>
-        _ = RunManualAsync(BaseManual(NizimaTriggerCommands.StopMotion, SelectedPath(MotionComboBox)));
+        _ = RunManualAsync(ManualFor(NizimaTriggerCommands.StopMotion, SelectedPath(MotionComboBox), SelectedPath(MotionModelComboBox)));
+
+    private void ItemExpressionOnButton_Click(object sender, RoutedEventArgs e) =>
+        _ = RunManualAsync(ManualFor(NizimaTriggerCommands.ItemExpressionOn, SelectedPath(ItemExpressionComboBox), SelectedPath(ItemComboBox)));
+
+    private void ItemExpressionOffButton_Click(object sender, RoutedEventArgs e) =>
+        _ = RunManualAsync(ManualFor(NizimaTriggerCommands.ItemExpressionOff, SelectedPath(ItemExpressionComboBox), SelectedPath(ItemComboBox)));
+
+    private static NizimaTriggerRule ManualFor(string command, string value, string targetId) => new()
+    {
+        CommandType = command,
+        CommandValue = value,
+        ModelId = targetId
+    };
 }
 
 public sealed class RuleListItem(NizimaTriggerRule rule, string summary)

@@ -12,6 +12,9 @@ public sealed class NizimaRuleCatalogs
     public IReadOnlyList<NizimaNamedOption> RegisteredModels { get; init; } = [];
     public IReadOnlyList<NizimaNamedOption> Expressions { get; init; } = [];
     public IReadOnlyList<NizimaNamedOption> Motions { get; init; } = [];
+    public IReadOnlyList<NizimaNamedOption> Live2DItems { get; init; } = [];
+    public IReadOnlyDictionary<string, IReadOnlyList<NizimaNamedOption>> ItemExpressions { get; init; } =
+        new Dictionary<string, IReadOnlyList<NizimaNamedOption>>();
 
     public static IReadOnlyList<NizimaNamedOption> WithCurrentModelOption(IEnumerable<NizimaNamedOption> items) =>
     [
@@ -26,10 +29,16 @@ internal static class NizimaCommandUi
         commandType switch
         {
             NizimaTriggerCommands.ExpressionOn or NizimaTriggerCommands.ExpressionOff
+                or NizimaTriggerCommands.ExpressionToggle
                 or NizimaTriggerCommands.StartMotion or NizimaTriggerCommands.StopMotion
                 or NizimaTriggerCommands.ChangeModel => true,
             _ => false
         };
+
+    public static bool ShowsItemTarget(string? commandType) =>
+        commandType is NizimaTriggerCommands.ItemExpressionOn
+            or NizimaTriggerCommands.ItemExpressionOff
+            or NizimaTriggerCommands.ItemExpressionToggle;
 
     public static bool ModelTargetRequired(string? commandType) =>
         commandType == NizimaTriggerCommands.ChangeModel;
@@ -62,8 +71,8 @@ internal static class NizimaNamedOptionCatalog
         }
 
         EnsureOption(list, value);
-        combo.SelectedValue = value;
-        if (combo.SelectedIndex < 0)
-            combo.Text = value;
+        combo.SelectedItem = list.First(item => string.Equals(item.Path, value, StringComparison.OrdinalIgnoreCase));
+        if (combo.IsEditable && combo.SelectedItem is NizimaNamedOption selected)
+            combo.Text = selected.Label;
     }
 }

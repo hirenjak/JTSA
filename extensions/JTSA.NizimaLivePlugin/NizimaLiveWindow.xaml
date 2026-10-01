@@ -84,9 +84,6 @@
         </Style>
     </Window.Resources>
     <DockPanel Margin="12">
-        <TextBlock DockPanel.Dock="Bottom" x:Name="FooterText"
-                   Text="チャット部分一致は権限を見ません。誰のコメントでもモデルが動きます。"
-                   Foreground="#FFFFC107" TextWrapping="Wrap" Margin="0,8,0,0"/>
         <TabControl>
             <TabItem Header="接続">
                 <StackPanel Margin="12">
@@ -107,7 +104,7 @@
             <TabItem Header="トリガー">
                 <DockPanel Margin="8">
                     <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#FFE8E8E8" Margin="0,0,0,8"
-                               Text="コマンドはモデル切り替え・表情 ON/OFF・モーション開始/停止のみ。ChangeModel は ModelId と ModelPath が必要。それ以外は ModelId が空なら GetCurrentModelId を使います。"/>
+                               Text="ChangeModel は対象モデルと登録モデル Path が必要です。表情・モーションは対象が空なら現在のモデルです。アイテム表情は Live2D アイテムを指定します。"/>
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="追加" Width="80" Height="28" Margin="0,0,8,0" Click="AddRuleButton_Click"/>
                         <Button Content="削除" Width="80" Height="28" Click="DeleteRuleButton_Click"/>
@@ -116,39 +113,60 @@
                              MouseDoubleClick="RulesListBox_MouseDoubleClick"/>
                 </DockPanel>
             </TabItem>
-            <TabItem Header="モデル">
-                <StackPanel Margin="12">
-                    <TextBlock Text="ModelId（空なら現在モデル）" Foreground="#FFE8E8E8"/>
-                    <TextBox x:Name="ModelIdTextBox" Height="28" Margin="0,4,0,8"/>
-                    <TextBlock Text="ModelPath（ChangeModel）" Foreground="#FFE8E8E8"/>
-                    <TextBox x:Name="ModelPathTextBox" Height="28" Margin="0,4,0,8"/>
-                    <Button Content="モデル切り替え" Width="120" Height="28" HorizontalAlignment="Left" Click="ChangeModelButton_Click"/>
-                    <TextBlock x:Name="ManualStatus" Foreground="#FF80CBC4" TextWrapping="Wrap" Margin="0,12,0,0"/>
-                </StackPanel>
-            </TabItem>
-            <TabItem Header="表情">
-                <StackPanel Margin="12">
-                    <TextBlock Text="表情" Foreground="#FFE8E8E8"/>
-                    <ComboBox x:Name="ExpressionComboBox" Height="28" Margin="0,4,0,8"
-                              IsEditable="True" DisplayMemberPath="Label" SelectedValuePath="Path"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="一覧更新" Width="90" Height="28" Margin="0,0,8,0" Click="RefreshCatalogButton_Click"/>
-                        <Button Content="オン" Width="80" Height="28" Margin="0,0,8,0" Click="ExpressionOnButton_Click"/>
-                        <Button Content="オフ" Width="80" Height="28" Click="ExpressionOffButton_Click"/>
+            <TabItem Header="直接操作">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+                        <TextBlock Text="モデル切り替え" Foreground="White" FontSize="16" Margin="0,0,0,8"/>
+                        <TextBlock Text="対象モデル（空なら現在モデル）" Foreground="#FFE8E8E8"/>
+                        <TextBox x:Name="ModelIdTextBox" Height="28" Margin="0,4,0,8"/>
+                        <TextBlock Text="登録モデル Path" Foreground="#FFE8E8E8"/>
+                        <TextBox x:Name="ModelPathTextBox" Height="28" Margin="0,4,0,8"/>
+                        <Button Content="モデル切り替え" Width="120" Height="28" HorizontalAlignment="Left" Click="ChangeModelButton_Click"/>
+
+                        <TextBlock Text="表情" Foreground="White" FontSize="16" Margin="0,20,0,8"/>
+                        <TextBlock Text="対象モデル（空なら現在のモデル）" Foreground="#FFE8E8E8"/>
+                        <ComboBox x:Name="ExpressionModelComboBox" Height="28" Margin="0,4,0,8"
+                                  DisplayMemberPath="Label" SelectedValuePath="Path"
+                                  SelectionChanged="ExpressionModelComboBox_SelectionChanged"/>
+                        <TextBlock Text="表情" Foreground="#FFE8E8E8"/>
+                        <ComboBox x:Name="ExpressionComboBox" Height="28" Margin="0,4,0,8"
+                                  DisplayMemberPath="Label" SelectedValuePath="Path"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="一覧更新" Width="90" Height="28" Margin="0,0,8,0" Click="RefreshCatalogButton_Click"/>
+                            <Button Content="オン" Width="80" Height="28" Margin="0,0,8,0" Click="ExpressionOnButton_Click"/>
+                            <Button Content="オフ" Width="80" Height="28" Click="ExpressionOffButton_Click"/>
+                        </StackPanel>
+
+                        <TextBlock Text="モーション" Foreground="White" FontSize="16" Margin="0,20,0,8"/>
+                        <TextBlock Text="対象モデル（空なら現在のモデル）" Foreground="#FFE8E8E8"/>
+                        <ComboBox x:Name="MotionModelComboBox" Height="28" Margin="0,4,0,8"
+                                  DisplayMemberPath="Label" SelectedValuePath="Path"
+                                  SelectionChanged="MotionModelComboBox_SelectionChanged"/>
+                        <TextBlock Text="モーション" Foreground="#FFE8E8E8"/>
+                        <ComboBox x:Name="MotionComboBox" Height="28" Margin="0,4,0,8"
+                                  DisplayMemberPath="Label" SelectedValuePath="Path"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="一覧更新" Width="90" Height="28" Margin="0,0,8,0" Click="RefreshCatalogButton_Click"/>
+                            <Button Content="開始" Width="80" Height="28" Margin="0,0,8,0" Click="MotionOnButton_Click"/>
+                            <Button Content="停止" Width="80" Height="28" Click="MotionOffButton_Click"/>
+                        </StackPanel>
+
+                        <TextBlock Text="アイテムの表情" Foreground="White" FontSize="16" Margin="0,20,0,8"/>
+                        <TextBlock Text="対象アイテム" Foreground="#FFE8E8E8"/>
+                        <ComboBox x:Name="ItemComboBox" Height="28" Margin="0,4,0,8"
+                                  DisplayMemberPath="Label" SelectedValuePath="Path"
+                                  SelectionChanged="ItemComboBox_SelectionChanged"/>
+                        <TextBlock Text="表情" Foreground="#FFE8E8E8"/>
+                        <ComboBox x:Name="ItemExpressionComboBox" Height="28" Margin="0,4,0,8"
+                                  DisplayMemberPath="Label" SelectedValuePath="Path"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="一覧更新" Width="90" Height="28" Margin="0,0,8,0" Click="RefreshCatalogButton_Click"/>
+                            <Button Content="オン" Width="80" Height="28" Margin="0,0,8,0" Click="ItemExpressionOnButton_Click"/>
+                            <Button Content="オフ" Width="80" Height="28" Click="ItemExpressionOffButton_Click"/>
+                        </StackPanel>
+                        <TextBlock x:Name="ManualStatus" Foreground="#FF80CBC4" TextWrapping="Wrap" Margin="0,12,0,0"/>
                     </StackPanel>
-                </StackPanel>
-            </TabItem>
-            <TabItem Header="モーション">
-                <StackPanel Margin="12">
-                    <TextBlock Text="モーション" Foreground="#FFE8E8E8"/>
-                    <ComboBox x:Name="MotionComboBox" Height="28" Margin="0,4,0,8"
-                              IsEditable="True" DisplayMemberPath="Label" SelectedValuePath="Path"/>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="一覧更新" Width="90" Height="28" Margin="0,0,8,0" Click="RefreshCatalogButton_Click"/>
-                        <Button Content="開始" Width="80" Height="28" Margin="0,0,8,0" Click="MotionOnButton_Click"/>
-                        <Button Content="停止" Width="80" Height="28" Click="MotionOffButton_Click"/>
-                    </StackPanel>
-                </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </DockPanel>

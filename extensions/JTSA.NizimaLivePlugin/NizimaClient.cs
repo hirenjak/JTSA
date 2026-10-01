@@ -231,13 +231,20 @@ public sealed class NizimaClient : IDisposable
         var models = await SendRequestAsync("GetModels", new JsonObject(), cancellationToken).ConfigureAwait(false);
         var registeredModels = await SendRequestAsync("GetRegisteredModels", new JsonObject(), cancellationToken)
             .ConfigureAwait(false);
+        var items = await SendRequestAsync("GetItems", new JsonObject(), cancellationToken).ConfigureAwait(false);
+        var live2DItems = NizimaNamedOption.FromLive2DItems(items);
+        var itemExpressions = new Dictionary<string, IReadOnlyList<NizimaNamedOption>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in live2DItems)
+            itemExpressions[item.Path] = await GetExpressionsAsync(item.Path, cancellationToken).ConfigureAwait(false);
 
         return new NizimaRuleCatalogs
         {
             Expressions = expressions,
             Motions = motions,
             ModelsOnScreen = NizimaNamedOption.FromArray(models, "Models", "Name", "ModelId"),
-            RegisteredModels = NizimaNamedOption.FromArray(registeredModels, "RegisteredModels", "Name", "ModelPath")
+            RegisteredModels = NizimaNamedOption.FromArray(registeredModels, "RegisteredModels", "Name", "ModelPath"),
+            Live2DItems = live2DItems,
+            ItemExpressions = itemExpressions
         };
     }
 

@@ -9,7 +9,8 @@ public sealed class NizimaLivePlugin : IJtsaPlugin
     private NizimaLiveSettings settings = new();
     private NizimaLiveWindow? window;
     private CancellationTokenSource? autoConnectCts;
-    private Action<ExpansionTriggerInfo>? triggerHandler;
+    private NizimaExpansionSubscription? expansionSubscription;
+    private bool channelPointOnly;
 
     public string Id => "jtsa.nizimalive";
     public string Name => "nizima LIVE";
@@ -18,12 +19,20 @@ public sealed class NizimaLivePlugin : IJtsaPlugin
 
     public NizimaClient Client { get; } = new();
 
+    public bool ChannelPointOnly => channelPointOnly;
+
     public void Initialize(IJtsaPluginContext pluginContext)
     {
         context = pluginContext;
         settings = NizimaSettingsStore.Load(pluginContext.DataDirectory);
-        triggerHandler = info => _ = HandleTriggerAsync(info);
-        pluginContext.ExpansionTriggered += triggerHandler;
+        if (NizimaExpansionSubscription.TrySubscribe(pluginContext, DispatchTrigger, out expansionSubscription))
+            channelPointOnly = false;
+        else
+        {
+            channelPointOnly = true;
+            pluginContext.ChannelPointRedeemed += OnChannelPointRedeemed;
+        }
+
         Client.StatusChanged += () => window?.Dispatcher.BeginInvoke(window.RefreshConnectionUi);
         if (settings.AutoConnect)
             StartAutoConnect();
@@ -40,18 +49,21 @@ public sealed class NizimaLivePlugin : IJtsaPlugin
             return;
         }
 
-        window = new NizimaLiveWindow(this, context!, settings);
+        window = new NizimaLiveWindow(this, context!, settings, channelPointOnly);
         window.Closed += (_, _) => window = null;
         window.Show();
     }
 
     public void Shutdown()
     {
-        if (context is not null && triggerHandler is not null)
-            context.ExpansionTriggered -= triggerHandler;
+        if (context is not null && channelPointOnly)
+            context.ChannelPointRedeemed -= OnChannelPointRedeemed;
+        expansionSubscription?.Dispose();
+        expansionSubscription = null;
         autoConnectCts?.Cancel();
         window?.Close();
         window = null;
+        NizimaTriggerExecutor.CancelAllAutoOff();
         Client.Dispose();
     }
 
@@ -132,11 +144,15 @@ public sealed class NizimaLivePlugin : IJtsaPlugin
         }
     }
 
-    private Task HandleTriggerAsync(ExpansionTriggerInfo info) =>
-        NizimaTriggerExecutor.HandleTriggerAsync(
+    private void OnChannelPointRedeemed(ChannelPointRedemptionInfo info) =>
+        DispatchTrigger(NizimaTriggerTypes.ChannelPoint, info.RewardId);
+
+    private void DispatchTrigger(string triggerType, string value) =>
+        _ = NizimaTriggerExecutor.HandleTriggerAsync(
             Client,
             settings.Rules,
-            info,
+            triggerType,
+            value,
             message => context?.Log(message),
             (message, exception) => context?.LogError(message, exception));
 }
