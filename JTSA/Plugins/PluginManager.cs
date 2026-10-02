@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.IO;
 using JTSA.Dao;
+using JTSA.Utility;
 
 namespace JTSA.Plugins;
 
@@ -73,6 +74,8 @@ public sealed class PluginManager : IDisposable
     private void TryLoad(string manifestPath, IReadOnlySet<string> autoStartPluginIds)
     {
         PluginLoadContext? loadContext = null;
+        string? loadingPluginId = null;
+        var registrationStarted = false;
         try
         {
             var manifest = JsonSerializer.Deserialize<PluginManifest>(
@@ -81,6 +84,7 @@ public sealed class PluginManager : IDisposable
                 ?? throw new InvalidDataException("plugin.json を読み取れません。");
 
             ValidateManifest(manifest);
+            loadingPluginId = manifest.Id;
             var pluginDirectory = Path.GetDirectoryName(manifestPath)!;
             var assemblyPath = Path.GetFullPath(Path.Combine(pluginDirectory, manifest.EntryAssembly));
             if (!IsInsideDirectory(pluginDirectory, assemblyPath) || !File.Exists(assemblyPath))
@@ -104,6 +108,7 @@ public sealed class PluginManager : IDisposable
             if (Plugins.Any(item => string.Equals(item.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException($"プラグインID '{plugin.Id}' が重複しています。");
 
+            registrationStarted = true;
             using (loadContext.EnterContextualReflection())
                 plugin.Initialize(new JtsaPluginContext(mainWindow, pluginDirectory, plugin.Id));
             var descriptor = new PluginDescriptor(
@@ -122,6 +127,8 @@ public sealed class PluginManager : IDisposable
         }
         catch (Exception ex)
         {
+            if (registrationStarted && loadingPluginId is not null)
+                RemotePanelRegistry.RemoveAll(loadingPluginId);
             loadContext?.Unload();
             RecordError(Path.GetFileName(Path.GetDirectoryName(manifestPath)), ex);
         }
@@ -225,6 +232,7 @@ public sealed class PluginManager : IDisposable
                     loaded.Instance.Shutdown();
             }
             catch (Exception ex) { RecordError(descriptor.Name, ex); }
+            RemotePanelRegistry.RemoveAll(descriptor.Id);
             loaded.LoadContext.Unload();
             descriptor.LoadedPlugin = null;
         }

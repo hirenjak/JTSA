@@ -58,6 +58,8 @@
   <ItemGroup>
     <Resource Include="Resources\jtsa.ico" />
     <EmbeddedResource Include="Resources\RemotePanel.html" LogicalName="JTSA.RemotePanel.html" />
+    <EmbeddedResource Include="Resources\ThirdParty\NoSleep.min.js" LogicalName="JTSA.NoSleep.min.js" />
+    <EmbeddedResource Include="Resources\ThirdParty\NoSleep.LICENSE.txt" LogicalName="JTSA.NoSleep.LICENSE.txt" />
   </ItemGroup>
 
   <ItemGroup>

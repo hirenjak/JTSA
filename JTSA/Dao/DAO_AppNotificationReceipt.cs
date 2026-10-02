@@ -4,6 +4,15 @@ namespace JTSA.Dao;
 
 internal static class DAO_AppNotificationReceipt
 {
+    public static string? FindKey(string prefix)
+    {
+        using var db = new AppDbContext();
+        return db.T_AppNotificationReceipt
+            .Where(x => x.NotificationKey.StartsWith(prefix))
+            .Select(x => x.NotificationKey)
+            .FirstOrDefault();
+    }
+
     public static bool IsAcknowledged(string notificationKey)
     {
         using var db = new AppDbContext();

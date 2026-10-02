@@ -18,10 +18,14 @@ internal sealed class RemotePanelServer : IDisposable
     private readonly Func<RemotePanelSnapshot> getSnapshot;
     private readonly Func<TodoChange, bool> applyTodoChange;
     private readonly Func<RemoteObsChange, Task<bool>> applyObsChange;
+    private readonly Func<bool, Task<RemotePreview>> getPreview;
+    private readonly RemoteWebRtcPreview webRtc;
     private readonly Dispatcher dispatcher;
     private readonly Action<Exception> onError;
     private readonly Task serving;
     private readonly byte[] page;
+    private readonly byte[] noSleepScript;
+    private readonly byte[] noSleepLicense;
     private readonly object pairingLock = new();
     private int failedPairings;
     private DateTime lockUntilUtc;
@@ -30,12 +34,14 @@ internal sealed class RemotePanelServer : IDisposable
     public string Pin { get; private set; } = CreatePin();
 
     private sealed record PairRequest(string Pin);
+    private sealed record PluginActionRequest(string PanelId, string Action, string? Value);
     private sealed record Request(string Method, string Path, Dictionary<string, string> Headers, byte[] Body);
 
     public RemotePanelServer(
         Func<RemotePanelSnapshot> getSnapshot,
         Func<TodoChange, bool> applyTodoChange,
         Func<RemoteObsChange, Task<bool>> applyObsChange,
+        Func<bool, Task<RemotePreview>> getPreview,
         Dispatcher dispatcher,
         string key,
         int port,
@@ -44,7 +50,10 @@ internal sealed class RemotePanelServer : IDisposable
         this.getSnapshot = getSnapshot;
         this.applyTodoChange = applyTodoChange;
         this.applyObsChange = applyObsChange;
+        this.getPreview = getPreview;
         this.dispatcher = dispatcher;
+        webRtc = new RemoteWebRtcPreview(async isSub =>
+            await (await dispatcher.InvokeAsync(() => getPreview(isSub), DispatcherPriority.Background).Task));
         this.onError = onError;
         Key = key;
         using var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("JTSA.RemotePanel.html")
@@ -52,6 +61,8 @@ internal sealed class RemotePanelServer : IDisposable
         using var buffer = new MemoryStream();
         resource.CopyTo(buffer);
         page = buffer.ToArray();
+        noSleepScript = ReadResource("JTSA.NoSleep.min.js");
+        noSleepLicense = ReadResource("JTSA.NoSleep.LICENSE.txt");
         listener = new TcpListener(IPAddress.Any, port);
         listener.Start();
         serving = ServeAsync();
@@ -74,6 +85,15 @@ internal sealed class RemotePanelServer : IDisposable
         catch (Exception ex) { if (!lifetime.IsCancellationRequested) onError(ex); }
     }
 
+    private static byte[] ReadResource(string name)
+    {
+        using var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(name)
+            ?? throw new FileNotFoundException(name);
+        using var buffer = new MemoryStream();
+        resource.CopyTo(buffer);
+        return buffer.ToArray();
+    }
+
     private async Task HandleAsync(TcpClient client)
     {
         try
@@ -93,6 +113,16 @@ internal sealed class RemotePanelServer : IDisposable
                 if (request.Method == "GET" && request.Path is "/controls" or "/controls/")
                 {
                     await ReplyAsync(stream, 200, "text/html; charset=utf-8", page, token);
+                    return;
+                }
+                if (request.Method == "GET" && request.Path == "/controls/NoSleep.min.js")
+                {
+                    await ReplyAsync(stream, 200, "application/javascript; charset=utf-8", noSleepScript, token);
+                    return;
+                }
+                if (request.Method == "GET" && request.Path == "/controls/NoSleep.LICENSE.txt")
+                {
+                    await ReplyAsync(stream, 200, "text/plain; charset=utf-8", noSleepLicense, token);
                     return;
                 }
                 if (request.Method == "POST" && request.Path == "/controls/api/pair")
@@ -124,6 +154,67 @@ internal sealed class RemotePanelServer : IDisposable
                     await ReplyAsync(stream, 200, "application/json; charset=utf-8",
                         JsonSerializer.SerializeToUtf8Bytes(snapshot), token);
                     return;
+                }
+                if (request.Method == "POST" && request.Path == "/controls/api/plugin/action")
+                {
+                    PluginActionRequest? change;
+                    try { change = JsonSerializer.Deserialize<PluginActionRequest>(request.Body,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
+                    catch (JsonException) { change = null; }
+                    var applied = change is { PanelId: { Length: > 0 and <= 128 }, Action: { Length: > 0 and <= 64 }, Value: null or { Length: <= 1000 } } &&
+                        await dispatcher.InvokeAsync(() => RemotePanelRegistry.ApplyAction(
+                            change.PanelId, change.Action, change.Value), DispatcherPriority.Background, token).Task;
+                    await ReplyAsync(stream, applied ? 200 : 400, "application/json; charset=utf-8",
+                        applied ? "{}"u8.ToArray() : "{\"Error\":\"Invalid action\"}"u8.ToArray(), token);
+                    return;
+                }
+                if (request.Method == "GET" && request.Path is "/controls/api/preview/main" or "/controls/api/preview/sub")
+                {
+                    var preview = await (await dispatcher.InvokeAsync(
+                        () => getPreview(request.Path.EndsWith("/sub", StringComparison.Ordinal)),
+                        DispatcherPriority.Background, token).Task);
+                    await ReplyAsync(stream, 200, "application/json; charset=utf-8",
+                        JsonSerializer.SerializeToUtf8Bytes(preview), token);
+                    return;
+                }
+                if (request.Method == "POST" && request.Path == "/controls/api/preview/webrtc")
+                {
+                    RemoteWebRtcOffer? offer;
+                    try { offer = JsonSerializer.Deserialize<RemoteWebRtcOffer>(request.Body,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
+                    catch (JsonException) { offer = null; }
+                    if (offer == null)
+                    {
+                        await ReplyAsync(stream, 400, "application/json; charset=utf-8",
+                            JsonSerializer.SerializeToUtf8Bytes(new { Error = "接続情報が不正です。" }), token);
+                        return;
+                    }
+                    timeout.CancelAfter(TimeSpan.FromSeconds(30));
+                    var answer = await webRtc.CreateAsync(offer, token);
+                    await ReplyAsync(stream, answer.Error == null ? 200 : 503, "application/json; charset=utf-8",
+                        JsonSerializer.SerializeToUtf8Bytes(answer), token);
+                    return;
+                }
+                if (request.Path.StartsWith("/controls/api/preview/webrtc/", StringComparison.Ordinal))
+                {
+                    var id = request.Path["/controls/api/preview/webrtc/".Length..];
+                    if (id.Length != 32 || !id.All(Uri.IsHexDigit))
+                    {
+                        await ReplyAsync(stream, 400, "text/plain; charset=utf-8", "Invalid session"u8.ToArray(), token);
+                        return;
+                    }
+                    if (request.Method == "DELETE")
+                    {
+                        await webRtc.CloseAsync(id);
+                        await ReplyAsync(stream, 200, "application/json; charset=utf-8", "{}"u8.ToArray(), token);
+                        return;
+                    }
+                    if (request.Method == "POST")
+                    {
+                        var active = await webRtc.TouchAsync(id);
+                        await ReplyAsync(stream, active ? 200 : 404, "application/json; charset=utf-8", "{}"u8.ToArray(), token);
+                        return;
+                    }
                 }
                 if (request.Method == "POST" && request.Path == "/controls/api/todo")
                 {
@@ -179,7 +270,7 @@ internal sealed class RemotePanelServer : IDisposable
         if (marker != 0x0D0A0D0A) return null;
         var lines = Encoding.ASCII.GetString(header.ToArray()).Split("\r\n", StringSplitOptions.None);
         var first = lines[0].Split(' ');
-        if (first.Length != 3 || first[0] is not ("GET" or "POST") || !first[1].StartsWith('/')) return null;
+        if (first.Length != 3 || first[0] is not ("GET" or "POST" or "DELETE") || !first[1].StartsWith('/')) return null;
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var line in lines.Skip(1))
         {
@@ -189,8 +280,9 @@ internal sealed class RemotePanelServer : IDisposable
         }
         if (headers.ContainsKey("Transfer-Encoding")) return null;
         var length = 0;
+        var maxLength = first[1] == "/controls/api/preview/webrtc" ? 262144 : 4096;
         if (headers.TryGetValue("Content-Length", out var value)
-            && (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out length) || length < 0 || length > 4096)) return null;
+            && (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out length) || length < 0 || length > maxLength)) return null;
         if (first[0] == "POST" && length == 0) return null;
         var body = new byte[length];
         if (length > 0) await stream.ReadExactlyAsync(body, token);
@@ -230,8 +322,8 @@ internal sealed class RemotePanelServer : IDisposable
 
     private static async Task ReplyAsync(NetworkStream stream, int status, string contentType, byte[] body, CancellationToken token)
     {
-        var reason = status switch { 200 => "OK", 400 => "Bad Request", 403 => "Forbidden", 404 => "Not Found", 429 => "Too Many Requests", _ => "Error" };
-        var text = $"HTTP/1.1 {status} {reason}\r\nContent-Type: {contentType}\r\nContent-Length: {body.Length}\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src https: http: data:; form-action 'none'\r\n\r\n";
+        var reason = status switch { 200 => "OK", 400 => "Bad Request", 403 => "Forbidden", 404 => "Not Found", 429 => "Too Many Requests", 503 => "Service Unavailable", _ => "Error" };
+        var text = $"HTTP/1.1 {status} {reason}\r\nContent-Type: {contentType}\r\nContent-Length: {body.Length}\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; media-src 'self' data: blob:; img-src https: http: data: blob:; form-action 'none'\r\n\r\n";
         await stream.WriteAsync(Encoding.ASCII.GetBytes(text), token);
         await stream.WriteAsync(body, token);
     }
@@ -240,10 +332,12 @@ internal sealed class RemotePanelServer : IDisposable
     {
         lifetime.Cancel();
         listener.Stop();
+        _ = webRtc.DisposeAsync().AsTask();
         _ = serving.ContinueWith(_ => lifetime.Dispose(), TaskScheduler.Default);
     }
 }
 
+internal sealed record RemotePreview(string? SceneName, string? ImageData, string? Error);
 internal sealed record RemoteChatInfo(string Id, string User, string Message, string Color, DateTime Time, string ProfileImageUrl);
 internal sealed record RemoteTodoInfo(Guid Id, string Text, bool IsCurrent, bool IsCompleted);
 internal sealed record RemoteObsSceneInfo(long AccountId, bool IsSub, string SceneName, string DisplayName, bool IsCurrent);
@@ -253,6 +347,7 @@ internal sealed record RemotePanelSnapshot(
     IReadOnlyList<RemoteChatInfo> Chat,
     IReadOnlyList<RemoteTodoInfo> Todos,
     IReadOnlyList<RemoteObsSceneInfo> Scenes,
-    IReadOnlyList<RemoteObsSourceInfo> Sources);
+    IReadOnlyList<RemoteObsSourceInfo> Sources,
+    IReadOnlyList<RemotePanelInfo>? Panels = null);
 internal sealed record TodoChange(string Action, Guid? Id = null, string? Text = null, bool? Value = null);
 internal sealed record RemoteObsChange(string Action, long AccountId, bool IsSub, string SceneName, string? SourceName = null, string? ContainerName = null);

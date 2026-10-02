@@ -53,6 +53,21 @@ public interface IJtsaExternalChatPluginContext
     void AddExternalChatMessage(ExternalChatMessageInfo message);
 }
 
+/// <summary>スマホ画面に独自のパネルを追加するプラグイン向けの追加機能。</summary>
+/// <remarks>共通コンテキストとのバイナリ互換性を保つため、別インターフェースとして提供します。</remarks>
+public interface IJtsaRemotePanelPluginContext
+{
+    /// <summary>IDが同じパネルは更新します。内容はスマホ画面の次回更新時に反映されます。</summary>
+    void SetRemotePanel(RemotePluginPanelContent panel);
+    /// <summary>このプラグインが登録したパネルを取り除きます。</summary>
+    void RemoveRemotePanel(string id);
+    /// <summary>スマホからの操作と現在状態を持つパネルを登録します。コールバックはUIスレッドで実行されます。</summary>
+    void SetInteractiveRemotePanel(RemotePluginPanelContent panel, Func<string, string?, bool> onAction, Func<string> getState);
+}
+
+/// <summary>スマホ画面で表示するプラグインのパネル。HTMLは隔離されたiframe内に表示されます。</summary>
+public sealed record RemotePluginPanelContent(string Id, string Title, string Html);
+
 public sealed record StreamMetadataInfo(
     string Title,
     string CategoryId,

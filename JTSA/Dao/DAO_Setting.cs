@@ -102,6 +102,10 @@ namespace JTSA.Dao
             RemotePanelAutoStart = 61,
             /// <summary>スマホパネルでペアリング済み端末を識別するキー</summary>
             RemotePanelAccessKey = 62,
+            /// <summary>チャット入力欄で使用する定型文</summary>
+            ChatTemplates = 63,
+            /// <summary>スマホパネルの表示順（パネルIDのJSON配列）</summary>
+            RemotePanelOrder = 64,
         }
 
 

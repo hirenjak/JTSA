@@ -1294,6 +1294,34 @@ namespace JTSA
                 triggerObs: obsName, broadcasterId: broadcasterId, accessToken: accessToken);
         }
 
+        private async Task PostCalendarPinnedChatAsync(
+            string streamId, DateTime startedAt, string broadcasterId, string accessToken)
+        {
+            var streamStart = startedAt.ToLocalTime();
+            var entry = DAO_Calendar.SelectByDate(streamStart)
+                .OrderBy(item => Math.Abs(((item.CalendarDate.Date + item.StartTime) - streamStart).Ticks))
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
+            if (entry is null || string.IsNullOrWhiteSpace(entry.PinnedChatMessage))
+                return;
+            var receiptPrefix = $"calendar-pin:{broadcasterId}:{streamId}:";
+            if (DAO_AppNotificationReceipt.IsAcknowledged(receiptPrefix + "pinned"))
+                return;
+
+            var sentKey = DAO_AppNotificationReceipt.FindKey(receiptPrefix + "sent:");
+            var messageId = sentKey is null
+                ? await TwitchHelper.SendChat(entry.PinnedChatMessage, broadcasterId, accessToken)
+                : sentKey[(receiptPrefix.Length + "sent:".Length)..];
+            if (string.IsNullOrWhiteSpace(messageId))
+                return;
+            if (sentKey is null)
+                DAO_AppNotificationReceipt.Acknowledge(receiptPrefix + "sent:" + messageId);
+            if (await TwitchHelper.PinedChat(messageId, broadcasterId, accessToken) == true)
+                DAO_AppNotificationReceipt.Acknowledge(receiptPrefix + "pinned");
+            else
+                AppLogPanel.Error(GetType().Name, "予定のチャットは投稿しましたが、ピン留めに失敗しました。");
+        }
+
         private void HandleObsStreamingStateEvent(ObsController controller, bool isSub, bool isStreaming)
         {
             UpdateObsButtonFromEvent(controller, isStreaming);
@@ -2261,6 +2289,14 @@ namespace JTSA
             processLog.SuccessLogWrite();
         }
 
+        /// <summary>チャット定型文へ、現在の配信概要とタイトルタグを反映する。</summary>
+        public string ExpandChatTemplate(string template)
+        {
+            var withTitle = TitlePlaceholderReplacer.ReplaceTitle(
+                TitleEditTextBox.Text, template, CurrentCategoryJapaneseName);
+            return TitleTextFriendTagReplace(withTitle);
+        }
+
         #endregion
 
 
@@ -2480,9 +2516,10 @@ namespace JTSA
         /// <summary>
         /// ${ID} 形式のタイトルタグを登録済みの表示文字列へ置換する。
         /// </summary>
-        private static string TitleTextTagReplace(string titleText)
+        private string TitleTextTagReplace(string titleText)
         {
             titleText = TitlePlaceholderReplacer.ReplaceDate(titleText, DateTime.Now);
+            titleText = titleText.Replace("${steam_url}", SteamUrlTextBlock?.Text ?? string.Empty);
 
             foreach (var titleTag in DAO_TitleTag.SelectAllOrderbyLastUser())
             {
@@ -2558,6 +2595,16 @@ namespace JTSA
                 currentViewerCount = stream.ViewerCount;
                 UpdateDisplayedViewerCount();
                 await UpdateConnectedChattersAsync(selectedAccount);
+                try
+                {
+                    await PostCalendarPinnedChatAsync(stream.StreamId, stream.StartedAt,
+                        selectedAccount.BroadcasterId, TwitchHelper.AccessToken);
+                }
+                catch (Exception ex)
+                {
+                    AppLogPanel.Error(GetType().Name,
+                        $"予定のピン留めチャット投稿失敗 「 {ex.GetBaseException().Message} 」");
+                }
             }
             finally
             {

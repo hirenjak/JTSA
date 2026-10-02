@@ -822,9 +822,18 @@ public partial class ObsSettingPanel : UserControl
             if (controller is null) throw new InvalidOperationException("OBSに接続できませんでした");
             var current = await Task.Run(() => controller.GetSceneSourceEnabled(
                 preset.SceneName, preset.SourceName, preset.ContainerName));
-            await Task.Run(() => controller.SetSceneSourceEnabled(
-                preset.SceneName, preset.SourceName, !current, preset.ContainerName));
+            await Task.Run(() =>
+            {
+                if (preset.ApplyToAllScenes)
+                    controller.SetInputVisibleAcrossScenes(preset.SourceName, !current);
+                else
+                    controller.SetSceneSourceEnabled(preset.SceneName, preset.SourceName, !current, preset.ContainerName);
+            });
             preset.IsVisible = !current;
+            if (preset.ApplyToAllScenes)
+                foreach (var matching in sourceSwitchPresets.Where(item => item.IsSub == preset.IsSub &&
+                    string.Equals(item.SourceName, preset.SourceName, StringComparison.OrdinalIgnoreCase)))
+                    matching.IsVisible = !current;
             var mainWindow = (MainWindow)Application.Current.MainWindow;
             RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
             mainWindow.RefreshObsSourceShortcutButtons();
@@ -840,6 +849,16 @@ public partial class ObsSettingPanel : UserControl
     {
         if ((sender as Button)?.Tag is not SourceSwitchPreset preset) return;
         sourceSwitchPresets.Remove(preset);
+        SaveSourceSwitchPresets();
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+        mainWindow.RefreshObsSourceShortcutButtons();
+    }
+
+    private void SourceSwitchAllScenesCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox { Tag: SourceSwitchPreset preset } checkBox) return;
+        preset.ApplyToAllScenes = checkBox.IsChecked == true;
         SaveSourceSwitchPresets();
         var mainWindow = (MainWindow)Application.Current.MainWindow;
         RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
@@ -1167,7 +1186,8 @@ public partial class ObsSettingPanel : UserControl
 
     private void SourcePresetCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (IsInsideTextBox(e.OriginalSource as DependencyObject))
+        if (IsInsideTextBox(e.OriginalSource as DependencyObject) ||
+            IsInsideCheckBox(e.OriginalSource as DependencyObject))
         {
             draggedSourcePreset = null;
             return;
@@ -1271,6 +1291,18 @@ public partial class ObsSettingPanel : UserControl
         ((MainWindow)Application.Current.MainWindow).RefreshObsSourceShortcutButtons();
     }
 
+    private static bool IsInsideCheckBox(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is CheckBox) return true;
+            source = source is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+                ? System.Windows.Media.VisualTreeHelper.GetParent(source)
+                : LogicalTreeHelper.GetParent(source);
+        }
+        return false;
+    }
+
     private static bool IsInsideTextBox(DependencyObject? source)
     {
         while (source is not null)
@@ -1314,13 +1346,15 @@ public partial class ObsSettingPanel : UserControl
         public string SourceName { get; set; } = string.Empty;
         public string ButtonDisplayName { get; set; } = string.Empty;
         public string ContainerName { get; set; } = string.Empty;
+        public bool ApplyToAllScenes { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsVisible { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SourceName}";
         public string ShortcutDisplayName => string.IsNullOrWhiteSpace(ButtonDisplayName)
             ? SourceName
             : ButtonDisplayName.Trim();
-        public string DetailText => string.IsNullOrWhiteSpace(ContainerName) ||
+        public string DetailText => ApplyToAllScenes ? $"全シーン / {SourceName}" :
+                                    string.IsNullOrWhiteSpace(ContainerName) ||
                                     string.Equals(ContainerName, SceneName, StringComparison.OrdinalIgnoreCase)
             ? $"{SceneName} / {SourceName}"
             : $"{SceneName} / {ContainerName} / {SourceName}";

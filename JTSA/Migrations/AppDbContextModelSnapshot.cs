@@ -189,6 +189,10 @@ namespace JTSA.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PinnedChatMessage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedDateTime")
                         .HasColumnType("TEXT");
 

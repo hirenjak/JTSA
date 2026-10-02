@@ -3,6 +3,12 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Text.Json;
+using System.Collections.ObjectModel;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using JTSA.Dao;
 using JTSA.Panels;
@@ -22,6 +28,7 @@ internal sealed class RemotePanelController : IDisposable
     private readonly Action<Exception> onError;
     private readonly string accessKey;
     private RemotePanelServer? server;
+    private readonly SemaphoreSlim previewLock = new(1, 1);
 
     public bool IsRunning => server != null;
     public string Pin => server?.Pin ?? string.Empty;
@@ -39,6 +46,12 @@ internal sealed class RemotePanelController : IDisposable
         this.getAccountId = getAccountId;
         this.dispatcher = dispatcher;
         this.onError = onError;
+        var savedOrder = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RemotePanelOrder)?.Value;
+        if (!string.IsNullOrEmpty(savedOrder))
+        {
+            try { RemotePanelRegistry.SetOrder(JsonSerializer.Deserialize<string[]>(savedOrder) ?? []); }
+            catch (JsonException) { }
+        }
         var savedKey = DAO_Setting.SelectOneById(DAO_Setting.SettingName.RemotePanelAccessKey)?.Value;
         accessKey = savedKey is { Length: 48 } && savedKey.All(Uri.IsHexDigit)
             ? savedKey
@@ -56,6 +69,7 @@ internal sealed class RemotePanelController : IDisposable
                 GetSnapshot,
                 chatPanel.ApplyTodoChange,
                 ApplyObsChangeAsync,
+                GetPreviewAsync,
                 dispatcher,
                 accessKey,
                 Port,
@@ -92,9 +106,29 @@ internal sealed class RemotePanelController : IDisposable
 
     public void RegeneratePin() => server?.RegeneratePin();
 
+    private async Task<RemotePreview> GetPreviewAsync(bool isSub)
+    {
+        if (!previewLock.Wait(0)) return new(null, null, "画像を取得中です");
+        try
+        {
+            var controller = (Application.Current.MainWindow as MainWindow)?.GetConnectedObsController(isSub);
+            if (controller == null) return new(null, null, $"{(isSub ? "サブ" : "メイン")}OBSが未接続です。PCでOBSに接続してください。");
+            var screenshot = await Task.Run(controller.GetProgramScreenshot);
+            return new(screenshot.SceneName, screenshot.ImageData, null);
+        }
+        catch (Exception)
+        {
+            return new(null, null, "OBSの画像を取得できませんでした。OBSの接続状態を確認してください。");
+        }
+        finally { previewLock.Release(); }
+    }
+
     private RemotePanelSnapshot GetSnapshot()
     {
-        var snapshot = chatPanel.GetRemotePanelSnapshot();
+        var snapshot = chatPanel.GetRemotePanelSnapshot() with
+        {
+            Panels = RemotePanelRegistry.GetPanels()
+        };
         var accountId = getAccountId();
         if (accountId is null) return snapshot;
         var scenes = obsSettingPanel.GetSceneSwitchPresets(accountId)
@@ -140,6 +174,97 @@ public partial class RemotePanelWindow : Window
 {
     private readonly RemotePanelController controller;
     private bool settingsLoaded;
+    private Point dragStart;
+    private string? dragPanelId;
+    private ObservableCollection<RemotePanelInfo>? dragPreview;
+    private const string PanelDragFormat = "JTSA.RemotePanelId";
+
+    private void PanelDragHandle_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        dragStart = e.GetPosition(PanelListBox);
+        dragPanelId = (sender as FrameworkElement)?.DataContext is RemotePanelInfo panel ? panel.Id : null;
+    }
+
+    private void PanelDragHandle_MouseUp(object sender, MouseButtonEventArgs e) => dragPanelId = null;
+
+    private void PanelDragHandle_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed ||
+            sender is not FrameworkElement { DataContext: RemotePanelInfo panel } handle) return;
+        if (dragPanelId != panel.Id) return;
+        var position = e.GetPosition(PanelListBox);
+        if (Math.Abs(position.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(position.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        dragPreview = new ObservableCollection<RemotePanelInfo>(RemotePanelRegistry.GetPanels());
+        PanelListBox.ItemsSource = dragPreview;
+        PanelListBox.UpdateLayout();
+        try
+        {
+            DragDrop.DoDragDrop(PanelListBox, new DataObject(PanelDragFormat, panel.Id), DragDropEffects.Move);
+        }
+        finally
+        {
+            dragPreview = null;
+            dragPanelId = null;
+            RefreshPanelList();
+        }
+        e.Handled = true;
+    }
+
+    private void PanelListBox_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = dragPreview != null && e.Data.GetData(PanelDragFormat) is string id && id == dragPanelId
+            ? DragDropEffects.Move : DragDropEffects.None;
+        if (e.Effects == DragDropEffects.Move) UpdateDragPreview(e.GetPosition(PanelListBox).Y);
+        e.Handled = true;
+    }
+
+    private void UpdateDragPreview(double pointerY)
+    {
+        if (dragPreview == null) return;
+        var source = dragPreview.ToList().FindIndex(panel => panel.Id == dragPanelId);
+        if (source < 0) return;
+        var positions = new Dictionary<string, double>();
+        var destination = 0;
+        for (var i = 0; i < dragPreview.Count; i++)
+        {
+            if (PanelListBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem item) return;
+            var visualY = item.TranslatePoint(new Point(0, 0), PanelListBox).Y;
+            var offset = (item.RenderTransform as TranslateTransform)?.Y ?? 0;
+            positions[dragPreview[i].Id] = visualY;
+            // Use the settled row positions so an animation cannot trigger repeated swaps.
+            if (i != source && pointerY > visualY - offset + item.ActualHeight / 2) destination++;
+        }
+        if (source == destination) return;
+        dragPreview.Move(source, destination);
+        PanelListBox.UpdateLayout();
+        for (var i = 0; i < dragPreview.Count; i++)
+        {
+            if (PanelListBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem item) continue;
+            item.RenderTransform = Transform.Identity;
+            var settledY = item.TranslatePoint(new Point(0, 0), PanelListBox).Y;
+            var transform = new TranslateTransform();
+            item.RenderTransform = transform;
+            transform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(positions[dragPreview[i].Id] - settledY, 0, TimeSpan.FromMilliseconds(180))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                    FillBehavior = FillBehavior.Stop
+                });
+        }
+    }
+
+    private void PanelListBox_Drop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        e.Effects = DragDropEffects.None;
+        if (dragPreview == null || e.Data.GetData(PanelDragFormat) is not string id || id != dragPanelId) return;
+        UpdateDragPreview(e.GetPosition(PanelListBox).Y);
+        var order = dragPreview.Select(panel => panel.Id).ToArray();
+        DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RemotePanelOrder, JsonSerializer.Serialize(order));
+        RemotePanelRegistry.SetOrder(order);
+        e.Effects = DragDropEffects.Move;
+    }
 
     internal RemotePanelWindow(RemotePanelController controller)
     {
@@ -150,7 +275,20 @@ public partial class RemotePanelWindow : Window
         AutoStartCheckBox.IsChecked =
             DAO_Setting.SelectOneById(DAO_Setting.SettingName.RemotePanelAutoStart)?.Value == "1";
         settingsLoaded = true;
+        RemotePanelRegistry.Changed += RefreshPanelList;
+        Closed += (_, _) => RemotePanelRegistry.Changed -= RefreshPanelList;
+        RefreshPanelList();
         RefreshState();
+    }
+
+    private void RefreshPanelList()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(RefreshPanelList);
+            return;
+        }
+        if (dragPreview == null) PanelListBox.ItemsSource = RemotePanelRegistry.GetPanels();
     }
 
     private void StartButton_Click(object sender, RoutedEventArgs e)

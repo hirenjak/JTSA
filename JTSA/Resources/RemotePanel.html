@@ -9,17 +9,26 @@
     :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #17191d; color: #f5f5f5; }
     * { box-sizing: border-box; }
     html, body { width: 100%; max-width: 100%; overflow: hidden; }
-    body { margin: 0; }
+    body { margin: 0; height: 100dvh; display: flex; flex-direction: column; }
+    header, #sleepControls, nav { flex-shrink: 0; }
     header { height: 58px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #252831; }
     header strong { font-size: 18px; }
     #status { font-size: 12px; color: #aab0bb; }
-    nav { display: flex; background: #252831; }
-    nav button { width: 33.333%; border: 0; border-bottom: 3px solid transparent; padding: 13px 5px; color: #adb4c1; background: transparent; font-size: 15px; }
+    .headerActions { display: flex; align-items: center; gap: 10px; }
+    .headerBrand { display: flex; align-items: center; gap: 8px; }
+    #fullscreenButton, #previewButton { border: 1px solid #565b66; border-radius: 7px; padding: 7px 10px; background: #30343d; color: white; font-size: 13px; }
+    #previewButton[aria-expanded="true"] { border-color: #68cbb4; background: #2f655b; }
+    @media (max-width: 360px) { header { padding: 0 8px; } .headerActions { gap: 5px; } #status { font-size: 10px; } }
+    #fullscreenButton:disabled { color: #aab0bb; }
+    nav { display: flex; height: 49px; overflow-x: auto; background: #252831; scrollbar-width: thin; }
+    nav button { flex: 0 0 auto; min-width: 33.333%; border: 0; border-bottom: 3px solid transparent; padding: 13px 12px; color: #adb4c1; background: transparent; font-size: 15px; white-space: nowrap; }
     nav button.active { color: white; border-color: #68cbb4; }
-    main { display: flex; width: 100%; height: calc(100dvh - 107px); transition: transform .2s ease; }
-    main.page-obs { transform: translateX(0); }
-    main.page-chat { transform: translateX(-100vw); }
-    main.page-todo { transform: translateX(-200vw); }
+    main { display: flex; width: 100%; flex: 1; min-height: 0; transform: translateX(calc(-1 * var(--page-index, 1) * 100vw)); transition: transform .2s ease; }
+    #sleepControls { height: 50px; padding: 5px 12px; background: #252831; }
+    #sleepControls[hidden] { display: none; }
+    #sleepControls label { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+    #sleepControls input { width: 18px; height: 18px; margin: 0; }
+    #sleepStatus { display: block; margin: 3px 0 0 25px; font-size: 11px; color: #aab0bb; }
     section { flex: 0 0 100%; width: 100%; height: 100%; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
     .chat { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; background: #24272e; border-radius: 12px; margin: 0 0 8px; padding: 11px 13px; overflow-wrap: anywhere; }
     .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #3b3f48; }
@@ -45,6 +54,17 @@
     .obsButton.active { border-color: #68cbb4; background: #2f655b; box-shadow: inset 0 0 0 1px #68cbb4; }
     .obsButton small { display: block; margin-top: 4px; color: #aab0bb; font-size: 11px; }
     .empty { text-align: center; color: #9ca4b1; margin-top: 35px; }
+    .pluginPage { padding: 0; }
+    .pluginPage iframe { display: block; width: 100%; height: 100%; border: 0; background: #17191d; }
+    #previewArea { flex-shrink: 0; padding: 8px 12px; background: #252831; }
+    #previewArea[hidden] { display: none; }
+    #previewImage { display: block; width: 100%; height: auto; max-height: 30dvh; object-fit: contain; background: #000; border-radius: 8px; margin-top: 8px; }
+    #previewImage[hidden] { display: none; }
+    #previewVideo { display: block; width: 100%; max-height: 30dvh; object-fit: contain; background: #000; border-radius: 8px; margin-top: 8px; }
+    #previewVideo[hidden] { display: none; }
+    #previewObs { padding: 7px; background: #30343d; color: white; border: 1px solid #565b66; border-radius: 7px; }
+    .previewControls { display: flex; align-items: center; gap: 8px; }
+    #previewStatus { color: #aab0bb; font-size: 12px; overflow-wrap: anywhere; margin: 8px 0 0; }
     #pairScreen { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 5; display: grid; place-items: center; overflow: hidden; background: #17191d; padding: 20px; }
     #pairScreen.hidden { display: none; }
     #pairBox { width: min(100%, 320px); background: #252831; padding: 20px; border-radius: 16px; text-align: center; }
@@ -64,9 +84,21 @@
     <div id="pairError" role="alert"></div>
   </div>
 </div>
-<header><strong>JTSA</strong><span id="status">接続中…</span></header>
-<nav><button id="obsTab">OBS</button><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
-<main id="pages" class="page-chat">
+<header><div class="headerBrand"><strong>JTSA</strong><button id="previewButton" type="button" aria-expanded="false" aria-controls="previewArea">プレビュー</button></div><div class="headerActions"><span id="status">接続中…</span><button id="fullscreenButton" type="button" aria-pressed="false">全画面</button></div></header>
+<div id="sleepControls">
+  <label><input id="keepAwake" type="checkbox" aria-describedby="sleepStatus">画面をスリープさせない</label>
+  <span id="sleepStatus" role="status">OFF</span>
+</div>
+<div id="previewArea" hidden>
+  <div class="previewControls">
+    <select id="previewObs" aria-label="プレビューに表示するOBS"><option value="main">メインOBS</option><option value="sub">サブOBS</option></select>
+  </div>
+  <p id="previewStatus" role="status" hidden></p>
+  <img id="previewImage" alt="OBSの現在のシーン" hidden>
+  <video id="previewVideo" autoplay muted playsinline aria-label="OBSのリアルタイム映像" hidden></video>
+</div>
+<nav id="panelTabs"><button id="obsTab">OBS</button><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
+<main id="pages" style="--page-index: 1">
   <section id="obsPage">
     <h2 class="obsHeading">シーン選択</h2>
     <div id="scenes"></div>
@@ -81,13 +113,244 @@
     <div id="todos"></div>
   </section>
 </main>
+<script src="/controls/NoSleep.min.js"></script>
 <script>
+  const fullscreenButton = document.getElementById('fullscreenButton');
+  const fullscreenRoot = document.documentElement;
+  function updateFullscreenButton() {
+    const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    const supported = Boolean((fullscreenRoot.requestFullscreen && document.fullscreenEnabled !== false) ||
+      (fullscreenRoot.webkitRequestFullscreen && document.webkitFullscreenEnabled !== false));
+    fullscreenButton.disabled = !supported && !active;
+    fullscreenButton.textContent = active ? '全画面を解除' : supported ? '全画面' : '全画面非対応';
+    fullscreenButton.setAttribute('aria-pressed', String(active));
+  }
+  fullscreenButton.addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+      } else if (fullscreenRoot.requestFullscreen) {
+        await fullscreenRoot.requestFullscreen();
+      } else if (fullscreenRoot.webkitRequestFullscreen) {
+        await fullscreenRoot.webkitRequestFullscreen();
+      }
+      updateFullscreenButton();
+    } catch (_) {
+      updateFullscreenButton();
+      fullscreenButton.textContent = '再試行';
+      fullscreenButton.title = '全画面に切り替えられませんでした';
+    }
+  });
+  document.addEventListener('fullscreenchange', updateFullscreenButton);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+  updateFullscreenButton();
+  const keepAwake = document.getElementById('keepAwake');
+  const sleepControls = document.getElementById('sleepControls');
+  const sleepStatus = document.getElementById('sleepStatus');
+  let noSleep = null, screenLock = null, sleepAttempt = 0;
+  function stopKeepingAwake(message = 'OFF') {
+    sleepAttempt++;
+    keepAwake.checked = false;
+    if (screenLock) { screenLock.release().catch(() => {}); screenLock = null; }
+    noSleep?.disable();
+    sleepStatus.textContent = message;
+  }
+  async function startKeepingAwake() {
+    if (!keepAwake.checked) { stopKeepingAwake(); return; }
+    const attempt = ++sleepAttempt;
+    keepAwake.disabled = true;
+    sleepStatus.textContent = '開始中…';
+    try {
+      if (window.isSecureContext && navigator.wakeLock) {
+        const lock = await navigator.wakeLock.request('screen');
+        if (attempt !== sleepAttempt) { await lock.release(); return; }
+        screenLock = lock;
+        lock.addEventListener('release', () => {
+          if (screenLock === lock) stopKeepingAwake('解除されました。再度ONにしてください');
+        });
+        sleepStatus.textContent = 'ON';
+      } else {
+        if (!noSleep) {
+          if (typeof NoSleep !== 'function') throw new Error('スリープ抑止機能を読み込めません。ページを再読み込みしてください');
+          noSleep = new NoSleep();
+          if (!noSleep.noSleepVideo) { noSleep = null; throw new Error('動画方式を利用できません'); }
+          const video = noSleep.noSleepVideo;
+          video.muted = true;
+          video.setAttribute('muted', '');
+          video.setAttribute('webkit-playsinline', '');
+          video.setAttribute('aria-hidden', 'true');
+          video.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;pointer-events:none;';
+          document.body.append(video);
+          noSleep.noSleepVideo.addEventListener('pause', () => {
+            if (keepAwake.checked) stopKeepingAwake('停止しました。再度ONにしてください');
+          });
+        }
+        await noSleep.enable();
+        if (attempt !== sleepAttempt) { noSleep.disable(); return; }
+        sleepStatus.textContent = 'ON（端末によっては効かない場合があります）';
+      }
+    } catch (error) {
+      if (attempt === sleepAttempt) {
+        const reason = error.name === 'NotAllowedError' ? 'ブラウザが動画再生を許可しませんでした'
+          : error.name === 'NotSupportedError' ? 'このブラウザでは動画を再生できません'
+          : error.message || error.name || '原因不明';
+        stopKeepingAwake('開始できませんでした：' + reason);
+      }
+    } finally {
+      keepAwake.disabled = false;
+    }
+  }
+  keepAwake.addEventListener('click', startKeepingAwake);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && keepAwake.checked)
+      stopKeepingAwake('画面切替で解除しました。再度ONにしてください');
+  });
+  window.addEventListener('pagehide', () => stopKeepingAwake());
   let key = localStorage.getItem('jtsa-panel-key');
   const pairScreen = document.getElementById('pairScreen');
   const pairError = document.getElementById('pairError');
   const pages = document.getElementById('pages');
+  const panelTabs = document.getElementById('panelTabs');
   const status = document.getElementById('status');
   let active = 1, busy = false;
+  const pluginPages = new Map();
+  window.addEventListener('message', async event => {
+    const entry = [...pluginPages].find(([, panel]) => panel.frame.contentWindow === event.source);
+    if (!entry || !event.data || event.data.type !== 'jtsa-plugin-action') return;
+    const [id] = entry;
+    if (typeof event.data.action !== 'string' || event.data.action.length > 64 ||
+        (event.data.value != null && (typeof event.data.value !== 'string' || event.data.value.length > 1000))) return;
+    try {
+      await api('/controls/api/plugin/action', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({panelId:id, action:event.data.action, value:event.data.value ?? null})});
+    } catch (error) {
+      event.source.postMessage({type:'jtsa-plugin-error', message:error.message}, '*');
+    }
+  });
+  const previewImage = document.getElementById('previewImage');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewStatus = document.getElementById('previewStatus');
+  const previewObs = document.getElementById('previewObs');
+  const previewButton = document.getElementById('previewButton');
+  const previewArea = document.getElementById('previewArea');
+  let previewTimer = null, previewRequest = null;
+  let previewPeer = null, previewSession = null, previewHeartbeat = null, previewWatchdog = null;
+  function previewVisible() {
+    return Boolean(key && !document.hidden && pairScreen.classList.contains('hidden') &&
+      !previewArea.hidden);
+  }
+  function stopPreview() {
+    clearTimeout(previewTimer); previewTimer = null;
+    previewRequest?.abort(); previewRequest = null;
+    clearInterval(previewHeartbeat); previewHeartbeat = null;
+    clearTimeout(previewWatchdog); previewWatchdog = null;
+    if (previewPeer) { previewPeer.onconnectionstatechange = null; previewPeer.ontrack = null; previewPeer.close(); previewPeer = null; }
+    previewVideo.pause(); previewVideo.srcObject?.getTracks().forEach(track => track.stop());
+    previewVideo.srcObject = null; previewVideo.hidden = true;
+    closePreviewSession(previewSession); previewSession = null;
+  }
+  function updatePreview() {
+    if (!previewVisible()) { stopPreview(); return; }
+    if (previewTimer === null && previewRequest === null)
+      streamPreview();
+  }
+  async function streamPreview() {
+    const request = new AbortController(); previewRequest = request;
+    let peer;
+    try {
+      if (typeof RTCPeerConnection !== 'function') throw new Error('このブラウザはWebRTCに対応していません');
+      previewStatus.textContent = '映像に接続中…'; previewStatus.hidden = false;
+      peer = new RTCPeerConnection({iceServers:[]}); previewPeer = peer;
+      peer.addTransceiver('video', {direction:'recvonly'});
+      peer.ontrack = event => {
+        if (previewRequest !== request) return;
+        previewVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+        previewVideo.hidden = false; previewImage.hidden = true;
+        previewVideo.play().catch(() => failWebRtc(request, '映像の再生を開始できませんでした'));
+      };
+      peer.onconnectionstatechange = () => {
+        if (previewRequest !== request) return;
+        if (peer.connectionState === 'connected') {
+          clearTimeout(previewWatchdog); previewWatchdog = null;
+          previewStatus.hidden = true;
+        } else if (peer.connectionState === 'failed') {
+          failWebRtc(request, '映像の接続に失敗しました');
+        } else if (peer.connectionState === 'disconnected' && previewWatchdog === null) {
+          previewWatchdog = setTimeout(() => failWebRtc(request, '映像の接続が切れました'), 10000);
+        }
+      };
+      previewWatchdog = setTimeout(() => failWebRtc(request, '映像の接続がタイムアウトしました'), 35000);
+      await peer.setLocalDescription(await peer.createOffer());
+      await new Promise((resolve, reject) => {
+        if (peer.iceGatheringState === 'complete') { resolve(); return; }
+        const cleanup = () => {
+          clearTimeout(timeout); peer.removeEventListener('icegatheringstatechange', changed);
+          request.signal.removeEventListener('abort', aborted);
+        };
+        const changed = () => { if (peer.iceGatheringState === 'complete') { cleanup(); resolve(); } };
+        const aborted = () => { cleanup(); reject(new Error('接続を中止しました')); };
+        const timeout = setTimeout(() => { cleanup(); reject(new Error('接続情報の取得がタイムアウトしました')); }, 7000);
+        peer.addEventListener('icegatheringstatechange', changed);
+        request.signal.addEventListener('abort', aborted, {once:true});
+        if (request.signal.aborted) aborted();
+      });
+      const response = await fetch('/controls/api/preview/webrtc', {
+        method:'POST', cache:'no-store', signal:request.signal,
+        headers:{'X-JTSA-Key':key, 'Content-Type':'application/json'},
+        body:JSON.stringify({isSub:previewObs.value === 'sub', sdp:peer.localDescription.sdp})
+      });
+      const answer = await response.json();
+      if (!response.ok || answer.Error) throw new Error(answer.Error || '映像に接続できませんでした');
+      if (previewRequest !== request || !previewVisible()) {
+        closePreviewSession(answer.SessionId); return;
+      }
+      previewSession = answer.SessionId;
+      await peer.setRemoteDescription({type:'answer', sdp:answer.Sdp});
+      if (previewRequest !== request) return;
+      previewHeartbeat = setInterval(async () => {
+        if (previewRequest !== request || !previewVisible()) return;
+        try {
+          const response = await fetch('/controls/api/preview/webrtc/' + previewSession, {
+            method:'POST', headers:{'X-JTSA-Key':key, 'Content-Type':'application/json'},
+            body:'{}', signal:request.signal, cache:'no-store'
+          });
+          if (!response.ok) failWebRtc(request, '映像の接続が終了しました');
+        } catch (_) { if (previewRequest === request) failWebRtc(request, 'PCに接続できません'); }
+      }, 5000);
+    } catch (error) {
+      if (previewRequest === request) failWebRtc(request, error.message);
+    }
+  }
+  function closePreviewSession(id) {
+    if (!id || !key) return;
+    fetch('/controls/api/preview/webrtc/' + id, {
+      method:'DELETE', headers:{'X-JTSA-Key':key}, keepalive:true
+    }).catch(() => {});
+  }
+  function failWebRtc(request, message) {
+    if (previewRequest !== request) return;
+    stopPreview(); previewVideo.hidden = true;
+    previewStatus.textContent = message; previewStatus.hidden = false;
+    if (previewVisible()) previewTimer = setTimeout(() => { previewTimer = null; updatePreview(); }, 3000);
+  }
+  previewObs.addEventListener('change', () => {
+    stopPreview(); previewImage.hidden = true; previewImage.removeAttribute('src');
+    previewStatus.textContent = '画像を取得中…'; previewStatus.hidden = false; updatePreview();
+  });
+  previewButton.addEventListener('click', () => {
+    previewArea.hidden = !previewArea.hidden;
+    sleepControls.hidden = !previewArea.hidden;
+    previewButton.setAttribute('aria-expanded', String(!previewArea.hidden));
+    if (!previewArea.hidden) {
+      keepAwake.checked = true; startKeepingAwake();
+      previewImage.hidden = true;
+      previewStatus.textContent = '画像を取得中…'; previewStatus.hidden = false;
+    } else stopKeepingAwake();
+    updatePreview();
+  });
+  document.addEventListener('visibilitychange', updatePreview);
+  window.addEventListener('pagehide', stopPreview);
   document.getElementById('pairForm').onsubmit = async event => {
     event.preventDefault();
     const pin = document.getElementById('pairInput').value;
@@ -112,24 +375,73 @@
   };
   function show(index) {
     active = index;
-    pages.classList.toggle('page-obs', index === 0);
-    pages.classList.toggle('page-chat', index === 1);
-    pages.classList.toggle('page-todo', index === 2);
-    document.getElementById('obsTab').classList.toggle('active', index === 0);
-    document.getElementById('chatTab').classList.toggle('active', index === 1);
-    document.getElementById('todoTab').classList.toggle('active', index === 2);
+    pages.style.setProperty('--page-index', index);
+    [...panelTabs.children].forEach((button, i) => button.classList.toggle('active', i === index));
+    panelTabs.children[index]?.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    updatePreview();
   }
-  document.getElementById('obsTab').onclick = () => show(0);
-  document.getElementById('chatTab').onclick = () => show(1);
-  document.getElementById('todoTab').onclick = () => show(2);
+  for (const id of ['obs', 'chat', 'todo']) {
+    const tab = document.getElementById(id + 'Tab');
+    tab.onclick = () => show([...panelTabs.children].indexOf(tab));
+  }
   let touchX = 0, touchY = 0;
   pages.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; touchY = event.touches[0].clientY; }, {passive:true});
   pages.addEventListener('touchend', event => {
     const dx = event.changedTouches[0].clientX - touchX;
     const dy = event.changedTouches[0].clientY - touchY;
     if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4)
-      show(Math.max(0, Math.min(2, active + (dx < 0 ? 1 : -1))));
+      show(Math.max(0, Math.min(panelTabs.children.length - 1, active + (dx < 0 ? 1 : -1))));
   }, {passive:true});
+  function renderPanels(items) {
+    const selectedTab = panelTabs.children[active];
+    const incoming = new Set();
+    for (const item of items || []) {
+      if (!item.IsPlugin) continue;
+      incoming.add(item.Id);
+      let panel = pluginPages.get(item.Id);
+      if (!panel) {
+        const tab = document.createElement('button');
+        const section = document.createElement('section'); section.className = 'pluginPage';
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.title = item.Title;
+        frame.addEventListener('load', () => frame.contentWindow?.postMessage(
+          {type:'jtsa-plugin-state', state:panel.state}, '*'));
+        section.append(frame);
+        panelTabs.append(tab); pages.append(section);
+        panel = {tab, section, frame, html: null};
+        pluginPages.set(item.Id, panel);
+        tab.onclick = () => show([...panelTabs.children].indexOf(tab));
+      }
+      panel.tab.textContent = item.Title;
+      panel.frame.title = item.Title;
+      if (panel.html !== item.Html) {
+        panel.html = item.Html;
+        panel.frame.srcdoc = item.Html;
+      }
+      panel.state = item.State;
+      panel.frame.contentWindow?.postMessage({type:'jtsa-plugin-state', state:item.State}, '*');
+    }
+    for (const [id, panel] of pluginPages) {
+      if (incoming.has(id)) continue;
+      panel.tab.remove(); panel.section.remove(); pluginPages.delete(id);
+    }
+    let position = 0;
+    for (const item of items || []) {
+      const panel = item.IsPlugin ? pluginPages.get(item.Id) : {
+        tab: document.getElementById(item.Id + 'Tab'),
+        section: document.getElementById(item.Id + 'Page')
+      };
+      if (!panel?.tab || !panel.section) continue;
+      if (panelTabs.children[position] !== panel.tab)
+        panelTabs.insertBefore(panel.tab, panelTabs.children[position] || null);
+      if (pages.children[position] !== panel.section)
+        pages.insertBefore(panel.section, pages.children[position] || null);
+      position++;
+    }
+    const selectedIndex = [...panelTabs.children].indexOf(selectedTab);
+    show(selectedIndex < 0 ? 0 : selectedIndex);
+  }
   async function api(path, options = {}) {
     const response = await fetch(path, { cache: 'no-store', ...options, headers: { 'X-JTSA-Key': key, ...(options.headers || {}) } });
     if (!response.ok) {
@@ -242,6 +554,7 @@
       pairScreen.classList.add('hidden');
       document.getElementById('category').textContent = data.Category + ' のToDo';
       renderChat(data.Chat); renderTodos(data.Todos); renderObs(data.Scenes, data.Sources);
+      renderPanels(data.Panels);
     } catch (error) {
       status.textContent = error.message;
       if (error.status === 403) {
@@ -249,6 +562,7 @@
         localStorage.removeItem('jtsa-panel-key');
         pairError.textContent = '接続コードを入力してください。';
         pairScreen.classList.remove('hidden');
+        stopPreview();
       }
     }
   }

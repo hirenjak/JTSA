@@ -120,6 +120,23 @@ public sealed class ObsController : IDisposable
         return client.GetCurrentProgramScene();
     }
 
+    public (string SceneName, string ImageData) GetProgramScreenshot()
+    {
+        EnsureConnected();
+        var sceneName = client.GetCurrentProgramScene();
+        var response = client.SendRequest("GetSourceScreenshot", new JObject
+        {
+            ["sourceName"] = sceneName,
+            ["imageFormat"] = "jpeg",
+            ["imageWidth"] = 960,
+            ["imageCompressionQuality"] = 65
+        });
+        var imageData = response.Value<string>("imageData");
+        if (string.IsNullOrWhiteSpace(imageData))
+            throw new InvalidOperationException("OBSの画像を取得できませんでした。");
+        return (sceneName, imageData);
+    }
+
     public void SetCurrentProgramScene(string sceneName)
     {
         EnsureConnected();

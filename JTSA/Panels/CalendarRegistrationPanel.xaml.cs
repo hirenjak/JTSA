@@ -155,6 +155,7 @@ public partial class CalendarRegistrationPanel : UserControl
         editingEntryId = entry.Id;
         ScheduleDatePicker.SelectedDate = entry.CalendarDate;
         ContentTextBox.Text = entry.Content;
+        PinnedChatTextBox.Text = entry.PinnedChatMessage;
         TitlePlaceholderTextBox.Text = entry.TitlePlaceholder;
         StartHourComboBox.SelectedIndex = entry.StartTime.Hours;
         StartMinuteComboBox.SelectedIndex = entry.StartTime.Minutes / 5;
@@ -191,7 +192,8 @@ public partial class CalendarRegistrationPanel : UserControl
             categoryBoxArtUrl,
             string.Join(',', SelectedFriends.Select(friend => friend.BroadcastId)),
             startTime,
-            editingEntryId);
+            editingEntryId,
+            PinnedChatTextBox.Text.Trim());
         editingEntryId = null;
         Reload();
         StatusTextBlock.Text = "予定を保存しました。";

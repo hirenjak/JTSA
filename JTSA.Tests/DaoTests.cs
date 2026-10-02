@@ -136,6 +136,21 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void Calendar_PinnedChatMessage_SurvivesEditingOtherFields()
+    {
+        var date = new DateTime(2026, 10, 1);
+        DAO_Calendar.InsertUpdate(date, "元の予定", pinnedChatMessage: "配信へようこそ");
+        var saved = Assert.Single(DAO_Calendar.SelectByDate(date));
+        Assert.Equal("配信へようこそ", saved.PinnedChatMessage);
+
+        DAO_Calendar.InsertUpdate(date, "更新した予定", entryId: saved.Id,
+            pinnedChatMessage: saved.PinnedChatMessage);
+
+        var updated = Assert.Single(DAO_Calendar.SelectByDate(date));
+        Assert.Equal("配信へようこそ", updated.PinnedChatMessage);
+    }
+
+    [Fact]
     public void StreamExpansionClipAndVtsHotkey_RoundTripWithOtherActions()
     {
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader { Name = "Clips", IsActive = true, UpdatedDateTime = DateTime.Now },

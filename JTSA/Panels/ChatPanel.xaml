@@ -235,6 +235,7 @@
                     <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="110"/>
                 </Grid.ColumnDefinitions>
 
                 <Button 
@@ -255,6 +256,10 @@
                     Foreground="Black" FontSize="14"
                     Background="White"
                     KeyDown="SendChatTextBox_KeyDown"/>
+                <Button Grid.Column="3" Content="テンプレート" Margin="8,0,0,0"
+                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                        ToolTip="チャットの定型文を選択・編集します"
+                        Click="ChatTemplateButton_Click"/>
             </Grid>
 
             <Border Margin="0, 8, 0, 0" Width="Auto" Height="2" Background="White"/>

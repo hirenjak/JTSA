@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:JTSA.Controls"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="スマホパネル" Icon="../Resources/jtsa.ico"
-        Width="480" Height="690" MinWidth="440" MinHeight="620"
+        Width="760" Height="690" MinWidth="700" MinHeight="620"
         WindowStartupLocation="CenterOwner" WindowStyle="None"
         ResizeMode="CanResize" Background="#FF303030">
     <shell:WindowChrome.WindowChrome>
@@ -54,42 +54,86 @@
             <controls:CategoryStyleTitleBar/>
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="20">
-                    <TextBlock Text="スマホパネル" FontSize="20" FontWeight="SemiBold"/>
-                    <TextBlock Margin="0,7,0,16" Foreground="LightGray" TextWrapping="Wrap"
-                               Text="同じWi-Fiのスマホでチャット表示とToDo管理ができます。サーバーを起動し、QRコードを読み取ってください。"/>
+                    <TextBlock Margin="0,0,0,16" Foreground="LightGray" TextWrapping="Wrap"
+                               Text="同じWi-Fiのスマホでパネルを利用できます。サーバーを起動し、QRコードを読み取ってください。"/>
 
                     <TextBlock Text="接続先" Margin="0,0,0,5" Foreground="LightGray"/>
                     <ComboBox x:Name="NetworkAddressesComboBox"
                               DisplayMemberPath="Label"
                               SelectionChanged="NetworkAddressesComboBox_SelectionChanged"/>
 
-                    <Border Margin="0,14,0,12" Padding="12" Background="#FF404040"
-                            BorderBrush="#FF555555" BorderThickness="1">
-                        <Image x:Name="QrImage" Width="260" Height="260"
-                               Stretch="Uniform" HorizontalAlignment="Center"/>
-                    </Border>
+                    <Grid Margin="0,14,0,12">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="286"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <Border Padding="12" Background="#FF404040" BorderBrush="#FF555555" BorderThickness="1">
+                            <Image x:Name="QrImage" Width="260" Height="260" Stretch="Uniform" HorizontalAlignment="Center"/>
+                        </Border>
+                        <Border Grid.Column="2" Padding="12" Background="#FF404040" BorderBrush="#FF555555" BorderThickness="1">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="スマホ内のパネル" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <ListBox x:Name="PanelListBox" Background="Transparent" BorderThickness="0"
+                                         AllowDrop="True" DragOver="PanelListBox_DragOver" Drop="PanelListBox_Drop"
+                                         HorizontalContentAlignment="Stretch"
+                                         Foreground="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="3,5">
+                                                <Border DockPanel.Dock="Left" Width="28" Background="Transparent"
+                                                        Cursor="SizeAll" ToolTip="ドラッグして並べ替え"
+                                                        PreviewMouseLeftButtonDown="PanelDragHandle_MouseDown"
+                                                        PreviewMouseLeftButtonUp="PanelDragHandle_MouseUp"
+                                                        PreviewMouseMove="PanelDragHandle_MouseMove">
+                                                    <TextBlock Text="☰" FontSize="18" Foreground="LightGray"
+                                                               VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </Border>
+                                                <StackPanel>
+                                                <TextBlock Text="{Binding Title}" Foreground="White" TextWrapping="Wrap"/>
+                                                <TextBlock Text="プラグイン" Foreground="LightGray" FontSize="11">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers><DataTrigger Binding="{Binding IsPlugin}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
 
-                    <TextBlock Text="接続コード" HorizontalAlignment="Center" Foreground="LightGray"/>
-                    <TextBlock x:Name="PairingCodeTextBlock" FontSize="30" FontWeight="Bold"
-                               HorizontalAlignment="Center" Margin="0,2,0,5"/>
-                    <Button x:Name="RegeneratePinButton" Content="接続コードを再生成"
-                            HorizontalAlignment="Center" Height="26" Padding="10,0"
-                            Margin="0,0,0,12" Click="RegeneratePinButton_Click"/>
-
-                    <TextBlock Text="URL" Margin="0,0,0,5" Foreground="LightGray"/>
-                    <TextBox x:Name="AddressTextBox" IsReadOnly="True" TextWrapping="Wrap" MinHeight="38"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="286"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="URL" Margin="0,0,0,5" Foreground="LightGray"/>
+                            <TextBox x:Name="AddressTextBox" IsReadOnly="True" TextWrapping="Wrap" MinHeight="38"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button Content="サーバー起動" Style="{StaticResource PrimaryButtonStyle}"
+                                        Click="StartButton_Click"/>
+                                <Button Content="停止" Margin="8,0,0,0" Click="StopButton_Click"/>
+                                <Button Content="URLをコピー" Margin="8,0,0,0" Click="CopyButton_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="接続コード" HorizontalAlignment="Center" Foreground="LightGray"/>
+                            <TextBlock x:Name="PairingCodeTextBlock" FontSize="30" FontWeight="Bold"
+                                       HorizontalAlignment="Center" Margin="0,2,0,5"/>
+                            <Button x:Name="RegeneratePinButton" Content="接続コードを再生成"
+                                    HorizontalAlignment="Center" Height="26" Padding="10,0"
+                                    Click="RegeneratePinButton_Click"/>
+                        </StackPanel>
+                    </Grid>
 
                     <Border Margin="0,12,0,12" Padding="10,8" Background="#FF404040"
                             BorderBrush="#FF555555" BorderThickness="1">
                         <TextBlock x:Name="StatusTextBlock" TextWrapping="Wrap"/>
                     </Border>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="サーバー起動" Style="{StaticResource PrimaryButtonStyle}"
-                                Click="StartButton_Click"/>
-                        <Button Content="停止" Margin="8,0,0,0" Click="StopButton_Click"/>
-                        <Button Content="URLをコピー" Margin="8,0,0,0" Click="CopyButton_Click"/>
-                    </StackPanel>
 
                     <CheckBox x:Name="AutoStartCheckBox"
                               Content="JTSA起動時にサーバーを自動起動"

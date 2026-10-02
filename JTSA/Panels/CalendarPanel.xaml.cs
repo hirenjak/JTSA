@@ -312,7 +312,8 @@ public partial class CalendarPanel : UserControl
             existing?.CategoryBoxArtUrl ?? string.Empty,
             existing?.SelectedFriendIds ?? string.Empty,
             existing?.StartTime,
-            existing?.Id);
+            existing?.Id,
+            existing?.PinnedChatMessage ?? string.Empty);
         ReloadEntries(date);
         SelectDate(date);
         HeaderStatusTextBlock.Text = "予定を保存しました。";

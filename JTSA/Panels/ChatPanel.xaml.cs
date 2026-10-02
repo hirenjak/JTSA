@@ -888,6 +888,20 @@ namespace JTSA.Panels
             SendChatButton_Click(sendChatButton, new RoutedEventArgs(Button.ClickEvent, sendChatButton));
         }
 
+        private void ChatTemplateButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ChatTemplateWindow(sendChatTextBox.Text)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            sendChatTextBox.Text = mainWindow.ExpandChatTemplate(dialog.SelectedText);
+            sendChatTextBox.CaretIndex = sendChatTextBox.Text.Length;
+            sendChatTextBox.Focus();
+        }
+
 
         /// <summary>
         /// コントロール読み込み時

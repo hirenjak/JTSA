@@ -20,6 +20,8 @@ public class T_CalendarEntry : DBBaseTransaction
 
     public string Content { get; set; } = string.Empty;
 
+    public string PinnedChatMessage { get; set; } = string.Empty;
+
     public string TitlePlaceholder { get; set; } = string.Empty;
 
     public string CategoryId { get; set; } = string.Empty;

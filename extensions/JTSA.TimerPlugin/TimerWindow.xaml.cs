@@ -89,6 +89,40 @@ public partial class TimerWindow : Window
             StartTimer();
     }
 
+    public TimerRemoteState GetRemoteState()
+    {
+        if (timer.IsEnabled) UpdateRemaining();
+        return new TimerRemoteState(FormatDuration(remaining), StatusTextBlock.Text,
+            timer.IsEnabled, MinutesTextBox.Text);
+    }
+
+    public bool ApplyRemoteAction(string action, string? value)
+    {
+        if (action is "setMinutes" or "start" or "reset" && !timer.IsEnabled && !isPaused && value != null)
+        {
+            if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var minutes) ||
+                !double.IsFinite(minutes) || minutes is <= 0 or > 1440) return false;
+            MinutesTextBox.Text = minutes.ToString(CultureInfo.CurrentCulture);
+        }
+        switch (action)
+        {
+            case "setMinutes":
+                if (timer.IsEnabled) return false;
+                isPaused = false;
+                return TryReadDuration();
+            case "start":
+                if (!timer.IsEnabled) StartTimer();
+                return timer.IsEnabled;
+            case "stop":
+                if (timer.IsEnabled) StopTimer();
+                return true;
+            case "reset":
+                ResetButton_Click(this, new RoutedEventArgs());
+                return true;
+            default: return false;
+        }
+    }
+
     private void StartTimer()
     {
         if (timer.IsEnabled) return;
@@ -384,3 +418,4 @@ public sealed record TimerOverlaySettings(
     TimerHistoryEntry[]? TimerHistory = null);
 
 public sealed record TimerHistoryEntry(DateTime StartedAt, double Minutes);
+public sealed record TimerRemoteState(string Time, string Status, bool Running, string Minutes);

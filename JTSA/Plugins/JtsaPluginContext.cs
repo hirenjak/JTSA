@@ -10,7 +10,8 @@ internal sealed class JtsaPluginContext :
     IJtsaPluginContext,
     IJtsaCalendarPluginContext,
     IJtsaStreamMetadataPluginContext,
-    IJtsaExternalChatPluginContext
+    IJtsaExternalChatPluginContext,
+    IJtsaRemotePanelPluginContext
 {
     private readonly MainWindow mainWindow;
     private readonly string pluginId;
@@ -33,6 +34,15 @@ internal sealed class JtsaPluginContext :
 
     public void AddExternalChatMessage(ExternalChatMessageInfo message) =>
         mainWindow.ChatPanel.AddExternalChatMessage(message);
+
+    public void SetRemotePanel(RemotePluginPanelContent panel) =>
+        RemotePanelRegistry.Set(pluginId, panel);
+
+    public void RemoveRemotePanel(string id) =>
+        RemotePanelRegistry.Remove(pluginId, id);
+
+    public void SetInteractiveRemotePanel(RemotePluginPanelContent panel, Func<string, string?, bool> onAction, Func<string> getState) =>
+        RemotePanelRegistry.Set(pluginId, panel, onAction, getState);
 
     public IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards() =>
         mainWindow.ChannelPointPanel.ChannelPointRewardFormList

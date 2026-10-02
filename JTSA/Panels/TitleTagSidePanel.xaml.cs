@@ -196,6 +196,13 @@ namespace JTSA.Panels
                 DisplayName = "選択したフレンド",
                 LastUsedDate = string.Empty
             });
+            TitleTagFormList.Add(new()
+            {
+                Placeholder = "${steam_url}",
+                IsSystem = true,
+                DisplayName = "Steamアドレス",
+                LastUsedDate = string.Empty
+            });
 
             // データの取得
             var records = DAO_TitleTag.SelectAllOrderbyLastUser();
