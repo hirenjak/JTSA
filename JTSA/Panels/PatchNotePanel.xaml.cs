@@ -18,6 +18,22 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
+                Version = "次回更新",
+                ReleaseDate = "未リリース",
+                Summary = "スマホ連携の不具合修正、プラグイン一覧の改善およびToDo編集機能を追加",
+                Changes =
+                [
+                    "【スマホ連携機能】",
+                    "・OBSのプレビューが途中で止まってしまう不具合を修正",
+                    "【プラグイン機能】",
+                    "・一覧を多く入れている場合に表示量が少なく使いにくいため、アイテムカード表示としてコンパクトな表示に変更",
+                    "【ToDo機能】",
+                    "・登録したToDoを後から編集できる機能を追加",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
                 Version = "v1.5.40",
                 ReleaseDate = "2026/10/02",
                 Summary = "スマホ連携、カレンダー、チャットおよびOBS操作を拡張",

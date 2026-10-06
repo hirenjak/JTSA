@@ -24,7 +24,17 @@ namespace JTSA.Panels
     public sealed class TodoItemForm : INotifyPropertyChanged
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Text { get; set; } = string.Empty;
+        public string Text
+        {
+            get => text;
+            set
+            {
+                if (text == value) return;
+                text = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text)));
+            }
+        }
+        private string text = string.Empty;
         public bool IsCurrent
         {
             get => isCurrent;
@@ -1531,6 +1541,46 @@ namespace JTSA.Panels
                 item.IsCurrent = false;
             UpdateNoCurrentTodoSelection();
             SaveTodos();
+        }
+
+        private void EditTodoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: TodoItemForm item }) return;
+            if (((Button)sender).Parent is not StackPanel { Parent: Grid row }) return;
+            var editor = row.Children.OfType<TextBox>().Single();
+            row.Children.OfType<TextBlock>().Single().Visibility = Visibility.Collapsed;
+            editor.Text = item.Text;
+            editor.Visibility = Visibility.Visible;
+            editor.Focus();
+            editor.SelectAll();
+        }
+
+        private void TodoEditor_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is not TextBox editor) return;
+            if (e.Key is not (Key.Enter or Key.Escape)) return;
+            e.Handled = true;
+            FinishTodoEditing(editor, save: e.Key == Key.Enter);
+        }
+
+        private void TodoEditor_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is TextBox editor) FinishTodoEditing(editor, save: true);
+        }
+
+        private void FinishTodoEditing(TextBox editor, bool save)
+        {
+            if (editor.Visibility != Visibility.Visible || editor.Parent is not Grid row) return;
+            var text = editor.Text.Trim();
+            // Hide first so the focus change cannot save a cancelled edit.
+            editor.Visibility = Visibility.Collapsed;
+            row.Children.OfType<TextBlock>().Single().Visibility = Visibility.Visible;
+            if (save && !string.IsNullOrWhiteSpace(text) &&
+                editor.DataContext is TodoItemForm item && TodoItems.Contains(item) && item.Text != text)
+            {
+                item.Text = text;
+                SaveTodos();
+            }
         }
 
         private void RemoveTodoButton_Click(object sender, RoutedEventArgs e)

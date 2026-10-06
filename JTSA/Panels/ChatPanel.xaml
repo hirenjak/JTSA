@@ -575,9 +575,17 @@
                              Foreground="LightGray" Margin="0,0,0,7"
                              Click="NoCurrentTodoRadioButton_Click"/>
                 <ListBox ItemsSource="{Binding TodoItems, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}}"
-                         Background="Transparent" BorderThickness="0"
+                         Background="Transparent" BorderThickness="0" Padding="0"
                          HorizontalContentAlignment="Stretch"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="0,2">
@@ -591,9 +599,30 @@
                                           Click="TodoCompletedCheckBox_Click"/>
                                 <TextBlock x:Name="TodoText" Grid.Column="2" Text="{Binding Text}"
                                            Foreground="White" TextWrapping="Wrap"/>
-                                <Button Grid.Column="3" Content="×" Width="24" Tag="{Binding}"
+                                <TextBox x:Name="TodoEditor" Grid.Column="2" Visibility="Collapsed"
+                                         Padding="3,0" MinWidth="25"
+                                         KeyDown="TodoEditor_KeyDown" LostKeyboardFocus="TodoEditor_LostKeyboardFocus"/>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <Button Content="✎" Width="22" Height="28" Padding="0" Margin="2,0,0,0" Tag="{Binding}"
+                                            Foreground="White" ToolTip="ToDoの内容を編集" Click="EditTodoButton_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ElementName=TodoEditor, Path=Visibility}" Value="Visible">
+                                                        <Setter Property="Background" Value="#FF285653"/>
+                                                        <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <Button Content="×" Width="20" Padding="0" Tag="{Binding}"
                                         ToolTip="ToDoを削除" Style="{StaticResource OverviewDeleteButtonStyle}"
                                         Click="RemoveTodoButton_Click"/>
+                                </StackPanel>
                             </Grid>
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding IsCompleted}" Value="True">
