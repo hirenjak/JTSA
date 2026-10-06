@@ -236,6 +236,9 @@
   const previewArea = document.getElementById('previewArea');
   let previewTimer = null, previewRequest = null;
   let previewPeer = null, previewSession = null, previewHeartbeat = null, previewWatchdog = null;
+  const previewClientId = sessionStorage.getItem('jtsa-preview-client') ||
+    Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+  sessionStorage.setItem('jtsa-preview-client', previewClientId);
   function previewVisible() {
     return Boolean(key && !document.hidden && pairScreen.classList.contains('hidden') &&
       !previewArea.hidden);
@@ -298,7 +301,8 @@
       const response = await fetch('/controls/api/preview/webrtc', {
         method:'POST', cache:'no-store', signal:request.signal,
         headers:{'X-JTSA-Key':key, 'Content-Type':'application/json'},
-        body:JSON.stringify({isSub:previewObs.value === 'sub', sdp:peer.localDescription.sdp})
+        body:JSON.stringify({isSub:previewObs.value === 'sub', sdp:peer.localDescription.sdp,
+          clientId:previewClientId})
       });
       const answer = await response.json();
       if (!response.ok || answer.Error) throw new Error(answer.Error || '映像に接続できませんでした');

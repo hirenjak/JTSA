@@ -3,7 +3,7 @@ using System.IO;
 
 namespace JTSA.Utility;
 
-internal sealed record RemoteWebRtcOffer(bool IsSub, string Sdp);
+internal sealed record RemoteWebRtcOffer(bool IsSub, string Sdp, string? ClientId = null);
 internal sealed record RemoteWebRtcAnswer(string? SessionId, string? Sdp, string? Error);
 
 /// <summary>Encodes OBS snapshots as a video-only WebRTC track in a private headless browser.</summary>
@@ -17,9 +17,10 @@ internal sealed class RemoteWebRtcPreview : IAsyncDisposable
     private IBrowser? browser;
     private bool disposed;
 
-    private sealed class Session(string id, bool isSub, IPage page, CancellationTokenSource stop)
+    private sealed class Session(string id, string? clientId, bool isSub, IPage page, CancellationTokenSource stop)
     {
         public string Id { get; } = id;
+        public string? ClientId { get; } = clientId;
         public bool IsSub { get; } = isSub;
         public IPage Page { get; } = page;
         public CancellationTokenSource Stop { get; } = stop;
@@ -75,13 +76,19 @@ internal sealed class RemoteWebRtcPreview : IAsyncDisposable
     {
         if (string.IsNullOrWhiteSpace(offer.Sdp) || offer.Sdp.Length > 200_000)
             return new(null, null, "接続情報が不正です。");
+        if (offer.ClientId is { Length: > 64 })
+            return new(null, null, "接続情報が不正です。");
         await gate.WaitAsync(token);
         IPage? page = null;
         var stage = "OBS画像の取得";
         try
         {
             if (disposed) return new(null, null, "サーバーは停止しています。");
-            if (sessions.Count >= 2) return new(null, null, "リアルタイム接続は最大2台です。");
+            // Reconnects can arrive before the previous sender pump has shut down.
+            foreach (var old in sessions.Values.Where(s => s.ClientId != null && s.ClientId == offer.ClientId))
+                old.Stop.Cancel();
+            if (sessions.Values.Count(s => !s.Stop.IsCancellationRequested) >= 2)
+                return new(null, null, "リアルタイム接続は最大2台です。");
             var first = await getFrame(offer.IsSub);
             if (first.ImageData == null) return new(null, null, first.Error);
             if (browser?.IsConnected != true)
@@ -112,7 +119,7 @@ internal sealed class RemoteWebRtcPreview : IAsyncDisposable
             stage = "WebRTC接続情報の作成";
             var sdp = await page.EvaluateAsync<string>("sdp => window.answerOffer(sdp)", offer.Sdp);
             token.ThrowIfCancellationRequested();
-            var session = new Session(Guid.NewGuid().ToString("N"), offer.IsSub, page,
+            var session = new Session(Guid.NewGuid().ToString("N"), offer.ClientId, offer.IsSub, page,
                 CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token));
             sessions.Add(session.Id, session);
             session.Pump = PumpAsync(session);
