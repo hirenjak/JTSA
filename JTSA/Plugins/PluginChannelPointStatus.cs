@@ -26,6 +26,8 @@ internal static class PluginChannelPointStatus
         reward.Id,
         reward.Title ?? "",
         reward.Cost,
+        // TwitchLib は default_image を読み込めない（setter が無い）ため、配信者が設定した画像だけを渡す
+        reward.Image?.Url2x ?? "",
         reward.IsEnabled,
         reward.IsPaused,
         reward.IsInStock,

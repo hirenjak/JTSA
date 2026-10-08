@@ -9,7 +9,8 @@ public class PluginChannelPointStatusTests
 {
     private static CustomReward Reward(string extra) => JsonConvert.DeserializeObject<CustomReward>($$"""
         {"id":"r1","title":"筋トレ","cost":300,"is_enabled":true,"is_paused":false,"is_in_stock":true,
-         "global_cooldown_setting":{"is_enabled":true,"global_cooldown_seconds":270}{{extra}}}
+         "global_cooldown_setting":{"is_enabled":true,"global_cooldown_seconds":270},
+         "image":{"url_1x":"https://x/1.png","url_2x":"https://x/2.png","url_4x":"https://x/4.png"}{{extra}}}
         """)!;
 
     [Fact]
@@ -19,6 +20,7 @@ public class PluginChannelPointStatusTests
             Reward(""","cooldown_expires_at":"2026-02-26T18:20:00Z","redemptions_redeemed_current_stream":5"""), true);
 
         Assert.Equal(270, info.GlobalCooldownSeconds);
+        Assert.Equal("https://x/2.png", info.ImageUrl);
         Assert.Equal(new DateTimeOffset(2026, 2, 26, 18, 20, 0, TimeSpan.Zero), info.CooldownExpiresAt);
         Assert.Equal(5, info.RedemptionsRedeemedCurrentStream);
         Assert.True(info.IsManageable);
@@ -32,6 +34,7 @@ public class PluginChannelPointStatusTests
     {
         var info = PluginChannelPointStatus.ToInfo(Reward(""","cooldown_expires_at":null"""), false);
         Assert.Null(info.CooldownExpiresAt);
+        Assert.Equal("https://x/2.png", info.ImageUrl);
         Assert.True(info.IsRedeemable(DateTimeOffset.UtcNow));
         Assert.False((info with { IsPaused = true }).IsRedeemable(DateTimeOffset.UtcNow));
         Assert.False((info with { IsInStock = false }).IsRedeemable(DateTimeOffset.UtcNow));

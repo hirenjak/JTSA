@@ -141,6 +141,7 @@ public sealed record ChannelPointRedemptionInfo(
 }
 
 /// <summary>チャンネルポイント報酬の利用状況。</summary>
+/// <param name="ImageUrl">配信者が設定した報酬アイコンの URL。未設定（Twitch の既定アイコン）なら空。</param>
 /// <param name="GlobalCooldownSeconds">クールダウンの設定秒数。クールダウン無しなら 0。</param>
 /// <param name="CooldownExpiresAt">クールダウン中なら終了時刻、そうでなければ null。</param>
 /// <param name="RedemptionsRedeemedCurrentStream">今の配信での交換回数。配信していないときは null。</param>
@@ -149,6 +150,7 @@ public sealed record ChannelPointRewardStatusInfo(
     string Id,
     string Title,
     int Cost,
+    string ImageUrl,
     bool IsEnabled,
     bool IsPaused,
     bool IsInStock,
