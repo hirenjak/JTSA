@@ -234,6 +234,11 @@ public sealed class NizimaRuleDialog : Window
         rule.TriggerValue = triggerValue;
         rule.CommandType = command;
         rule.CommandValue = (commandCombo.SelectedValue as string ?? commandCombo.Text ?? "").Trim();
+        rule.CommandValueName = commandCombo.SelectedItem is NizimaNamedOption option &&
+                                string.Equals(option.Path, rule.CommandValue, StringComparison.OrdinalIgnoreCase) &&
+                                !string.Equals(option.Name, option.Path, StringComparison.OrdinalIgnoreCase)
+            ? option.Name
+            : "";
         rule.ModelId = NizimaCommandUi.ShowsItemTarget(command)
             ? (itemTargetCombo.SelectedValue as string ?? "").Trim()
             : NizimaCommandUi.ShowsModelTarget(command)
@@ -376,7 +381,8 @@ public sealed class NizimaRuleDialog : Window
         }
 
         ReplaceCommandOptions(command);
-        NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, InitialCommandValue(rule));
+        NizimaNamedOptionCatalog.SelectComboValue(
+            commandCombo, commandOptions, InitialCommandValue(rule), rule.CommandValueName);
         _ = ReloadCommandOptionsForTargetAsync();
     }
 
@@ -386,6 +392,7 @@ public sealed class NizimaRuleDialog : Window
             return;
         var command = SelectedId(commandType);
         var selected = commandCombo.SelectedValue as string ?? commandCombo.Text;
+        var selectedName = (commandCombo.SelectedItem as NizimaNamedOption)?.Name;
         try
         {
             IReadOnlyList<NizimaNamedOption> items = command switch
@@ -412,7 +419,7 @@ public sealed class NizimaRuleDialog : Window
             if (command is NizimaTriggerCommands.ChangeModel)
                 return;
             NizimaNamedOptionCatalog.ReplaceAll(commandOptions, items);
-            NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, selected);
+            NizimaNamedOptionCatalog.SelectComboValue(commandCombo, commandOptions, selected, selectedName);
             commandCombo.IsEditable = false;
         }
         catch

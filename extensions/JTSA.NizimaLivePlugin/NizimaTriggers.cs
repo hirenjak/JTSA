@@ -115,6 +115,8 @@ public sealed class NizimaTriggerRule
     public string CommandValue { get; set; } = "";
     public string ModelId { get; set; } = "";
     public string SceneId { get; set; } = "";
+    // モデルから一覧を取れないときに表示する、保存時点の表情・モーション名。
+    public string CommandValueName { get; set; } = "";
     public int AutoOffValue { get; set; }
     public string AutoOffUnit { get; set; } = NizimaAutoOffUnits.Seconds;
     public NizimaTriggerCommandExtra Extra { get; set; } = new();
@@ -177,7 +179,8 @@ public static class NizimaTriggerRuleSummary
             NizimaTriggerCommands.ChangeModel => catalogs.RegisteredModels,
             _ => null
         };
-        return DisplayName(catalog, raw) ?? raw;
+        return DisplayName(catalog, raw) ??
+               (string.IsNullOrWhiteSpace(rule.CommandValueName) ? raw : rule.CommandValueName);
     }
 
     private static string? DisplayName(IReadOnlyList<NizimaNamedOption>? catalog, string path) =>

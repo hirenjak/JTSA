@@ -62,7 +62,11 @@ internal static class NizimaNamedOptionCatalog
             target.Add(item);
     }
 
-    public static void SelectComboValue(ComboBox combo, ObservableCollection<NizimaNamedOption> list, string? value)
+    public static void SelectComboValue(
+        ComboBox combo,
+        ObservableCollection<NizimaNamedOption> list,
+        string? value,
+        string? fallbackName = null)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -70,7 +74,7 @@ internal static class NizimaNamedOptionCatalog
             return;
         }
 
-        EnsureOption(list, value);
+        EnsureOption(list, value, string.IsNullOrWhiteSpace(fallbackName) ? null : fallbackName);
         combo.SelectedItem = list.First(item => string.Equals(item.Path, value, StringComparison.OrdinalIgnoreCase));
         if (combo.IsEditable && combo.SelectedItem is NizimaNamedOption selected)
             combo.Text = selected.Label;

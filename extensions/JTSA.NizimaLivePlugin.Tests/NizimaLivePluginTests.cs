@@ -179,6 +179,25 @@ public class NizimaTriggerRuleSummaryTests
     }
 
     [Fact]
+    public void FallsBackToRecordedNameWhenCatalogLacksValue()
+    {
+        var rule = new NizimaTriggerRule
+        {
+            TriggerType = NizimaTriggerTypes.Follow,
+            CommandType = NizimaTriggerCommands.StartMotion,
+            CommandValue = "motions/wave.motion3.json",
+            CommandValueName = "手を振る"
+        };
+        Assert.Equal("ON フォロー → モーションを開始 手を振る", NizimaTriggerRuleSummary.Format(rule));
+
+        var motions = new[] { new NizimaNamedOption("ウェーブ", "motions/wave.motion3.json") };
+        Assert.Contains("ウェーブ", NizimaTriggerRuleSummary.Format(rule, new NizimaRuleCatalogs { Motions = motions }));
+
+        rule.CommandValueName = "";
+        Assert.Contains("motions/wave.motion3.json", NizimaTriggerRuleSummary.Format(rule));
+    }
+
+    [Fact]
     public void ShowsAutoOffOnlyForSupportedCommands()
     {
         var rule = new NizimaTriggerRule

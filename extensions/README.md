@@ -31,6 +31,21 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
 トークンは `%AppData%\JTSA\Plugins\jtsa.nizimalive\settings.json` に保存されます。
 プラグイン名は `JTSA` 固定です。nizima 側で削除すると InvalidToken となり再登録します。
 
+## ともぞっちの配置
+
+tomozow_streaming_tool のともぞっち（tamagotchi-twitch）のゲージ機能を移したものです。
+ゲージは配信拡張に表示され、チャネポ交換で増減・追加・削除できます。
+
+1. `dotnet build extensions/JTSA.TomozotchiPlugin/JTSA.TomozotchiPlugin.csproj -c Release`
+2. 出力の `JTSA.TomozotchiPlugin.dll` と `plugin.json` を `Plugins/Tomozotchi/` へコピーします。
+3. JTSA の「プラグイン」タブで「再読み込み」を押し、「開く」で設定画面を出します。
+4. 「ゲージ」タブの「ファイルから読み込み」で、tamagotchi-twitch の `game_config.json` を選ぶと
+   ゲージとチャネポ割り当てをそのまま移せます。
+
+設定は `%AppData%\JTSA\Plugins\jtsa.tomozotchi\settings.json`、プリセットは同じフォルダの
+`presets\` に保存されます。ゲージの値は保存せず、JTSA を起動するたびに初期値から始まります。
+チャネポ状況（交換可能・クールダウン・TODO）の表示は未対応です。
+
 ## ルーレットの配置
 
 1. `dotnet build extensions/JTSA.RoulettePlugin/JTSA.RoulettePlugin.csproj -c Release`
