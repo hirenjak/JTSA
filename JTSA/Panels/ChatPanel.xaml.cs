@@ -4,6 +4,7 @@ using JTSA.Models;
 using JTSA.Plugin.Abstractions;
 using JTSA.Plugins;
 using JTSA.Utility;
+using JTSA.TwitchIF;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Data;
 using NAudio.Wave;
 using TwitchLib.Api;
 using System.Threading;
@@ -22,7 +24,17 @@ namespace JTSA.Panels
     public sealed class TodoItemForm : INotifyPropertyChanged
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Text { get; set; } = string.Empty;
+        public string Text
+        {
+            get => text;
+            set
+            {
+                if (text == value) return;
+                text = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Text)));
+            }
+        }
+        private string text = string.Empty;
         public bool IsCurrent
         {
             get => isCurrent;
@@ -65,6 +77,17 @@ namespace JTSA.Panels
     public partial class ChatPanel : UserControl
     {
         private const int MaxDisplayedChatCount = 1000;
+        private readonly ChatCountWriter chatCountWriter = new();
+        private readonly AsyncCache<string, M_User?> chatUsers = new(1024, TimeSpan.FromMinutes(1));
+        private readonly HashSet<Task> pendingChats = [];
+        private bool stoppingChats;
+
+        public async Task StopChatProcessingAsync()
+        {
+            stoppingChats = true;
+            await Task.WhenAll(pendingChats.ToArray());
+            await chatCountWriter.CompleteAsync();
+        }
 
         public static readonly RoutedUICommand AddFriendCommand = new(
             "フレンドに追加", nameof(AddFriendCommand), typeof(ChatPanel));
@@ -101,10 +124,85 @@ namespace JTSA.Panels
 
         public ObservableCollection<TwitchChatForm> PinedTwitchChatFormList { get; } = new();
 
+        public void AddExternalChatMessage(ExternalChatMessageInfo message)
+        {
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(() => AddExternalChatMessage(message));
+                return;
+            }
+
+            var platform = string.IsNullOrWhiteSpace(message.Platform) ? "External" : message.Platform.Trim();
+            TwitchChatFormList.Insert(0, new TwitchChatForm
+            {
+                Channel = platform,
+                MessageId = message.MessageId,
+                UserId = $"{platform}:{message.UserId}",
+                UserName = platform,
+                DisplayName = message.DisplayName,
+                Message = message.Message,
+                ProfielImageUrl = message.ProfileImageUrl,
+                HexColor = string.IsNullOrWhiteSpace(message.UserColor) ? "#FFFFFF" : message.UserColor,
+                MessageColor = "#FFFFFF",
+                CreatedDateTime = DateTime.Now,
+                MessageParts = [new TwitchChatPart { Text = message.Message }]
+            });
+            while (TwitchChatFormList.Count > MaxDisplayedChatCount)
+                TwitchChatFormList.RemoveAt(TwitchChatFormList.Count - 1);
+        }
+
         public ObservableCollection<ChatUserForm> ChatUserFormList { get; } = new();
+        public BatchObservableCollection<ChatUserForm> ConnectedChatUserFormList { get; } = new();
+        private ICollectionView? connectedChatUserView;
+        private bool showConnectedChatters;
         public ObservableCollection<ParticipationUserForm> ParticipationUsers { get; } = new();
         public ObservableCollection<ParticipationUserForm> PlayingParticipationUsers { get; } = new();
         public ObservableCollection<TodoItemForm> TodoItems { get; } = new();
+
+        internal RemotePanelSnapshot GetRemotePanelSnapshot() => new(
+            TodoCategoryTextBlock.Text,
+            TwitchChatFormList.Take(100).Select(item => new RemoteChatInfo(
+                item.MessageId, item.DisplayName, item.Message, item.HexColor,
+                item.CreatedDateTime, item.ProfielImageUrl)).ToArray(),
+            TodoItems.Select(item => new RemoteTodoInfo(
+                item.Id, item.Text, item.IsCurrent, item.IsCompleted)).ToArray(),
+            [],
+            []);
+
+        internal bool ApplyTodoChange(TodoChange change)
+        {
+            if (string.IsNullOrEmpty(connectedBroadcasterId)) return false;
+            var item = TodoItems.FirstOrDefault(x => x.Id == change.Id);
+            switch (change.Action)
+            {
+                case "add":
+                    var text = change.Text?.Trim();
+                    if (string.IsNullOrEmpty(text) || text.Length > 300) return false;
+                    TodoItems.Add(new TodoItemForm { Text = text });
+                    break;
+                case "current" when item != null:
+                    foreach (var todo in TodoItems) todo.IsCurrent = ReferenceEquals(todo, item);
+                    item.IsCompleted = false;
+                    break;
+                case "clearCurrent":
+                    foreach (var todo in TodoItems) todo.IsCurrent = false;
+                    break;
+                case "complete" when item != null && change.Value.HasValue:
+                    item.IsCompleted = change.Value.Value;
+                    if (item.IsCompleted) item.IsCurrent = false;
+                    break;
+                case "remove" when item != null:
+                    TodoItems.Remove(item);
+                    break;
+                case "clearCompleted":
+                    foreach (var todo in TodoItems.Where(x => x.IsCompleted).ToList()) TodoItems.Remove(todo);
+                    break;
+                default: return false;
+            }
+            UpdateNoCurrentTodoSelection();
+            SaveTodos();
+            return true;
+        }
         private readonly HashSet<string> participationRedemptions = new();
         private readonly Queue<string> participationRedemptionOrder = new();
         private string participationRewardId = "";
@@ -766,7 +864,8 @@ namespace JTSA.Panels
 
             if (string.IsNullOrWhiteSpace(chatId)) return;
 
-            var result = await TwitchHelper.PinedChat(chatId);
+            var result = await TwitchHelper.PinedChat(
+                chatId, connectedBroadcasterId, connectedAccessToken);
 
             if (result == true)
             {
@@ -797,6 +896,20 @@ namespace JTSA.Panels
 
             e.Handled = true;
             SendChatButton_Click(sendChatButton, new RoutedEventArgs(Button.ClickEvent, sendChatButton));
+        }
+
+        private void ChatTemplateButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ChatTemplateWindow(sendChatTextBox.Text)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            sendChatTextBox.Text = mainWindow.ExpandChatTemplate(dialog.SelectedText);
+            sendChatTextBox.CaretIndex = sendChatTextBox.Text.Length;
+            sendChatTextBox.Focus();
         }
 
 
@@ -851,9 +964,12 @@ namespace JTSA.Panels
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.ChatOverlayShowUserIcon)?.Value != "0";
             overlayAppearanceInitialized = true;
 
-            // 前回配信時のチャットユーザーをクリア
-            DAO_ChatUser.AllDelete();
+            // 切替前の保存・表示完了後に前回の入室記録をクリアする。
+            await Task.WhenAll(pendingChats.ToArray());
+            await Task.Run(DAO_ChatUser.AllDelete);
             ChatUserFormList.Clear();
+            if (!string.IsNullOrEmpty(connectedBroadcasterId))
+                ClearConnectedChatters();
             chatEntranceTracker.Clear();
             chatEntranceTracker.Restore(
                 TwitchHelper.CurrentStreamId,
@@ -928,8 +1044,10 @@ namespace JTSA.Panels
 
                 };
 
-                twitchChatService.SubscriptionReceived += () =>
-                    _ = streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+                twitchChatService.SubscriptionDetailReceived += subscription =>
+                    _ = streamExpansionService.HandleAsync(
+                        subscription.IsGift ? StreamExpansionTriggerType.GiftSubscription : StreamExpansionTriggerType.Subscribe,
+                        string.Empty, subscription: subscription);
 
                 twitchChatService.HealthCheck += () =>
                     _ = Dispatcher.InvokeAsync(async () => await PinedChatLoad());
@@ -989,18 +1107,21 @@ namespace JTSA.Panels
                         }, true, isFirstEntrance);
                     });
 
+                    var channelPointPlaceholders = new ChatPlaceholderValues(
+                        channelPoint.UserName,
+                        channelPoint.UserLogin);
                     _ = streamExpansionService.HandleAsync(
                         StreamExpansionTriggerType.ChannelPoint,
                         channelPoint.RewardId,
+                        chatPlaceholders: channelPointPlaceholders,
                         channelPointInput: channelPoint.UserInput);
 
                     if (isFirstEntrance)
                     {
-                        var chatPlaceholders = new ChatPlaceholderValues(channelPoint.UserName, channelPoint.UserLogin);
                         _ = streamExpansionService.HandleAsync(
                             StreamExpansionTriggerType.FirstChat,
                             channelPoint.UserLogin,
-                            chatPlaceholders);
+                            channelPointPlaceholders);
                     }
                 };
 
@@ -1135,7 +1256,22 @@ namespace JTSA.Panels
         /// <param name="form"></param>
         /// <param name="isChannelPoint"></param>
         /// <param name="isFirstEntrance">現在の配信で最初のチャット入室か。</param>
-        private async Task ChatAddAsync(
+        private Task ChatAddAsync(TwitchChatForm form, bool isChannelPoint, bool isFirstEntrance)
+        {
+            if (stoppingChats) return Task.CompletedTask;
+            var task = ProcessChatAsync(form, isChannelPoint, isFirstEntrance);
+            pendingChats.Add(task);
+            _ = RemoveCompletedChatAsync(task);
+            return task;
+        }
+
+        private async Task RemoveCompletedChatAsync(Task task)
+        {
+            try { await task; }
+            finally { pendingChats.Remove(task); }
+        }
+
+        private async Task ProcessChatAsync(
             TwitchChatForm form,
             bool isChannelPoint,
             bool isFirstEntrance)
@@ -1147,50 +1283,60 @@ namespace JTSA.Panels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"チャット追加処理エラー: {ex}");
+                if (Application.Current.MainWindow is MainWindow window)
+                    window.AppLogPanel.Error(nameof(ChatPanel), $"チャット保存・表示に失敗しました: {ex.GetBaseException().Message}");
             }
         }
 
         private async Task ChatAddCoreAsync(TwitchChatForm form, bool isChannelPoint, bool isFirstEntrance)
         {
-            DAO_StreamChatUserCount.Increment(
+            await chatCountWriter.RecordAsync(
                 DateTime.Now,
                 form.UserId,
                 form.UserName,
                 form.DisplayName,
                 TwitchHelper.CurrentStreamId);
 
-            var userData = DAO_User.SelectOneByUserId(form.UserId);
+            var userData = await chatUsers.GetAsync(form.UserId, async () =>
+            {
+                var userData = DAO_User.SelectOneByUserId(form.UserId);
+
+                if (userData == null)
+                {
+                    // 配信者情報取得
+                    var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(form.UserName);
+
+                    // データチェック
+                    if (streamerInfo == null) return null;
+                    if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return null;
+
+                    // データ作成
+                    var insertData = new M_User
+                    {
+                        UserId = streamerInfo.UserId,
+                        LoginId = streamerInfo.Login,
+                        DisplayName = streamerInfo.DisplayName,
+                        ProfielImageUrl = streamerInfo.ProfileImageUrl,
+                        IsFriend = false,
+                        LastUsedDateTime = DateTime.Now,
+                        CreatedDateTime = DateTime.Now,
+                        UpdatedDateTime = DateTime.Now
+                    };
+
+                    DAO_User.Insert(insertData);
+
+                    userData = insertData;
+                }
+                return userData;
+            });
 
             if (userData == null)
             {
-                // 配信者情報取得
-                var streamerInfo = await TwitchHelper.GetBroadcasterIdAsync(form.UserName);
-
-                // データチェック
-                if (streamerInfo == null) return;
-                if (string.IsNullOrWhiteSpace(streamerInfo.UserId)) return;
-
-                // データ作成
-                var insertData = new M_User
-                {
-                    UserId = streamerInfo.UserId,
-                    LoginId = streamerInfo.Login,
-                    DisplayName = streamerInfo.DisplayName,
-                    ProfielImageUrl = streamerInfo.ProfileImageUrl,
-                    IsFriend = false,
-                    LastUsedDateTime = DateTime.Now,
-                    CreatedDateTime = DateTime.Now,
-                    UpdatedDateTime = DateTime.Now
-                };
-
-                DAO_User.Insert(insertData);
-
-                userData = insertData;
+                chatUsers.Remove(form.UserId);
+                return;
             }
 
-            if (userData == null) return;
-
-            form.ProfielImageUrl = userData.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png");
+            form.ProfielImageUrl = userData.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png") ?? string.Empty;
             form.CreatedDateTime = DateTime.Now;
 
             if (isChannelPoint)
@@ -1209,7 +1355,7 @@ namespace JTSA.Panels
                     LastUsedDateTime = DateTime.Now
                 };
 
-                DAO_ChatUser.InsertUpdate(inserData);
+                await Task.Run(() => DAO_ChatUser.InsertUpdate(inserData));
             }
 
             UpdateChatUserList(form, userData);
@@ -1248,6 +1394,88 @@ namespace JTSA.Panels
                 MessageCount = messageCount,
                 IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.LoginId)
             });
+        }
+
+        /// <summary>選択中チャンネルのチャット接続者一覧を更新する。</summary>
+        internal void SetConnectedChatters(
+            string broadcasterId,
+            IReadOnlyList<TwitchChatterIF> chatters,
+            IReadOnlyDictionary<string, string> cachedImages,
+            ChatterRoles roles)
+        {
+            if (!string.IsNullOrEmpty(connectedBroadcasterId) &&
+                !string.Equals(connectedBroadcasterId, broadcasterId, StringComparison.Ordinal))
+                return;
+
+            var speakers = ChatUserFormList.ToDictionary(x => x.UserId, StringComparer.Ordinal);
+            ConnectedChatUserFormList.ReplaceAll(chatters
+                .Where(x => !string.IsNullOrWhiteSpace(x.UserId))
+                .DistinctBy(x => x.UserId)
+                .OrderBy(x => GetChatterCategoryOrder(x.UserId, broadcasterId, roles))
+                .ThenBy(x => x.UserName, StringComparer.OrdinalIgnoreCase)
+                .Select(x => new ChatUserForm
+                {
+                    UserId = x.UserId,
+                    UserName = x.UserLogin,
+                    DisplayName = x.UserName,
+                    ProfileImageUrl = cachedImages.TryGetValue(x.UserId, out var image)
+                        ? image : speakers.TryGetValue(x.UserId, out var speaker)
+                            ? speaker.ProfileImageUrl : string.Empty,
+                    LastChatDateTime = DateTime.MinValue,
+                    MessageCount = 0,
+                    CategoryName = GetChatterCategoryName(x.UserId, broadcasterId, roles),
+                    IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, x.UserLogin)
+                }));
+        }
+
+        private static int GetChatterCategoryOrder(string userId, string broadcasterId, ChatterRoles roles)
+            => userId == broadcasterId ? 0
+                : roles.ModeratorIds.Contains(userId) ? 1
+                : roles.VipIds.Contains(userId) ? 2 : 3;
+
+        private static string GetChatterCategoryName(string userId, string broadcasterId, ChatterRoles roles)
+            => GetChatterCategoryOrder(userId, broadcasterId, roles) switch
+            {
+                0 => "配信者",
+                1 => "モデレーター",
+                2 => "VIP",
+                _ => "視聴者"
+            };
+
+        public void UpdateConnectedChatterImages(IReadOnlyDictionary<string, string> images)
+        {
+            foreach (var user in ConnectedChatUserFormList)
+            {
+                if (images.TryGetValue(user.UserId, out var image) &&
+                    !string.IsNullOrWhiteSpace(image))
+                    user.ProfileImageUrl = image;
+            }
+        }
+
+        public void ClearConnectedChatters() => ConnectedChatUserFormList.ReplaceAll([]);
+
+        private void ChatUserSourceButton_Click(object sender, RoutedEventArgs e)
+        {
+            showConnectedChatters = ReferenceEquals(sender, ConnectedChattersButton);
+            if (showConnectedChatters && connectedChatUserView is null)
+            {
+                connectedChatUserView = CollectionViewSource.GetDefaultView(ConnectedChatUserFormList);
+                connectedChatUserView.GroupDescriptions?.Add(
+                    new PropertyGroupDescription(nameof(ChatUserForm.CategoryName)));
+            }
+            ChatUserListBox.ItemsSource = showConnectedChatters
+                ? connectedChatUserView : ChatUserFormList;
+            ChatUserListHeading.SetBinding(TextBlock.TextProperty, new Binding(
+                showConnectedChatters
+                    ? "ConnectedChatUserFormList.Count" : "ChatUserFormList.Count")
+            {
+                StringFormat = showConnectedChatters
+                    ? "チャット接続中 ({0})" : "チャットユーザー ({0})"
+            });
+            ChatSpeakersButton.Style = (Style)FindResource(showConnectedChatters
+                ? "OverviewSecondaryButtonStyle" : "OverviewPrimaryButtonStyle");
+            ConnectedChattersButton.Style = (Style)FindResource(showConnectedChatters
+                ? "OverviewPrimaryButtonStyle" : "OverviewSecondaryButtonStyle");
         }
 
         /// <summary>参加管理エリアとOBSの参加一覧の表示・非表示を切り替える。</summary>
@@ -1313,6 +1541,46 @@ namespace JTSA.Panels
                 item.IsCurrent = false;
             UpdateNoCurrentTodoSelection();
             SaveTodos();
+        }
+
+        private void EditTodoButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button { Tag: TodoItemForm item }) return;
+            if (((Button)sender).Parent is not StackPanel { Parent: Grid row }) return;
+            var editor = row.Children.OfType<TextBox>().Single();
+            row.Children.OfType<TextBlock>().Single().Visibility = Visibility.Collapsed;
+            editor.Text = item.Text;
+            editor.Visibility = Visibility.Visible;
+            editor.Focus();
+            editor.SelectAll();
+        }
+
+        private void TodoEditor_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (sender is not TextBox editor) return;
+            if (e.Key is not (Key.Enter or Key.Escape)) return;
+            e.Handled = true;
+            FinishTodoEditing(editor, save: e.Key == Key.Enter);
+        }
+
+        private void TodoEditor_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is TextBox editor) FinishTodoEditing(editor, save: true);
+        }
+
+        private void FinishTodoEditing(TextBox editor, bool save)
+        {
+            if (editor.Visibility != Visibility.Visible || editor.Parent is not Grid row) return;
+            var text = editor.Text.Trim();
+            // Hide first so the focus change cannot save a cancelled edit.
+            editor.Visibility = Visibility.Collapsed;
+            row.Children.OfType<TextBlock>().Single().Visibility = Visibility.Visible;
+            if (save && !string.IsNullOrWhiteSpace(text) &&
+                editor.DataContext is TodoItemForm item && TodoItems.Contains(item) && item.Text != text)
+            {
+                item.Text = text;
+                SaveTodos();
+            }
         }
 
         private void RemoveTodoButton_Click(object sender, RoutedEventArgs e)
@@ -1535,8 +1803,24 @@ namespace JTSA.Panels
 
             if (user == null) return;
 
+            if (DAO_User.SelectOneByUserId(user.UserId) is null)
+            {
+                var now = DateTime.Now;
+                DAO_User.Insert(new M_User
+                {
+                    UserId = user.UserId,
+                    LoginId = user.UserName,
+                    DisplayName = user.DisplayName,
+                    IsFriend = false,
+                    CreatedDateTime = now,
+                    UpdatedDateTime = now,
+                    LastUsedDateTime = now
+                });
+            }
+
             if (DAO_User.MarkAsFriend(user.UserId))
             {
+                chatUsers.Remove(user.UserId);
                 ((MainWindow)Application.Current.MainWindow).FriendPanel.ReloadFriend();
             }
 
@@ -1579,7 +1863,7 @@ namespace JTSA.Panels
             if (message != null)
             {
                 var user = DAO_User.SelectOneByUserId(message.UserId);
-                message.ProfielImageUrl = user?.ProfielImageUrl.Replace("-300x300.png", "-70x70.png") ?? "";
+                message.ProfielImageUrl = user?.ProfielImageUrl?.Replace("-300x300.png", "-70x70.png") ?? string.Empty;
                 PinedTwitchChatFormList.Add(message);
             }
         }
@@ -1831,5 +2115,124 @@ namespace JTSA.Panels
                 PinedTwitchChatFormList.Clear();
             }
         }
+
+        private static TwitchChatForm? GetContextChat(object sender)
+        {
+            if (sender is not MenuItem menuItem) return null;
+            ItemsControl? owner = ItemsControl.ItemsControlFromItemContainer(menuItem);
+            while (owner is MenuItem parentMenuItem)
+                owner = ItemsControl.ItemsControlFromItemContainer(parentMenuItem);
+            var contextMenu = owner as ContextMenu ?? menuItem.Parent as ContextMenu;
+            return (contextMenu?.PlacementTarget as FrameworkElement)?.DataContext as TwitchChatForm;
+        }
+
+        private void OpenChatUserPageMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (GetContextChat(sender) is { UserName.Length: > 0 } chat)
+                JTSAHelper.OpenTwitchChannel(chat.UserName);
+        }
+
+        private async void DeleteChatMessageMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.MessageId)) return;
+
+            var success = await TwitchHelper.DeleteChatMessageAsync(
+                chat.MessageId, connectedBroadcasterId, connectedAccessToken);
+            if (success)
+            {
+                TwitchChatFormList.Remove(chat);
+                return;
+            }
+
+            MessageBox.Show(
+                "メッセージを削除できませんでした。6時間以上前の投稿、配信者本人の投稿、またはTwitch権限を確認してください。",
+                "Twitchモデレーション",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        private async void PinChatMessageMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.MessageId)) return;
+
+            var success = await TwitchHelper.PinedChat(
+                chat.MessageId, connectedBroadcasterId, connectedAccessToken);
+            if (success == true)
+            {
+                await PinedChatLoad();
+                return;
+            }
+
+            MessageBox.Show(
+                "メッセージをピン留めできませんでした。対象メッセージとTwitch権限を確認してください。",
+                "Twitchモデレーション",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+
+        private async void BlockChatUserMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.UserId)) return;
+            if (!ConfirmModeration(chat, "ブロック", "ブロックすると、このアカウントからのメッセージや通知が表示されなくなります。")) return;
+
+            var success = await TwitchHelper.BlockUserAsync(chat.UserId, connectedAccessToken);
+            ShowModerationResult(chat, "ブロック", success);
+        }
+
+        private async void TimeoutChatUserMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null) return;
+            if (chat.UserId == connectedBroadcasterId)
+            {
+                MessageBox.Show("配信者本人はタイムアウトできません。", "Twitchモデレーション");
+                return;
+            }
+
+            var dialog = new TimeoutDurationDialog(chat.DisplayName, chat.UserName)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var success = await TwitchHelper.TimeoutUserAsync(
+                chat.UserId, dialog.DurationSeconds, connectedBroadcasterId, connectedAccessToken);
+            ShowModerationResult(chat, "タイムアウト", success);
+        }
+
+        private async void BanChatUserMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var chat = GetContextChat(sender);
+            if (chat is null || string.IsNullOrWhiteSpace(chat.UserId)) return;
+            if (chat.UserId == connectedBroadcasterId)
+            {
+                MessageBox.Show("配信者本人は追放できません。", "Twitchモデレーション");
+                return;
+            }
+            if (!ConfirmModeration(chat, "追放", "追放は解除するまで継続します。")) return;
+
+            var success = await TwitchHelper.BanUserAsync(
+                chat.UserId, connectedBroadcasterId, connectedAccessToken);
+            ShowModerationResult(chat, "追放", success);
+        }
+
+        private static bool ConfirmModeration(TwitchChatForm chat, string operation, string detail)
+            => MessageBox.Show(
+                $"{chat.DisplayName}（{chat.UserName}）を{operation}しますか？\n\n{detail}",
+                "Twitchモデレーション",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning) == MessageBoxResult.Yes;
+
+        private static void ShowModerationResult(TwitchChatForm chat, string operation, bool success)
+            => MessageBox.Show(
+                success
+                    ? $"{chat.DisplayName}を{operation}しました。"
+                    : $"{chat.DisplayName}を{operation}できませんでした。アプリログとTwitch権限を確認してください。",
+                "Twitchモデレーション",
+                MessageBoxButton.OK,
+                success ? MessageBoxImage.Information : MessageBoxImage.Error);
     }
 }

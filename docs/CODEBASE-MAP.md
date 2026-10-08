@@ -139,7 +139,7 @@ JTSA/
 
 **依存関係**: `TwitchChatService`（IRC 受信）、`TwitchEventSubService`（チャンネルポイント通知）、`ChatOverlayWindow`、DAO_User / DAO_ChatUser / DAO_Setting。
 
-**変更時の注意**: 受信イベントは非 UI スレッドで来るため必ず `Dispatcher.InvokeAsync` を経由している。`ChatAddAsync` はチャット 1 件ごとにピン止めチャットを API 取得し直す実装で、高頻度チャットでは負荷になり得る。
+**変更時の注意**: 受信イベントは非 UI スレッドで来るため `Dispatcher.InvokeAsync` を経由する。発言数は `ChatCountWriter` でまとめて保存し、ユーザー取得は件数・期限付きキャッシュでバックグラウンド実行する。画面コレクション操作は UI スレッドで行い、終了・アカウント切替時は処理中の保存を待つ。ピン止めチャットの取得は接続ヘルスチェック時に実行する。
 
 ### `JTSA/Utility/TwitchChatService.cs` / `JTSA/Utility/TwitchEventSubService.cs`
 

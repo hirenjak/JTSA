@@ -235,6 +235,7 @@
                     <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="110"/>
                 </Grid.ColumnDefinitions>
 
                 <Button 
@@ -255,6 +256,10 @@
                     Foreground="Black" FontSize="14"
                     Background="White"
                     KeyDown="SendChatTextBox_KeyDown"/>
+                <Button Grid.Column="3" Content="テンプレート" Margin="8,0,0,0"
+                        Style="{StaticResource OverviewSecondaryButtonStyle}"
+                        ToolTip="チャットの定型文を選択・編集します"
+                        Click="ChatTemplateButton_Click"/>
             </Grid>
 
             <Border Margin="0, 8, 0, 0" Width="Auto" Height="2" Background="White"/>
@@ -295,6 +300,52 @@
             <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
+                            <StackPanel.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="ユーザーページを開く"
+                                              Click="OpenChatUserPageMenuItem_Click"/>
+                                    <Separator/>
+                                    <MenuItem Header="このメッセージをピン留め"
+                                              Click="PinChatMessageMenuItem_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="{x:Null}">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="このメッセージを削除"
+                                              Click="DeleteChatMessageMenuItem_Click">
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding MessageId}" Value="{x:Null}">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Twitchでタイムアウト..."
+                                              Click="TimeoutChatUserMenuItem_Click"/>
+                                    <MenuItem Header="Twitchで追放"
+                                              Click="BanChatUserMenuItem_Click"/>
+                                    <MenuItem Header="Twitchでブロック"
+                                              Click="BlockChatUserMenuItem_Click"/>
+                                </ContextMenu>
+                            </StackPanel.ContextMenu>
                             <StackPanel Margin="8, 4, 8, 0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -303,7 +354,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Ellipse Grid.Column="0" Width="42" Height="42">
                                         <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
+                                            <ImageBrush ImageSource="{Binding ProfielImageUrl, Converter={StaticResource CachedImageConverter}}" />
                                         </Ellipse.Fill>
                                     </Ellipse>
 
@@ -404,7 +455,7 @@
                                         </Grid.ColumnDefinitions>
                                         <Ellipse Grid.Column="0" Width="42" Height="42">
                                             <Ellipse.Fill>
-                                                <ImageBrush ImageSource="{Binding ProfielImageUrl}" />
+                                                <ImageBrush ImageSource="{Binding ProfielImageUrl, Converter={StaticResource CachedImageConverter}}" />
                                             </Ellipse.Fill>
                                         </Ellipse>
 
@@ -524,9 +575,17 @@
                              Foreground="LightGray" Margin="0,0,0,7"
                              Click="NoCurrentTodoRadioButton_Click"/>
                 <ListBox ItemsSource="{Binding TodoItems, RelativeSource={RelativeSource AncestorType={x:Type local:ChatPanel}}}"
-                         Background="Transparent" BorderThickness="0"
+                         Background="Transparent" BorderThickness="0" Padding="0"
                          HorizontalContentAlignment="Stretch"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <Grid Margin="0,2">
@@ -540,9 +599,30 @@
                                           Click="TodoCompletedCheckBox_Click"/>
                                 <TextBlock x:Name="TodoText" Grid.Column="2" Text="{Binding Text}"
                                            Foreground="White" TextWrapping="Wrap"/>
-                                <Button Grid.Column="3" Content="×" Width="24" Tag="{Binding}"
+                                <TextBox x:Name="TodoEditor" Grid.Column="2" Visibility="Collapsed"
+                                         Padding="3,0" MinWidth="25"
+                                         KeyDown="TodoEditor_KeyDown" LostKeyboardFocus="TodoEditor_LostKeyboardFocus"/>
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <Button Content="✎" Width="22" Height="28" Padding="0" Margin="2,0,0,0" Tag="{Binding}"
+                                            Foreground="White" ToolTip="ToDoの内容を編集" Click="EditTodoButton_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ElementName=TodoEditor, Path=Visibility}" Value="Visible">
+                                                        <Setter Property="Background" Value="#FF285653"/>
+                                                        <Setter Property="BorderBrush" Value="LightSeaGreen"/>
+                                                        <Setter Property="BorderThickness" Value="1"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <Button Content="×" Width="20" Padding="0" Tag="{Binding}"
                                         ToolTip="ToDoを削除" Style="{StaticResource OverviewDeleteButtonStyle}"
                                         Click="RemoveTodoButton_Click"/>
+                                </StackPanel>
                             </Grid>
                             <DataTemplate.Triggers>
                                 <DataTrigger Binding="{Binding IsCompleted}" Value="True">
@@ -621,7 +701,7 @@
                                         Style="{StaticResource OverviewDeleteButtonStyle}" Width="24"/>
                                 <Ellipse DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Top">
                                     <Ellipse.Fill>
-                                        <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                        <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}}"/>
                                     </Ellipse.Fill>
                                 </Ellipse>
                                 <StackPanel>
@@ -657,7 +737,7 @@
                                         Style="{StaticResource OverviewDeleteButtonStyle}" Width="24"/>
                                 <Ellipse DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Top">
                                     <Ellipse.Fill>
-                                        <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                        <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}}"/>
                                     </Ellipse.Fill>
                                 </Ellipse>
                                 <StackPanel>
@@ -680,7 +760,7 @@
             </DockPanel>
         </Border>
 
-        <!-- この配信中に発言したユーザー。最新発言者を先頭に表示する。 -->
+        <!-- 発言者と、Twitchのチャットに接続中のユーザーを切り替えて表示する。 -->
         <Border Grid.Row="0"
                 Grid.RowSpan="3"
                 Grid.Column="3"
@@ -692,6 +772,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="36"/>
+                    <RowDefinition Height="28"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -701,7 +782,7 @@
                             ToolTip="ユーザー一覧を閉じる" AutomationProperties.Name="ユーザー一覧を閉じる"
                             Style="{StaticResource OverviewDangerButtonStyle}"
                             Click="ChatUserListToggleButton_Click"/>
-                <TextBlock
+                <TextBlock x:Name="ChatUserListHeading"
                            Text="{Binding ChatUserFormList.Count, StringFormat=チャットユーザー ({0})}"
                            Foreground="White"
                            FontSize="14"
@@ -710,7 +791,17 @@
                            VerticalAlignment="Center"/>
                 </DockPanel>
 
-                <ListBox Grid.Row="1"
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="8,0,8,4">
+                    <Button x:Name="ChatSpeakersButton" Content="発言者" Width="92" Height="22"
+                            Style="{StaticResource OverviewPrimaryButtonStyle}"
+                            Click="ChatUserSourceButton_Click"/>
+                    <Button x:Name="ConnectedChattersButton" Content="接続中" Width="92" Height="22" Margin="4,0,0,0"
+                            ToolTip="チャットに接続中のユーザー。動画を見ているかは判別できません"
+                            Style="{StaticResource OverviewSecondaryButtonStyle}"
+                            Click="ChatUserSourceButton_Click"/>
+                </StackPanel>
+
+                <ListBox Grid.Row="2" x:Name="ChatUserListBox"
                          ItemsSource="{Binding ChatUserFormList}"
                          Background="Transparent"
                          BorderThickness="0"
@@ -721,6 +812,18 @@
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         </Style>
                     </ListBox.ItemContainerStyle>
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FF24242B" Padding="8,4" Margin="0,5,0,1">
+                                        <TextBlock Text="{Binding Name}" Foreground="White"
+                                                   FontSize="11" FontWeight="SemiBold"/>
+                                    </Border>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
@@ -734,35 +837,96 @@
                                                   Click="ToggleChatUserSpeechMute_Click"/>
                                     </ContextMenu>
                                 </StackPanel.ContextMenu>
-                                <Grid Margin="8,5">
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Margin" Value="8,5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                    <Setter Property="Margin" Value="8,1"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <Ellipse Grid.Column="0" Width="36" Height="36">
+                                    <Ellipse Grid.Column="0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Width" Value="36"/>
+                                                <Setter Property="Height" Value="36"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                        <Setter Property="Width" Value="18"/>
+                                                        <Setter Property="Height" Value="18"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
                                         <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding ProfileImageUrl}"/>
+                                            <ImageBrush ImageSource="{Binding ProfileImageUrl, Converter={StaticResource CachedImageConverter}, ConverterParameter=48}"/>
                                         </Ellipse.Fill>
                                     </Ellipse>
 
-                                    <StackPanel Grid.Column="1" Margin="7,0,0,0" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Margin" Value="11,0,0,0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                        <Setter Property="Margin" Value="2,0,0,0"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
                                         <TextBlock Text="{Binding DisplayName}"
                                                    Foreground="White"
-                                                   FontSize="13"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontSize" Value="13"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                            <Setter Property="FontSize" Value="10"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                         <TextBlock Text="読み上げなし"
                                                    Foreground="Gray"
                                                    FontSize="10"
                                                    Visibility="{Binding IsSpeechMuted, Converter={StaticResource OverlaySettingsVisibilityConverter}}"/>
                                         <TextBlock Text="{Binding UserName, StringFormat=@{0}}"
                                                    Foreground="LightGray"
-                                                   FontSize="10"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontSize" Value="10"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                            <Setter Property="FontSize" Value="8.5"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding MessageCount}" Value="0">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
                                         <TextBlock Text="{Binding MessageCount, StringFormat={}{0}件}"
                                                    Foreground="LightSeaGreen"
                                                    FontSize="11"

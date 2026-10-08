@@ -17,9 +17,7 @@ namespace JTSA.Controls
     {
         private static readonly HttpClient httpClient = new();
 
-        private static readonly ConcurrentDictionary<
-            string,
-            Lazy<Task<byte[]>>> imageCache = new();
+        private static readonly JTSA.Utility.AsyncCache<string, byte[]> imageCache = new(256, TimeSpan.FromMinutes(10));
 
         public static readonly DependencyProperty MessagePartsProperty =
             DependencyProperty.Register(
@@ -131,12 +129,7 @@ namespace JTSA.Controls
         {
             try
             {
-                var lazyData = imageCache.GetOrAdd(
-                    imageUrl,
-                    url => new Lazy<Task<byte[]>>(
-                        () => httpClient.GetByteArrayAsync(url)));
-
-                var imageData = await lazyData.Value;
+                var imageData = await imageCache.GetAsync(imageUrl, () => httpClient.GetByteArrayAsync(imageUrl));
 
                 if (IsGif(imageData))
                 {
@@ -160,6 +153,7 @@ namespace JTSA.Controls
 
                     bitmap.BeginInit();
                     bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.DecodePixelHeight = 64;
                     bitmap.StreamSource = stream;
                     bitmap.EndInit();
 
@@ -172,7 +166,7 @@ namespace JTSA.Controls
             catch (Exception exception)
             {
                 // 失敗結果をキャッシュし続けない
-                imageCache.TryRemove(imageUrl, out _);
+                imageCache.Remove(imageUrl);
 
                 System.Diagnostics.Debug.WriteLine(
                     $"スタンプ画像読込エラー: {imageUrl}");

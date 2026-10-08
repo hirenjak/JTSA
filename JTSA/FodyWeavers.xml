@@ -1,3 +1,5 @@
 ﻿<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
-  <Costura />
+  <!-- WebView2 must stay as physical, non-collectible assemblies. Embedding these
+       with Costura causes WPF to load them into an incompatible load context. -->
+  <Costura ExcludeAssemblies="Microsoft.Web.WebView2.Core|Microsoft.Web.WebView2.Wpf|Microsoft.Web.WebView2.WinForms" />
 </Weavers>

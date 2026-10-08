@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>JTSA スマホパネル</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #17191d; color: #f5f5f5; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; max-width: 100%; overflow: hidden; }
+    body { margin: 0; height: 100dvh; display: flex; flex-direction: column; }
+    header, #sleepControls, nav { flex-shrink: 0; }
+    header { height: 58px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #252831; }
+    header strong { font-size: 18px; }
+    #status { font-size: 12px; color: #aab0bb; }
+    .headerActions { display: flex; align-items: center; gap: 10px; }
+    .headerBrand { display: flex; align-items: center; gap: 8px; }
+    #fullscreenButton, #previewButton { border: 1px solid #565b66; border-radius: 7px; padding: 7px 10px; background: #30343d; color: white; font-size: 13px; }
+    #previewButton[aria-expanded="true"] { border-color: #68cbb4; background: #2f655b; }
+    @media (max-width: 360px) { header { padding: 0 8px; } .headerActions { gap: 5px; } #status { font-size: 10px; } }
+    #fullscreenButton:disabled { color: #aab0bb; }
+    nav { display: flex; height: 49px; overflow-x: auto; background: #252831; scrollbar-width: thin; }
+    nav button { flex: 0 0 auto; min-width: 33.333%; border: 0; border-bottom: 3px solid transparent; padding: 13px 12px; color: #adb4c1; background: transparent; font-size: 15px; white-space: nowrap; }
+    nav button.active { color: white; border-color: #68cbb4; }
+    main { display: flex; width: 100%; flex: 1; min-height: 0; transform: translateX(calc(-1 * var(--page-index, 1) * 100vw)); transition: transform .2s ease; }
+    #sleepControls { height: 50px; padding: 5px 12px; background: #252831; }
+    #sleepControls[hidden] { display: none; }
+    #sleepControls label { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+    #sleepControls input { width: 18px; height: 18px; margin: 0; }
+    #sleepStatus { display: block; margin: 3px 0 0 25px; font-size: 11px; color: #aab0bb; }
+    section { flex: 0 0 100%; width: 100%; height: 100%; overflow-y: auto; padding: 12px; overscroll-behavior: contain; }
+    .chat { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; background: #24272e; border-radius: 12px; margin: 0 0 8px; padding: 11px 13px; overflow-wrap: anywhere; }
+    .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #3b3f48; }
+    .chatBody { min-width: 0; }
+    .chat b { display: block; margin-bottom: 4px; padding-right: 48px; }
+    .chat small { float: right; color: #9ca4b1; }
+    .row { display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid #363942; }
+    .row span { flex: 1; overflow-wrap: anywhere; }
+    .row.done span { color: #969ba4; text-decoration: line-through; }
+    input[type=text] { flex: 1; min-width: 0; font-size: 16px; background: #30343d; color: white; border: 1px solid #565b66; border-radius: 8px; padding: 10px; }
+    input[type=checkbox], input[type=radio] { width: 22px; height: 22px; accent-color: #68cbb4; }
+    button.action { border: 0; border-radius: 8px; padding: 10px 13px; background: #397d70; color: white; font-size: 14px; }
+    button.delete { background: #653b43; }
+    #todoHead { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 10px; }
+    #todoHead h2 { margin: 0; font-size: 16px; }
+    #addForm { display: flex; gap: 7px; margin-bottom: 10px; }
+    .obsHeading { margin: 4px 4px 10px; font-size: 16px; }
+    .obsHeading.sources { margin-top: 22px; }
+    .obsGroup { margin-bottom: 14px; }
+    .obsGroup h3 { margin: 0 4px 7px; color: #adb4c1; font-size: 13px; font-weight: 500; }
+    .obsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .obsButton { min-height: 50px; border: 1px solid #4b505a; border-radius: 9px; padding: 9px; background: #292d35; color: #f5f5f5; font-size: 14px; overflow-wrap: anywhere; }
+    .obsButton.active { border-color: #68cbb4; background: #2f655b; box-shadow: inset 0 0 0 1px #68cbb4; }
+    .obsButton small { display: block; margin-top: 4px; color: #aab0bb; font-size: 11px; }
+    .empty { text-align: center; color: #9ca4b1; margin-top: 35px; }
+    .pluginPage { padding: 0; }
+    .pluginPage iframe { display: block; width: 100%; height: 100%; border: 0; background: #17191d; }
+    #previewArea { flex-shrink: 0; padding: 8px 12px; background: #252831; }
+    #previewArea[hidden] { display: none; }
+    #previewImage { display: block; width: 100%; height: auto; max-height: 30dvh; object-fit: contain; background: #000; border-radius: 8px; margin-top: 8px; }
+    #previewImage[hidden] { display: none; }
+    #previewVideo { display: block; width: 100%; max-height: 30dvh; object-fit: contain; background: #000; border-radius: 8px; margin-top: 8px; }
+    #previewVideo[hidden] { display: none; }
+    #previewObs { padding: 7px; background: #30343d; color: white; border: 1px solid #565b66; border-radius: 7px; }
+    .previewControls { display: flex; align-items: center; gap: 8px; }
+    #previewStatus { color: #aab0bb; font-size: 12px; overflow-wrap: anywhere; margin: 8px 0 0; }
+    #pairScreen { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 5; display: grid; place-items: center; overflow: hidden; background: #17191d; padding: 20px; }
+    #pairScreen.hidden { display: none; }
+    #pairBox { width: min(100%, 320px); background: #252831; padding: 20px; border-radius: 16px; text-align: center; }
+    #pairBox h1 { font-size: 21px; margin: 0 0 8px; }
+    #pairBox p { color: #adb4c1; }
+    #pairForm { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; width: 100%; margin-top: 18px; }
+    #pairInput { width: 100%; text-align: center; letter-spacing: .15em; }
+    #pairError { color: #ff9fa9; min-height: 1.4em; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div id="pairScreen">
+  <div id="pairBox">
+    <h1>接続コードを入力</h1>
+    <p>PCのスマホパネルに表示された6桁の数字を入力してください。</p>
+    <form id="pairForm"><input id="pairInput" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required><button class="action">接続</button></form>
+    <div id="pairError" role="alert"></div>
+  </div>
+</div>
+<header><div class="headerBrand"><strong>JTSA</strong><button id="previewButton" type="button" aria-expanded="false" aria-controls="previewArea">プレビュー</button></div><div class="headerActions"><span id="status">接続中…</span><button id="fullscreenButton" type="button" aria-pressed="false">全画面</button></div></header>
+<div id="sleepControls">
+  <label><input id="keepAwake" type="checkbox" aria-describedby="sleepStatus">画面をスリープさせない</label>
+  <span id="sleepStatus" role="status">OFF</span>
+</div>
+<div id="previewArea" hidden>
+  <div class="previewControls">
+    <select id="previewObs" aria-label="プレビューに表示するOBS"><option value="main">メインOBS</option><option value="sub">サブOBS</option></select>
+  </div>
+  <p id="previewStatus" role="status" hidden></p>
+  <img id="previewImage" alt="OBSの現在のシーン" hidden>
+  <video id="previewVideo" autoplay muted playsinline aria-label="OBSのリアルタイム映像" hidden></video>
+</div>
+<nav id="panelTabs"><button id="obsTab">OBS</button><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
+<main id="pages" style="--page-index: 1">
+  <section id="obsPage">
+    <h2 class="obsHeading">シーン選択</h2>
+    <div id="scenes"></div>
+    <h2 class="obsHeading sources">ソース表示切替</h2>
+    <div id="sources"></div>
+  </section>
+  <section id="chatPage"><div class="empty">チャットを読み込み中…</div></section>
+  <section id="todoPage">
+    <div id="todoHead"><h2 id="category">ToDo</h2><button id="clearDone" class="action delete">完了済みを削除</button></div>
+    <form id="addForm"><input id="todoText" type="text" maxlength="300" placeholder="ToDoを追加"><button class="action">追加</button></form>
+    <div class="row"><input id="noCurrent" type="radio" name="current"><span>現在のToDoなし</span></div>
+    <div id="todos"></div>
+  </section>
+</main>
+<script src="/controls/NoSleep.min.js"></script>
+<script>
+  const fullscreenButton = document.getElementById('fullscreenButton');
+  const fullscreenRoot = document.documentElement;
+  function updateFullscreenButton() {
+    const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    const supported = Boolean((fullscreenRoot.requestFullscreen && document.fullscreenEnabled !== false) ||
+      (fullscreenRoot.webkitRequestFullscreen && document.webkitFullscreenEnabled !== false));
+    fullscreenButton.disabled = !supported && !active;
+    fullscreenButton.textContent = active ? '全画面を解除' : supported ? '全画面' : '全画面非対応';
+    fullscreenButton.setAttribute('aria-pressed', String(active));
+  }
+  fullscreenButton.addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+      } else if (fullscreenRoot.requestFullscreen) {
+        await fullscreenRoot.requestFullscreen();
+      } else if (fullscreenRoot.webkitRequestFullscreen) {
+        await fullscreenRoot.webkitRequestFullscreen();
+      }
+      updateFullscreenButton();
+    } catch (_) {
+      updateFullscreenButton();
+      fullscreenButton.textContent = '再試行';
+      fullscreenButton.title = '全画面に切り替えられませんでした';
+    }
+  });
+  document.addEventListener('fullscreenchange', updateFullscreenButton);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+  updateFullscreenButton();
+  const keepAwake = document.getElementById('keepAwake');
+  const sleepControls = document.getElementById('sleepControls');
+  const sleepStatus = document.getElementById('sleepStatus');
+  let noSleep = null, screenLock = null, sleepAttempt = 0;
+  function stopKeepingAwake(message = 'OFF') {
+    sleepAttempt++;
+    keepAwake.checked = false;
+    if (screenLock) { screenLock.release().catch(() => {}); screenLock = null; }
+    noSleep?.disable();
+    sleepStatus.textContent = message;
+  }
+  async function startKeepingAwake() {
+    if (!keepAwake.checked) { stopKeepingAwake(); return; }
+    const attempt = ++sleepAttempt;
+    keepAwake.disabled = true;
+    sleepStatus.textContent = '開始中…';
+    try {
+      if (window.isSecureContext && navigator.wakeLock) {
+        const lock = await navigator.wakeLock.request('screen');
+        if (attempt !== sleepAttempt) { await lock.release(); return; }
+        screenLock = lock;
+        lock.addEventListener('release', () => {
+          if (screenLock === lock) stopKeepingAwake('解除されました。再度ONにしてください');
+        });
+        sleepStatus.textContent = 'ON';
+      } else {
+        if (!noSleep) {
+          if (typeof NoSleep !== 'function') throw new Error('スリープ抑止機能を読み込めません。ページを再読み込みしてください');
+          noSleep = new NoSleep();
+          if (!noSleep.noSleepVideo) { noSleep = null; throw new Error('動画方式を利用できません'); }
+          const video = noSleep.noSleepVideo;
+          video.muted = true;
+          video.setAttribute('muted', '');
+          video.setAttribute('webkit-playsinline', '');
+          video.setAttribute('aria-hidden', 'true');
+          video.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;pointer-events:none;';
+          document.body.append(video);
+          noSleep.noSleepVideo.addEventListener('pause', () => {
+            if (keepAwake.checked) stopKeepingAwake('停止しました。再度ONにしてください');
+          });
+        }
+        await noSleep.enable();
+        if (attempt !== sleepAttempt) { noSleep.disable(); return; }
+        sleepStatus.textContent = 'ON（端末によっては効かない場合があります）';
+      }
+    } catch (error) {
+      if (attempt === sleepAttempt) {
+        const reason = error.name === 'NotAllowedError' ? 'ブラウザが動画再生を許可しませんでした'
+          : error.name === 'NotSupportedError' ? 'このブラウザでは動画を再生できません'
+          : error.message || error.name || '原因不明';
+        stopKeepingAwake('開始できませんでした：' + reason);
+      }
+    } finally {
+      keepAwake.disabled = false;
+    }
+  }
+  keepAwake.addEventListener('click', startKeepingAwake);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && keepAwake.checked)
+      stopKeepingAwake('画面切替で解除しました。再度ONにしてください');
+  });
+  window.addEventListener('pagehide', () => stopKeepingAwake());
+  let key = localStorage.getItem('jtsa-panel-key');
+  const pairScreen = document.getElementById('pairScreen');
+  const pairError = document.getElementById('pairError');
+  const pages = document.getElementById('pages');
+  const panelTabs = document.getElementById('panelTabs');
+  const status = document.getElementById('status');
+  let active = 1, busy = false;
+  const pluginPages = new Map();
+  window.addEventListener('message', async event => {
+    const entry = [...pluginPages].find(([, panel]) => panel.frame.contentWindow === event.source);
+    if (!entry || !event.data || event.data.type !== 'jtsa-plugin-action') return;
+    const [id] = entry;
+    if (typeof event.data.action !== 'string' || event.data.action.length > 64 ||
+        (event.data.value != null && (typeof event.data.value !== 'string' || event.data.value.length > 1000))) return;
+    try {
+      await api('/controls/api/plugin/action', {method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({panelId:id, action:event.data.action, value:event.data.value ?? null})});
+    } catch (error) {
+      event.source.postMessage({type:'jtsa-plugin-error', message:error.message}, '*');
+    }
+  });
+  const previewImage = document.getElementById('previewImage');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewStatus = document.getElementById('previewStatus');
+  const previewObs = document.getElementById('previewObs');
+  const previewButton = document.getElementById('previewButton');
+  const previewArea = document.getElementById('previewArea');
+  let previewTimer = null, previewRequest = null;
+  let previewPeer = null, previewSession = null, previewHeartbeat = null, previewWatchdog = null;
+  const previewClientId = sessionStorage.getItem('jtsa-preview-client') ||
+    Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+  sessionStorage.setItem('jtsa-preview-client', previewClientId);
+  function previewVisible() {
+    return Boolean(key && !document.hidden && pairScreen.classList.contains('hidden') &&
+      !previewArea.hidden);
+  }
+  function stopPreview() {
+    clearTimeout(previewTimer); previewTimer = null;
+    previewRequest?.abort(); previewRequest = null;
+    clearInterval(previewHeartbeat); previewHeartbeat = null;
+    clearTimeout(previewWatchdog); previewWatchdog = null;
+    if (previewPeer) { previewPeer.onconnectionstatechange = null; previewPeer.ontrack = null; previewPeer.close(); previewPeer = null; }
+    previewVideo.pause(); previewVideo.srcObject?.getTracks().forEach(track => track.stop());
+    previewVideo.srcObject = null; previewVideo.hidden = true;
+    closePreviewSession(previewSession); previewSession = null;
+  }
+  function updatePreview() {
+    if (!previewVisible()) { stopPreview(); return; }
+    if (previewTimer === null && previewRequest === null)
+      streamPreview();
+  }
+  async function streamPreview() {
+    const request = new AbortController(); previewRequest = request;
+    let peer;
+    try {
+      if (typeof RTCPeerConnection !== 'function') throw new Error('このブラウザはWebRTCに対応していません');
+      previewStatus.textContent = '映像に接続中…'; previewStatus.hidden = false;
+      peer = new RTCPeerConnection({iceServers:[]}); previewPeer = peer;
+      peer.addTransceiver('video', {direction:'recvonly'});
+      peer.ontrack = event => {
+        if (previewRequest !== request) return;
+        previewVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+        previewVideo.hidden = false; previewImage.hidden = true;
+        previewVideo.play().catch(() => failWebRtc(request, '映像の再生を開始できませんでした'));
+      };
+      peer.onconnectionstatechange = () => {
+        if (previewRequest !== request) return;
+        if (peer.connectionState === 'connected') {
+          clearTimeout(previewWatchdog); previewWatchdog = null;
+          previewStatus.hidden = true;
+        } else if (peer.connectionState === 'failed') {
+          failWebRtc(request, '映像の接続に失敗しました');
+        } else if (peer.connectionState === 'disconnected' && previewWatchdog === null) {
+          previewWatchdog = setTimeout(() => failWebRtc(request, '映像の接続が切れました'), 10000);
+        }
+      };
+      previewWatchdog = setTimeout(() => failWebRtc(request, '映像の接続がタイムアウトしました'), 35000);
+      await peer.setLocalDescription(await peer.createOffer());
+      await new Promise((resolve, reject) => {
+        if (peer.iceGatheringState === 'complete') { resolve(); return; }
+        const cleanup = () => {
+          clearTimeout(timeout); peer.removeEventListener('icegatheringstatechange', changed);
+          request.signal.removeEventListener('abort', aborted);
+        };
+        const changed = () => { if (peer.iceGatheringState === 'complete') { cleanup(); resolve(); } };
+        const aborted = () => { cleanup(); reject(new Error('接続を中止しました')); };
+        const timeout = setTimeout(() => { cleanup(); reject(new Error('接続情報の取得がタイムアウトしました')); }, 7000);
+        peer.addEventListener('icegatheringstatechange', changed);
+        request.signal.addEventListener('abort', aborted, {once:true});
+        if (request.signal.aborted) aborted();
+      });
+      const response = await fetch('/controls/api/preview/webrtc', {
+        method:'POST', cache:'no-store', signal:request.signal,
+        headers:{'X-JTSA-Key':key, 'Content-Type':'application/json'},
+        body:JSON.stringify({isSub:previewObs.value === 'sub', sdp:peer.localDescription.sdp,
+          clientId:previewClientId})
+      });
+      const answer = await response.json();
+      if (!response.ok || answer.Error) throw new Error(answer.Error || '映像に接続できませんでした');
+      if (previewRequest !== request || !previewVisible()) {
+        closePreviewSession(answer.SessionId); return;
+      }
+      previewSession = answer.SessionId;
+      await peer.setRemoteDescription({type:'answer', sdp:answer.Sdp});
+      if (previewRequest !== request) return;
+      previewHeartbeat = setInterval(async () => {
+        if (previewRequest !== request || !previewVisible()) return;
+        try {
+          const response = await fetch('/controls/api/preview/webrtc/' + previewSession, {
+            method:'POST', headers:{'X-JTSA-Key':key, 'Content-Type':'application/json'},
+            body:'{}', signal:request.signal, cache:'no-store'
+          });
+          if (!response.ok) failWebRtc(request, '映像の接続が終了しました');
+        } catch (_) { if (previewRequest === request) failWebRtc(request, 'PCに接続できません'); }
+      }, 5000);
+    } catch (error) {
+      if (previewRequest === request) failWebRtc(request, error.message);
+    }
+  }
+  function closePreviewSession(id) {
+    if (!id || !key) return;
+    fetch('/controls/api/preview/webrtc/' + id, {
+      method:'DELETE', headers:{'X-JTSA-Key':key}, keepalive:true
+    }).catch(() => {});
+  }
+  function failWebRtc(request, message) {
+    if (previewRequest !== request) return;
+    stopPreview(); previewVideo.hidden = true;
+    previewStatus.textContent = message; previewStatus.hidden = false;
+    if (previewVisible()) previewTimer = setTimeout(() => { previewTimer = null; updatePreview(); }, 3000);
+  }
+  previewObs.addEventListener('change', () => {
+    stopPreview(); previewImage.hidden = true; previewImage.removeAttribute('src');
+    previewStatus.textContent = '画像を取得中…'; previewStatus.hidden = false; updatePreview();
+  });
+  previewButton.addEventListener('click', () => {
+    previewArea.hidden = !previewArea.hidden;
+    sleepControls.hidden = !previewArea.hidden;
+    previewButton.setAttribute('aria-expanded', String(!previewArea.hidden));
+    if (!previewArea.hidden) {
+      keepAwake.checked = true; startKeepingAwake();
+      previewImage.hidden = true;
+      previewStatus.textContent = '画像を取得中…'; previewStatus.hidden = false;
+    } else stopKeepingAwake();
+    updatePreview();
+  });
+  document.addEventListener('visibilitychange', updatePreview);
+  window.addEventListener('pagehide', stopPreview);
+  document.getElementById('pairForm').onsubmit = async event => {
+    event.preventDefault();
+    const pin = document.getElementById('pairInput').value;
+    pairError.textContent = '';
+    try {
+      const response = await fetch('/controls/api/pair', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      if (!response.ok) {
+        pairError.textContent = response.status === 429
+          ? '試行回数が多すぎます。1分後にもう一度試してください。'
+          : '接続コードが違います。';
+        return;
+      }
+      key = (await response.json()).key;
+      localStorage.setItem('jtsa-panel-key', key);
+      document.getElementById('pairInput').value = '';
+      await refresh();
+    } catch (_) { pairError.textContent = 'PCに接続できません。Wi-Fiを確認してください。'; }
+  };
+  function show(index) {
+    active = index;
+    pages.style.setProperty('--page-index', index);
+    [...panelTabs.children].forEach((button, i) => button.classList.toggle('active', i === index));
+    panelTabs.children[index]?.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    updatePreview();
+  }
+  for (const id of ['obs', 'chat', 'todo']) {
+    const tab = document.getElementById(id + 'Tab');
+    tab.onclick = () => show([...panelTabs.children].indexOf(tab));
+  }
+  let touchX = 0, touchY = 0;
+  pages.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; touchY = event.touches[0].clientY; }, {passive:true});
+  pages.addEventListener('touchend', event => {
+    const dx = event.changedTouches[0].clientX - touchX;
+    const dy = event.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4)
+      show(Math.max(0, Math.min(panelTabs.children.length - 1, active + (dx < 0 ? 1 : -1))));
+  }, {passive:true});
+  function renderPanels(items) {
+    const selectedTab = panelTabs.children[active];
+    const incoming = new Set();
+    for (const item of items || []) {
+      if (!item.IsPlugin) continue;
+      incoming.add(item.Id);
+      let panel = pluginPages.get(item.Id);
+      if (!panel) {
+        const tab = document.createElement('button');
+        const section = document.createElement('section'); section.className = 'pluginPage';
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.title = item.Title;
+        frame.addEventListener('load', () => frame.contentWindow?.postMessage(
+          {type:'jtsa-plugin-state', state:panel.state}, '*'));
+        section.append(frame);
+        panelTabs.append(tab); pages.append(section);
+        panel = {tab, section, frame, html: null};
+        pluginPages.set(item.Id, panel);
+        tab.onclick = () => show([...panelTabs.children].indexOf(tab));
+      }
+      panel.tab.textContent = item.Title;
+      panel.frame.title = item.Title;
+      if (panel.html !== item.Html) {
+        panel.html = item.Html;
+        panel.frame.srcdoc = item.Html;
+      }
+      panel.state = item.State;
+      panel.frame.contentWindow?.postMessage({type:'jtsa-plugin-state', state:item.State}, '*');
+    }
+    for (const [id, panel] of pluginPages) {
+      if (incoming.has(id)) continue;
+      panel.tab.remove(); panel.section.remove(); pluginPages.delete(id);
+    }
+    let position = 0;
+    for (const item of items || []) {
+      const panel = item.IsPlugin ? pluginPages.get(item.Id) : {
+        tab: document.getElementById(item.Id + 'Tab'),
+        section: document.getElementById(item.Id + 'Page')
+      };
+      if (!panel?.tab || !panel.section) continue;
+      if (panelTabs.children[position] !== panel.tab)
+        panelTabs.insertBefore(panel.tab, panelTabs.children[position] || null);
+      if (pages.children[position] !== panel.section)
+        pages.insertBefore(panel.section, pages.children[position] || null);
+      position++;
+    }
+    const selectedIndex = [...panelTabs.children].indexOf(selectedTab);
+    show(selectedIndex < 0 ? 0 : selectedIndex);
+  }
+  async function api(path, options = {}) {
+    const response = await fetch(path, { cache: 'no-store', ...options, headers: { 'X-JTSA-Key': key, ...(options.headers || {}) } });
+    if (!response.ok) {
+      const error = new Error('通信エラー ' + response.status);
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  }
+  async function change(action, id, value, text) {
+    if (busy) return;
+    busy = true;
+    try {
+      await api('/controls/api/todo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, id, value, text }) });
+      await refresh();
+    } catch (error) { status.textContent = error.message; }
+    finally { busy = false; }
+  }
+  document.getElementById('addForm').onsubmit = event => {
+    event.preventDefault();
+    const input = document.getElementById('todoText');
+    const text = input.value.trim();
+    if (text) { change('add', null, null, text); input.value = ''; }
+  };
+  document.getElementById('clearDone').onclick = () => change('clearCompleted');
+  document.getElementById('noCurrent').onchange = () => change('clearCurrent');
+  function renderChat(items) {
+    const parent = document.getElementById('chatPage');
+    parent.replaceChildren();
+    if (!items.length) { parent.innerHTML = '<div class="empty">チャットはまだありません</div>'; return; }
+    for (const item of items) {
+      const card = document.createElement('div'); card.className = 'chat';
+      const avatar = document.createElement('img'); avatar.className = 'avatar'; avatar.alt = '';
+      avatar.loading = 'lazy'; avatar.referrerPolicy = 'no-referrer';
+      if (item.ProfileImageUrl) avatar.src = item.ProfileImageUrl;
+      avatar.onerror = () => avatar.removeAttribute('src');
+      const body = document.createElement('div'); body.className = 'chatBody';
+      const time = document.createElement('small');
+      time.textContent = new Date(item.Time).toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'});
+      const name = document.createElement('b'); name.textContent = item.User;
+      if (/^#[0-9a-fA-F]{6}$/.test(item.Color)) name.style.color = item.Color;
+      const message = document.createElement('div'); message.textContent = item.Message;
+      body.append(time, name, message); card.append(avatar, body); parent.append(card);
+    }
+  }
+  function renderTodos(items) {
+    const parent = document.getElementById('todos'); parent.replaceChildren();
+    document.getElementById('noCurrent').checked = !items.some(item => item.IsCurrent);
+    for (const item of items) {
+      const row = document.createElement('div'); row.className = 'row' + (item.IsCompleted ? ' done' : '');
+      const current = document.createElement('input'); current.type = 'radio'; current.name = 'current'; current.checked = item.IsCurrent;
+      current.setAttribute('aria-label', '現在のToDoにする'); current.onchange = () => change('current', item.Id);
+      const done = document.createElement('input'); done.type = 'checkbox'; done.checked = item.IsCompleted;
+      done.setAttribute('aria-label', '完了'); done.onchange = () => change('complete', item.Id, done.checked);
+      const label = document.createElement('span'); label.textContent = item.Text;
+      const remove = document.createElement('button'); remove.className = 'action delete'; remove.textContent = '削除';
+      remove.onclick = () => change('remove', item.Id);
+      row.append(current, done, label, remove); parent.append(row);
+    }
+  }
+  async function obsChange(action, item) {
+    if (busy) return;
+    busy = true;
+    try {
+      await api('/controls/api/obs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, accountId: item.AccountId, isSub: item.IsSub,
+          sceneName: item.SceneName, sourceName: item.SourceName ?? '',
+          containerName: item.ContainerName ?? '' })
+      });
+      await refresh();
+    } catch (error) { status.textContent = error.message; }
+    finally { busy = false; }
+  }
+  function renderObsGroup(parent, items, action) {
+    for (const [isSub, title] of [[false, 'メインOBS'], [true, 'サブOBS']]) {
+      const groupItems = items.filter(item => item.IsSub === isSub);
+      if (!groupItems.length) continue;
+      const group = document.createElement('div'); group.className = 'obsGroup';
+      const heading = document.createElement('h3'); heading.textContent = title;
+      const grid = document.createElement('div'); grid.className = 'obsGrid';
+      for (const item of groupItems) {
+        const button = document.createElement('button');
+        const selected = action === 'scene' ? item.IsCurrent : item.IsVisible;
+        button.className = 'obsButton' + (selected ? ' active' : '');
+        button.textContent = item.DisplayName;
+        if (action === 'source') {
+          const detail = document.createElement('small'); detail.textContent = item.DetailText;
+          button.append(detail);
+        }
+        button.onclick = () => obsChange(action, item);
+        grid.append(button);
+      }
+      group.append(heading, grid); parent.append(group);
+    }
+  }
+  function renderObs(scenes, sources) {
+    const sceneParent = document.getElementById('scenes'); sceneParent.replaceChildren();
+    const sourceParent = document.getElementById('sources'); sourceParent.replaceChildren();
+    if (!scenes.length) sceneParent.innerHTML = '<div class="empty">登録済みのシーンがありません</div>';
+    else renderObsGroup(sceneParent, scenes, 'scene');
+    if (!sources.length) sourceParent.innerHTML = '<div class="empty">登録済みのソースがありません</div>';
+    else renderObsGroup(sourceParent, sources, 'source');
+  }
+  async function refresh() {
+    if (!key) return;
+    try {
+      const data = await api('/controls/api/snapshot');
+      status.textContent = '接続中';
+      pairScreen.classList.add('hidden');
+      document.getElementById('category').textContent = data.Category + ' のToDo';
+      renderChat(data.Chat); renderTodos(data.Todos); renderObs(data.Scenes, data.Sources);
+      renderPanels(data.Panels);
+    } catch (error) {
+      status.textContent = error.message;
+      if (error.status === 403) {
+        key = null;
+        localStorage.removeItem('jtsa-panel-key');
+        pairError.textContent = '接続コードを入力してください。';
+        pairScreen.classList.remove('hidden');
+        stopPreview();
+      }
+    }
+  }
+  if (key) refresh();
+  else status.textContent = '接続コードを入力してください';
+  setInterval(refresh, 1500);
+</script>
+</body>
+</html>

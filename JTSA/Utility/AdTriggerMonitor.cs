@@ -99,7 +99,11 @@ internal sealed class AdTriggerMonitor(TwitchAPI api, string broadcasterId, Acti
                         if (now - lastError > TimeSpan.FromMinutes(5))
                         {
                             lastError = now;
-                            log($"CM予定取得失敗：{ex.GetType().Name}。Twitchを再認証し channel:read:ads を許可してください。");
+                            var detail = ex is HttpRequestException httpError && httpError.StatusCode is { } status
+                                ? $"HTTP {(int)status}" : ex.GetType().Name;
+                            var guidance = ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden }
+                                ? "。Twitchを再認証し channel:read:ads を許可してください。" : "";
+                            log($"CM予定取得失敗：{detail}{guidance}");
                         }
                     }
                 }

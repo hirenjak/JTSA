@@ -2,6 +2,7 @@ using JTSA.Dao;
 using JTSA.Models;
 using JTSA.Utility;
 using Microsoft.Win32;
+using Newtonsoft.Json.Linq;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -15,16 +16,22 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
 {
     private string headerName = string.Empty;
     private bool isActive;
+    private long? folderId;
+    private string folderDisplayName = "フォルダなし";
     private bool doShoutout;
     private bool doGrantVip;
     public long HeaderId { get; set; }
     public string HeaderName { get => headerName; set { headerName = value; Changed(); } }
+    public long? FolderId { get => folderId; set { folderId = value; Changed(); } }
+    public string FolderDisplayName { get => folderDisplayName; set { folderDisplayName = value; Changed(); } }
     public bool IsActive { get => isActive; set { isActive = value; Changed(); } }
     public bool IsRaid { get; set; }
     public bool IsSubscribe { get; set; }
+    public bool IsGiftSubscription { get; set; }
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsStreamInfoApplied { get; set; }
     public bool IsHourly { get; set; }
     public bool IsAdStart { get; set; }
     public bool IsAdEnd { get; set; }
@@ -53,9 +60,11 @@ public class StreamExpansionHeaderForm : INotifyPropertyChanged
             var items = new List<string>();
             if (IsRaid) items.Add("レイド");
             if (IsSubscribe) items.Add("サブスク");
+            if (IsGiftSubscription) items.Add("サブギフ");
             if (IsBits) items.Add("ビッツ");
             if (IsFirstChat) items.Add("チャット入室");
             if (IsFollow) items.Add("フォロー");
+            if (IsStreamInfoApplied) items.Add("JTSAから配信情報反映");
             if (IsAdStart) items.Add("CM開始");
             if (IsAdEnd) items.Add("CM終了予定");
             if (IsAdUpcoming) items.Add($"CM開始{AdAdvanceMinutes}分前");
@@ -121,6 +130,7 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     private bool isChatSettingsExpanded;
     private bool isTwitchSettingsExpanded;
     private bool isObsSettingsExpanded;
+    private bool isVtsSettingsExpanded;
     private string imageContent = string.Empty;
     private string audioContent = string.Empty;
     private string chatContent = string.Empty;
@@ -214,8 +224,19 @@ public class StreamExpansionItemForm : INotifyPropertyChanged
     public bool IsChatSettingsExpanded { get => isChatSettingsExpanded; set { isChatSettingsExpanded = value; Changed(); } }
     public bool IsTwitchSettingsExpanded { get => isTwitchSettingsExpanded; set { isTwitchSettingsExpanded = value; Changed(); } }
     public bool IsObsSettingsExpanded { get => isObsSettingsExpanded; set { isObsSettingsExpanded = value; Changed(); } }
+    public bool IsVtsSettingsExpanded { get => isVtsSettingsExpanded; set { isVtsSettingsExpanded = value; Changed(); } }
     public ObservableCollection<StreamExpansionObsTextForm> ObsTextForms { get; } = [];
+    public ObservableCollection<StreamExpansionVtsHotkeyForm> VtsHotkeyForms { get; } = [];
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
+}
+
+public class StreamExpansionVtsHotkeyForm : INotifyPropertyChanged
+{
+    private string hotkeyId = string.Empty;
+    public string HotkeyId { get => hotkeyId; set { hotkeyId = value ?? string.Empty; Changed(); } }
+    public ObservableCollection<VtsNamedOption> Hotkeys { get; } = [];
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
@@ -243,10 +264,17 @@ public class StreamExpansionChannelPointForm
     public string DisplayName { get; set; } = string.Empty;
 }
 
+public class StreamExpansionFolderOption
+{
+    public long? Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
 public partial class StereamExpansionPanel : UserControl , INotifyPropertyChanged
 {
     private StreamExpansionHeaderForm? selectedHeader;
     private StreamExpansionHeaderForm? editingHeader;
+    private long? editingFolderId;
     private bool isReloading;
     private bool isSwitchingHeader;
     private bool isSaving;
@@ -254,6 +282,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
     private StreamExpansionPlaceholderHelpWindow? placeholderHelpWindow;
 
     public ObservableCollection<StreamExpansionHeaderForm> HeaderFormList { get; } = [];
+    public ObservableCollection<StreamExpansionFolderOption> FolderOptions { get; } = [];
     public ObservableCollection<StreamExpansionItemForm> ItemFormList { get; } = [];
     public ObservableCollection<StreamExpansionChannelPointForm> ChannelPointFormList { get; } = [];
 
@@ -269,6 +298,8 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         InitializeComponent();
         ImplementationTabControl.Items.Remove(PlaceholderHelpTab);
         DataContext = this;
+        System.Windows.Data.CollectionViewSource.GetDefaultView(HeaderFormList).GroupDescriptions.Add(
+            new System.Windows.Data.PropertyGroupDescription(nameof(StreamExpansionHeaderForm.FolderDisplayName)));
 
 
         Loaded += StereamExpansionPanel_Loaded;
@@ -348,6 +379,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         isReloading = true;
         try
         {
+        FolderOptions.Clear();
+        FolderOptions.Add(new() { Name = "フォルダなし" });
+        foreach (var folder in DAO_StreamExpansion.SelectFolders())
+            FolderOptions.Add(new() { Id = folder.Id, Name = folder.Name });
+
         // ヘッダーリストの初期化
         HeaderFormList.Clear();
 
@@ -359,12 +395,16 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             {
                 HeaderId = x.Id,
                 HeaderName = x.Name,
+                FolderId = x.FolderId,
+                FolderDisplayName = FolderOptions.FirstOrDefault(f => f.Id == x.FolderId)?.Name ?? "フォルダなし",
                 IsActive = x.IsActive,
                 IsRaid = x.IsRaid,
                 IsSubscribe = x.IsSubscribe,
+                IsGiftSubscription = x.IsGiftSubscription,
                 IsBits = x.IsBits,
                 IsFirstChat = x.IsFirstChat,
                 IsFollow = x.IsFollow,
+                IsStreamInfoApplied = x.IsStreamInfoApplied,
                 IsHourly = x.IsHourly,
                 AdAdvanceMinutes = x.AdAdvanceMinutes,
                 IsAdUpcoming = x.IsAdUpcoming,
@@ -413,6 +453,49 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
 
         HeaderFormList.Add(item); SelectedHeader = item; StreamExpansionListBox.SelectedItem = item; ClearItemForms();
         SaveCurrent();
+    }
+
+    private void AddFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        var input = new TextBox { Margin = new Thickness(12), MinWidth = 240 };
+        var ok = new Button { Content = "追加", Width = 80, Height = 28, Margin = new Thickness(12, 0, 12, 12), HorizontalAlignment = HorizontalAlignment.Right, IsDefault = true };
+        var layout = new StackPanel();
+        layout.Children.Add(input);
+        layout.Children.Add(ok);
+        var dialog = new Window { Title = "フォルダを追加", Content = layout, SizeToContent = SizeToContent.WidthAndHeight,
+            ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = Window.GetWindow(this) };
+        ok.Click += (_, _) =>
+        {
+            var name = input.Text.Trim();
+            if (string.IsNullOrWhiteSpace(name)) return;
+            if (FolderOptions.Any(x => x.Id.HasValue && x.Name.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                MessageBox.Show(dialog, "同じ名前のフォルダがあります。", "配信拡張");
+                return;
+            }
+            dialog.DialogResult = true;
+        };
+        if (dialog.ShowDialog() != true) return;
+        var id = DAO_StreamExpansion.AddFolder(input.Text);
+        FolderOptions.Add(new() { Id = id, Name = input.Text.Trim() });
+        RefreshFolderGroups();
+    }
+
+    private void FolderSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (isReloading || isSwitchingHeader || SelectedHeader is null ||
+            SelectedHeader != editingHeader) return;
+        (sender as ComboBox)?.GetBindingExpression(ComboBox.SelectedValueProperty)?.UpdateSource();
+        if (SelectedHeader.FolderId == editingFolderId) return;
+        editingFolderId = SelectedHeader.FolderId;
+        SelectedHeader.FolderDisplayName = FolderOptions.FirstOrDefault(x => x.Id == SelectedHeader.FolderId)?.Name ?? "フォルダなし";
+        RefreshFolderGroups();
+        SaveCurrent();
+    }
+
+    private void RefreshFolderGroups()
+    {
+        System.Windows.Data.CollectionViewSource.GetDefaultView(HeaderFormList).Refresh();
     }
 
     private void OpenTriggerSettingsButton_Click(object sender, RoutedEventArgs e)
@@ -498,6 +581,12 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             ToggleExclusiveSettings(item, nameof(item.IsObsSettingsExpanded));
     }
 
+    private void VtsSettingsToggleButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionItemForm item)
+            ToggleExclusiveSettings(item, nameof(item.IsVtsSettingsExpanded));
+    }
+
     private static void ToggleExclusiveSettings(StreamExpansionItemForm item, string targetProperty)
     {
         var shouldOpen = targetProperty switch
@@ -507,6 +596,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             nameof(item.IsChatSettingsExpanded) => !item.IsChatSettingsExpanded,
             nameof(item.IsTwitchSettingsExpanded) => !item.IsTwitchSettingsExpanded,
             nameof(item.IsObsSettingsExpanded) => !item.IsObsSettingsExpanded,
+            nameof(item.IsVtsSettingsExpanded) => !item.IsVtsSettingsExpanded,
             _ => false
         };
 
@@ -515,6 +605,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         item.IsChatSettingsExpanded = false;
         item.IsTwitchSettingsExpanded = false;
         item.IsObsSettingsExpanded = false;
+        item.IsVtsSettingsExpanded = false;
 
         if (!shouldOpen) return;
         switch (targetProperty)
@@ -524,6 +615,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
             case nameof(item.IsChatSettingsExpanded): item.IsChatSettingsExpanded = true; break;
             case nameof(item.IsTwitchSettingsExpanded): item.IsTwitchSettingsExpanded = true; break;
             case nameof(item.IsObsSettingsExpanded): item.IsObsSettingsExpanded = true; break;
+            case nameof(item.IsVtsSettingsExpanded): item.IsVtsSettingsExpanded = true; break;
         }
     }
 
@@ -551,6 +643,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         {
             ClearItemForms();
             editingHeader = SelectedHeader;
+            editingFolderId = editingHeader?.FolderId;
 
             if (editingHeader is null || editingHeader.HeaderId == 0) return;
             foreach (var group in DAO_StreamExpansion.SelectItems(editingHeader.HeaderId).GroupBy(x => x.SortNumber))
@@ -591,6 +684,11 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                                 SourceName = item.ObsSourceName,
                                 TextTemplate = item.Content
                             });
+                            break;
+                        case "VtsHotkey":
+                            var hotkey = new StreamExpansionVtsHotkeyForm { HotkeyId = item.Content };
+                            VtsNamedOptionCatalog.EnsureOption(hotkey.Hotkeys, item.Content);
+                            form.VtsHotkeyForms.Add(hotkey);
                             break;
                         default:
                             form.IsAudio = true;
@@ -786,6 +884,70 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         }
     }
 
+    private async void AddVtsHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is not StreamExpansionItemForm item) return;
+        var form = new StreamExpansionVtsHotkeyForm();
+        item.VtsHotkeyForms.Add(form);
+        await ReloadVtsHotkeysAsync(form, showError: false);
+        SaveCurrent();
+    }
+
+    private void DeleteVtsHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.Tag is StreamExpansionItemForm item &&
+            (sender as Button)?.DataContext is StreamExpansionVtsHotkeyForm hotkey)
+        {
+            item.VtsHotkeyForms.Remove(hotkey);
+            SaveCurrent();
+        }
+    }
+
+    private async void ReloadVtsHotkeysButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is StreamExpansionVtsHotkeyForm hotkey)
+            await ReloadVtsHotkeysAsync(hotkey, showError: true);
+    }
+
+    private async void TestVtsHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as Button)?.DataContext is not StreamExpansionVtsHotkeyForm hotkey ||
+            string.IsNullOrWhiteSpace(hotkey.HotkeyId)) return;
+        try
+        {
+            await VtsTriggerService.ExecuteHotkeyAsync(hotkey.HotkeyId);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"VTSホットキーを実行できませんでした。\n{ex.GetBaseException().Message}", "VTS連携");
+        }
+    }
+
+    private static async Task ReloadVtsHotkeysAsync(StreamExpansionVtsHotkeyForm form, bool showError)
+    {
+        try
+        {
+            if (Application.Current.MainWindow is not MainWindow mainWindow || !mainWindow.VtsClient.IsAuthenticated)
+                throw new InvalidOperationException("VTSに接続されていません。");
+            var response = await mainWindow.VtsClient.GetHotkeysAsync();
+            var options = (response["data"]?["availableHotkeys"] as JArray)?
+                .OfType<JObject>()
+                .Select(item => new VtsNamedOption
+                {
+                    Id = item.Value<string>("hotkeyID") ?? string.Empty,
+                    Name = item.Value<string>("name") ?? item.Value<string>("hotkeyID") ?? string.Empty
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+                .ToList() ?? [];
+            VtsNamedOptionCatalog.ReplaceKeeping(form.Hotkeys, options, [form.HotkeyId]);
+        }
+        catch (Exception ex)
+        {
+            if (showError)
+                MessageBox.Show($"VTSホットキー一覧を取得できませんでした。\n{ex.GetBaseException().Message}", "VTS連携");
+        }
+    }
+
 
     /// <summary>
     /// 
@@ -835,18 +997,24 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
                     UpdatedDateTime = DateTime.Now
                 });
             }
+            foreach (var hotkey in form.VtsHotkeyForms)
+                AddSaveItem(saveItems, !string.IsNullOrWhiteSpace(hotkey.HotkeyId), "VtsHotkey",
+                    hotkey.HotkeyId.Trim(), form.Weight, 100, groupIndex);
         }
 
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader
         {
             Id = header.HeaderId,
             Name = header.HeaderName.Trim(),
+            FolderId = header.FolderId,
             IsActive = header.IsActive,
             IsRaid = header.IsRaid,
             IsSubscribe = header.IsSubscribe,
+            IsGiftSubscription = header.IsGiftSubscription,
             IsBits = header.IsBits,
             IsFirstChat = header.IsFirstChat,
             IsFollow = header.IsFollow,
+            IsStreamInfoApplied = header.IsStreamInfoApplied,
             IsHourly = header.IsHourly,
             AdAdvanceMinutes = header.AdAdvanceMinutes,
             IsAdUpcoming = header.IsAdUpcoming,

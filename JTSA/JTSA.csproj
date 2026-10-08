@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <VersionPrefix>1.3</VersionPrefix>
+    <VersionPrefix>1.5</VersionPrefix>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -41,10 +41,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0-preview.6.26359.118" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.9" />
     <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="obs-websocket-dotnet" Version="5.0.1" />
     <PackageReference Include="TwitchLib.Api" Version="3.10.1-preview.199.347b75c" />
     <PackageReference Include="TwitchLib.Client" Version="4.0.1" />
@@ -55,6 +57,9 @@
 
   <ItemGroup>
     <Resource Include="Resources\jtsa.ico" />
+    <EmbeddedResource Include="Resources\RemotePanel.html" LogicalName="JTSA.RemotePanel.html" />
+    <EmbeddedResource Include="Resources\ThirdParty\NoSleep.min.js" LogicalName="JTSA.NoSleep.min.js" />
+    <EmbeddedResource Include="Resources\ThirdParty\NoSleep.LICENSE.txt" LogicalName="JTSA.NoSleep.LICENSE.txt" />
   </ItemGroup>
 
   <ItemGroup>

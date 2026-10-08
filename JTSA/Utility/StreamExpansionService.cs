@@ -8,13 +8,16 @@ using System.Windows;
 
 namespace JTSA.Utility;
 
-internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, Bits, ObsStreamStart, Hourly, ScheduledTime, AdStart, AdEnd, AdUpcoming }
+internal enum StreamExpansionTriggerType { Chat, FirstChat, Follow, ChannelPoint, Raid, Subscribe, GiftSubscription, Bits, ObsStreamStart, StreamInfoApplied, Hourly, ScheduledTime, AdStart, AdEnd, AdUpcoming }
 
 internal sealed record StreamExpansionChatUserContext(
     bool IsBroadcaster,
     bool IsModerator,
     bool IsVip,
     bool IsSubscriber);
+
+internal sealed record StreamExpansionSubscriptionInfo(bool IsGift, int Months = 0,
+    string Sender = "", string Recipient = "");
 
 internal sealed class StreamExpansionService
 {
@@ -29,12 +32,13 @@ internal sealed class StreamExpansionService
         string broadcasterId = "",
         string accessToken = "",
         string channelPointInput = "",
-        StreamExpansionChatUserContext? chatUser = null)
+        StreamExpansionChatUserContext? chatUser = null,
+        StreamExpansionSubscriptionInfo? subscription = null)
     {
         try
         {
             PluginExpansionTriggerHub.Publish(new ExpansionTriggerInfo(type.ToString(), value ?? ""));
-            _ = VtsTriggerService.HandleAsync(type, value ?? "");
+            _ = VtsTriggerService.HandleAsync(type, value);
 
             var selectedContext = GetSelectedAccountContext();
             if (!string.IsNullOrWhiteSpace(selectedContext.BroadcasterId) &&
@@ -49,6 +53,11 @@ internal sealed class StreamExpansionService
                 .Where(rule => Matches(rule, type, value) && HasChatPermission(rule, type, chatUser))
                 .ToList();
 
+            if (type is StreamExpansionTriggerType.AdStart or StreamExpansionTriggerType.AdEnd or StreamExpansionTriggerType.AdUpcoming)
+            {
+                LogSuccess($"CMトリガー受信：{type}（値 {value}、一致ルール {rules.Count}件）");
+            }
+
             if (type == StreamExpansionTriggerType.Raid)
             {
                 LogSuccess($"レイド通知受信：{value}（一致ルール {rules.Count}件）");
@@ -61,7 +70,7 @@ internal sealed class StreamExpansionService
             // Run each matching rule independently so every delay starts at the trigger time.
             await Task.WhenAll(rules.Select(rule =>
                 ExecuteRuleAsync(rule, type, value, raidPlaceholders, chatPlaceholders,
-                    triggerObs, broadcasterId, accessToken, channelPointInput)));
+                    triggerObs, broadcasterId, accessToken, channelPointInput, subscription)));
         }
         catch (Exception ex)
         {
@@ -78,7 +87,8 @@ internal sealed class StreamExpansionService
         string triggerObs,
         string broadcasterId,
         string accessToken,
-        string channelPointInput)
+        string channelPointInput,
+        StreamExpansionSubscriptionInfo? subscription)
     {
         if (rule.DelaySeconds > 0)
         {
@@ -97,7 +107,7 @@ internal sealed class StreamExpansionService
             var selectedGroup = ChooseByWeight(groups);
             var resolvedChannelPointInput = ResolveChannelPointInput(rule, type, value, channelPointInput);
             var triggerValues = await CreateTriggerValuesAsync(
-                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, resolvedChannelPointInput);
+                selectedGroup, type, value, triggerObs, broadcasterId, accessToken, resolvedChannelPointInput, subscription);
             tasks.AddRange(selectedGroup.Where(item => item.ActionType != "ObsText").Select(item =>
                 ExecuteAsync(item, raidPlaceholders, chatPlaceholders, triggerValues, broadcasterId, accessToken)));
             foreach (var item in selectedGroup.Where(item => item.ActionType == "ObsText"))
@@ -254,6 +264,9 @@ internal sealed class StreamExpansionService
             case StreamExpansionTriggerType.Subscribe:
                 return rule.IsSubscribe;
 
+            case StreamExpansionTriggerType.GiftSubscription:
+                return rule.IsGiftSubscription;
+
             case StreamExpansionTriggerType.Bits:
                 return rule.IsBits;
 
@@ -261,6 +274,9 @@ internal sealed class StreamExpansionService
                 return string.Equals(value, "sub", StringComparison.OrdinalIgnoreCase)
                     ? rule.IsObsStreamStartSub
                     : rule.IsObsStreamStartMain;
+
+            case StreamExpansionTriggerType.StreamInfoApplied:
+                return rule.IsStreamInfoApplied;
         }
 
         return false;
@@ -376,6 +392,17 @@ internal sealed class StreamExpansionService
                 }
                 break;
 
+            case "VtsHotkey":
+                try
+                {
+                    await VtsTriggerService.ExecuteHotkeyAsync(item.Content);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"VTSホットキー実行失敗（{item.Content}）：{ex.GetBaseException().Message}");
+                }
+                break;
+
             case "Image":
                 StreamExpansionOverlayService.ShowImage(StreamExpansionImageSettings.Decode(item.Content));
                 break;
@@ -424,7 +451,8 @@ internal sealed class StreamExpansionService
         string triggerObs,
         string broadcasterId,
         string accessToken,
-        string channelPointInput)
+        string channelPointInput,
+        StreamExpansionSubscriptionInfo? subscription)
     {
         var needsStreamInfo = items.Any(item =>
             item.Content.Contains(StreamExpansionPlaceholderReplacer.StreamTitlePlaceholder, StringComparison.OrdinalIgnoreCase) ||
@@ -463,7 +491,14 @@ internal sealed class StreamExpansionService
             StreamSupportTracker.FormatBitsUsers(),
             StreamSupportTracker.FormatSubscribeUsers(),
             StreamSupportTracker.FormatRaidUsers(),
-            StreamSupportTracker.FormatFollowUsers());
+            StreamSupportTracker.FormatFollowUsers(),
+            type == StreamExpansionTriggerType.Bits ? value : string.Empty,
+            type == StreamExpansionTriggerType.Subscribe && subscription?.IsGift == false
+                ? subscription.Months.ToString(System.Globalization.CultureInfo.InvariantCulture) : string.Empty,
+            type == StreamExpansionTriggerType.GiftSubscription && subscription?.IsGift == true
+                ? subscription.Sender : string.Empty,
+            type == StreamExpansionTriggerType.GiftSubscription && subscription?.IsGift == true
+                ? subscription.Recipient : string.Empty);
     }
 
     private static string ToTriggerName(StreamExpansionTriggerType type) => type switch
@@ -472,6 +507,7 @@ internal sealed class StreamExpansionService
         StreamExpansionTriggerType.FirstChat => "first_chat",
         StreamExpansionTriggerType.ChannelPoint => "channel_point",
         StreamExpansionTriggerType.ObsStreamStart => "obs_stream_start",
+        StreamExpansionTriggerType.StreamInfoApplied => "stream_info_applied",
         _ => type.ToString().ToLowerInvariant()
     };
 

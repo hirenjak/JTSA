@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>JTSA-win-Setup</AssemblyName>
+    <ApplicationIcon>..\..\JTSA\Resources\jtsa.ico</ApplicationIcon>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(VelopackSetupPath)' != ''">
+    <EmbeddedResource Include="$(VelopackSetupPath)" LogicalName="VelopackSetup" />
+  </ItemGroup>
+</Project>

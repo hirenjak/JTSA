@@ -38,9 +38,9 @@ namespace JTSA.Dao
         /// SELECT * FROM M_Category ORDER BY LastUseDateTime DESC
         /// </summary>
         /// <returns>検索結果</returns>
-        public static T_GamePlaylistHeader SelectHeaderById(long gamePlaylistId)
+        public static T_GamePlaylistHeader? SelectHeaderById(long gamePlaylistId)
         {
-            T_GamePlaylistHeader result;
+            T_GamePlaylistHeader? result;
 
             using (var db = new AppDbContext())
             {
@@ -246,11 +246,12 @@ namespace JTSA.Dao
                 }
                 else
                 {
-                    var entityPlayListItem = db.T_GamePlaylistItem.Where(x => x.GamePlayListId == selectHeaderExeResult.GamePlayListId).ToList();
+                    var playlistId = selectHeaderExeResult!.GamePlayListId;
+                    var entityPlayListItem = db.T_GamePlaylistItem.Where(x => x.GamePlayListId == playlistId).ToList();
 
                     if (entityPlayListItem != null)
                     {
-                        db.T_GamePlaylistItem.Where(x => x.GamePlayListId == selectHeaderExeResult.GamePlayListId);
+                        db.T_GamePlaylistItem.Where(x => x.GamePlayListId == playlistId);
                     }
 
                     // SQL実行

@@ -83,14 +83,27 @@ namespace JTSA.Dao
         }
 
 
-        public static async Task<M_Category?> InsertDataCreate(string categoryId, string steamUrl = "")
+        public static async Task<M_Category?> InsertDataCreate(
+            string categoryId,
+            string steamUrl = "",
+            string? displayName = null,
+            string? boxArtUrl = null)
         {
+            // 検索結果から名称と画像を受け取れる場合は、登録のためだけにTwitchへ
+            // 再問い合わせしない。補助APIの一時失敗でカテゴリ追加まで失敗するのを防ぐ。
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                var selectCategory = await TwitchHelper.GetCategoryByGameId(categoryId);
+                if (selectCategory == null) return null;
 
-            var selectCategory = await TwitchHelper.GetCategoryByGameId(categoryId);
-            if (selectCategory == null) return null;
+                displayName = selectCategory.Name;
+                boxArtUrl ??= selectCategory.BoxArtUrl;
+            }
+
+            boxArtUrl ??= string.Empty;
 
             var japaneseDisplayName = await IgdbService.GetJapaneseGameNameAsync(categoryId)
-                ?? selectCategory.Name;
+                ?? displayName;
 
             // Steamに無いカテゴリではappIdが取れないため、ヘッダー画像もnullになる
             var appId = SteamHelper.GetSteamAppId(steamUrl);
@@ -101,9 +114,9 @@ namespace JTSA.Dao
             return new M_Category
             {
                 CategoryId = categoryId,
-                DisplayName = selectCategory.Name,
+                DisplayName = displayName,
                 JapaneseDisplayName = japaneseDisplayName,
-                BoxArtUrl = selectCategory.BoxArtUrl,
+                BoxArtUrl = boxArtUrl,
                 SteamHeaderArtUrl = steamHeaderArtUrl,
                 SteamUrl = steamUrl,
                 LastUsedDateTime = DateTime.Now,

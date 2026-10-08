@@ -25,7 +25,7 @@ namespace JTSA.Dao
             ChatOverlayHeight = 13,
             ChatOverlayShowUserIcon = 14,
             ChatOverlayFontSize = 15,
-            AutoStartRegisteredApps = 16,
+            // 16 は旧・外部アプリ自動起動設定（現在はプラグイン側JSONへ移行）
             BouyomiEnabled = 17,
             BouyomiEndpoint = 18,
             SpeechEngine = 19,
@@ -84,18 +84,28 @@ namespace JTSA.Dao
             ChatManagementPanelVisibility = 52,
             /// <summary>チャット読み上げをしないTwitchログイン名（改行区切り）</summary>
             SpeechMutedUserLogins = 53,
-            /// <summary>VTube Studio WebSocket接続URL</summary>
-            VtsWebSocketUrl = 54,
-            /// <summary>VTube Studio プラグイン認証トークン</summary>
-            VtsAuthToken = 55,
-            /// <summary>起動時にVTube Studioへ自動接続するか</summary>
-            VtsAutoConnect = 56,
-            /// <summary>VTSトリガーとコマンドの対応ルール</summary>
-            VtsTriggerRules = 57,
             /// <summary>チャット読み上げの最大文字数（0は制限なし）</summary>
-            SpeechMaxChars = 58,
+            SpeechMaxChars = 54,
             /// <summary>同じスタンプ名の連続読み上げ上限（0は制限なし）</summary>
-            SpeechMaxSameToken = 59,
+            SpeechMaxSameToken = 55,
+            /// <summary>VTube Studio WebSocket接続URL</summary>
+            VtsWebSocketUrl = 56,
+            /// <summary>VTube Studio プラグイン認証トークン</summary>
+            VtsAuthToken = 57,
+            /// <summary>起動時にVTube Studioへ自動接続するか</summary>
+            VtsAutoConnect = 58,
+            /// <summary>VTSトリガーとコマンドの対応ルール</summary>
+            VtsTriggerRules = 59,
+            /// <summary>JTSA起動時に開くプラグインID一覧</summary>
+            AutoStartPlugins = 60,
+            /// <summary>JTSA起動時にスマホパネル用サーバーを起動するか</summary>
+            RemotePanelAutoStart = 61,
+            /// <summary>スマホパネルでペアリング済み端末を識別するキー</summary>
+            RemotePanelAccessKey = 62,
+            /// <summary>チャット入力欄で使用する定型文</summary>
+            ChatTemplates = 63,
+            /// <summary>スマホパネルの表示順（パネルIDのJSON配列）</summary>
+            RemotePanelOrder = 64,
         }
 
 

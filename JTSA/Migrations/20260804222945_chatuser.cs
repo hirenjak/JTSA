@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace JTSA.Migrations
 {
     /// <inheritdoc />
-    public partial class chatuser : Migration
+    public partial class ChatUser : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

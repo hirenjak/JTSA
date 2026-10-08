@@ -1,5 +1,7 @@
 ﻿using JTSA.Models;
+using JTSA.TwitchIF;
 using System;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,6 +30,7 @@ namespace JTSA.Dao
                     ProfielImageUrl = record.ProfielImageUrl,
                     StreamingPlatform = record.StreamingPlatform,
                     StreamingUrl = record.StreamingUrl,
+                    AppPoints = record.AppPoints,
                     IsFriend = record.IsFriend,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
@@ -62,6 +65,7 @@ namespace JTSA.Dao
                     ProfielImageUrl = record.ProfielImageUrl,
                     StreamingPlatform = record.StreamingPlatform,
                     StreamingUrl = record.StreamingUrl,
+                    AppPoints = record.AppPoints,
                     IsFriend = record.IsFriend,
                     LastUsedDateTime = record.LastUsedDateTime,
                     CreatedDateTime = record.CreatedDateTime,
@@ -77,11 +81,70 @@ namespace JTSA.Dao
         /// </summary>
         /// <param name="db"></param>
         /// <returns></returns>
-        public static M_User SelectOneByUserId(string userId)
+        public static M_User? SelectOneByUserId(string userId)
         {
             using var db = new AppDbContext();
 
-            return db.M_User.SingleOrDefault(x => x.UserId == userId);
+            return db.M_User.AsNoTracking().SingleOrDefault(x => x.UserId == userId);
+        }
+
+        /// <summary>接続中ユーザーの保存済みプロフィール画像をまとめて読む。</summary>
+        public static Dictionary<string, string> SelectCachedProfileImages(IEnumerable<string> userIds)
+        {
+            using var db = new AppDbContext();
+            var images = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var ids in userIds.Distinct(StringComparer.Ordinal).Chunk(100))
+            {
+                foreach (var user in db.M_User.AsNoTracking()
+                    .Where(x => ids.Contains(x.UserId) && x.ProfielImageUrl != null && x.ProfielImageUrl != "")
+                    .Select(x => new { x.UserId, x.ProfielImageUrl }))
+                {
+                    images[user.UserId] = user.ProfielImageUrl!;
+                }
+            }
+
+            return images;
+        }
+
+        /// <summary>未保存のTwitchプロフィール画像をユーザーキャッシュへ保存する。</summary>
+        public static void CacheProfileImages(IEnumerable<TwitchUserIF> profiles)
+        {
+            using var db = new AppDbContext();
+            var now = DateTime.Now;
+            foreach (var batch in profiles
+                .Where(x => !string.IsNullOrWhiteSpace(x.UserId) &&
+                            !string.IsNullOrWhiteSpace(x.ProfileImageUrl))
+                .DistinctBy(x => x.UserId)
+                .Chunk(100))
+            {
+                var ids = batch.Select(x => x.UserId).ToArray();
+                var existing = db.M_User.Where(x => ids.Contains(x.UserId))
+                    .ToDictionary(x => x.UserId, StringComparer.Ordinal);
+                foreach (var profile in batch)
+                {
+                    if (existing.TryGetValue(profile.UserId, out var user))
+                    {
+                        if (!string.IsNullOrWhiteSpace(user.ProfielImageUrl)) continue;
+                        user.ProfielImageUrl = profile.ProfileImageUrl;
+                        user.UpdatedDateTime = now;
+                    }
+                    else
+                    {
+                        db.M_User.Add(new M_User
+                        {
+                            UserId = profile.UserId,
+                            LoginId = profile.Login,
+                            DisplayName = profile.DisplayName,
+                            ProfielImageUrl = profile.ProfileImageUrl,
+                            CreatedDateTime = now,
+                            UpdatedDateTime = now,
+                            LastUsedDateTime = now
+                        });
+                    }
+                }
+            }
+
+            db.SaveChanges();
         }
 
 
@@ -117,6 +180,7 @@ namespace JTSA.Dao
             using var db = new AppDbContext();
 
             var targetRecord = SelectOneByUserId(updateData.UserId);
+            if (targetRecord == null) return false;
             updateData.CreatedDateTime = targetRecord.CreatedDateTime;
 
             db.M_User.Update(updateData);
@@ -134,6 +198,7 @@ namespace JTSA.Dao
         public static bool UpdateLastUse(string broadcastId)
         {
             var targetRecord = SelectOneByUserId(broadcastId);
+            if (targetRecord == null) return false;
 
             targetRecord.LastUsedDateTime = DateTime.Now;
 

@@ -8,9 +8,20 @@ namespace JTSA.Forms
         public required string UserId { get; set; }
         public required string UserName { get; set; }
         public required string DisplayName { get; set; }
-        public required string ProfileImageUrl { get; set; }
+        private string profileImageUrl = string.Empty;
+        public required string ProfileImageUrl
+        {
+            get => profileImageUrl;
+            set
+            {
+                if (profileImageUrl == value) return;
+                profileImageUrl = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ProfileImageUrl)));
+            }
+        }
         public required DateTime LastChatDateTime { get; set; }
         public int MessageCount { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
 
         private bool isSpeechMuted;
         public bool IsSpeechMuted

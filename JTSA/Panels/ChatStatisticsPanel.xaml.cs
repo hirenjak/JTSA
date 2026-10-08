@@ -24,8 +24,8 @@ namespace JTSA.Panels
             remove => RemoveHandler(CloseRequestedEvent, value);
         }
 
-        public ObservableCollection<ChatUserStatisticsForm> UserStatistics { get; } = new();
-        public ObservableCollection<ChatCalendarDayForm> CalendarDays { get; } = new();
+        public BatchObservableCollection<ChatUserStatisticsForm> UserStatistics { get; } = new();
+        public BatchObservableCollection<ChatCalendarDayForm> CalendarDays { get; } = new();
         private Dictionary<DateTime, int> selectedUserChatCountsByDate = new();
         private Dictionary<string, int> selectedUserChatCountsByStream = new();
         private List<Models.T_StreamChatUserCount> selectedUserStreamCounts = [];
@@ -162,7 +162,7 @@ namespace JTSA.Panels
             var daysFromSunday = (int)displayedCalendarMonth.DayOfWeek;
             var calendarStart = displayedCalendarMonth.AddDays(-daysFromSunday);
 
-            CalendarDays.Clear();
+            var days = new List<ChatCalendarDayForm>(42);
             for (var index = 0; index < 42; index++)
             {
                 var date = calendarStart.AddDays(index);
@@ -184,7 +184,7 @@ namespace JTSA.Panels
                         selectedUserChatCountsByStream.TryGetValue(stream.StreamId, out var chatCountForStream);
                         return FormatStreamSummary(stream, chatCountForStream);
                     }));
-                CalendarDays.Add(new ChatCalendarDayForm
+                days.Add(new ChatCalendarDayForm
                 {
                     Date = date,
                     DisplayMonth = displayedCalendarMonth.Month,
@@ -197,6 +197,7 @@ namespace JTSA.Panels
                 });
             }
 
+            CalendarDays.ReplaceAll(days);
             var monthEnd = displayedCalendarMonth.AddMonths(1);
             var monthEntries = selectedUserStreamCounts
                 .Where(x => ResolveStreamDate(x) >= displayedCalendarMonth &&
@@ -241,16 +242,12 @@ namespace JTSA.Panels
             aggregationStartDate = startDate?.Date;
             aggregationEndDate = endDate?.Date;
 
-            var streamCounts = DAO_StreamChatUserCount.SelectAll();
+            var filteredStreamCounts = DAO_StreamChatUserCount.SelectByPeriod(startDate, endDate);
             var streamHistory = DAO_StreamHistory.SelectAll();
             streamHistoryById = streamHistory.ToDictionary(x => x.StreamId);
             streamsByDate = streamHistory
                 .GroupBy(x => x.StartedAt.Date)
                 .ToDictionary(x => x.Key, x => x.OrderBy(y => y.StartedAt).ToList());
-            var filteredStreamCounts = streamCounts
-                .Where(x => !startDate.HasValue || ResolveStreamDate(x) >= startDate.Value.Date)
-                .Where(x => !endDate.HasValue || ResolveStreamDate(x) <= endDate.Value.Date)
-                .ToList();
             var statistics = filteredStreamCounts
                 .GroupBy(x => x.UserId)
                 .Select(group => new
@@ -266,11 +263,11 @@ namespace JTSA.Panels
                 .ThenBy(x => x.Latest.DisplayName)
                 .ToList();
 
-            UserStatistics.Clear();
+            var users = new List<ChatUserStatisticsForm>(statistics.Count);
             for (var index = 0; index < statistics.Count; index++)
             {
                 var item = statistics[index];
-                UserStatistics.Add(new ChatUserStatisticsForm
+                users.Add(new ChatUserStatisticsForm
                 {
                     Rank = index + 1,
                     UserId = item.UserId,
@@ -283,12 +280,13 @@ namespace JTSA.Panels
                 });
             }
 
+            UserStatistics.ReplaceAll(users);
             UserStatisticsDataGrid.SelectedItem = UserStatistics.FirstOrDefault();
 
             if (filteredStreamCounts.Count == 0)
             {
                 ClearActivityCalendar();
-                PeriodTextBlock.Text = streamCounts.Count == 0
+                PeriodTextBlock.Text = !DAO_StreamChatUserCount.HasAny()
                     ? "保存済みのチャット統計はまだありません"
                     : $"指定期間のチャット統計はありません（{FormatPeriod(startDate, endDate)}）";
                 return;

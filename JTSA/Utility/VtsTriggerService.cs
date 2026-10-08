@@ -97,6 +97,16 @@ internal static class VtsTriggerService
         }
     }
 
+    internal static async Task ExecuteHotkeyAsync(string hotkeyId)
+    {
+        if (string.IsNullOrWhiteSpace(hotkeyId))
+            throw new ArgumentException("実行するVTSホットキーを選択してください。", nameof(hotkeyId));
+        var client = await GetClientAsync();
+        if (client is null || !client.IsAuthenticated)
+            throw new InvalidOperationException("VTSに接続されていません。");
+        await client.TriggerHotkeyAsync(hotkeyId);
+    }
+
     private static Task<VtsClient?> GetClientAsync()
     {
         var application = Application.Current;

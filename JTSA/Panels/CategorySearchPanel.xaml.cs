@@ -1,4 +1,4 @@
-﻿using JTSA.Dao;
+using JTSA.Dao;
 using JTSA.Forms;
 using JTSA.Utility;
 using System;
@@ -38,7 +38,7 @@ namespace JTSA.Panels
         private System.Windows.Threading.DispatcherTimer categorySearchDebounceTimer;
 
         /// <summary>  </summary>
-        public ObservableCollection<CategoryForm> SearchCategoryFormList { get; } = new();
+        public BatchObservableCollection<CategoryForm> SearchCategoryFormList { get; } = new();
 
         public CategorySearchPanel()
         {
@@ -93,15 +93,31 @@ namespace JTSA.Panels
 
             if (existingCategory == null)
             {
-                // Steamに存在しないカテゴリ（Art等）ではURLが取れないため、空文字として扱う
-                List<string> steamUrls = await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
-                string steamUrl = steamUrls.FirstOrDefault() ?? "";
+                // Steam URLは補助情報。IGDBが一時的に利用できなくてもカテゴリ登録は続行する。
+                string steamUrl = "";
+                try
+                {
+                    List<string> steamUrls = await IgdbService.GetSteamUrlsAsync(selectedItem.CategoryId);
+                    steamUrl = steamUrls.FirstOrDefault() ?? "";
+                }
+                catch (Exception ex)
+                {
+                    mainWindow.AppLogPanel.Error(
+                        GetType().Name,
+                        $"カテゴリ追加時のSteam URL取得失敗 「 {selectedItem.DisplayName} 」：{ex.GetBaseException().Message}");
+                }
 
                 // 未登録カテゴリを新規登録
-                var insertData = await DAO_Category.InsertDataCreate(selectedItem.CategoryId, steamUrl);
+                var insertData = await DAO_Category.InsertDataCreate(
+                    selectedItem.CategoryId,
+                    steamUrl,
+                    selectedItem.DisplayName,
+                    selectedItem.BoxArtUrl);
                 if (insertData == null) return false;
 
-                DAO_Category.Insert(insertData);
+                if (!DAO_Category.Insert(insertData) &&
+                    DAO_Category.SelectOneById(selectedItem.CategoryId) == null)
+                    return false;
             }
             else
             {
@@ -131,9 +147,7 @@ namespace JTSA.Panels
             var results = await TwitchHelper.SearchCategoriesByGameNameAsync(searchText);
 
             // 画面データ入れ換え処理
-            foreach (var item in results)
-            {
-                SearchCategoryFormList.Add(new()
+            SearchCategoryFormList.ReplaceAll((results ?? []).Select(item => new CategoryForm
                 {
                     CategoryId = item.Id,
                     DisplayName = item.Name,
@@ -141,8 +155,7 @@ namespace JTSA.Panels
                     BoxArtUrl = item.BoxArtUrl,
                     SteamUrl = "",
                     LastUsedDate = ""
-                });
-            }
+                }));
 
             mainWindow.StatusTextBlock.Text = "検索カテゴリリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;

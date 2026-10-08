@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 
 namespace JTSA.Panels
 {
@@ -22,7 +23,7 @@ namespace JTSA.Panels
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
 
         /// <summary>  </summary>
-        public ObservableCollection<CategoryForm> CategoryFormList { get; } = new();
+        public JTSA.Utility.BatchObservableCollection<CategoryForm> CategoryFormList { get; } = new();
 
         /// <summary> カテゴリに紐づけられるチャンネルポイントプリセットの選択肢 </summary>
         public ObservableCollection<ChannelPointPresetForm> ChannelPointPresetFormList { get; } = new();
@@ -38,11 +39,30 @@ namespace JTSA.Panels
             InitializeComponent();
 
             DataContext = this;
+
+            CollectionViewSource.GetDefaultView(CategoryFormList).Filter = MatchesCategoryFilter;
         }
 
         public void Initialize()
         {
             ReloadCategory();
+        }
+
+        private void CategoryFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            CollectionViewSource.GetDefaultView(CategoryFormList).Refresh();
+        }
+
+        private bool MatchesCategoryFilter(object item)
+        {
+            if (item is not CategoryForm category) return false;
+
+            var searchText = CategoryFilterTextBox.Text.Trim();
+            if (searchText.Length == 0) return true;
+
+            return category.DisplayName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)
+                || category.JapaneseDisplayName.Contains(searchText, StringComparison.CurrentCultureIgnoreCase)
+                || category.CategoryId.Contains(searchText, StringComparison.OrdinalIgnoreCase);
         }
 
 
@@ -115,7 +135,7 @@ namespace JTSA.Panels
         {
             // DB接続と初期化処理
             using var db = new AppDbContext();
-            CategoryFormList.Clear();
+            var categories = new List<CategoryForm>();
 
             // プリセットの選択肢を先に用意する（カテゴリ行のComboBoxが参照するため）
             ReloadChannelPointPreset();
@@ -129,7 +149,7 @@ namespace JTSA.Panels
             foreach (var item in records)
             {
                 captureRules.TryGetValue(item.CategoryId, out var captureRule);
-                CategoryFormList.Add(new()
+                categories.Add(new()
                 {
                     CategoryId = item.CategoryId,
                     DisplayName = item.DisplayName,
@@ -149,6 +169,7 @@ namespace JTSA.Panels
                 });
             }
 
+            CategoryFormList.ReplaceAll(categories);
             mainWindow.StatusTextBlock.Text = "カテゴリリストを読込";
             mainWindow.StatusTextBlock.Foreground = System.Windows.Media.Brushes.LightGreen;
         }

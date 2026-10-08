@@ -1,5 +1,6 @@
 using JTSA.Dao;
 using JTSA.Models;
+using JTSA.TwitchIF;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -71,6 +72,53 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
+    public void UserDao_AppPoints_PersistAndSurviveFriendProfileUpdate()
+    {
+        DAO_User.InsertUpdateFriend(null, "point-user", "ポイント利用者", null, "YouTube", "");
+        var user = Assert.Single(DAO_User.SelectAllOrderbyLastUser());
+        Assert.Equal(0L, user.AppPoints);
+
+        user.AppPoints = 123;
+        Assert.True(DAO_User.Update(user));
+
+        DAO_User.InsertUpdateFriend(null, "point-user", "更新後の利用者", null, "YouTube", "");
+
+        var updated = Assert.Single(DAO_User.SelectAllOrderbyLastUser());
+        Assert.Equal(123L, updated.AppPoints);
+        Assert.Equal(123L, DAO_User.SelectOneByUserId(updated.UserId)!.AppPoints);
+    }
+
+    [Fact]
+    public void UserDao_CacheProfileImages_FillsMissingImagesWithoutChangingPointsOrFriends()
+    {
+        var now = DateTime.Now;
+        DAO_User.Insert(new M_User
+        {
+            UserId = "existing",
+            LoginId = "existing",
+            DisplayName = "Existing",
+            IsFriend = true,
+            AppPoints = 42,
+            CreatedDateTime = now,
+            UpdatedDateTime = now,
+            LastUsedDateTime = now
+        });
+
+        DAO_User.CacheProfileImages([
+            new TwitchUserIF { UserId = "existing", Login = "existing", DisplayName = "Existing", ProfileImageUrl = "https://example.test/existing.png" },
+            new TwitchUserIF { UserId = "new", Login = "new", DisplayName = "New", ProfileImageUrl = "https://example.test/new.png" }
+        ]);
+
+        var images = DAO_User.SelectCachedProfileImages(["existing", "new"]);
+        Assert.Equal("https://example.test/existing.png", images["existing"]);
+        Assert.Equal("https://example.test/new.png", images["new"]);
+        var existing = DAO_User.SelectOneByUserId("existing")!;
+        Assert.True(existing.IsFriend);
+        Assert.Equal(42L, existing.AppPoints);
+        Assert.False(DAO_User.SelectOneByUserId("new")!.IsFriend);
+    }
+
+    [Fact]
     public void Calendar_SelectByDate_ReturnsOnlyRequestedDateInTimeOrder()
     {
         var targetDate = new DateTime(2026, 9, 6);
@@ -88,19 +136,39 @@ public sealed class DaoTests : IDisposable
     }
 
     [Fact]
-    public void StreamExpansionClip_RoundTripsWithOtherActions()
+    public void Calendar_PinnedChatMessage_SurvivesEditingOtherFields()
+    {
+        var date = new DateTime(2026, 10, 1);
+        DAO_Calendar.InsertUpdate(date, "元の予定", pinnedChatMessage: "配信へようこそ");
+        var saved = Assert.Single(DAO_Calendar.SelectByDate(date));
+        Assert.Equal("配信へようこそ", saved.PinnedChatMessage);
+
+        DAO_Calendar.InsertUpdate(date, "更新した予定", entryId: saved.Id,
+            pinnedChatMessage: saved.PinnedChatMessage);
+
+        var updated = Assert.Single(DAO_Calendar.SelectByDate(date));
+        Assert.Equal("配信へようこそ", updated.PinnedChatMessage);
+    }
+
+    [Fact]
+    public void StreamExpansionClipAndVtsHotkey_RoundTripWithOtherActions()
     {
         var id = DAO_StreamExpansion.Save(new T_StreamExpansionHeader { Name = "Clips", IsActive = true, UpdatedDateTime = DateTime.Now },
         [
             new T_StreamExpansionItem { ActionType = "ObsClip", Content = "{chat_login}", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now },
-            new T_StreamExpansionItem { ActionType = "ObsText", Content = "Hello", ObsSourceName = "title", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now }
+            new T_StreamExpansionItem { ActionType = "ObsText", Content = "Hello", ObsSourceName = "title", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now },
+            new T_StreamExpansionItem { ActionType = "VtsHotkey", Content = "hotkey-1", SortNumber = 2, Weight = 3, UpdatedDateTime = DateTime.Now }
         ]);
         var items = DAO_StreamExpansion.SelectItems(id);
-        Assert.Equal(2, items.Count);
+        Assert.Equal(3, items.Count);
         var clip = Assert.Single(items, item => item.ActionType == "ObsClip");
         Assert.Equal("{chat_login}", clip.Content);
         Assert.Equal(2, clip.SortNumber);
         Assert.Equal(3, clip.Weight);
+        var hotkey = Assert.Single(items, item => item.ActionType == "VtsHotkey");
+        Assert.Equal("hotkey-1", hotkey.Content);
+        Assert.Equal(2, hotkey.SortNumber);
+        Assert.Equal(3, hotkey.Weight);
     }
 
     [Fact]
@@ -397,6 +465,78 @@ public sealed class DaoTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task ChatWriterDrainsPendingCountsOnCompletionAcrossStreams()
+    {
+        var writer = new JTSA.Utility.ChatCountWriter();
+        var time = new DateTime(2026, 9, 9);
+        var writes = Enumerable.Range(0, 250).Select(index =>
+            writer.RecordAsync(time.AddSeconds(index), "user", "login", "display", index % 2 == 0 ? "a" : "b")).ToArray();
+        await writer.CompleteAsync();
+        await Task.WhenAll(writes);
+        Assert.Equal(125, Assert.Single(DAO_StreamChatUserCount.SelectByStreamId("a")).ChatCount);
+        var b = Assert.Single(DAO_StreamChatUserCount.SelectByStreamId("b"));
+        Assert.Equal(125, b.ChatCount);
+        Assert.Equal(time.AddSeconds(1), b.FirstChatDateTime);
+        Assert.Equal(time.AddSeconds(249), b.LastChatDateTime);
+        await writer.CompleteAsync();
+        await Assert.ThrowsAsync<System.Threading.Channels.ChannelClosedException>(() => writer.RecordAsync(time, "u", "l", "n", "a"));
+    }
+
+    [Fact]
+    public void AppNotificationReceipt_Acknowledge_IsPersistedAndIdempotent()
+    {
+        const string notificationKey = "test-one-shot-notification";
+
+        Assert.False(DAO_AppNotificationReceipt.IsAcknowledged(notificationKey));
+
+        DAO_AppNotificationReceipt.Acknowledge(notificationKey);
+        DAO_AppNotificationReceipt.Acknowledge(notificationKey);
+
+        Assert.True(DAO_AppNotificationReceipt.IsAcknowledged(notificationKey));
+        using var db = new AppDbContext();
+        Assert.Single(db.T_AppNotificationReceipt.Where(x => x.NotificationKey == notificationKey));
+    }
+
+    [Fact]
+    public void ChatBatchRollsBackAllCountsWhenAnyWriteFails()
+    {
+        using var db = new AppDbContext();
+        db.Database.ExecuteSqlRaw("""
+            CREATE TRIGGER reject_chat BEFORE INSERT ON T_StreamChatUserCount
+            WHEN NEW.UserId = 'reject' BEGIN SELECT RAISE(ABORT, 'test'); END;
+            """);
+        var time = DateTime.Now;
+        Assert.Throws<SqliteException>(() => DAO_StreamChatUserCount.IncrementBatch([
+            new(time, "ok", "login", "display", "s"),
+            new(time, "reject", "login", "display", "s")]));
+        Assert.False(DAO_StreamChatUserCount.HasAny());
+    }
+
+    [Fact]
+    public void ChatBatchAggregates250MessagesIntoTwoDatabaseWrites()
+    {
+        using var db = new AppDbContext();
+        db.Database.ExecuteSqlRaw("""
+            CREATE TABLE ChatWriteAudit (Id INTEGER);
+            CREATE TRIGGER audit_chat BEFORE INSERT ON T_StreamChatUserCount
+            BEGIN INSERT INTO ChatWriteAudit VALUES (1); END;
+            """);
+        var time = DateTime.Now;
+        DAO_StreamChatUserCount.IncrementBatch(Enumerable.Range(0, 250)
+            .Select(i => new DAO_StreamChatUserCount.ChatCountEntry(time.AddSeconds(-i), "user", "login", $"name-{i}", i % 2 == 0 ? "a" : "b"))
+            .ToArray());
+        db.Database.OpenConnection();
+        using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM ChatWriteAudit";
+        Assert.Equal(2L, (long)command.ExecuteScalar()!);
+        var a = Assert.Single(DAO_StreamChatUserCount.SelectByStreamId("a"));
+        Assert.Equal(125, a.ChatCount);
+        Assert.Equal(time.AddSeconds(-248), a.FirstChatDateTime);
+        Assert.Equal(time, a.LastChatDateTime);
+        Assert.Equal("name-248", a.DisplayName);
+    }
+
     public void Dispose()
     {
         AppDbContext.DatabasePathOverride = null;
@@ -406,4 +546,73 @@ public sealed class DaoTests : IDisposable
             Directory.Delete(testDirectory, recursive: true);
         }
     }
+
+    [Fact]
+    public void ChatUser_UpsertReplacesExistingRecordAndBulkDeleteClearsAll()
+    {
+        var now = DateTime.Now;
+        var record = new T_ChatUser { UserId = "user'1", DisplayName = "first", UpdatedDateTime = now };
+        DAO_ChatUser.InsertUpdate(record);
+        record.DisplayName = "updated";
+        record.IsSubscribe = true;
+        record.TakeBits = 42;
+        record.SelectedCount = 3;
+        record.SortNumber = 5;
+        record.LastUsedDateTime = now;
+        DAO_ChatUser.InsertUpdate(record);
+        var saved = DAO_ChatUser.SelectOneByUserId(record.UserId);
+        Assert.NotNull(saved);
+        Assert.Equal("updated", saved.DisplayName);
+        Assert.True(saved.IsSubscribe);
+        Assert.Equal(42, saved.TakeBits);
+        Assert.Equal(3, saved.SelectedCount);
+        Assert.Equal(5, saved.SortNumber);
+        Assert.Equal(now, saved.LastUsedDateTime);
+        DAO_ChatUser.InsertUpdate(new T_ChatUser { UserId = "other", UpdatedDateTime = now });
+        using var db = new AppDbContext();
+        Assert.Equal(2, db.T_ChatUser.Count());
+        DAO_ChatUser.AllDelete();
+        Assert.Empty(db.T_ChatUser.AsNoTracking());
+    }
+
+    [Fact]
+    public void ChatPeriod_UsesStreamStartAndIncludesWholeEndDateWithMissingHistoryFallback()
+    {
+        var day = new DateTime(2026, 9, 1);
+        Assert.False(DAO_StreamChatUserCount.HasAny());
+        DAO_StreamChatUserCount.Increment(day.AddDays(1), "u", "login", "name", "overnight");
+        DAO_StreamChatUserCount.Increment(day.AddHours(23).AddMinutes(59), "u", "login", "name", "missing");
+        DAO_StreamChatUserCount.Increment(day.AddDays(1), "u", "login", "name", "outside");
+        using (var db = new AppDbContext())
+        {
+            db.T_StreamHistory.Add(new T_StreamHistory { StreamId = "overnight", StartedAt = day.AddHours(22) });
+            db.SaveChanges();
+        }
+        Assert.True(DAO_StreamChatUserCount.HasAny());
+        var rows = DAO_StreamChatUserCount.SelectByPeriod(day.AddHours(12), day);
+        Assert.Equal(new[] { "missing", "overnight" }, rows.Select(x => x.StreamId).OrderBy(x => x));
+        Assert.Equal(3, DAO_StreamChatUserCount.SelectByPeriod(null, null).Count);
+        Assert.Single(DAO_StreamChatUserCount.SelectByPeriod(day.AddDays(1), null));
+        Assert.Equal(2, DAO_StreamChatUserCount.SelectByPeriod(null, day).Count);
+        Assert.Equal(3, DAO_StreamChatUserCount.SelectByPeriod(null, DateTime.MaxValue).Count);
+    }
+
+    [Fact]
+    public void ChatUserHistory_QueryUsesMigratedIndexWithoutSorting()
+    {
+        using var db = new AppDbContext();
+        db.Database.OpenConnection();
+        using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = """
+            EXPLAIN QUERY PLAN SELECT * FROM "T_StreamChatUserCount"
+            WHERE "UserId" = 'user' ORDER BY "FirstChatDateTime";
+            """;
+        using var reader = command.ExecuteReader();
+        var details = new List<string>();
+        while (reader.Read()) details.Add(reader.GetString(3));
+        Assert.Contains(details, x => x.Contains("IX_T_StreamChatUserCount_UserId_FirstChatDateTime"));
+        Assert.DoesNotContain(details, x => x.Contains("TEMP B-TREE"));
+        Assert.False(db.Database.HasPendingModelChanges());
+    }
+
 }

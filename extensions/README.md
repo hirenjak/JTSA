@@ -16,9 +16,16 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
 `Plugins` 内のDLLと関連ファイルを上書きでき、「再読み込み」で新しいバージョンへ切り替えられます。
 再読み込み時には、開いている対象Extensionのウィンドウはいったん閉じます。
 
+## ルーレットの配置
+
+1. `dotnet build extensions/JTSA.RoulettePlugin/JTSA.RoulettePlugin.csproj -c Release`
+2. 出力フォルダの `JTSA.RoulettePlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
+   `Plugins/Roulette/` へコピーします。
+3. JTSA の「Extension」タブで「再読み込み」を押します。
+
 ## nizima LIVE の配置
 
-この Extension は **ExpansionTriggered を公開している JTSA ホストとセット** です。
+この Extension は **`IJtsaExpansionTriggerPluginContext`（ExpansionTriggered）を公開している JTSA ホストとセット** です。
 対応していない古いホストでは読み込み時に実行時例外になります。
 
 1. `dotnet build extensions/JTSA.NizimaLivePlugin/JTSA.NizimaLivePlugin.csproj -c Release`
@@ -28,7 +35,7 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
    接続成功だけでは API は使えません。有効化後にモデル操作が通ります。
 
 ウィンドウを閉じても接続は維持されます。再読み込み時に切断します。
-トークンは `%AppData%\JTSA\Plugins\jtsa.nizimalive\settings.json` に保存されます。
+トークンは `%LocalAppData%\JTSA\UserData\PluginData\jtsa.nizimalive\settings.json` に保存されます。
 プラグイン名は `JTSA` 固定です。nizima 側で削除すると InvalidToken となり再登録します。
 
 ## ともぞっちの配置
@@ -42,17 +49,23 @@ tomozow_streaming_tool のともぞっち（tamagotchi-twitch）のゲージ機�
 4. 「ゲージ」タブの「ファイルから読み込み」で、tamagotchi-twitch の `game_config.json` を選ぶと
    ゲージとチャネポ割り当てをそのまま移せます。
 
-設定は `%AppData%\JTSA\Plugins\jtsa.tomozotchi\settings.json`、プリセットは同じフォルダの
+設定は `%LocalAppData%\JTSA\UserData\PluginData\jtsa.tomozotchi\settings.json`、プリセットは同じフォルダの
 `presets\` に保存されます。ゲージの値は保存せず、JTSA を起動するたびに初期値から始まります。
 チャネポ状況（交換可能・クールダウン・TODO）の表示は未対応です。
 
-## ルーレットの配置
+## カレンダー画像化の配置
 
-1. `dotnet build extensions/JTSA.RoulettePlugin/JTSA.RoulettePlugin.csproj -c Release`
-2. 出力フォルダの `JTSA.RoulettePlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
-   `Plugins/Roulette/` へコピーします。
+1. `dotnet build extensions/JTSA.CalendarImagePlugin/JTSA.CalendarImagePlugin.csproj -c Release`
+2. 出力フォルダの `JTSA.CalendarImagePlugin.dll` と `plugin.json` を、JTSA の実行ファイル横にある
+   `Plugins/CalendarImage/` へコピーします。
 3. JTSA の「Extension」タブで「再読み込み」を押します。
 
+表示週を選び、JTSAに登録済みの予定を週ごとのカレンダー画像としてプレビューできます。
+「PNGで保存」から配信告知などに使える画像を書き出せます。
+
+## 外部プラットフォーム連携
+
+外部プラットフォーム連携プラグインは `JTSA_pulugins_multiplatform` リポジトリで管理します。ビルドと配置方法はそちらの README を参照してください。
 ## 配信拡張への描画
 
 どの Extension からでも、`IJtsaPluginContext` の共通APIを使って既存の
@@ -77,3 +90,9 @@ context.RemoveExpansionOverlay("status");
 ```
 
 描画IDはプラグインIDごとに分離されるため、別のExtensionと同じ名前を使っても衝突しません。
+
+## Desktop Wall 連携
+
+JTSAの予定をDesktopWallManagerへ共有するExtensionを追加しました。
+導入手順・切断時の保存動作は [Desktop Wall 連携](JTSA.DesktopWallPlugin/README.md) を参照してください。
+JTSA連携に対応したDesktopWallManagerが必要です。

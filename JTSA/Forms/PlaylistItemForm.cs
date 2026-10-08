@@ -21,6 +21,9 @@ namespace JTSA.Forms
         /// <summary> カテゴリーID </summary>
         public string CategoryId { get; set; } = "";
 
+        public bool IsCustomGame { get; set; }
+        public string CustomSteamUrl { get; set; } = string.Empty;
+
         /// <summary> イメージURL </summary>
         public string ImageUrl { get; set; } = "";
 

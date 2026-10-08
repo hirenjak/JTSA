@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Squirrel</AssemblyName>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\JTSA.SetupBootstrapper\LegacyPluginMigration.cs" Link="LegacyPluginMigration.cs" />
+    <EmbeddedResource Include="$(VelopackUpdaterPath)" LogicalName="VelopackUpdater" Condition="'$(VelopackUpdaterPath)' != ''" />
+  </ItemGroup>
+</Project>

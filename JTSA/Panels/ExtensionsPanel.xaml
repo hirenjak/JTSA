@@ -17,32 +17,48 @@
                     Click="ReloadButton_Click"/>
         </StackPanel>
 
-        <ListBox Grid.Row="1" ItemsSource="{Binding Plugins, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                 Background="#FF353535" BorderBrush="#FF606060" HorizontalContentAlignment="Stretch">
-            <ListBox.ItemTemplate>
+        <ScrollViewer Grid.Row="1" Background="#FF353535" BorderBrush="#FF606060"
+                      BorderThickness="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Plugins, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          Margin="7">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border Padding="12" BorderBrush="#FF555555" BorderThickness="0,0,0,1">
+                    <Border Width="245" MinHeight="150" Margin="5" Padding="12"
+                            Background="#FF454545" BorderBrush="#FF696969"
+                            BorderThickness="1" CornerRadius="6">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding VersionText}" Foreground="#FF9FD8CF" Margin="8,2,0,0"/>
-                                </StackPanel>
-                                <TextBlock Text="{Binding Description}" Foreground="LightGray" Margin="0,4,12,0" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding Status}" Foreground="#FF91D8CD" Margin="0,5,0,0" FontSize="11"/>
+                                <TextBlock Text="{Binding Name}" Foreground="White" FontSize="15"
+                                           FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding VersionText}" Foreground="#FF9FD8CF" Margin="0,3,0,0"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="開く" Width="90" Height="30" Tag="{Binding}"
-                                    Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
-                                    Click="OpenButton_Click"/>
+                            <StackPanel Grid.Row="1" Margin="0,8,0,8">
+                                <TextBlock Text="{Binding Description}" Foreground="LightGray" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Status}" Foreground="#FF91D8CD" Margin="0,7,0,0" FontSize="11"/>
+                            </StackPanel>
+                            <Grid Grid.Row="2">
+                                <CheckBox Content="自動起動" Foreground="White" VerticalAlignment="Center"
+                                          IsChecked="{Binding IsAutoStart, Mode=TwoWay}"/>
+                                <Button Content="開く" Width="90" Height="30" Tag="{Binding}"
+                                        HorizontalAlignment="Right"
+                                        Foreground="White" Background="#FF285653" BorderBrush="LightSeaGreen"
+                                        Click="OpenButton_Click"/>
+                            </Grid>
                         </Grid>
                     </Border>
                 </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
 
         <ItemsControl Grid.Row="2" ItemsSource="{Binding LoadErrors, RelativeSource={RelativeSource AncestorType=UserControl}}"
                       Margin="0,8,0,0">

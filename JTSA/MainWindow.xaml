@@ -143,6 +143,7 @@
                     Background="#FF565656"
                     BorderBrush="#FF777777"
                     Foreground="White"
+                    ToolTip="Xの投稿画面を既定の外部ブラウザで開きます"
                     Click="TweetButton_Click"/>
             </Grid>
 
@@ -277,7 +278,8 @@
                             <TextBlock x:Name="ViewerCountTextBlock" Text="-- 人" Foreground="White"
                                        Margin="6,0,0,0" VerticalAlignment="Center" Cursor="Hand"
                                        ToolTip="クリックで視聴者数の表示／非表示を切り替え"
-                                       MouseLeftButtonDown="ViewerCountTextBlock_MouseLeftButtonDown"/>
+                                       MouseLeftButtonDown="ViewerCountTextBlock_MouseLeftButtonDown"
+                                       MouseLeftButtonUp="ViewerCountTextBlock_MouseLeftButtonUp"/>
                             <TextBlock x:Name="ViewerCountUpdateCountdownTextBlock" Text="次回更新 --:--"
                                        Foreground="DarkGray" FontSize="10" Margin="8,0,0,0"
                                        VerticalAlignment="Bottom"/>
@@ -325,6 +327,8 @@
             Height="22"
             Margin="8,0,8,0">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -446,8 +450,16 @@
                 </ComboBox>
             </StackPanel>
 
+            <Button Grid.Column="1" Content="配信情報ページ"
+                    Width="104" Height="22" Margin="8,0,0,0"
+                    Padding="0" FontSize="11" VerticalAlignment="Center"
+                    Foreground="White" Background="#FF285653"
+                    BorderBrush="LightSeaGreen" BorderThickness="1" Cursor="Hand"
+                    ToolTip="選択中のアカウントの配信情報ページをアプリ内ブラウザで開きます"
+                    Click="OpenStreamInfoEditorButton_Click"/>
+
             <Button x:Name="ObsSceneShortcutToggleButton"
-                    Grid.Column="1" Content="OBS ☰"
+                    Grid.Column="2" Content="OBS ☰"
                     Width="90" Height="22" Margin="8,0,0,0"
                     Padding="0" FontSize="11" VerticalAlignment="Center"
                     Foreground="White" Background="#FF565656"
@@ -471,7 +483,7 @@
             </Button>
 
             <Button x:Name="UrlLinkToggleButton"
-                    Grid.Column="2" Content="URLリンク ☰"
+                    Grid.Column="3" Content="URLリンク ☰"
                     Width="90" Height="22" Margin="8,0,0,0"
                     Padding="0" FontSize="11" VerticalAlignment="Center"
                     Foreground="White" Background="#FF565656"
@@ -490,7 +502,15 @@
                 </Button.Template>
             </Button>
 
-            <Button x:Name="LaunchSteamGameButton" Grid.Column="3"
+            <Button Grid.Column="4" Content="スマホ"
+                    Width="72" Height="22" Margin="8,0,0,0"
+                    Padding="0" FontSize="11" VerticalAlignment="Center"
+                    Foreground="White" Background="#FF285653"
+                    BorderBrush="LightSeaGreen" BorderThickness="1" Cursor="Hand"
+                    ToolTip="スマホ用のチャット・ToDo画面を共有します"
+                    Click="OpenRemotePanelButton_Click"/>
+
+            <Button x:Name="LaunchSteamGameButton" Grid.Column="5"
                     Content="ゲーム起動" Width="88" Height="22"
                     Padding="6,0" HorizontalAlignment="Right"
                     IsEnabled="False"
@@ -677,12 +697,6 @@
                 Background="#FF464646" BorderBrush="#FF555555"
                 BorderThickness="1,0,1,1" CornerRadius="0">
             <WrapPanel>
-                <Button Content="配信情報を編集 ↗" Width="130" Height="26"
-                        Margin="0,0,8,0" Padding="8,0"
-                        Foreground="White" Background="#FF285653"
-                        BorderBrush="LightSeaGreen" BorderThickness="1"
-                        ToolTip="選択中のアカウントの配信情報編集を外部ブラウザで開きます"
-                        Click="OpenStreamInfoEditorButton_Click"/>
                 <Button Content="報酬設定 ↗" Width="130" Height="26"
                         Margin="0,0,8,0" Padding="8,0"
                         Foreground="White" Background="#FF285653"
@@ -711,7 +725,7 @@
                         Padding="8,0"
                         Foreground="White" Background="#FF285653"
                         BorderBrush="LightSeaGreen" BorderThickness="1"
-                        ToolTip="StreamTogetherを外部ブラウザで開きます"
+                        ToolTip="StreamTogetherをChromeまたはFirefoxで開きます"
                         Click="OpenGuestStarButton_Click"/>
             </WrapPanel>
         </Border>
@@ -914,7 +928,7 @@
                                                                 <ColumnDefinition Width="Auto"/>
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <Image Source="{Binding CategoryBoxArtUrl}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
+                                                            <Image Source="{Binding CategoryBoxArtUrl, Converter={StaticResource CachedImageConverter}}" Grid.Column="0" Width="36" Height="48" Margin="0,0,8,0"/>
 
                                                             <StackPanel Grid.Column="1" Margin="8,0,28,0">
                                                                 <TextBlock Text="{Binding Content}" Grid.Column="0" Width="Auto" Foreground="White" FontSize="16" TextWrapping="Wrap"></TextBlock>
@@ -989,8 +1003,14 @@
 
                                 <!-- サイドパネル（カテゴリ一覧） -->
                                 <Grid Grid.Column="1" Margin="8">
+                                    <Grid.Resources>
+                                        <CollectionViewSource x:Key="OverviewCategoryView"
+                                                              Filter="OverviewCategoryView_Filter"/>
+                                    </Grid.Resources>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="27"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
                                     <Grid>
@@ -1005,26 +1025,37 @@
                                                 Click="OpenCategorySettingsButton_Click"/>
                                     </Grid>
 
-                                    <ListBox Grid.Row="1" Margin="0,3,0,0"
+                                    <Border Grid.Row="1" Grid.RowSpan="3" Margin="0,3,0,0"
+                                            Padding="4" Background="#FF404040"
+                                            BorderBrush="#FF606060" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <Button Grid.Row="0" Content="＋ カテゴリを追加"
+                                                    Height="30" Padding="8,0"
+                                                    HorizontalContentAlignment="Left"
+                                                    Background="#FF285653" BorderBrush="LightSeaGreen"
+                                                    BorderThickness="1" Foreground="White"
+                                                    Click="OverviewAddCategoryButton_Click"/>
+
+                                            <TextBox x:Name="OverviewCategoryFilterTextBox" Grid.Row="1" Height="28"
+                                                     Margin="0,4,0,5" Padding="7,3"
+                                                     VerticalContentAlignment="Center"
+                                                     ToolTip="登録済みカテゴリを英語名・日本語名・カテゴリIDで検索"
+                                                     TextChanged="OverviewCategoryFilterTextBox_TextChanged"/>
+
+                                            <ListBox Grid.Row="2"
                                                  x:Name="OverviewCategoryListBox"
+                                                 ItemsSource="{Binding Source={StaticResource OverviewCategoryView}}"
                                                  Background="#FF404040"
+                                                 BorderThickness="0"
                                                  HorizontalContentAlignment="Stretch"
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                  SelectionChanged="OverviewCategoryListBox_SelectionChanged">
-                                            <ListBox.ItemsSource>
-                                                <CompositeCollection>
-                                                    <ListBoxItem HorizontalContentAlignment="Stretch" Padding="4">
-                                                        <Button Content="＋ カテゴリを追加"
-                                                                Height="30" Padding="8,0"
-                                                                HorizontalContentAlignment="Left"
-                                                                Background="#FF285653" BorderBrush="LightSeaGreen"
-                                                                BorderThickness="1" Foreground="White"
-                                                                Click="OverviewAddCategoryButton_Click"/>
-                                                    </ListBoxItem>
-                                                    <CollectionContainer Collection="{Binding Source={x:Reference CategoryPanel}, Path=CategoryFormList}"/>
-                                                </CompositeCollection>
-                                            </ListBox.ItemsSource>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel>
@@ -1033,7 +1064,7 @@
                                                                 <ColumnDefinition Width="36"/>
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
-                                                            <Image Grid.Column="0" Source="{Binding BoxArtUrl}" Width="36" Height="48"/>
+                                                            <Image Grid.Column="0" Source="{Binding BoxArtUrl, Converter={StaticResource CachedImageConverter}}" Width="36" Height="48"/>
                                                             <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="14" TextWrapping="Wrap"/>
                                                                 <TextBlock Text="{Binding LastUsedDate, StringFormat=最終使用日：{0}}" Foreground="LightGray" FontSize="10"/>
@@ -1043,7 +1074,9 @@
                                                     </StackPanel>
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
-                                        </ListBox>
+                                            </ListBox>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
 
                             </Grid>
@@ -1131,9 +1164,6 @@
                     <panels:StereamExpansionPanel x:Name="StereamExpansionPanel"/>
                 </TabItem>
 
-                <TabItem Header="外部アプリ">
-                    <panels:AppArrangePanel x:Name="AppArrangePanel"/>
-                </TabItem>
                 <TabItem Header="プラグイン">
                     <panels:ExtensionsPanel x:Name="ExtensionsPanel"/>
                 </TabItem>

@@ -103,6 +103,36 @@ public class StreamExpansionPlaceholderReplacerTests
         Assert.Equal("入力: リクエスト文言", result);
     }
 
+    [Fact]
+    public void ReplaceExpandsSupportEventPlaceholders()
+    {
+        var result = StreamExpansionPlaceholderReplacer.Replace(
+            "{BITS_AMOUNT}|{subscription_months}|{gift_sender}|{gift_recipient}",
+            null,
+            trigger: new StreamExpansionTriggerValues("subscribe", "", "", "", "",
+                BitsAmount: "100", SubscriptionMonths: "6", GiftSender: "Sender", GiftRecipient: "Receiver"));
+
+        Assert.Equal("100|6|Sender|Receiver", result);
+        Assert.Equal("|||", StreamExpansionPlaceholderReplacer.Replace(
+            "{bits_amount}|{subscription_months}|{gift_sender}|{gift_recipient}", null));
+    }
+
+    [Fact]
+    public void SubscriptionAndGiftTriggersMatchIndependently()
+    {
+        var rule = new JTSA.Models.T_StreamExpansionHeader
+        {
+            UpdatedDateTime = DateTime.Now, IsActive = true, IsSubscribe = true
+        };
+        Assert.True(StreamExpansionService.Matches(rule, StreamExpansionTriggerType.Subscribe, ""));
+        Assert.False(StreamExpansionService.Matches(rule, StreamExpansionTriggerType.GiftSubscription, ""));
+
+        rule.IsSubscribe = false;
+        rule.IsGiftSubscription = true;
+        Assert.False(StreamExpansionService.Matches(rule, StreamExpansionTriggerType.Subscribe, ""));
+        Assert.True(StreamExpansionService.Matches(rule, StreamExpansionTriggerType.GiftSubscription, ""));
+    }
+
     [Theory]
     [InlineData("!request テスト曲", "!request", "テスト曲")]
     [InlineData("!REQUEST    テスト曲  ", "!request", "テスト曲")]

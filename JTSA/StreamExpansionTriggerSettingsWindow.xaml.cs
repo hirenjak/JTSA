@@ -13,9 +13,11 @@ public partial class StreamExpansionTriggerSettingsWindow : Window
 
     public bool IsRaid { get; set; }
     public bool IsSubscribe { get; set; }
+    public bool IsGiftSubscription { get; set; }
     public bool IsBits { get; set; }
     public bool IsFirstChat { get; set; }
     public bool IsFollow { get; set; }
+    public bool IsStreamInfoApplied { get; set; }
     public bool IsHourly { get; set; }
     public bool IsAdStart { get; set; }
     public bool IsAdEnd { get; set; }
@@ -38,9 +40,11 @@ public partial class StreamExpansionTriggerSettingsWindow : Window
         this.target = target;
         IsRaid = target.IsRaid;
         IsSubscribe = target.IsSubscribe;
+        IsGiftSubscription = target.IsGiftSubscription;
         IsBits = target.IsBits;
         IsFirstChat = target.IsFirstChat;
         IsFollow = target.IsFollow;
+        IsStreamInfoApplied = target.IsStreamInfoApplied;
         IsHourly = target.IsHourly;
         AdAdvanceMinutes = target.AdAdvanceMinutes;
         IsAdUpcoming = target.IsAdUpcoming;
@@ -64,9 +68,11 @@ public partial class StreamExpansionTriggerSettingsWindow : Window
     {
         target.IsRaid = IsRaid;
         target.IsSubscribe = IsSubscribe;
+        target.IsGiftSubscription = IsGiftSubscription;
         target.IsBits = IsBits;
         target.IsFirstChat = IsFirstChat;
         target.IsFollow = IsFollow;
+        target.IsStreamInfoApplied = IsStreamInfoApplied;
         target.IsHourly = IsHourly;
         target.AdAdvanceMinutes = AdAdvanceMinutes;
         target.IsAdUpcoming = IsAdUpcoming;

@@ -1,5 +1,7 @@
 ﻿using JTSA.Models;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace JTSA.Dao
 {
     class DAO_ChatUser
@@ -15,7 +17,7 @@ namespace JTSA.Dao
 
             using (var db = new AppDbContext())
             {
-                result = db.T_ChatUser.FirstOrDefault(x => x.UserId == userId);
+                result = db.T_ChatUser.AsNoTracking().FirstOrDefault(x => x.UserId == userId);
             }
 
             return result;
@@ -31,18 +33,21 @@ namespace JTSA.Dao
         {
             using (var db = new AppDbContext())
             {
-                var existingRecord = db.T_ChatUser.FirstOrDefault(x => x.UserId == record.UserId);
-
-                if (existingRecord != null)
-                {
-                    db.T_ChatUser.Update(record);
-                }
-                else
-                {
-                    db.T_ChatUser.Add(record);
-                }
-
-                db.SaveChanges();
+                db.Database.ExecuteSqlInterpolated($"""
+                    INSERT INTO "T_ChatUser"
+                        ("UserId", "LoginId", "DisplayName", "IsSubscribe", "IsRaid", "TakeBits",
+                         "SelectedCount", "SortNumber", "LastUsedDateTime", "CreatedDateTime", "UpdatedDateTime")
+                    VALUES
+                        ({record.UserId}, {record.LoginId}, {record.DisplayName}, {record.IsSubscribe},
+                         {record.IsRaid}, {record.TakeBits}, {record.SelectedCount}, {record.SortNumber},
+                         {record.LastUsedDateTime}, {record.CreatedDateTime}, {record.UpdatedDateTime})
+                    ON CONFLICT ("UserId") DO UPDATE SET
+                        "LoginId" = excluded."LoginId", "DisplayName" = excluded."DisplayName",
+                        "IsSubscribe" = excluded."IsSubscribe", "IsRaid" = excluded."IsRaid",
+                        "TakeBits" = excluded."TakeBits", "SelectedCount" = excluded."SelectedCount",
+                        "SortNumber" = excluded."SortNumber", "LastUsedDateTime" = excluded."LastUsedDateTime",
+                        "CreatedDateTime" = excluded."CreatedDateTime", "UpdatedDateTime" = excluded."UpdatedDateTime";
+                    """);
             }
 
             return true;
@@ -57,9 +62,7 @@ namespace JTSA.Dao
         {
             using (var db = new AppDbContext())
             {
-                db.T_ChatUser.RemoveRange(db.T_ChatUser);
-
-                db.SaveChanges();
+                db.T_ChatUser.ExecuteDelete();
             }
             return true;
         }

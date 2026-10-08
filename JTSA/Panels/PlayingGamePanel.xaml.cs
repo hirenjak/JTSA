@@ -40,14 +40,15 @@ namespace JTSA.Panels
             set { CurrentGamePlaylistIdTextBlock.Text = value.ToString(); }}
         public string CurrentGamePlaylistName { get { return GamePlayListTitleEdit.Text; } set { GamePlayListTitleEdit.Text = value; } }
 
-        public ObservableCollection<PlaylistItemForm> PlaylistItemFormList { get; } = new();
-        private ObservableCollection<PlaylistItemForm> playlistItemFormList => PlaylistItemFormList;
+        public BatchObservableCollection<PlaylistItemForm> PlaylistItemFormList { get; } = new();
+        private BatchObservableCollection<PlaylistItemForm> playlistItemFormList => PlaylistItemFormList;
 
         /// <summary>  </summary>
-        public ObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
+        public BatchObservableCollection<PlaylistHeaderForm> playlistHeaderFormList { get; } = new();
 
         private ObsHttpServer? server;
         private const long RecentPlaylistId = -1;
+        private const string CustomGameTwitchCategoryName = "Games + Demos";
         private bool IsRecentPlaylist => CurrentGamePlaylistId == RecentPlaylistId;
         private readonly PlaylistHeaderForm recentHeader = new()
         {
@@ -57,6 +58,7 @@ namespace JTSA.Panels
         private readonly System.Windows.Threading.DispatcherTimer recentTimer = new() { Interval = TimeSpan.FromSeconds(5) };
         private string recentSignature = "";
         private int itemReloadVersion;
+        private int headerReloadVersion;
         private long obsPlaylistId;
         private string obsPlaylistTitle = string.Empty;
         private IReadOnlyList<ObsPlaylistItem> obsPlaylistItems = [];
@@ -182,7 +184,13 @@ namespace JTSA.Panels
                 Owner = Window.GetWindow(this)
             };
 
-            if (window.ShowDialog() == true && !string.IsNullOrWhiteSpace(window.SelectedCategoryId))
+            if (window.ShowDialog() != true) return;
+
+            if (window.IsCustomGame)
+            {
+                AddCustomPlaylistItem(window.CustomGameName, window.CustomSteamUrl);
+            }
+            else if (!string.IsNullOrWhiteSpace(window.SelectedCategoryId))
             {
                 AddPlaylistItem(window.SelectedCategoryId);
             }
@@ -287,11 +295,22 @@ namespace JTSA.Panels
 
                 if (item.Status == GameStatus.Playing)
                 {
-                    var categoryData = await TwitchHelper.GetCategoryByGameId(item.CategoryId);
+                    var categoryData = item.IsCustomGame
+                        ? (await TwitchHelper.SearchCategoriesByGameNameAsync(CustomGameTwitchCategoryName))
+                            .FirstOrDefault(category => string.Equals(
+                                category.Name, CustomGameTwitchCategoryName, StringComparison.OrdinalIgnoreCase))
+                        : await TwitchHelper.GetCategoryByGameId(item.CategoryId);
+                    if (categoryData == null)
+                    {
+                        return;
+                    }
 
                     mainWindow.CurrentCategoryId = categoryData.Id;
                     mainWindow.CurrentCategoryName = categoryData.Name;
                     mainWindow.CurrentCategoryBoxArtUrl = categoryData.BoxArtUrl;
+                    mainWindow.CurrentCategorySteamUrl = item.IsCustomGame
+                        ? item.CustomSteamUrl
+                        : DAO_Category.SelectOneById(categoryData.Id)?.SteamUrl ?? string.Empty;
 
                     // カテゴリに紐づくチャンネルポイントプリセットを適用する（紐づけが無ければ何もしない）
                     await mainWindow.ApplyChannelPointPresetForCategoryAsync(categoryData.Id);
@@ -382,6 +401,14 @@ namespace JTSA.Panels
             return ResolveThumbnailUrl(null, twitchCategoryData?.BoxArtUrl);
         }
 
+        private static async Task<string> ResolveCustomGameImageUrlAsync(string steamUrl)
+        {
+            var appId = SteamHelper.GetSteamAppId(steamUrl);
+            if (appId is null) return string.Empty;
+
+            return await SteamHelper.GetSteamHeaderImageUrlAsync(appId) ?? string.Empty;
+        }
+
         /// <summary>
         /// プレイリストヘッダー用にTwitchカテゴリのボックスアートURLを解決する。
         /// Steamヘッダー画像は使用しない。
@@ -426,8 +453,6 @@ namespace JTSA.Panels
         /// <returns></returns>
         private T_GamePlaylistHeader FormConvertToPlaylistHeader()
         {
-            T_GamePlaylistHeader result = null;
-
             var playlistTitleText = CurrentGamePlaylistName;
 
             if (string.IsNullOrEmpty(playlistTitleText))
@@ -442,7 +467,7 @@ namespace JTSA.Panels
                 playlistId = JTSAHelper.GetCurrentUnixTimestampMillis();
             }
 
-            result = new T_GamePlaylistHeader
+            var result = new T_GamePlaylistHeader
             {
                 GamePlayListId = playlistId,
                 GamePlayListName = playlistTitleText,
@@ -473,6 +498,9 @@ namespace JTSA.Panels
                     {
                         GamePlayListId = playlistId,
                         CategoryId = item.CategoryId,
+                        CustomGameName = item.IsCustomGame ? item.DisplayLabel : string.Empty,
+                        CustomSteamUrl = item.IsCustomGame ? item.CustomSteamUrl : string.Empty,
+                        IsCustomGame = item.IsCustomGame,
                         Status = (int)item.Status,
                         LastUsedDateTime = DateTime.Now,
                         CreatedDateTime = DateTime.Now,
@@ -486,14 +514,17 @@ namespace JTSA.Panels
         #endregion
 
 
-        public async void ReloadPlaylistHeader()
+        public async void ReloadPlaylistHeader() => await ReloadPlaylistHeaderAsync();
+
+        public async Task ReloadPlaylistHeaderAsync()
         {
+            var version = ++headerReloadVersion;
             //　リストの初期化
-            playlistHeaderFormList.Clear();
+            var headers = new List<PlaylistHeaderForm>();
 
             // プレイリストヘッダ一覧の読込
             var gamePlayListHeaders = DAO_GamePlaylist.SelectAllHeader();
-            if (gamePlayListHeaders.Count == 0) return;
+            if (gamePlayListHeaders.Count == 0) { playlistHeaderFormList.Clear(); return; }
 
             foreach (var gamePlayListHeader in gamePlayListHeaders)
             {
@@ -505,9 +536,12 @@ namespace JTSA.Panels
 
                 var thumbnailUrl = firstItem == null
                     ? ""
-                    : await ResolveBoxArtUrlByCategoryIdAsync(firstItem.CategoryId);
+                    : firstItem.IsCustomGame
+                        ? await ResolveCustomGameImageUrlAsync(firstItem.CustomSteamUrl)
+                        : await ResolveBoxArtUrlByCategoryIdAsync(firstItem.CategoryId);
+                if (version != headerReloadVersion) return;
 
-                playlistHeaderFormList.Add(new PlaylistHeaderForm()
+                headers.Add(new PlaylistHeaderForm()
                 {
                     GamePlayListId = gamePlayListHeader.GamePlayListId,
                     GamePlayListName = gamePlayListHeader.GamePlayListName,
@@ -518,6 +552,7 @@ namespace JTSA.Panels
                 });
             }
 
+            playlistHeaderFormList.ReplaceAll(headers);
             if (obsPlaylistId == 0 || (obsPlaylistId != RecentPlaylistId &&
                 playlistHeaderFormList.All(x => x.GamePlayListId != obsPlaylistId)))
             {
@@ -554,7 +589,9 @@ namespace JTSA.Panels
         /// プレイリスト一覧画面の再読み込み
         /// </summary>
         /// <returns></returns>
-        public async void ReloadGamePlaylistItem()
+        public async void ReloadGamePlaylistItem() => await ReloadGamePlaylistItemAsync();
+
+        public async Task ReloadGamePlaylistItemAsync()
         {
             var version = ++itemReloadVersion;
             GamePlayListTitleEdit.IsReadOnly = IsRecentPlaylist;
@@ -566,7 +603,7 @@ namespace JTSA.Panels
                 return;
             }
             //　リストの初期化
-            playlistItemFormList.Clear();
+            var items = new List<PlaylistItemForm>();
 
             // 画面に設定されているプレイリストIDに紐づくプレイリストアイテムを取得
             var gamePlayListItems = DAO_GamePlaylist.SelectGamePlaylistById(CurrentGamePlaylistId);
@@ -574,15 +611,21 @@ namespace JTSA.Panels
             //
             foreach (var game in gamePlayListItems)
             {
-                var imageUrl = await ResolveThumbnailUrlByCategoryIdAsync(game.CategoryId);
+                var imageUrl = game.IsCustomGame
+                    ? await ResolveCustomGameImageUrlAsync(game.CustomSteamUrl)
+                    : await ResolveThumbnailUrlByCategoryIdAsync(game.CategoryId);
                 if (version != itemReloadVersion) return;
-                playlistItemFormList.Add(new PlaylistItemForm()
+                items.Add(new PlaylistItemForm()
                 {
                     CategoryId = game.CategoryId,
                     ImageUrl = imageUrl,
+                    DisplayLabel = game.CustomGameName,
+                    IsCustomGame = game.IsCustomGame,
+                    CustomSteamUrl = game.CustomSteamUrl,
                     Status = (GameStatus)game.Status
                 });
             }
+            playlistItemFormList.ReplaceAll(items);
         }
 
 
@@ -599,8 +642,7 @@ namespace JTSA.Panels
                 var signature = JsonSerializer.Serialize(items.Select(x => new { x.CategoryId, x.ImageUrl, x.DisplayLabel, x.Status }));
                 if (signature == recentSignature) return;
                 recentSignature = signature;
-                playlistItemFormList.Clear();
-                foreach (var item in items) playlistItemFormList.Add(item);
+                playlistItemFormList.ReplaceAll(items);
             }
             catch (Exception ex)
             {
@@ -655,6 +697,29 @@ namespace JTSA.Panels
 
         }
 
+        public void AddCustomPlaylistItem(string gameName, string steamUrl)
+        {
+            if (IsRecentPlaylist || string.IsNullOrWhiteSpace(gameName)) return;
+
+            DAO_GamePlaylist.InsertItemList(
+            [
+                new T_GamePlaylistItem
+                {
+                    GamePlayListId = CurrentGamePlaylistId,
+                    CategoryId = $"custom:{Guid.NewGuid():N}",
+                    CustomGameName = gameName.Trim(),
+                    CustomSteamUrl = steamUrl.Trim(),
+                    IsCustomGame = true,
+                    Status = (int)GameStatus.None,
+                    LastUsedDateTime = DateTime.Now,
+                    CreatedDateTime = DateTime.Now,
+                    UpdatedDateTime = DateTime.Now
+                }
+            ]);
+
+            ReloadGamePlaylistItem();
+        }
+
 
         /// <summary>
         /// OBS用JSON作成
@@ -706,7 +771,9 @@ namespace JTSA.Panels
             foreach (var item in DAO_GamePlaylist.SelectGamePlaylistById(obsPlaylistId))
             {
                 items.Add(new ObsPlaylistItem(
-                    await ResolveThumbnailUrlByCategoryIdAsync(item.CategoryId),
+                    item.IsCustomGame
+                        ? await ResolveCustomGameImageUrlAsync(item.CustomSteamUrl)
+                        : await ResolveThumbnailUrlByCategoryIdAsync(item.CategoryId),
                     ((GameStatus)item.Status).ToString()));
             }
 

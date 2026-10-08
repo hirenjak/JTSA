@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using Newtonsoft.Json.Linq;
@@ -240,14 +241,14 @@ public sealed class VtsClient : IDisposable
     }
 
     private Task<JObject> AuthenticateAsync(string token)
-        => SendAsync("AuthenticationRequest", new
+        => SendEnvelopeAsync(VtsProtocol.CreateEnvelope("AuthenticationRequest", new
         {
             pluginName = VtsProtocol.PluginName,
             pluginDeveloper = VtsProtocol.PluginDeveloper,
             authenticationToken = token
-        });
+        }), allowApiError: true);
 
-    private async Task<JObject> SendEnvelopeAsync(JObject envelope)
+    private async Task<JObject> SendEnvelopeAsync(JObject envelope, bool allowApiError = false)
     {
         if (!IsConnected)
             throw new InvalidOperationException("VTube Studio に接続していません。");
@@ -278,9 +279,19 @@ public sealed class VtsClient : IDisposable
         }
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
-        await using var registration = timeout.Token.Register(() => tcs.TrySetException(
+        using var registration = timeout.Token.Register(() => tcs.TrySetException(
             new TimeoutException("VTube Studio からの応答がタイムアウトしました。")));
-        return await tcs.Task;
+        try
+        {
+            var response = await tcs.Task;
+            if (!allowApiError)
+                ThrowIfApiError(response);
+            return response;
+        }
+        finally
+        {
+            pending.TryRemove(requestId, out _);
+        }
     }
 
     private void StartReceiveLoop()
@@ -292,7 +303,7 @@ public sealed class VtsClient : IDisposable
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
         var buffer = new byte[64 * 1024];
-        var message = new StringBuilder();
+        using var message = new MemoryStream();
         try
         {
             while (!cancellationToken.IsCancellationRequested && socket?.State == WebSocketState.Open)
@@ -301,12 +312,12 @@ public sealed class VtsClient : IDisposable
                 if (result.MessageType == WebSocketMessageType.Close)
                     break;
 
-                message.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                message.Write(buffer, 0, result.Count);
                 if (!result.EndOfMessage)
                     continue;
 
-                var text = message.ToString();
-                message.Clear();
+                var text = Encoding.UTF8.GetString(message.GetBuffer(), 0, (int)message.Length);
+                message.SetLength(0);
                 HandleIncoming(text);
             }
         }

@@ -120,6 +120,23 @@ public sealed class ObsController : IDisposable
         return client.GetCurrentProgramScene();
     }
 
+    public (string SceneName, string ImageData) GetProgramScreenshot()
+    {
+        EnsureConnected();
+        var sceneName = client.GetCurrentProgramScene();
+        var response = client.SendRequest("GetSourceScreenshot", new JObject
+        {
+            ["sourceName"] = sceneName,
+            ["imageFormat"] = "jpeg",
+            ["imageWidth"] = 960,
+            ["imageCompressionQuality"] = 65
+        });
+        var imageData = response.Value<string>("imageData");
+        if (string.IsNullOrWhiteSpace(imageData))
+            throw new InvalidOperationException("OBSの画像を取得できませんでした。");
+        return (sceneName, imageData);
+    }
+
     public void SetCurrentProgramScene(string sceneName)
     {
         EnsureConnected();
@@ -140,10 +157,11 @@ public sealed class ObsController : IDisposable
     public IReadOnlyList<ObsSceneSource> GetSceneSources(string sceneName)
     {
         EnsureConnected();
-        var sources = client.GetSceneItemList(sceneName)
+        var response = client.SendRequest("GetSceneItemList", new JObject { ["sceneName"] = sceneName });
+        var sources = (response["sceneItems"] as JArray ?? []).OfType<JObject>()
             .Select(item => new ObsSceneSource(
-                item.SourceName,
-                client.GetSceneItemEnabled(sceneName, item.ItemId),
+                item.Value<string>("sourceName") ?? string.Empty,
+                item.Value<bool?>("sceneItemEnabled") ?? false,
                 string.Empty))
             .ToList();
 

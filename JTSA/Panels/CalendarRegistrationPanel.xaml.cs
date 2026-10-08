@@ -4,6 +4,7 @@ using JTSA.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -117,6 +118,27 @@ public partial class CalendarRegistrationPanel : UserControl
         CategoryListBox.SelectedItem = null;
     }
 
+    private void CalendarCategoryFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (FindResource("CalendarCategoryView") is CollectionViewSource viewSource)
+            viewSource.View.Refresh();
+    }
+
+    private void CalendarCategoryView_Filter(object sender, FilterEventArgs e)
+    {
+        if (e.Item is not CategoryForm category)
+        {
+            e.Accepted = false;
+            return;
+        }
+
+        var query = CalendarCategoryFilterTextBox?.Text.Trim() ?? string.Empty;
+        e.Accepted = query.Length == 0
+            || category.DisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+            || category.JapaneseDisplayName.Contains(query, StringComparison.CurrentCultureIgnoreCase)
+            || category.CategoryId.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void AddCategoryButton_Click(object sender, RoutedEventArgs e)
     {
         var window = new CategorySearchWindow
@@ -133,6 +155,7 @@ public partial class CalendarRegistrationPanel : UserControl
         editingEntryId = entry.Id;
         ScheduleDatePicker.SelectedDate = entry.CalendarDate;
         ContentTextBox.Text = entry.Content;
+        PinnedChatTextBox.Text = entry.PinnedChatMessage;
         TitlePlaceholderTextBox.Text = entry.TitlePlaceholder;
         StartHourComboBox.SelectedIndex = entry.StartTime.Hours;
         StartMinuteComboBox.SelectedIndex = entry.StartTime.Minutes / 5;
@@ -169,7 +192,8 @@ public partial class CalendarRegistrationPanel : UserControl
             categoryBoxArtUrl,
             string.Join(',', SelectedFriends.Select(friend => friend.BroadcastId)),
             startTime,
-            editingEntryId);
+            editingEntryId,
+            PinnedChatTextBox.Text.Trim());
         editingEntryId = null;
         Reload();
         StatusTextBlock.Text = "予定を保存しました。";
@@ -194,7 +218,7 @@ public partial class CalendarRegistrationPanel : UserControl
         {
             SelectedCategoryBoxArt.Source = string.IsNullOrWhiteSpace(categoryBoxArtUrl)
                 ? null
-                : new BitmapImage(new Uri(categoryBoxArtUrl));
+                : JTSA.Utility.CachedImageConverter.GetImage(categoryBoxArtUrl);
         }
         catch
         {

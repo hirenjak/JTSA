@@ -48,7 +48,8 @@ internal static class DAO_Calendar
         string categoryBoxArtUrl = "",
         string selectedFriendIds = "",
         TimeSpan? startTime = null,
-        long? entryId = null)
+        long? entryId = null,
+        string pinnedChatMessage = "")
     {
         using var db = new AppDbContext();
         var calendarDate = date.Date;
@@ -64,6 +65,7 @@ internal static class DAO_Calendar
                 CalendarDate = calendarDate,
                 StartTime = startTime ?? TimeSpan.Zero,
                 Content = content,
+                PinnedChatMessage = pinnedChatMessage,
                 TitlePlaceholder = titlePlaceholder,
                 CategoryId = categoryId,
                 CategoryName = categoryName,
@@ -80,6 +82,7 @@ internal static class DAO_Calendar
         {
             entry.CalendarDate = calendarDate;
             entry.Content = content;
+            entry.PinnedChatMessage = pinnedChatMessage;
             entry.StartTime = startTime ?? TimeSpan.Zero;
             entry.TitlePlaceholder = titlePlaceholder;
             entry.CategoryId = categoryId;

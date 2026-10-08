@@ -38,13 +38,14 @@ namespace JTSA.Models
         public DbSet<T_ChatUser> T_ChatUser { get; set; }
         public DbSet<T_StreamChatUserCount> T_StreamChatUserCount { get; set; }
         public DbSet<T_StreamHistory> T_StreamHistory { get; set; }
+        public DbSet<T_AppNotificationReceipt> T_AppNotificationReceipt { get; set; }
         public DbSet<T_CalendarEntry> T_CalendarEntry { get; set; }
         public DbSet<M_ChannelPoint> M_ChannelPoint { get; set; }
         public DbSet<T_ChannelPointPresetHeader> T_ChannelPointPresetHeader { get; set; }
         public DbSet<T_ChannelPointPresetItem> T_ChannelPointPresetItem { get; set; }
         internal DbSet<T_StreamExpansionHeader> T_StreamExpansionHeader { get; set; }
+        internal DbSet<T_StreamExpansionFolder> T_StreamExpansionFolder { get; set; }
         internal DbSet<T_StreamExpansionItem> T_StreamExpansionItem { get; set; }
-        internal DbSet<T_StreamWindow> T_StreamWindow { get; set; }
 
         /// <summary>
         /// EF Core導入前に作成された旧DBへ初期マイグレーション履歴を補完する。
@@ -152,6 +153,9 @@ namespace JTSA.Models
 
             modelBuilder.Entity<T_StreamChatUserCount>()
                 .HasIndex(c => c.StreamId);
+
+            modelBuilder.Entity<T_StreamChatUserCount>()
+                .HasIndex(c => new { c.UserId, c.FirstChatDateTime });
 
             modelBuilder.Entity<T_StreamExpansionItem>()
                 .HasIndex(c => new { c.Id, c.HeaderId });

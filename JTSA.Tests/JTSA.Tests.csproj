@@ -20,5 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\JTSA\JTSA.csproj" />
+    <ProjectReference Include="..\installer\JTSA.SetupBootstrapper\JTSA.SetupBootstrapper.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../extensions/JTSA.DesktopWallPlugin/CalendarBridgeProtocol.cs" Link="CalendarBridgeProtocol.cs" />
+    <Compile Include="../extensions/JTSA.DesktopWallPlugin/CalendarBridgeServer.cs" Link="CalendarBridgeServer.cs" />
   </ItemGroup>
 </Project>

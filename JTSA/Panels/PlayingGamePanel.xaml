@@ -86,7 +86,7 @@
                                     MouseRightButtonUp="ImageItem_RightClick">
 
                                 <Grid Background="#FF202020" ToolTip="{Binding DisplayLabel}">
-                                    <Image Source="{Binding ImageUrl}"
+                                    <Image Source="{Binding ImageUrl, Converter={StaticResource CachedImageConverter}, ConverterParameter=256}"
                                            Stretch="Uniform"/>
                                     <TextBlock Text="{Binding DisplayLabel}" Foreground="White" Background="#AA202020"
                                                VerticalAlignment="Top" TextTrimming="CharacterEllipsis"/>
@@ -199,7 +199,7 @@
                                                      IsHitTestVisible="False"
                                                      IsChecked="{Binding IsObsSelected, Mode=OneWay}"/>
 
-                                        <Image Grid.Column="1" Source="{Binding ImageUrl}"
+                                        <Image Grid.Column="1" Source="{Binding ImageUrl, Converter={StaticResource CachedImageConverter}, ConverterParameter=256}"
                                    Height="48"
                                Stretch="UniformToFill"/>
 

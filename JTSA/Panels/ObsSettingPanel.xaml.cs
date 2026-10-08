@@ -822,9 +822,18 @@ public partial class ObsSettingPanel : UserControl
             if (controller is null) throw new InvalidOperationException("OBSに接続できませんでした");
             var current = await Task.Run(() => controller.GetSceneSourceEnabled(
                 preset.SceneName, preset.SourceName, preset.ContainerName));
-            await Task.Run(() => controller.SetSceneSourceEnabled(
-                preset.SceneName, preset.SourceName, !current, preset.ContainerName));
+            await Task.Run(() =>
+            {
+                if (preset.ApplyToAllScenes)
+                    controller.SetInputVisibleAcrossScenes(preset.SourceName, !current);
+                else
+                    controller.SetSceneSourceEnabled(preset.SceneName, preset.SourceName, !current, preset.ContainerName);
+            });
             preset.IsVisible = !current;
+            if (preset.ApplyToAllScenes)
+                foreach (var matching in sourceSwitchPresets.Where(item => item.IsSub == preset.IsSub &&
+                    string.Equals(item.SourceName, preset.SourceName, StringComparison.OrdinalIgnoreCase)))
+                    matching.IsVisible = !current;
             var mainWindow = (MainWindow)Application.Current.MainWindow;
             RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
             mainWindow.RefreshObsSourceShortcutButtons();
@@ -840,6 +849,16 @@ public partial class ObsSettingPanel : UserControl
     {
         if ((sender as Button)?.Tag is not SourceSwitchPreset preset) return;
         sourceSwitchPresets.Remove(preset);
+        SaveSourceSwitchPresets();
+        var mainWindow = (MainWindow)Application.Current.MainWindow;
+        RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
+        mainWindow.RefreshObsSourceShortcutButtons();
+    }
+
+    private void SourceSwitchAllScenesCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox { Tag: SourceSwitchPreset preset } checkBox) return;
+        preset.ApplyToAllScenes = checkBox.IsChecked == true;
         SaveSourceSwitchPresets();
         var mainWindow = (MainWindow)Application.Current.MainWindow;
         RefreshSourceSwitchPresetFilter(mainWindow.SelectedTargetAccountId);
@@ -1131,18 +1150,26 @@ public partial class ObsSettingPanel : UserControl
                     ? mainWindow.GetConnectedObsController(group.Key)
                     : await mainWindow.EnsureObsConnectedAsync(group.Key);
                 if (controller is null) continue;
-                foreach (var preset in group)
+                using var concurrency = new SemaphoreSlim(4);
+                var states = await Task.WhenAll(group.GroupBy(preset => preset.SceneName).Select(async scene =>
                 {
+                    await concurrency.WaitAsync();
                     try
                     {
-                        preset.IsVisible = await Task.Run(() =>
-                            controller.GetSceneSourceEnabled(
-                                preset.SceneName, preset.SourceName, preset.ContainerName));
+                        var sources = await Task.Run(() => controller.GetSceneSources(scene.Key));
+                        return (Presets: scene.ToList(), Sources: sources);
                     }
                     catch
                     {
-                        preset.IsVisible = false;
+                        return (Presets: scene.ToList(), Sources: (IReadOnlyList<ObsSceneSource>)Array.Empty<ObsSceneSource>());
                     }
+                    finally { concurrency.Release(); }
+                }));
+                foreach (var state in states)
+                foreach (var preset in state.Presets)
+                {
+                    preset.IsVisible = state.Sources.FirstOrDefault(source =>
+                        source.SourceName == preset.SourceName && source.ContainerName == preset.ContainerName)?.IsEnabled ?? false;
                 }
             }
             catch { }
@@ -1159,7 +1186,8 @@ public partial class ObsSettingPanel : UserControl
 
     private void SourcePresetCard_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (IsInsideTextBox(e.OriginalSource as DependencyObject))
+        if (IsInsideTextBox(e.OriginalSource as DependencyObject) ||
+            IsInsideCheckBox(e.OriginalSource as DependencyObject))
         {
             draggedSourcePreset = null;
             return;
@@ -1263,6 +1291,18 @@ public partial class ObsSettingPanel : UserControl
         ((MainWindow)Application.Current.MainWindow).RefreshObsSourceShortcutButtons();
     }
 
+    private static bool IsInsideCheckBox(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is CheckBox) return true;
+            source = source is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+                ? System.Windows.Media.VisualTreeHelper.GetParent(source)
+                : LogicalTreeHelper.GetParent(source);
+        }
+        return false;
+    }
+
     private static bool IsInsideTextBox(DependencyObject? source)
     {
         while (source is not null)
@@ -1306,13 +1346,15 @@ public partial class ObsSettingPanel : UserControl
         public string SourceName { get; set; } = string.Empty;
         public string ButtonDisplayName { get; set; } = string.Empty;
         public string ContainerName { get; set; } = string.Empty;
+        public bool ApplyToAllScenes { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsVisible { get; set; }
         public string DisplayName => $"{(IsSub ? "サブ" : "メイン")}｜{SourceName}";
         public string ShortcutDisplayName => string.IsNullOrWhiteSpace(ButtonDisplayName)
             ? SourceName
             : ButtonDisplayName.Trim();
-        public string DetailText => string.IsNullOrWhiteSpace(ContainerName) ||
+        public string DetailText => ApplyToAllScenes ? $"全シーン / {SourceName}" :
+                                    string.IsNullOrWhiteSpace(ContainerName) ||
                                     string.Equals(ContainerName, SceneName, StringComparison.OrdinalIgnoreCase)
             ? $"{SceneName} / {SourceName}"
             : $"{SceneName} / {ContainerName} / {SourceName}";
@@ -1373,6 +1415,9 @@ public partial class ObsSettingPanel : UserControl
         isRestoringCards = true;
         try
         {
+            var scenes = await Task.Run(controller.GetSceneNames);
+            var sourcesByScene = new Dictionary<string, IReadOnlyList<string>>();
+            var textBySource = new Dictionary<string, string>();
             foreach (var card in textSourceCards.Where(card =>
                          card.IsSub == isSub && card.SelectedScene is not null))
             {
@@ -1381,7 +1426,6 @@ public partial class ObsSettingPanel : UserControl
                 card.Controller = controller;
                 card.Status = "文言読込中...";
 
-                var scenes = await Task.Run(controller.GetSceneNames);
                 ReplaceItems(card.Scenes, scenes);
                 card.SelectedScene = sceneName;
                 if (sceneName is null || !card.Scenes.Contains(sceneName))
@@ -1390,7 +1434,8 @@ public partial class ObsSettingPanel : UserControl
                     continue;
                 }
 
-                var sources = await Task.Run(() => controller.GetTextSourceNames(sceneName));
+                if (!sourcesByScene.TryGetValue(sceneName, out var sources))
+                    sourcesByScene[sceneName] = sources = await Task.Run(() => controller.GetTextSourceNames(sceneName));
                 ReplaceItems(card.Sources, sources);
                 card.SelectedSource = sourceName;
                 if (sourceName is null || !card.Sources.Contains(sourceName))
@@ -1399,7 +1444,9 @@ public partial class ObsSettingPanel : UserControl
                     continue;
                 }
 
-                card.Text = await Task.Run(() => controller.GetTextSourceText(sourceName));
+                if (!textBySource.TryGetValue(sourceName, out var text))
+                    textBySource[sourceName] = text = await Task.Run(() => controller.GetTextSourceText(sourceName));
+                card.Text = text;
                 card.IsTextLoaded = true;
                 card.Status = "保存済み設定を読み込みました";
             }
@@ -1768,10 +1815,9 @@ public partial class ObsSettingPanel : UserControl
         }));
     }
 
-    private static void ReplaceItems(ObservableCollection<string> target, IEnumerable<string> values)
+    private static void ReplaceItems(BatchObservableCollection<string> target, IEnumerable<string> values)
     {
-        target.Clear();
-        foreach (var value in values) target.Add(value);
+        target.ReplaceAll(values);
     }
 
     private sealed class ObsTextSourceCard : INotifyPropertyChanged
@@ -1831,8 +1877,8 @@ public partial class ObsSettingPanel : UserControl
                 Notify();
             }
         }
-        public ObservableCollection<string> Scenes { get; } = [];
-        public ObservableCollection<string> Sources { get; } = [];
+        public BatchObservableCollection<string> Scenes { get; } = [];
+        public BatchObservableCollection<string> Sources { get; } = [];
         public string? SelectedScene
         {
             get => selectedScene;

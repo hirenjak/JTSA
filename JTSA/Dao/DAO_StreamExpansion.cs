@@ -4,6 +4,21 @@ namespace JTSA.Dao;
 
 internal static class DAO_StreamExpansion
 {
+    public static List<T_StreamExpansionFolder> SelectFolders()
+    {
+        using var db = new AppDbContext();
+        return db.T_StreamExpansionFolder.OrderBy(x => x.Id).ToList();
+    }
+
+    public static long AddFolder(string name)
+    {
+        using var db = new AppDbContext();
+        var folder = new T_StreamExpansionFolder { Name = name.Trim() };
+        db.T_StreamExpansionFolder.Add(folder);
+        db.SaveChanges();
+        return folder.Id;
+    }
+
     public static List<T_StreamExpansionHeader> SelectAllHeaders()
     {
         using var db = new AppDbContext();
@@ -32,12 +47,15 @@ internal static class DAO_StreamExpansion
         else
         {
             entity.Name = header.Name;
+            entity.FolderId = header.FolderId;
             entity.IsActive = header.IsActive;
             entity.IsRaid = header.IsRaid;
             entity.IsSubscribe = header.IsSubscribe;
+            entity.IsGiftSubscription = header.IsGiftSubscription;
             entity.IsBits = header.IsBits;
             entity.IsFirstChat = header.IsFirstChat;
             entity.IsFollow = header.IsFollow;
+            entity.IsStreamInfoApplied = header.IsStreamInfoApplied;
             entity.IsHourly = header.IsHourly;
             entity.AdAdvanceMinutes = header.AdAdvanceMinutes;
             entity.IsAdUpcoming = header.IsAdUpcoming;

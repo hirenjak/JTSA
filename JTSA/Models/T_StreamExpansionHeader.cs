@@ -13,18 +13,21 @@ namespace JTSA.Models
         public long Id { get; set; }
 
         public string Name { get; set; } = string.Empty;
+        public long? FolderId { get; set; }
 
         public bool IsActive { get; set; }
 
         public bool IsRaid { get; set; }
 
         public bool IsSubscribe { get; set; }
+        public bool IsGiftSubscription { get; set; }
 
         public bool IsBits { get; set; }
 
         public bool IsFirstChat { get; set; }
 
         public bool IsFollow { get; set; }
+        public bool IsStreamInfoApplied { get; set; }
         public bool IsHourly { get; set; }
         public bool IsAdStart { get; set; }
         public bool IsAdEnd { get; set; }

@@ -1,11 +1,18 @@
 using JTSA.Plugin.Abstractions;
 using JTSA.Utility;
+using JTSA.Dao;
 using System.Windows.Interop;
 using System.IO;
 
 namespace JTSA.Plugins;
 
-internal sealed class JtsaPluginContext : IJtsaPluginContext
+internal sealed class JtsaPluginContext :
+    IJtsaPluginContext,
+    IJtsaCalendarPluginContext,
+    IJtsaStreamMetadataPluginContext,
+    IJtsaExternalChatPluginContext,
+    IJtsaRemotePanelPluginContext,
+    IJtsaExpansionTriggerPluginContext
 {
     private readonly MainWindow mainWindow;
     private readonly string pluginId;
@@ -15,15 +22,29 @@ internal sealed class JtsaPluginContext : IJtsaPluginContext
         this.mainWindow = mainWindow;
         this.pluginId = pluginId;
         PluginDirectory = pluginDirectory;
-        DataDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JTSA", "Plugins", pluginId);
-        Directory.CreateDirectory(DataDirectory);
+        DataDirectory = PluginStorage.GetDataDirectory(pluginId);
     }
 
     public string PluginDirectory { get; }
     public string DataDirectory { get; }
     public nint MainWindowHandle => new WindowInteropHelper(mainWindow).Handle;
+    public StreamMetadataInfo GetCurrentStreamMetadata() => new(
+        mainWindow.CurrentTitleText,
+        mainWindow.CurrentCategoryId,
+        mainWindow.CurrentCategoryName);
+
+    public void AddExternalChatMessage(ExternalChatMessageInfo message) =>
+        mainWindow.ChatPanel.AddExternalChatMessage(message);
+
+    public void SetRemotePanel(RemotePluginPanelContent panel) =>
+        RemotePanelRegistry.Set(pluginId, panel);
+
+    public void RemoveRemotePanel(string id) =>
+        RemotePanelRegistry.Remove(pluginId, id);
+
+    public void SetInteractiveRemotePanel(RemotePluginPanelContent panel, Func<string, string?, bool> onAction, Func<string> getState) =>
+        RemotePanelRegistry.Set(pluginId, panel, onAction, getState);
+
     public IReadOnlyList<ChannelPointRewardInfo> GetChannelPointRewards() =>
         mainWindow.ChannelPointPanel.ChannelPointRewardFormList
             .Select(reward => new ChannelPointRewardInfo(
@@ -31,6 +52,54 @@ internal sealed class JtsaPluginContext : IJtsaPluginContext
                 reward.Title,
                 reward.IsUserInputRequired))
             .ToArray();
+
+    public IReadOnlyList<CalendarEntryInfo> GetCalendarEntries(DateTime from, DateTime toExclusive)
+    {
+        var start = from.Date;
+        var end = toExclusive.Date;
+        if (end <= start) return [];
+
+        var titleTags = DAO_TitleTag.SelectAllOrderbyLastUser();
+        var friendPrefix = DAO_Setting.SelectOneById(DAO_Setting.SettingName.FriendPrefixWord)?.Value ?? string.Empty;
+
+        return DAO_Calendar.SelectAll()
+            .Where(entry => entry.CalendarDate >= start && entry.CalendarDate < end)
+            .Select(entry => new CalendarEntryInfo(
+                entry.Id,
+                entry.CalendarDate.Date,
+                entry.StartTime,
+                entry.Content,
+                entry.TitlePlaceholder,
+                entry.CategoryName,
+                entry.CategoryBoxArtUrl,
+                ResolveCalendarTitle(entry, titleTags, friendPrefix)))
+            .ToArray();
+    }
+
+    private static string ResolveCalendarTitle(
+        Models.T_CalendarEntry entry,
+        IReadOnlyList<M_TitleTag> titleTags,
+        string friendPrefix)
+    {
+        var category = DAO_Category.SelectOneById(entry.CategoryId);
+        var japaneseCategoryName = string.IsNullOrWhiteSpace(category?.JapaneseDisplayName)
+            ? entry.CategoryName
+            : category.JapaneseDisplayName;
+        var template = string.IsNullOrWhiteSpace(entry.TitlePlaceholder)
+            ? TitlePlaceholderReplacer.TitlePlaceholder
+            : entry.TitlePlaceholder;
+        var title = TitlePlaceholderReplacer.ReplaceTitle(entry.Content, template, japaneseCategoryName);
+        var friendText = string.IsNullOrWhiteSpace(entry.SelectedFriendNames)
+            ? string.Empty
+            : string.IsNullOrWhiteSpace(friendPrefix)
+                ? entry.SelectedFriendNames
+                : $"{friendPrefix} {entry.SelectedFriendNames}";
+        title = title.Replace("${friend}", friendText, StringComparison.OrdinalIgnoreCase);
+        title = TitlePlaceholderReplacer.ReplaceDate(title, entry.CalendarDate);
+        foreach (var titleTag in titleTags)
+            title = title.Replace($"${{{titleTag.Id}}}", titleTag.DisplayName, StringComparison.OrdinalIgnoreCase);
+        return title.Trim();
+    }
 
     public event Action<ChannelPointRedemptionInfo>? ChannelPointRedeemed
     {

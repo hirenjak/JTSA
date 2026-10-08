@@ -254,7 +254,7 @@ namespace JTSA.Panels
             if (Uri.TryCreate(value, UriKind.Absolute, out var uri)
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                return new BitmapImage(uri);
+                return CachedImageConverter.GetImage(value, 96);
             }
 
             try

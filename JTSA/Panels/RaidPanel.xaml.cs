@@ -124,7 +124,7 @@ namespace JTSA.Panels
                     UserName = data.UserName,
                     UserLogin = data.UserLogin,
                     StreamTitle = data.Title,
-                    GameBoxArtUrl = StreamGameBoxArtUrl,
+                    GameBoxArtUrl = StreamGameBoxArtUrl ?? string.Empty,
                     StreamingTime = $"{totalHours}:{timeSpan:mm\\:ss}",
                     ThumbnailUrl = ThumbnailUrl
                 });
@@ -183,7 +183,8 @@ namespace JTSA.Panels
         {
             var userName = $"{TestGiftUserPrefix}{++testGiftUserNumber}";
             StreamSupportTracker.AddGiftSubscription(userName, "1");
-            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.Subscribe, string.Empty);
+            await streamExpansionService.HandleAsync(StreamExpansionTriggerType.GiftSubscription,
+                string.Empty, subscription: new StreamExpansionSubscriptionInfo(true, Sender: userName));
         }
 
         private async void AddTestRaidButton_Click(object sender, RoutedEventArgs e)
