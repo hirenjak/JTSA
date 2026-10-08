@@ -198,6 +198,59 @@
                     </ScrollViewer>
                 </Grid>
             </TabItem>
+            <TabItem Header="チャネポ状況">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="300"/>
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Margin="0,0,12,0">
+                        <TextBlock x:Name="StatusSupportText" DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="56"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="72"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="リワード"/>
+                            <TextBlock Grid.Column="1" Text="TODO"/>
+                            <TextBlock Grid.Column="2" Text="クールダウン"/>
+                            <TextBlock Grid.Column="3" Text="交換可能"/>
+                        </Grid>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="HookRowsControl">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="56"/>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="72"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                            <CheckBox Grid.Column="1" IsChecked="{Binding Todo}" Click="HookCheckBox_Click"/>
+                                            <CheckBox Grid.Column="2" IsChecked="{Binding Cooldown}" Click="HookCheckBox_Click"/>
+                                            <CheckBox Grid.Column="3" IsChecked="{Binding Redeemable}" Click="HookCheckBox_Click"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                    <DockPanel Grid.Column="1">
+                        <TextBlock DockPanel.Dock="Top" Text="TODO（未処理の交換）" Margin="0,0,0,4"/>
+                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                            <Button Content="完了" Width="64" Height="28" Margin="0,0,8,8" Click="CompleteTodoButton_Click"/>
+                            <Button Content="キャンセル" Width="80" Height="28" Margin="0,0,8,8" Click="CancelTodoButton_Click"
+                                    ToolTip="JTSA で作ったリワードはポイントを返却します。それ以外は一覧から消すだけです。"/>
+                            <Button Content="今すぐ更新" Width="88" Height="28" Margin="0,0,8,8" Click="RefreshStatusButton_Click"/>
+                        </WrapPanel>
+                        <ListBox x:Name="TodoListBox" DisplayMemberPath="Label"/>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
             <TabItem Header="表示">
                 <StackPanel Margin="12" MaxWidth="360" HorizontalAlignment="Left">
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,12"

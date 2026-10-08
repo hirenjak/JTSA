@@ -52,8 +52,14 @@ public sealed class RewardAction
 public sealed class ChannelPointHooks
 {
     public List<RewardAction> RewardActions { get; set; } = [];
+    /// <summary>交換を TODO として表示するリワード。</summary>
+    public List<string> TodoRewardIds { get; set; } = [];
+    /// <summary>クールダウンの残り時間を表示するリワード。</summary>
+    public List<string> CooldownRewardIds { get; set; } = [];
+    /// <summary>交換できるときにアイコンを表示するリワード。</summary>
+    public List<string> RedeemableRewardIds { get; set; } = [];
 
-    // todoRewardIds などチャネポ状況表示用の設定は、移行時に失わないよう保持だけする
+    // 上記以外の tamagotchi-twitch の設定は、移行時に失わないよう保持だけする
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Extra { get; set; }
 }

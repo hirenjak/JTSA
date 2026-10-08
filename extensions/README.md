@@ -51,7 +51,15 @@ tomozow_streaming_tool のともぞっち（tamagotchi-twitch）のゲージ機�
 
 設定は `%LocalAppData%\JTSA\UserData\PluginData\jtsa.tomozotchi\settings.json`、プリセットは同じフォルダの
 `presets\` に保存されます。ゲージの値は保存せず、JTSA を起動するたびに初期値から始まります。
-チャネポ状況（交換可能・クールダウン・TODO）の表示は未対応です。
+
+「チャネポ状況」タブでリワードごとに TODO・クールダウン・交換可能をチェックすると、元アプリと同じく
+ゲージの下に交換可能アイコン、「⌛️クールダウン中 リワード名 4m05s」、TODO（☑ リワード名）を表示します。
+`game_config.json` の `todoRewardIds` / `cooldownRewardIds` / `redeemableRewardIds` もそのまま読み込みます。
+
+- TODO は交換イベントから作るので、配布版の JTSA でも動きます。「完了」「キャンセル」で一覧から消せます。
+- クールダウンと交換可能、JTSA で作ったリワードの TODO の Twitch 側への完了・キャンセル（ポイント返却）は、
+  `IJtsaChannelPointStatusPluginContext` に対応した JTSA が必要です（[hirenjak/JTSA#49](https://github.com/hirenjak/JTSA/pull/49)）。
+  対応していない JTSA では、この部分は表示されません。状況は 10 秒ごとに取得します。
 
 ## カレンダー画像化の配置
 

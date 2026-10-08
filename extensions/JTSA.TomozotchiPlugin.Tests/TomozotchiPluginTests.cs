@@ -53,7 +53,7 @@ public class TomozotchiPluginTests
         var loaded = TomozotchiStore.Load(directory);
 
         Assert.Equal(["おなか", "おみず", "進捗"], loaded.Game.Stats.Select(stat => stat.Name));
-        Assert.Equal("a48b82ae", loaded.Game.ChannelPoints!.Extra!["todoRewardIds"][0].GetString());
+        Assert.Equal(["a48b82ae"], loaded.Game.ChannelPoints!.TodoRewardIds);
         Assert.Contains("\"maxHearts\"", File.ReadAllText(Path.Combine(directory, "settings.json")));
     }
 

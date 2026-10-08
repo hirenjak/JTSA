@@ -9,6 +9,17 @@ namespace JTSA.TomozotchiPlugin;
 public partial class TomozotchiWindow : Window
 {
     private sealed record Row(string Key, string Label);
+    private sealed record TodoRow(TodoItem Item, string Label);
+
+    /// <summary>チャネポ状況タブの1行。チェックはバインディングで書き換わる。</summary>
+    private sealed class HookRow(string id, string title, ChannelPointHooks hooks)
+    {
+        public string Id { get; } = id;
+        public string Title { get; } = title;
+        public bool Todo { get; set; } = hooks.TodoRewardIds.Contains(id);
+        public bool Cooldown { get; set; } = hooks.CooldownRewardIds.Contains(id);
+        public bool Redeemable { get; set; } = hooks.RedeemableRewardIds.Contains(id);
+    }
 
     private readonly TomozotchiPlugin plugin;
     private readonly IJtsaPluginContext context;
@@ -32,12 +43,19 @@ public partial class TomozotchiWindow : Window
         ReloadStats();
         ReloadActions();
         ReloadPresets();
+        ReloadHooks();
+        ReloadTodos();
+        StatusSupportText.Text = plugin.StatusSource is null
+            ? "この JTSA はチャネポ状況の取得に対応していないため、TODO（交換イベントから作成）だけ表示します。クールダウンと交換可能は、対応した JTSA で表示されます。"
+            : "チェックしたリワードの状況を配信拡張に表示します（10 秒ごとに更新）。TODO の完了・キャンセルを Twitch に反映できるのは JTSA で作ったリワードだけです。";
         Game.Changed += ReloadStats;
         Game.ConfigChanged += ReloadActions;
+        plugin.BoardChanged += ReloadTodos;
         Closed += (_, _) =>
         {
             Game.Changed -= ReloadStats;
             Game.ConfigChanged -= ReloadActions;
+            plugin.BoardChanged -= ReloadTodos;
         };
     }
 
@@ -235,6 +253,7 @@ public partial class TomozotchiWindow : Window
     {
         ReloadRewards();
         ReloadActions();
+        ReloadHooks();
         Status($"リワード {rewards.Count} 件");
     }
 
@@ -298,6 +317,53 @@ public partial class TomozotchiWindow : Window
     {
         if (RewardComboBox.SelectedValue is not string rewardId) { Status("リワードを選んでください"); return; }
         Status(Game.FireReward(rewardId) ?? new(false, "このリワードには動作が割り当てられていません（保存してから実行してください）"));
+    }
+
+    // ===== チャネポ状況 =====
+
+    private ChannelPointHooks Hooks => Game.Config.ChannelPoints!;
+
+    private void ReloadHooks()
+    {
+        // JTSA 側でまだ取得していないリワードも、設定済みなら ID で表示する
+        var ids = rewards.Select(reward => reward.Id)
+            .Concat(Hooks.TodoRewardIds).Concat(Hooks.CooldownRewardIds).Concat(Hooks.RedeemableRewardIds)
+            .Distinct();
+        HookRowsControl.ItemsSource = ids.Select(id => new HookRow(id, TitleOf(id), Hooks)).ToList();
+    }
+
+    private void HookCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        var rows = HookRowsControl.Items.Cast<HookRow>().ToArray();
+        Hooks.TodoRewardIds = rows.Where(row => row.Todo).Select(row => row.Id).ToList();
+        Hooks.CooldownRewardIds = rows.Where(row => row.Cooldown).Select(row => row.Id).ToList();
+        Hooks.RedeemableRewardIds = rows.Where(row => row.Redeemable).Select(row => row.Id).ToList();
+        plugin.SaveSettings();
+        _ = plugin.PollStatusAsync();
+    }
+
+    private void ReloadTodos()
+    {
+        var selected = (TodoListBox.SelectedItem as TodoRow)?.Item.Id;
+        TodoListBox.ItemsSource = plugin.Board.Todos.Select(todo => new TodoRow(todo,
+            $"{todo.RewardTitle}（{todo.UserName}）" + (string.IsNullOrWhiteSpace(todo.UserInput) ? "" : $"：{todo.UserInput}"))).ToList();
+        TodoListBox.SelectedItem = TodoListBox.Items.Cast<TodoRow>().FirstOrDefault(row => row.Item.Id == selected);
+    }
+
+    private async void CompleteTodoButton_Click(object sender, RoutedEventArgs e) => await CompleteTodo(true);
+    private async void CancelTodoButton_Click(object sender, RoutedEventArgs e) => await CompleteTodo(false);
+
+    private async Task CompleteTodo(bool fulfilled)
+    {
+        if (TodoListBox.SelectedItem is not TodoRow row) { Status("TODO を選んでください"); return; }
+        Status(await plugin.CompleteTodoAsync(row.Item, fulfilled));
+    }
+
+    private async void RefreshStatusButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (plugin.StatusSource is null) { Status("この JTSA はチャネポ状況の取得に対応していません"); return; }
+        await plugin.PollStatusAsync();
+        Status($"チャネポ状況を更新しました（リワード {plugin.Board.Statuses.Count} 件）");
     }
 
     // ===== 表示 =====
