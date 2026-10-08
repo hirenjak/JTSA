@@ -28,6 +28,22 @@ public interface IJtsaPluginContext
     void RemoveExpansionOverlay(string id);
 }
 
+/// <summary>配信拡張のイベント（チャット・チャネポ・フォローなど）を受け取るプラグイン向けの追加機能。</summary>
+/// <remarks>既存プラグインとのバイナリ互換性を保つため、共通コンテキストとは別インターフェースです。</remarks>
+public interface IJtsaExpansionTriggerPluginContext
+{
+    /// <summary>配信拡張ルールの一致判定より前に、すべてのイベントで発火します。</summary>
+    event Action<ExpansionTriggerInfo>? ExpansionTriggered;
+}
+
+/// <summary>プラグインのローカル画像・動画・音声を配信拡張で表示するための追加機能。</summary>
+/// <remarks>既存プラグインとのバイナリ互換性を保つため、共通コンテキストとは別インターフェースです。</remarks>
+public interface IJtsaExpansionMediaPluginContext
+{
+    /// <summary>ファイルを配信対象に登録し、配信拡張の HTML から参照できる URL を返します。</summary>
+    string GetExpansionMediaUrl(string filePath);
+}
+
 /// <summary>JTSA のカレンダー予定を参照するプラグイン向けの追加機能。</summary>
 /// <remarks>
 /// 既存プラグインとのバイナリ互換性を保つため、共通コンテキストとは別インターフェースです。
@@ -102,6 +118,10 @@ public sealed record ChannelPointRedemptionInfo(
     string RewardId,
     string UserName,
     string UserInput);
+
+public sealed record ExpansionTriggerInfo(
+    string TriggerType,
+    string Value);
 
 /// <summary>既存の配信拡張ブラウザソース上に表示するプラグイン描画。</summary>
 public sealed record ExpansionOverlayContent(

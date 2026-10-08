@@ -11,7 +11,9 @@ internal sealed class JtsaPluginContext :
     IJtsaCalendarPluginContext,
     IJtsaStreamMetadataPluginContext,
     IJtsaExternalChatPluginContext,
-    IJtsaRemotePanelPluginContext
+    IJtsaRemotePanelPluginContext,
+    IJtsaExpansionTriggerPluginContext,
+    IJtsaExpansionMediaPluginContext
 {
     private readonly MainWindow mainWindow;
     private readonly string pluginId;
@@ -104,6 +106,15 @@ internal sealed class JtsaPluginContext :
     {
         add => PluginChannelPointEventHub.ChannelPointRedeemed += value;
         remove => PluginChannelPointEventHub.ChannelPointRedeemed -= value;
+    }
+
+    public string GetExpansionMediaUrl(string filePath) =>
+        StreamExpansionOverlayService.RegisterMediaFile(filePath);
+
+    public event Action<ExpansionTriggerInfo>? ExpansionTriggered
+    {
+        add => PluginExpansionTriggerHub.ExpansionTriggered += value;
+        remove => PluginExpansionTriggerHub.ExpansionTriggered -= value;
     }
 
     public void Log(string message) =>

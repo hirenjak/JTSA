@@ -1,5 +1,7 @@
 using JTSA.Dao;
 using JTSA.Models;
+using JTSA.Plugin.Abstractions;
+using JTSA.Plugins;
 using NAudio.Wave;
 using System.IO;
 using System.Windows;
@@ -35,6 +37,7 @@ internal sealed class StreamExpansionService
     {
         try
         {
+            PluginExpansionTriggerHub.Publish(new ExpansionTriggerInfo(type.ToString(), value ?? ""));
             _ = VtsTriggerService.HandleAsync(type, value);
 
             var selectedContext = GetSelectedAccountContext();
