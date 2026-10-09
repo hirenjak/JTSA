@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.IO;
 using System.Text;
 
 public class ObsHttpServer
@@ -49,6 +50,12 @@ public class ObsHttpServer
         if (path == "/expansion-image")
         {
             WriteExpansionImage(ctx);
+            return;
+        }
+
+        if (path == "/expansion-media")
+        {
+            WriteExpansionMedia(ctx);
             return;
         }
 
@@ -158,6 +165,34 @@ public class ObsHttpServer
         catch
         {
             ctx.Response.StatusCode = 500;
+        }
+        finally
+        {
+            ctx.Response.Close();
+        }
+    }
+
+    // ponytail: Range 非対応（頭からの再生のみ）。動画のシークが必要になったら 206 応答を追加する。
+    private static void WriteExpansionMedia(HttpListenerContext ctx)
+    {
+        try
+        {
+            var path = JTSA.Utility.StreamExpansionOverlayService.GetMediaPath(ctx.Request.QueryString["id"] ?? "");
+            if (path is null)
+            {
+                ctx.Response.StatusCode = 404;
+                return;
+            }
+
+            using var file = File.OpenRead(path);
+            ctx.Response.ContentType = JTSA.Utility.StreamExpansionOverlayService.ContentTypeOf(path);
+            ctx.Response.ContentLength64 = file.Length;
+            ctx.Response.AddHeader("Cache-Control", "max-age=3600");
+            file.CopyTo(ctx.Response.OutputStream);
+        }
+        catch
+        {
+            // ブラウザ側の切断などで送信が止まっても配信拡張全体は止めない
         }
         finally
         {

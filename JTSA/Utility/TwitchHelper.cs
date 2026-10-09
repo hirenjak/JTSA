@@ -733,6 +733,89 @@ namespace JTSA.Utility
 
 
         /// <summary>
+        /// プラグイン向けにチャンネルポイント報酬の状態を取得する（定期取得されるため成功時はログを出さない）
+        /// API: GET https://api.twitch.tv/helix/channel_points/custom_rewards
+        /// </summary>
+        /// <returns>(全報酬, このアプリで操作できる報酬ID)。失敗時はnull。</returns>
+        public static async Task<(List<CustomReward> Rewards, HashSet<string> ManageableIds)?> GetCustomRewardStatusesAsync()
+        {
+            if (string.IsNullOrEmpty(BroadcasterId)) return null;
+            api.Settings.AccessToken = TwitchHelper.api.Settings.AccessToken;
+            try
+            {
+                var all = await api.Helix.ChannelPoints.GetCustomRewardAsync(broadcasterId: BroadcasterId);
+                var manageable = await api.Helix.ChannelPoints.GetCustomRewardAsync(
+                    broadcasterId: BroadcasterId, onlyManageableRewards: true);
+                return ((all?.Data ?? []).ToList(), (manageable?.Data ?? []).Select(reward => reward.Id).ToHashSet());
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "プラグイン向けチャンネルポイント状態の取得失敗:" + ex.Message);
+                return null;
+            }
+        }
+
+
+        /// <summary>
+        /// 未処理（UNFULFILLED）の交換を古い順に取得する。このアプリが作成した報酬のみ取得できる。
+        /// API: GET https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions
+        /// Scope: channel:manage:redemptions（channel:read:redemptions でも可）
+        /// </summary>
+        public static async Task<List<RewardRedemption>?> GetUnfulfilledRedemptionsAsync(string rewardId)
+        {
+            if (string.IsNullOrEmpty(BroadcasterId) || string.IsNullOrWhiteSpace(rewardId)) return null;
+            api.Settings.AccessToken = TwitchHelper.api.Settings.AccessToken;
+            try
+            {
+                var response = await api.Helix.ChannelPoints.GetCustomRewardRedemptionAsync(
+                    broadcasterId: BroadcasterId,
+                    rewardId: rewardId,
+                    status: "UNFULFILLED",
+                    sort: "OLDEST",
+                    first: "50");
+                return (response?.Data ?? []).ToList();
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "未処理のチャンネルポイント交換の取得失敗:" + ex.Message);
+                return null;
+            }
+        }
+
+
+        /// <summary>
+        /// 交換を完了（FULFILLED）またはキャンセル（CANCELED、ポイント返却）にする。このアプリが作成した報酬のみ。
+        /// API: PATCH https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions
+        /// Scope: channel:manage:redemptions
+        /// </summary>
+        public static async Task<bool> UpdateRedemptionStatusAsync(string rewardId, string redemptionId, bool fulfilled)
+        {
+            if (string.IsNullOrEmpty(BroadcasterId)) return false;
+            api.Settings.AccessToken = TwitchHelper.api.Settings.AccessToken;
+            api.Settings.ClientId = TwitchHelper.ClientID;
+            try
+            {
+                await api.Helix.ChannelPoints.UpdateRedemptionStatusAsync(
+                    BroadcasterId,
+                    rewardId,
+                    [redemptionId],
+                    new TwitchLib.Api.Helix.Models.ChannelPoints.UpdateCustomRewardRedemptionStatus.UpdateCustomRewardRedemptionStatusRequest
+                    {
+                        Status = fulfilled
+                            ? TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.FULFILLED
+                            : TwitchLib.Api.Core.Enums.CustomRewardRedemptionStatus.CANCELED
+                    });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                mainWindow.AppLogPanel.Error(nameof(TwitchHelper), "チャンネルポイント交換の状態更新失敗:" + ex.Message);
+                return false;
+            }
+        }
+
+
+        /// <summary>
         /// TwitchLibを使用してチャンネルポイントのカスタム報酬を削除する
         /// API: DELETE https://api.twitch.tv/helix/channel_points/custom_rewards
         /// Scope: channel:manage:redemptions

@@ -11,7 +11,10 @@ internal sealed class JtsaPluginContext :
     IJtsaCalendarPluginContext,
     IJtsaStreamMetadataPluginContext,
     IJtsaExternalChatPluginContext,
-    IJtsaRemotePanelPluginContext
+    IJtsaRemotePanelPluginContext,
+    IJtsaExpansionTriggerPluginContext,
+    IJtsaExpansionMediaPluginContext,
+    IJtsaChannelPointStatusPluginContext
 {
     private readonly MainWindow mainWindow;
     private readonly string pluginId;
@@ -104,6 +107,24 @@ internal sealed class JtsaPluginContext :
     {
         add => PluginChannelPointEventHub.ChannelPointRedeemed += value;
         remove => PluginChannelPointEventHub.ChannelPointRedeemed -= value;
+    }
+
+    public Task<IReadOnlyList<ChannelPointRewardStatusInfo>> GetChannelPointRewardStatusesAsync() =>
+        PluginChannelPointStatus.GetRewardStatusesAsync();
+
+    public Task<IReadOnlyList<ChannelPointPendingRedemptionInfo>> GetUnfulfilledRedemptionsAsync(string rewardId) =>
+        PluginChannelPointStatus.GetUnfulfilledRedemptionsAsync(rewardId);
+
+    public Task<bool> CompleteRedemptionAsync(string rewardId, string redemptionId, bool fulfilled) =>
+        TwitchHelper.UpdateRedemptionStatusAsync(rewardId, redemptionId, fulfilled);
+
+    public string GetExpansionMediaUrl(string filePath) =>
+        StreamExpansionOverlayService.RegisterMediaFile(filePath);
+
+    public event Action<ExpansionTriggerInfo>? ExpansionTriggered
+    {
+        add => PluginExpansionTriggerHub.ExpansionTriggered += value;
+        remove => PluginExpansionTriggerHub.ExpansionTriggered -= value;
     }
 
     public void Log(string message) =>
