@@ -23,6 +23,44 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
    `Plugins/Roulette/` へコピーします。
 3. JTSA の「Extension」タブで「再読み込み」を押します。
 
+## nizima LIVE の配置
+
+この Extension は **`IJtsaExpansionTriggerPluginContext`（ExpansionTriggered）を公開している JTSA ホストとセット** です。
+対応していない古いホストでは読み込み時に実行時例外になります。
+
+1. `dotnet build extensions/JTSA.NizimaLivePlugin/JTSA.NizimaLivePlugin.csproj -c Release`
+2. 出力の `JTSA.NizimaLivePlugin.dll` と `plugin.json` を `Plugins/NizimaLive/` へコピーします。
+3. JTSA の「プラグイン」タブで「再読み込み」を押し、「開く」で設定画面を出します。
+4. nizima LIVE のプラグインマネージャーでポート（既定 22022）を合わせ、**JTSA を有効化**します。
+   接続成功だけでは API は使えません。有効化後にモデル操作が通ります。
+
+ウィンドウを閉じても接続は維持されます。再読み込み時に切断します。
+トークンは `%LocalAppData%\JTSA\UserData\PluginData\jtsa.nizimalive\settings.json` に保存されます。
+プラグイン名は `JTSA` 固定です。nizima 側で削除すると InvalidToken となり再登録します。
+
+## ともぞっちの配置
+
+tomozow_streaming_tool のともぞっち（tamagotchi-twitch）のゲージ機能を移したものです。
+ゲージは配信拡張に表示され、チャネポ交換で増減・追加・削除できます。
+
+1. `dotnet build extensions/JTSA.TomozotchiPlugin/JTSA.TomozotchiPlugin.csproj -c Release`
+2. 出力の `JTSA.TomozotchiPlugin.dll` と `plugin.json` を `Plugins/Tomozotchi/` へコピーします。
+3. JTSA の「プラグイン」タブで「再読み込み」を押し、「開く」で設定画面を出します。
+4. 「ゲージ」タブの「ファイルから読み込み」で、tamagotchi-twitch の `game_config.json` を選ぶと
+   ゲージとチャネポ割り当てをそのまま移せます。
+
+設定は `%LocalAppData%\JTSA\UserData\PluginData\jtsa.tomozotchi\settings.json`、プリセットは同じフォルダの
+`presets\` に保存されます。ゲージの値は保存せず、JTSA を起動するたびに初期値から始まります。
+
+「チャネポ状況」タブでリワードごとに TODO・クールダウン・交換可能をチェックすると、元アプリと同じく
+ゲージの下に交換可能アイコン、「⌛️クールダウン中 リワード名 4m05s」、TODO（☑ リワード名）を表示します。
+`game_config.json` の `todoRewardIds` / `cooldownRewardIds` / `redeemableRewardIds` もそのまま読み込みます。
+
+- TODO は交換イベントから作るので、配布版の JTSA でも動きます。「完了」「キャンセル」で一覧から消せます。
+- クールダウンと交換可能、JTSA で作ったリワードの TODO の Twitch 側への完了・キャンセル（ポイント返却）は、
+  `IJtsaChannelPointStatusPluginContext` に対応した JTSA が必要です（[hirenjak/JTSA#49](https://github.com/hirenjak/JTSA/pull/49)）。
+  対応していない JTSA では、この部分は表示されません。状況は 10 秒ごとに取得します。
+
 ## カレンダー画像化の配置
 
 1. `dotnet build extensions/JTSA.CalendarImagePlugin/JTSA.CalendarImagePlugin.csproj -c Release`

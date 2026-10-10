@@ -56,6 +56,8 @@ namespace JTSA.Panels
             SpeechMaxSameTokenTextBox.Text = SpeechTextLimiter.ParseNonNegative(
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMaxSameToken)?.Value,
                 SpeechTextLimiter.DefaultMaxSameToken).ToString();
+            SpeechOmitUrlCheckBox.IsChecked = DAO_Setting.SelectOneById(
+                DAO_Setting.SettingName.SpeechOmitUrl)?.Value != "0";
             ReloadSpeechMutedLoginsText();
             ReloadRegisteredAccounts();
             Loaded += SettingPanel_Loaded;
@@ -179,6 +181,9 @@ namespace JTSA.Panels
             SpeechMaxSameTokenTextBox.Text = SpeechTextLimiter.ParseNonNegative(
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMaxSameToken)?.Value,
                 SpeechTextLimiter.DefaultMaxSameToken).ToString();
+            DAO_Setting.InsertUpdate(
+                DAO_Setting.SettingName.SpeechOmitUrl,
+                SpeechOmitUrlCheckBox.IsChecked == true ? "1" : "0");
             DAO_Setting.InsertUpdate(
                 DAO_Setting.SettingName.SpeechMutedUserLogins,
                 SpeechMuteFilter.Serialize(
