@@ -1068,7 +1068,10 @@ namespace JTSA.Panels
                     PluginChannelPointEventHub.Publish(new ChannelPointRedemptionInfo(
                         channelPoint.RewardId,
                         channelPoint.UserName,
-                        channelPoint.UserInput));
+                        channelPoint.UserInput)
+                    {
+                        RedemptionId = channelPoint.RedemptionId
+                    });
 
                     // Register independently of chat rendering and observe UI-thread failures.
                     Dispatcher.Invoke(() =>

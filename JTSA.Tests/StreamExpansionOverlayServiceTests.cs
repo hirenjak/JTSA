@@ -32,6 +32,25 @@ public class StreamExpansionOverlayServiceTests
     }
 
     [Fact]
+    public void OnlyRegisteredMediaFilesAreServed()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var url = StreamExpansionOverlayService.RegisterMediaFile(path);
+            var id = url.Split("id=")[1].Split('&')[0];
+            Assert.Equal(Path.GetFullPath(path), StreamExpansionOverlayService.GetMediaPath(id));
+            Assert.Null(StreamExpansionOverlayService.GetMediaPath("unregistered"));
+            File.Delete(path);
+            Assert.Null(StreamExpansionOverlayService.GetMediaPath(id));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void DeletedImageInvalidatesCachedJson()
     {
         var path = Path.GetTempFileName();
