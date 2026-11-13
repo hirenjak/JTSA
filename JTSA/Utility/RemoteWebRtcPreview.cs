@@ -17,6 +17,10 @@ internal sealed class RemoteWebRtcPreview : IAsyncDisposable
     private IBrowser? browser;
     private bool disposed;
 
+    // 戻り値なしの EvaluateAsync は JsonElement? を返す。Costura 埋め込み時に System.Text.Json の型が
+    // 食い違って MissingMethodException になるため、STJ の型を含まない EvaluateAsync<T> を使う。
+    private const string PushFrameScript = "async data => { await window.pushFrame(data); return true; }";
+
     private sealed class Session(string id, string? clientId, bool isSub, IPage page, CancellationTokenSource stop)
     {
         public string Id { get; } = id;
@@ -115,7 +119,7 @@ internal sealed class RemoteWebRtcPreview : IAsyncDisposable
             // This private sender has no external resources or navigation.
             await page.RouteAsync("**/*", route => route.AbortAsync());
             await page.SetContentAsync(SenderHtml);
-            await page.EvaluateAsync("data => window.pushFrame(data)", first.ImageData);
+            await page.EvaluateAsync<bool>(PushFrameScript, first.ImageData);
             stage = "WebRTC接続情報の作成";
             var sdp = await page.EvaluateAsync<string>("sdp => window.answerOffer(sdp)", offer.Sdp);
             token.ThrowIfCancellationRequested();
@@ -182,7 +186,7 @@ internal sealed class RemoteWebRtcPreview : IAsyncDisposable
                 if (frame.ImageData != null)
                 {
                     missingFrames = 0;
-                    await session.Page.EvaluateAsync("data => window.pushFrame(data)", frame.ImageData);
+                    await session.Page.EvaluateAsync<bool>(PushFrameScript, frame.ImageData);
                 }
                 else if (++missingFrames >= 90) break;
                 // Include screenshot and transfer time in the 30fps budget instead of adding

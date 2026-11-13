@@ -1070,7 +1070,8 @@ namespace JTSA.Panels
                         channelPoint.UserName,
                         channelPoint.UserInput)
                     {
-                        RedemptionId = channelPoint.RedemptionId
+                        RedemptionId = channelPoint.RedemptionId,
+                        UserLogin = channelPoint.UserLogin
                     });
 
                     // Register independently of chat rendering and observe UI-thread failures.

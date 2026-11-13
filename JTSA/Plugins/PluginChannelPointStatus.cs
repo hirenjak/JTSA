@@ -34,7 +34,10 @@ internal static class PluginChannelPointStatus
         reward.GlobalCooldownSetting?.IsEnabled == true ? reward.GlobalCooldownSetting.GlobalCooldownSeconds : 0,
         ParseTime(reward.CooldownExpiresAt),
         reward.RedemptionsRedeemedCurrentStream,
-        isManageable);
+        isManageable)
+    {
+        MaxPerStream = reward.MaxPerStreamSetting?.IsEnabled == true ? reward.MaxPerStreamSetting.MaxPerStream : 0
+    };
 
     public static ChannelPointPendingRedemptionInfo ToInfo(RewardRedemption redemption) => new(
         redemption.Id,

@@ -874,7 +874,7 @@ public partial class StereamExpansionPanel : UserControl , INotifyPropertyChange
         try
         {
             if (item.IsClipConfigured)
-                await streamExpansionService.PlayClipPreviewAsync(item.ClipUserName, item.ClipRankingLimit);
+                await StreamExpansionService.PlayClipPreviewAsync(item.ClipUserName, item.ClipRankingLimit);
             foreach (var obsText in configuredItems)
                 await mainWindow.SetObsTextSourceAsync(obsText.IsSubObs, obsText.SourceName, obsText.TextTemplate);
         }

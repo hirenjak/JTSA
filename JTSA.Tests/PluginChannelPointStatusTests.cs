@@ -41,6 +41,20 @@ public class PluginChannelPointStatusTests
     }
 
     [Fact]
+    public void RewardReachingMaxPerStreamIsNotRedeemable()
+    {
+        const string limit = ""","max_per_stream_setting":{"is_enabled":true,"max_per_stream":3}""";
+        var reached = PluginChannelPointStatus.ToInfo(Reward(limit + ""","redemptions_redeemed_current_stream":3"""), true);
+        var under = PluginChannelPointStatus.ToInfo(Reward(limit + ""","redemptions_redeemed_current_stream":2"""), true);
+        var offline = PluginChannelPointStatus.ToInfo(Reward(limit), true);
+
+        Assert.Equal(3, reached.MaxPerStream);
+        Assert.False(reached.IsRedeemable(DateTimeOffset.UtcNow));
+        Assert.True(under.IsRedeemable(DateTimeOffset.UtcNow));
+        Assert.True(offline.IsRedeemable(DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
     public void PendingRedemptionKeepsIdsForCompletion()
     {
         var redemption = JsonConvert.DeserializeObject<RewardRedemption>("""

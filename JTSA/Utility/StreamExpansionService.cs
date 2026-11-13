@@ -37,7 +37,7 @@ internal sealed class StreamExpansionService
     {
         try
         {
-            PluginExpansionTriggerHub.Publish(new ExpansionTriggerInfo(type.ToString(), value ?? ""));
+            PluginExpansionTriggerHub.Publish(new ExpansionTriggerInfo(type.ToString(), value ?? "") { UserLogin = chatPlaceholders?.UserLogin ?? "" });
             _ = VtsTriggerService.HandleAsync(type, value);
 
             var selectedContext = GetSelectedAccountContext();
@@ -128,7 +128,7 @@ internal sealed class StreamExpansionService
         await Task.WhenAll(tasks);
     }
 
-    private static async Task SendRaidShoutoutAsync(
+    internal static async Task SendRaidShoutoutAsync(
         string userName,
         string broadcasterId,
         string accessToken)
@@ -413,7 +413,7 @@ internal sealed class StreamExpansionService
         }
     }
 
-    private static async Task SetObsTextOnUiThreadAsync(bool isSubObs, string sourceName, string text)
+    internal static async Task SetObsTextOnUiThreadAsync(bool isSubObs, string sourceName, string text)
     {
         var application = Application.Current
             ?? throw new InvalidOperationException("アプリケーションを取得できませんでした。");
@@ -425,7 +425,7 @@ internal sealed class StreamExpansionService
         }).Task.Unwrap();
     }
 
-    private static (string BroadcasterId, string AccessToken, string Login) GetSelectedAccountContext()
+    internal static (string BroadcasterId, string AccessToken, string Login) GetSelectedAccountContext()
     {
         var application = Application.Current;
         if (application?.Dispatcher == null)
@@ -536,14 +536,14 @@ internal sealed class StreamExpansionService
 
     internal Task PlayAudioPreviewAsync(string path, int volume) => PlayAudioAsync(path, volume);
 
-    internal Task PlayClipPreviewAsync(string login, int rankingLimit)
+    internal static Task PlayClipPreviewAsync(string login, int rankingLimit)
     {
         var account = GetSelectedAccountContext();
         if (login.Equals("{selected_account}", StringComparison.OrdinalIgnoreCase)) login = account.Login;
         return StreamExpansionClipService.PlayAsync(login, account.AccessToken, rankingLimit);
     }
 
-    private static async Task GrantChatUserVipAsync(
+    internal static async Task GrantChatUserVipAsync(
         string userLogin,
         string broadcasterId,
         string accessToken)
