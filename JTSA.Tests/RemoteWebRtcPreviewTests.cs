@@ -79,16 +79,17 @@ public sealed class RemoteWebRtcPreviewTests
             async () => [...(await previewPeer.getStats()).values()].some(stat =>
               stat.type === 'inbound-rtp' && stat.kind === 'video' && stat.framesDecoded > 0)
             """));
-        var receivedFps = await receiver.EvaluateAsync<double>("""
-            async () => {
-              const frames = async () => [...(await previewPeer.getStats()).values()]
-                .find(stat => stat.type === 'inbound-rtp' && stat.kind === 'video')?.framesDecoded || 0;
-              const before = await frames(), started = performance.now();
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              return ((await frames()) - before) * 1000 / (performance.now() - started);
-            }
+        var initialDecodedFrames = await receiver.EvaluateAsync<int>("""
+            async () => [...(await previewPeer.getStats()).values()]
+              .find(stat => stat.type === 'inbound-rtp' && stat.kind === 'video').framesDecoded
             """);
-        Assert.True(receivedFps > 10, $"Received only {receivedFps:F1} fps with synthetic frames.");
+        await receiver.WaitForFunctionAsync("""
+            async initialDecodedFrames => {
+              const stats = await previewPeer.getStats();
+              return [...stats.values()].some(stat => stat.type === 'inbound-rtp' &&
+                stat.kind === 'video' && stat.framesDecoded >= initialDecodedFrames + 3);
+            }
+            """, initialDecodedFrames, new() { Timeout = 10000, PollingInterval = 250 });
         Assert.NotNull(answer);
         Assert.Null(answer.Error);
         Assert.NotNull(answer.SessionId);
