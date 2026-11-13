@@ -246,6 +246,35 @@ public sealed class ObsController : IDisposable
         client.SetInputSettings(source.InputName, new JObject { [source.PropertyName] = value }, true);
     }
 
+    /// <summary>音声を持つ入力。OBS は音声の無い入力の GetInputVolume をエラーにするので、それで見分ける。</summary>
+    public IReadOnlyList<string> GetAudioInputNames()
+    {
+        EnsureConnected();
+        return client.GetInputList(null)
+            .Select(input => input.InputName)
+            .Where(name =>
+            {
+                try
+                {
+                    client.GetInputVolume(name);
+                    return true;
+                }
+                catch (ErrorResponseException)
+                {
+                    return false;
+                }
+            })
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>volume は 0〜1 の倍率。</summary>
+    public void SetInputVolume(string inputName, double volume)
+    {
+        EnsureConnected();
+        client.SetInputVolume(inputName, (float)Math.Clamp(volume, 0, 1), false);
+    }
+
     public void SetInputVisibleAcrossScenes(string inputName, bool visible)
     {
         EnsureConnected();
