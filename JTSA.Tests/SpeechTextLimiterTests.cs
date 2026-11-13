@@ -62,6 +62,20 @@ public class SpeechTextLimiterTests
     }
 
     [Fact]
+    public void OmitUrlsReplacesEachUrl()
+    {
+        Assert.Equal("これ URL省略 と URL省略 だ",
+            SpeechTextLimiter.OmitUrls("これ https://a.com/x?y=1 と HTTP://b.jp だ"));
+    }
+
+    [Fact]
+    public void LimitOmitsUrlBeforeTruncating()
+    {
+        var url = "https://example.com/" + new string('a', 200);
+        Assert.Equal("URL省略", SpeechTextLimiter.Limit(url, 80, 3, omitUrl: true));
+    }
+
+    [Fact]
     public void ParseNonNegativeFallsBackOnInvalid()
     {
         Assert.Equal(80, SpeechTextLimiter.ParseNonNegative("abc", 80));

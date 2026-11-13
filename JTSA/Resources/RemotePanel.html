@@ -16,10 +16,20 @@
     #status { font-size: 12px; color: #aab0bb; }
     .headerActions { display: flex; align-items: center; gap: 10px; }
     .headerBrand { display: flex; align-items: center; gap: 8px; }
-    #fullscreenButton, #previewButton { border: 1px solid #565b66; border-radius: 7px; padding: 7px 10px; background: #30343d; color: white; font-size: 13px; }
+    #fullscreenButton, #previewButton, #splitButton { border: 1px solid #565b66; border-radius: 7px; padding: 7px 10px; background: #30343d; color: white; font-size: 13px; }
     #previewButton[aria-expanded="true"] { border-color: #68cbb4; background: #2f655b; }
     @media (max-width: 360px) { header { padding: 0 8px; } .headerActions { gap: 5px; } #status { font-size: 10px; } }
     #fullscreenButton:disabled { color: #aab0bb; }
+    #splitButton[aria-pressed="true"] { border-color: #68cbb4; background: #2f655b; }
+    #splitButton[hidden], #splitTabs { display: none; }
+    body.split #panelTabs { display: none; }
+    body.split #splitTabs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; flex-shrink: 0; background: #3a3e48; }
+    #splitTabs nav { min-width: 0; }
+    #splitTabs nav button.other { color: #646a75; }
+    body.split main { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 1px; background: #3a3e48; transform: none; transition: none; }
+    body.split main > section { display: none; background: #17191d; }
+    body.split main > section.paneLeft { display: block; grid-area: 1 / 1; }
+    body.split main > section.paneRight { display: block; grid-area: 1 / 2; }
     nav { display: flex; height: 49px; overflow-x: auto; background: #252831; scrollbar-width: thin; }
     nav button { flex: 0 0 auto; min-width: 33.333%; border: 0; border-bottom: 3px solid transparent; padding: 13px 12px; color: #adb4c1; background: transparent; font-size: 15px; white-space: nowrap; }
     nav button.active { color: white; border-color: #68cbb4; }
@@ -84,7 +94,7 @@
     <div id="pairError" role="alert"></div>
   </div>
 </div>
-<header><div class="headerBrand"><strong>JTSA</strong><button id="previewButton" type="button" aria-expanded="false" aria-controls="previewArea">プレビュー</button></div><div class="headerActions"><span id="status">接続中…</span><button id="fullscreenButton" type="button" aria-pressed="false">全画面</button></div></header>
+<header><div class="headerBrand"><strong>JTSA</strong><button id="previewButton" type="button" aria-expanded="false" aria-controls="previewArea">プレビュー</button></div><div class="headerActions"><span id="status">接続中…</span><button id="splitButton" type="button" aria-pressed="false" hidden>2画面</button><button id="fullscreenButton" type="button" aria-pressed="false">全画面</button></div></header>
 <div id="sleepControls">
   <label><input id="keepAwake" type="checkbox" aria-describedby="sleepStatus">画面をスリープさせない</label>
   <span id="sleepStatus" role="status">OFF</span>
@@ -97,7 +107,8 @@
   <img id="previewImage" alt="OBSの現在のシーン" hidden>
   <video id="previewVideo" autoplay muted playsinline aria-label="OBSのリアルタイム映像" hidden></video>
 </div>
-<nav id="panelTabs"><button id="obsTab">OBS</button><button id="chatTab" class="active">チャット</button><button id="todoTab">ToDo</button></nav>
+<nav id="panelTabs"><button id="obsTab" data-key="obs">OBS</button><button id="chatTab" data-key="chat" class="active">チャット</button><button id="todoTab" data-key="todo">ToDo</button></nav>
+<div id="splitTabs"><nav id="leftTabs" aria-label="左の画面"></nav><nav id="rightTabs" aria-label="右の画面"></nav></div>
 <main id="pages" style="--page-index: 1">
   <section id="obsPage">
     <h2 class="obsHeading">シーン選択</h2>
@@ -382,8 +393,69 @@
     pages.style.setProperty('--page-index', index);
     [...panelTabs.children].forEach((button, i) => button.classList.toggle('active', i === index));
     panelTabs.children[index]?.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    renderSplit();
     updatePreview();
   }
+  // iPad などの広い横画面では左右2画面。各画面のタブで選び、反対側のページを選ぶと左右を入れ替える。
+  const wideScreen = matchMedia('(min-width: 900px) and (orientation: landscape)');
+  const splitButton = document.getElementById('splitButton');
+  const leftTabs = document.getElementById('leftTabs'), rightTabs = document.getElementById('rightTabs');
+  let split = false, splitTabsSignature = '';
+  let leftKey = localStorage.getItem('jtsa-split-left') || 'chat';
+  let rightKey = localStorage.getItem('jtsa-split-right') || 'obs';
+  function updateSplit() {
+    const wasSplit = split;
+    split = wideScreen.matches && localStorage.getItem('jtsa-split') !== 'off';
+    splitButton.hidden = !wideScreen.matches;
+    splitButton.setAttribute('aria-pressed', String(split));
+    document.body.classList.toggle('split', split);
+    if (wasSplit && !split) {
+      const index = [...panelTabs.children].findIndex(tab => tab.dataset.key === leftKey);
+      if (index >= 0) { show(index); return; }
+    }
+    renderSplit();
+  }
+  function pickSplit(left, key) {
+    if (left) { if (key === rightKey) rightKey = leftKey; leftKey = key; }
+    else { if (key === leftKey) leftKey = rightKey; rightKey = key; }
+    localStorage.setItem('jtsa-split-left', leftKey);
+    localStorage.setItem('jtsa-split-right', rightKey);
+    renderSplit();
+  }
+  function renderSplit() {
+    if (!split) return;
+    const tabs = [...panelTabs.children], keys = tabs.map(tab => tab.dataset.key);
+    if (!keys.includes(leftKey)) leftKey = keys.find(key => key !== rightKey);
+    if (!keys.includes(rightKey) || rightKey === leftKey) rightKey = keys.find(key => key !== leftKey);
+    // 1.5秒ごとの更新でタブを作り直すとタップが取りこぼされるため、構成が変わったときだけ作る
+    const signature = JSON.stringify(tabs.map(tab => [tab.dataset.key, tab.textContent]));
+    if (signature !== splitTabsSignature) {
+      splitTabsSignature = signature;
+      for (const [nav, left] of [[leftTabs, true], [rightTabs, false]])
+        nav.replaceChildren(...tabs.map(tab => {
+          const button = document.createElement('button');
+          button.textContent = tab.textContent; button.dataset.key = tab.dataset.key;
+          button.onclick = () => pickSplit(left, tab.dataset.key);
+          return button;
+        }));
+    }
+    for (const [nav, own, other] of [[leftTabs, leftKey, rightKey], [rightTabs, rightKey, leftKey]])
+      for (const button of nav.children) {
+        button.classList.toggle('active', button.dataset.key === own);
+        button.classList.toggle('other', button.dataset.key === other);
+        button.title = button.dataset.key === other ? '反対側と入れ替え' : '';
+      }
+    tabs.forEach((tab, i) => {
+      pages.children[i]?.classList.toggle('paneLeft', tab.dataset.key === leftKey);
+      pages.children[i]?.classList.toggle('paneRight', tab.dataset.key === rightKey);
+    });
+  }
+  splitButton.addEventListener('click', () => {
+    localStorage.setItem('jtsa-split', split ? 'off' : 'on');
+    updateSplit();
+  });
+  wideScreen.addEventListener('change', updateSplit);
+  updateSplit();
   for (const id of ['obs', 'chat', 'todo']) {
     const tab = document.getElementById(id + 'Tab');
     tab.onclick = () => show([...panelTabs.children].indexOf(tab));
@@ -391,6 +463,7 @@
   let touchX = 0, touchY = 0;
   pages.addEventListener('touchstart', event => { touchX = event.touches[0].clientX; touchY = event.touches[0].clientY; }, {passive:true});
   pages.addEventListener('touchend', event => {
+    if (split) return;
     const dx = event.changedTouches[0].clientX - touchX;
     const dy = event.changedTouches[0].clientY - touchY;
     if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.4)
@@ -404,7 +477,7 @@
       incoming.add(item.Id);
       let panel = pluginPages.get(item.Id);
       if (!panel) {
-        const tab = document.createElement('button');
+        const tab = document.createElement('button'); tab.dataset.key = item.Id;
         const section = document.createElement('section'); section.className = 'pluginPage';
         const frame = document.createElement('iframe');
         frame.setAttribute('sandbox', 'allow-scripts');

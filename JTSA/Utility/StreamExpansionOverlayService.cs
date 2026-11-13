@@ -1,4 +1,6 @@
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using JTSA.Plugin.Abstractions;
 
@@ -11,6 +13,7 @@ internal static class StreamExpansionOverlayService
     private static string? cachedJson;
     private static readonly List<OverlayImage> Images = [];
     private static readonly Dictionary<string, ExpansionOverlayContent> PluginOverlays = [];
+    private static readonly Dictionary<string, string> MediaFiles = [];
 
     private sealed record OverlayImage(
         long Id,
@@ -114,18 +117,40 @@ internal static class StreamExpansionOverlayService
             var image = Images.FirstOrDefault(item => item.Id == id);
             if (image is null || !File.Exists(image.Path)) return null;
 
-            var contentType = Path.GetExtension(image.Path).ToLowerInvariant() switch
-            {
-                ".png" => "image/png",
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".gif" => "image/gif",
-                ".bmp" => "image/bmp",
-                ".webp" => "image/webp",
-                _ => "application/octet-stream"
-            };
-            return (File.ReadAllBytes(image.Path), contentType);
+            return (File.ReadAllBytes(image.Path), ContentTypeOf(image.Path));
         }
     }
+
+    /// <summary>プラグインが表示するファイルを登録する。登録したファイルだけが配信される。</summary>
+    public static string RegisterMediaFile(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(fullPath.ToUpperInvariant())))[..16];
+        lock (StateLock) MediaFiles[id] = fullPath;
+        var stamp = File.Exists(fullPath) ? File.GetLastWriteTimeUtc(fullPath).Ticks : 0;
+        return $"/expansion-media?id={id}&v={stamp}";
+    }
+
+    public static string? GetMediaPath(string id)
+    {
+        lock (StateLock)
+            return MediaFiles.TryGetValue(id, out var path) && File.Exists(path) ? path : null;
+    }
+
+    public static string ContentTypeOf(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".bmp" => "image/bmp",
+        ".webp" => "image/webp",
+        ".mp4" => "video/mp4",
+        ".webm" => "video/webm",
+        ".mp3" => "audio/mpeg",
+        ".wav" => "audio/wav",
+        ".ogg" => "audio/ogg",
+        _ => "application/octet-stream"
+    };
 
     private static void RemoveExpiredImages()
     {
@@ -210,6 +235,10 @@ internal static class StreamExpansionOverlayService
                                     const start = Number(target.dataset.jtsaAnimationStart);
                                     if (!Number.isFinite(start)) return;
                                     target.style.animationDelay = `${Math.min(0, start - Date.now())}ms`;
+                                });
+                                element.querySelectorAll("[data-jtsa-volume]").forEach(media => {
+                                    const volume = Number(media.dataset.jtsaVolume);
+                                    if (Number.isFinite(volume)) media.volume = Math.min(1, Math.max(0, volume / 100));
                                 });
                             }
                             element.style.left = item.x + "px";

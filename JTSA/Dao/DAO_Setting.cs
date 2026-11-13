@@ -106,6 +106,8 @@ namespace JTSA.Dao
             ChatTemplates = 63,
             /// <summary>スマホパネルの表示順（パネルIDのJSON配列）</summary>
             RemotePanelOrder = 64,
+            /// <summary>チャット読み上げでURLを「URL省略」に置き換えるか（未設定は有効）</summary>
+            SpeechOmitUrl = 65,
         }
 
 

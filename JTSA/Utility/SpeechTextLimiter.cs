@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace JTSA.Utility;
 
@@ -8,8 +9,16 @@ public static class SpeechTextLimiter
     public const int DefaultMaxChars = 80;
     public const int DefaultMaxSameToken = 3;
 
-    public static string Limit(string? text, int maxChars, int maxSameToken)
+    public const string UrlReplacement = "URL省略";
+
+    private static readonly Regex UrlPattern = new(@"https?://\S+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    public static string OmitUrls(string? text)
+        => UrlPattern.Replace(text ?? string.Empty, UrlReplacement);
+
+    public static string Limit(string? text, int maxChars, int maxSameToken, bool omitUrl = false)
     {
+        if (omitUrl) text = OmitUrls(text);
         var limited = LimitConsecutiveSameTokens(text, maxSameToken);
         return TruncateChars(limited, maxChars);
     }

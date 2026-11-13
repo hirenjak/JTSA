@@ -114,6 +114,7 @@ namespace JTSA.Panels
         private HashSet<string> speechMutedLogins = new(StringComparer.OrdinalIgnoreCase);
         private int speechMaxChars = SpeechTextLimiter.DefaultMaxChars;
         private int speechMaxSameToken = SpeechTextLimiter.DefaultMaxSameToken;
+        private bool speechOmitUrl = true;
 
         private readonly StreamChatEntranceTracker chatEntranceTracker = new();
 
@@ -1067,7 +1068,10 @@ namespace JTSA.Panels
                     PluginChannelPointEventHub.Publish(new ChannelPointRedemptionInfo(
                         channelPoint.RewardId,
                         channelPoint.UserName,
-                        channelPoint.UserInput));
+                        channelPoint.UserInput)
+                    {
+                        RedemptionId = channelPoint.RedemptionId
+                    });
 
                     // Register independently of chat rendering and observe UI-thread failures.
                     Dispatcher.Invoke(() =>
@@ -1180,6 +1184,7 @@ namespace JTSA.Panels
             speechMaxSameToken = SpeechTextLimiter.ParseNonNegative(
                 DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechMaxSameToken)?.Value,
                 SpeechTextLimiter.DefaultMaxSameToken);
+            speechOmitUrl = DAO_Setting.SelectOneById(DAO_Setting.SettingName.SpeechOmitUrl)?.Value != "0";
             RefreshSpeechMuteFlags();
         }
 
@@ -1188,7 +1193,7 @@ namespace JTSA.Panels
             if (speechEngine == "None" || string.IsNullOrWhiteSpace(message)) return;
             if (SpeechMuteFilter.IsMuted(speechMutedLogins, userLogin)) return;
 
-            message = SpeechTextLimiter.Limit(message, speechMaxChars, speechMaxSameToken);
+            message = SpeechTextLimiter.Limit(message, speechMaxChars, speechMaxSameToken, speechOmitUrl);
             if (string.IsNullOrWhiteSpace(message)) return;
 
             try
@@ -1230,6 +1235,8 @@ namespace JTSA.Panels
             for (var index = 0; index < PlayingParticipationUsers.Count; index++)
                 PlayingParticipationUsers[index] = WithResolvedSpeechMute(PlayingParticipationUsers[index]);
             foreach (var user in ChatUserFormList)
+                user.IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.UserName);
+            foreach (var user in ConnectedChatUserFormList)
                 user.IsSpeechMuted = SpeechMuteFilter.IsMuted(speechMutedLogins, user.UserName);
         }
 

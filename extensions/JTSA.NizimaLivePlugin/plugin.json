@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.nizimalive",
+  "name": "nizima LIVE",
+  "entryAssembly": "JTSA.NizimaLivePlugin.dll",
+  "entryType": "JTSA.NizimaLivePlugin.NizimaLivePlugin",
+  "apiVersion": 1
+}

@@ -1,0 +1,7 @@
+{
+  "id": "jtsa.tomozotchi",
+  "name": "ともぞっち",
+  "entryAssembly": "JTSA.TomozotchiPlugin.dll",
+  "entryType": "JTSA.TomozotchiPlugin.TomozotchiPlugin",
+  "apiVersion": 1
+}

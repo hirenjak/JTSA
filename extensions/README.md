@@ -23,6 +23,44 @@ JTSAはExtensionを一時フォルダへシャドウコピーしてから読み�
    `Plugins/Roulette/` へコピーします。
 3. JTSA の「Extension」タブで「再読み込み」を押します。
 
+## nizima LIVE の配置
+
+この Extension は **`IJtsaExpansionTriggerPluginContext`（ExpansionTriggered）を公開している JTSA ホストとセット** です。
+対応していない古いホストでは読み込み時に実行時例外になります。
+
+1. `dotnet build extensions/JTSA.NizimaLivePlugin/JTSA.NizimaLivePlugin.csproj -c Release`
+2. 出力の `JTSA.NizimaLivePlugin.dll` と `plugin.json` を `Plugins/NizimaLive/` へコピーします。
+3. JTSA の「プラグイン」タブで「再読み込み」を押し、「開く」で設定画面を出します。
+4. nizima LIVE のプラグインマネージャーでポート（既定 22022）を合わせ、**JTSA を有効化**します。
+   接続成功だけでは API は使えません。有効化後にモデル操作が通ります。
+
+ウィンドウを閉じても接続は維持されます。再読み込み時に切断します。
+トークンは `%LocalAppData%\JTSA\UserData\PluginData\jtsa.nizimalive\settings.json` に保存されます。
+プラグイン名は `JTSA` 固定です。nizima 側で削除すると InvalidToken となり再登録します。
+
+## ともぞっちの配置
+
+tomozow_streaming_tool のともぞっち（tamagotchi-twitch）のゲージ機能を移したものです。
+ゲージは配信拡張に表示され、チャネポ交換で増減・追加・削除できます。
+
+1. `dotnet build extensions/JTSA.TomozotchiPlugin/JTSA.TomozotchiPlugin.csproj -c Release`
+2. 出力の `JTSA.TomozotchiPlugin.dll` と `plugin.json` を `Plugins/Tomozotchi/` へコピーします。
+3. JTSA の「プラグイン」タブで「再読み込み」を押し、「開く」で設定画面を出します。
+4. 「ゲージ」タブの「ファイルから読み込み」で、tamagotchi-twitch の `game_config.json` を選ぶと
+   ゲージとチャネポ割り当てをそのまま移せます。
+
+設定は `%LocalAppData%\JTSA\UserData\PluginData\jtsa.tomozotchi\settings.json`、プリセットは同じフォルダの
+`presets\` に保存されます。ゲージの値は保存せず、JTSA を起動するたびに初期値から始まります。
+
+「チャネポ状況」タブでリワードごとに TODO・クールダウン・交換可能をチェックすると、元アプリと同じく
+ゲージの下に交換可能アイコン、「⌛️クールダウン中 リワード名 4m05s」、TODO（☑ リワード名）を表示します。
+`game_config.json` の `todoRewardIds` / `cooldownRewardIds` / `redeemableRewardIds` もそのまま読み込みます。
+
+- TODO は交換イベントから作るので、配布版の JTSA でも動きます。「完了」「キャンセル」で一覧から消せます。
+- クールダウンと交換可能、JTSA で作ったリワードの TODO の Twitch 側への完了・キャンセル（ポイント返却）は、
+  `IJtsaChannelPointStatusPluginContext` に対応した JTSA が必要です（[hirenjak/JTSA#49](https://github.com/hirenjak/JTSA/pull/49)）。
+  対応していない JTSA では、この部分は表示されません。状況は 10 秒ごとに取得します。
+
 ## カレンダー画像化の配置
 
 1. `dotnet build extensions/JTSA.CalendarImagePlugin/JTSA.CalendarImagePlugin.csproj -c Release`
@@ -60,6 +98,65 @@ context.RemoveExpansionOverlay("status");
 ```
 
 描画IDはプラグインIDごとに分離されるため、別のExtensionと同じ名前を使っても衝突しません。
+
+### ローカルの画像・動画・音声を表示する
+
+`IJtsaExpansionMediaPluginContext` に対応したホストでは、ファイルを登録して配信拡張から参照できる URL を受け取れます。
+登録したファイルだけが `/expansion-media` から配信されます。
+
+```csharp
+if (context is IJtsaExpansionMediaPluginContext media)
+{
+    var url = media.GetExpansionMediaUrl(@"C:\effects\tanuki.gif");
+    context.SetExpansionOverlay(new ExpansionOverlayContent(
+        "fx", $"<img src=\"{url}\" style=\"width:100%\">", 0, 0, 400, 300));
+}
+```
+
+描画 HTML は innerHTML で差し込まれるためスクリプトは動きません。`<video>`・`<audio>` の音量は
+`data-jtsa-volume="0〜100"` 属性で指定できます。CSS アニメーションは `data-jtsa-animation-start="UNIX ミリ秒"`
+を付けると、再描画やページ再読み込みのあとも開始時刻に合わせて再生されます。
+
+## 配信拡張イベントの受け取り
+
+`IJtsaExpansionTriggerPluginContext` に対応したホストでは、配信拡張のすべてのイベント（チャット・フォロー・
+レイド・サブスク・Bits・広告・定時など）を、ルールの一致判定より前に受け取れます。
+
+```csharp
+if (context is IJtsaExpansionTriggerPluginContext triggers)
+    triggers.ExpansionTriggered += info => context.Log($"{info.TriggerType}: {info.Value}");
+```
+
+`TriggerType` は配信拡張のトリガー種別名（`Chat`、`Follow`、`Raid` など）、`Value` は種別ごとの値
+（チャット本文、ユーザー名、Bits 数など）です。プラグインの例外は本体の配信拡張を止めません。
+古いホストで動かすプラグインは、型を直接参照せずリフレクションで購読してください。
+
+## チャンネルポイントの利用状況
+
+`IJtsaChannelPointStatusPluginContext` に対応したホストでは、報酬のクールダウン・交換できるか・未処理の交換
+（TODO）を扱えます。呼ぶたびに Twitch API へ問い合わせるため、定期取得は数秒以上の間隔を空けてください。
+
+```csharp
+if (context is IJtsaChannelPointStatusPluginContext points)
+{
+    var now = DateTimeOffset.UtcNow;
+    foreach (var reward in await points.GetChannelPointRewardStatusesAsync())
+    {
+        if (reward.IsCoolingDown(now))
+            context.Log($"↺ {reward.Title} {(reward.CooldownExpiresAt!.Value - now).TotalMinutes:0.0}min");
+        else if (reward.IsRedeemable(now))
+            context.Log($"交換可能: {reward.Title}");
+    }
+
+    // 未処理の交換（TODO）。JTSA が作成した報酬（IsManageable）のみ取得・完了できます。
+    foreach (var todo in await points.GetUnfulfilledRedemptionsAsync(rewardId))
+        context.Log($"□ {todo.RewardTitle} ({todo.UserName})");
+    await points.CompleteRedemptionAsync(rewardId, redemptionId, fulfilled: true);
+}
+```
+
+`ChannelPointRedeemed` の `ChannelPointRedemptionInfo.RedemptionId` には交換 ID が入ります（古いホストでは空）。
+Twitch の Web 画面など JTSA 以外で作った報酬は、交換イベントで受け取った分を TODO として自前で持ってください。
 
 ## OBS の操作
 
