@@ -1858,7 +1858,9 @@ namespace JTSA.Panels
         {
             PinedTwitchChatFormList.Clear();
 
-            var message = await TwitchHelper.GetPinedChat();
+            var broadcasterId = connectedBroadcasterId;
+            var message = await TwitchHelper.GetPinedChat(broadcasterId, connectedAccessToken);
+            if (broadcasterId != connectedBroadcasterId) return;
 
             if (message != null)
             {
@@ -2108,9 +2110,10 @@ namespace JTSA.Panels
             if (sender is not Button button || button.Tag is not string messageId ||
                 string.IsNullOrWhiteSpace(messageId)) return;
 
-            var result = await TwitchHelper.PinedDeleteChat(messageId);
+            var broadcasterId = connectedBroadcasterId;
+            var result = await TwitchHelper.PinedDeleteChat(messageId, broadcasterId, connectedAccessToken);
 
-            if (result == true)
+            if (result == true && broadcasterId == connectedBroadcasterId)
             {
                 PinedTwitchChatFormList.Clear();
             }

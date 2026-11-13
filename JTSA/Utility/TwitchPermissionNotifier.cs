@@ -6,6 +6,35 @@ namespace JTSA.Utility;
 
 internal static class TwitchPermissionNotifier
 {
+    public static async Task NotifyForAccountIfRequiredAsync(
+        string broadcasterId, string accessToken, HttpResponseMessage response,
+        string operationName, params string[] requiredScopes)
+    {
+        if (response.StatusCode != HttpStatusCode.Unauthorized) return;
+        var detail = await response.Content.ReadAsStringAsync();
+        var application = Application.Current;
+        if (application?.Dispatcher == null) return;
+        await application.Dispatcher.InvokeAsync(() =>
+        {
+            if (application.MainWindow is not MainWindow mainWindow) return;
+            // サブ側の失敗や更新前のリクエストで、現在のメイン認証を消さない。
+            if (broadcasterId == TwitchHelper.BroadcasterId && accessToken == TwitchHelper.AccessToken)
+            {
+                mainWindow.RequireOAuthReauthentication($"{operationName}の認証を確認してください。", detail);
+                return;
+            }
+            var account = JTSA.Dao.DAO_TwitchAccount.SelectAll()
+                .FirstOrDefault(a => a.BroadcasterId == broadcasterId);
+            if (account != null)
+                mainWindow.ShowOAuthReauthenticationNotification(
+                    account.Id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    $"{account.UserName} の{operationName}で認証エラーが発生しました。設定から再認証してください。" +
+                    $"\n必要な権限: {string.Join(", ", requiredScopes)}");
+            mainWindow.AppLogPanel.Error(nameof(TwitchPermissionNotifier),
+                $"{operationName}の認証エラー：BroadcasterId={broadcasterId}, {detail}");
+        });
+    }
+
     public static async Task NotifyIfRequiredAsync(
         HttpResponseMessage response,
         string operationName,

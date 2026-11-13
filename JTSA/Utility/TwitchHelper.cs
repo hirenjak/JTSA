@@ -1136,18 +1136,22 @@ namespace JTSA.Utility
 
 
         public static async Task<bool?> PinedDeleteChat(string messageId)
+            => await PinedDeleteChat(messageId, BroadcasterId, AccessToken);
+
+        public static async Task<bool?> PinedDeleteChat(string messageId, string broadcasterId, string accessToken)
         {
+            if (string.IsNullOrWhiteSpace(broadcasterId) || string.IsNullOrWhiteSpace(accessToken)) return false;
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             client.DefaultRequestHeaders.Add("Client-Id", ClientID);
 
             var response = await client.DeleteAsync($"https://api.twitch.tv/helix/chat/pins" +
-                                                $"?broadcaster_id={BroadcasterId}" +
-                                                $"&moderator_id={BroadcasterId}" +
-                                                $"&message_id={messageId}");
+                                                $"?broadcaster_id={Uri.EscapeDataString(broadcasterId)}" +
+                                                $"&moderator_id={Uri.EscapeDataString(broadcasterId)}" +
+                                                $"&message_id={Uri.EscapeDataString(messageId)}");
 
-            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
-                response, "ピン留めチャットの解除", "moderator:manage:chat_messages");
+            await TwitchPermissionNotifier.NotifyForAccountIfRequiredAsync(
+                broadcasterId, accessToken, response, "ピン留めチャットの解除", "moderator:manage:chat_messages");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1158,20 +1162,23 @@ namespace JTSA.Utility
         }
 
         public static async Task<TwitchChatForm?> GetPinedChat()
+            => await GetPinedChat(BroadcasterId, AccessToken);
+
+        public static async Task<TwitchChatForm?> GetPinedChat(string broadcasterId, string accessToken)
         {
             // 権限エラーで再認証画面へ遷移した後は、チャットイベントごとの再試行を止める。
-            if (string.IsNullOrWhiteSpace(AccessToken)) return null;
+            if (string.IsNullOrWhiteSpace(broadcasterId) || string.IsNullOrWhiteSpace(accessToken)) return null;
 
             using var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             client.DefaultRequestHeaders.Add("Client-Id", ClientID);
 
             var response = await client.GetAsync($"https://api.twitch.tv/helix/chat/pins" +
-                                                $"?broadcaster_id={BroadcasterId}" +
-                                                $"&moderator_id={BroadcasterId}");
+                                                $"?broadcaster_id={Uri.EscapeDataString(broadcasterId)}" +
+                                                $"&moderator_id={Uri.EscapeDataString(broadcasterId)}");
 
-            await TwitchPermissionNotifier.NotifyIfRequiredAsync(
-                response, "ピン留めチャットの取得",
+            await TwitchPermissionNotifier.NotifyForAccountIfRequiredAsync(
+                broadcasterId, accessToken, response, "ピン留めチャットの取得",
                 "moderator:read:chat_messages または moderator:manage:chat_messages");
 
             if (!response.IsSuccessStatusCode)

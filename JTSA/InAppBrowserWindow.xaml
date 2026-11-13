@@ -7,6 +7,7 @@
         Title="ブラウザ" Icon="Resources/jtsa.ico"
         Width="900" Height="700" MinWidth="320" MinHeight="420"
         WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="CanResize"
+        ShowInTaskbar="False"
         Background="#FF404040">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="32" ResizeBorderThickness="6"
@@ -39,12 +40,17 @@
             <Grid Grid.Row="1" Margin="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Button x:Name="BackButton" Content="←" Style="{StaticResource NavigationButtonStyle}" Click="BackButton_Click"/>
                 <Button x:Name="ForwardButton" Grid.Column="1" Content="→" Style="{StaticResource NavigationButtonStyle}" Click="ForwardButton_Click"/>
                 <Button Grid.Column="2" Content="↻" Style="{StaticResource NavigationButtonStyle}" Click="ReloadButton_Click"/>
                 <TextBox x:Name="AddressTextBox" Grid.Column="3" IsReadOnly="True" VerticalContentAlignment="Center" Padding="6,3"
                          Background="#FF4A4747" Foreground="White" BorderBrush="#FF666666" BorderThickness="1"/>
+                <Button x:Name="OpenExternalButton" Grid.Column="4" Content="↗" Margin="4,0,0,0"
+                        Style="{StaticResource NavigationButtonStyle}" IsEnabled="False"
+                        ToolTip="既定のブラウザで開く" AutomationProperties.Name="既定のブラウザで開く"
+                        Click="OpenExternalButton_Click"/>
             </Grid>
             <Border Grid.Row="2" Margin="1,0,1,1" Background="White"><wv2:WebView2 x:Name="Browser"/></Border>
         </Grid>

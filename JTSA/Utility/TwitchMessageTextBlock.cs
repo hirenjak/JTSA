@@ -2,13 +2,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
 using XamlAnimatedGif;
 
 namespace JTSA.Controls
@@ -16,6 +19,9 @@ namespace JTSA.Controls
     public class TwitchMessageRichTextBox : RichTextBox
     {
         private static readonly HttpClient httpClient = new();
+        private static readonly Regex urlPattern = new(
+            @"https?://[^\s<>""'「」『』【】。、！？]+",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private static readonly JTSA.Utility.AsyncCache<string, byte[]> imageCache = new(256, TimeSpan.FromMinutes(10));
 
@@ -76,14 +82,7 @@ namespace JTSA.Controls
                 {
                     if (!part.IsEmote)
                     {
-                        var run = new Run(part.Text ?? "");
-                        if (!string.IsNullOrWhiteSpace(part.Foreground))
-                        {
-                            run.Foreground = (Brush)new BrushConverter()
-                                .ConvertFromString(part.Foreground)!;
-                        }
-
-                        paragraph.Inlines.Add(run);
+                        AddTextInlines(paragraph, part);
 
                         continue;
                     }
@@ -121,6 +120,69 @@ namespace JTSA.Controls
             }
 
             Document.Blocks.Add(paragraph);
+        }
+
+        private static void AddTextInlines(Paragraph paragraph, TwitchChatPart part)
+        {
+            var text = part.Text ?? string.Empty;
+            Brush? foreground = string.IsNullOrWhiteSpace(part.Foreground)
+                ? null
+                : (Brush)new BrushConverter().ConvertFromString(part.Foreground)!;
+
+            void AddText(string value)
+            {
+                if (value.Length == 0) return;
+                var run = new Run(value);
+                if (foreground != null) run.Foreground = foreground;
+                paragraph.Inlines.Add(run);
+            }
+
+            var offset = 0;
+            foreach (Match match in urlPattern.Matches(text))
+            {
+                var url = match.Value.TrimEnd('.', ',', '!', '?', ';', ':');
+                // 文中の括弧は除外し、URL自体に含まれる対応した括弧は残す。
+                while (url.Length > 0 &&
+                    ((url.EndsWith(')') && url.Count(c => c == ')') > url.Count(c => c == '(')) ||
+                     (url.EndsWith(']') && url.Count(c => c == ']') > url.Count(c => c == '['))))
+                    url = url[..^1];
+
+                AddText(text[offset..match.Index]);
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+                    !string.IsNullOrEmpty(uri.Host))
+                {
+                    var link = new Hyperlink(new Run(url))
+                    {
+                        NavigateUri = uri,
+                        ToolTip = url,
+                        Foreground = Brushes.DeepSkyBlue
+                    };
+                    link.RequestNavigate += OpenChatLink;
+                    paragraph.Inlines.Add(link);
+                }
+                else
+                {
+                    AddText(url);
+                }
+                offset = match.Index + url.Length;
+            }
+            AddText(text[offset..]);
+        }
+
+        private static void OpenChatLink(object sender, RequestNavigateEventArgs e)
+        {
+            e.Handled = true;
+            try
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            }
+            catch (Exception exception)
+            {
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                    mainWindow.AppLogPanel.Error(nameof(TwitchMessageRichTextBox),
+                        $"リンクを開けませんでした。{exception.Message}");
+            }
         }
 
         private static async Task LoadEmoteAsync(

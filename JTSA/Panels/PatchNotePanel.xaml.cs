@@ -18,7 +18,24 @@ namespace JTSA.Panels
 
             PatchNotes.Add(new PatchNoteForm
             {
-                Version = "次回更新",
+                Version = "v1.5.42",
+                ReleaseDate = "未リリース",
+                Summary = "チャット内のリンクとアプリ内ブラウザを改善し、プラグインのOBS操作を拡張",
+                Changes =
+                [
+                    "【チャット関連機能】",
+                    "・チャット内のURLをクリックして開けるように変更",
+                    "【UI関連機能】",
+                    "・アプリ内ブラウザで、表示中のページを外部ブラウザで開けるように変更",
+                    "【プラグイン関連機能】",
+                    "・プラグインからOBSの接続状態やシーン・ソースの一覧を取得できるように変更",
+                    "・テキストの更新、ソースの作成、シーン内でのソースの位置変更を行えるように変更",
+                ]
+            });
+
+            PatchNotes.Add(new PatchNoteForm
+            {
+                Version = "v1.5.41",
                 ReleaseDate = "未リリース",
                 Summary = "スマホ連携の不具合修正、プラグイン一覧の改善およびToDo編集機能を追加",
                 Changes =

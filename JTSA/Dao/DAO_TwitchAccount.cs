@@ -7,24 +7,37 @@ namespace JTSA.Dao
         public static List<M_TwitchAccount> SelectAll()
         {
             using var db = new AppDbContext();
+            NormalizePrimary(db);
             return db.M_TwitchAccount.OrderByDescending(x => x.IsPrimary).ThenBy(x => x.UserName).ToList();
         }
 
         public static M_TwitchAccount? SelectById(long id)
         {
             using var db = new AppDbContext();
+            NormalizePrimary(db);
             return db.M_TwitchAccount.SingleOrDefault(x => x.Id == id);
         }
 
         public static M_TwitchAccount? SelectPrimary()
         {
             using var db = new AppDbContext();
+            NormalizePrimary(db);
             return db.M_TwitchAccount.FirstOrDefault(x => x.IsPrimary);
+        }
+
+        private static void NormalizePrimary(AppDbContext db)
+        {
+            // 旧版で複数メインになった場合は、最初に登録されたメインを残す。
+            var primaries = db.M_TwitchAccount.Where(x => x.IsPrimary).OrderBy(x => x.Id).ToList();
+            foreach (var duplicate in primaries.Skip(1))
+                duplicate.IsPrimary = false;
+            if (primaries.Count > 1) db.SaveChanges();
         }
 
         public static M_TwitchAccount InsertUpdate(string userName, string broadcasterId, string refreshToken, bool isPrimary = false)
         {
             using var db = new AppDbContext();
+            NormalizePrimary(db);
             var account = db.M_TwitchAccount.SingleOrDefault(x => x.BroadcasterId == broadcasterId);
             var now = DateTime.Now;
             if (account is null)
@@ -48,6 +61,11 @@ namespace JTSA.Dao
                 account.IsPrimary = account.IsPrimary || isPrimary;
                 account.UpdatedDateTime = now;
                 account.LastUsedDateTime = now;
+            }
+            if (account.IsPrimary)
+            {
+                foreach (var other in db.M_TwitchAccount.Where(x => x.IsPrimary && x.BroadcasterId != broadcasterId))
+                    other.IsPrimary = false;
             }
             db.SaveChanges();
             return account;

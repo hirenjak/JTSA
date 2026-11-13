@@ -98,19 +98,57 @@ public sealed class ObsController : IDisposable
         int width,
         int height)
     {
+        CreateSource(sceneName, sourceName, "browser_source", new JObject
+        {
+            ["url"] = url,
+            ["width"] = width,
+            ["height"] = height
+        });
+    }
+
+    internal int CreateSource(
+        string sceneName, string sourceName, string inputKind, JObject? settings, bool enabled = true)
+    {
         EnsureConnected();
-        client.SendRequest("CreateInput", new JObject
+        var request = new JObject
         {
             ["sceneName"] = sceneName,
             ["inputName"] = sourceName,
-            ["inputKind"] = "browser_source",
-            ["inputSettings"] = new JObject
-            {
-                ["url"] = url,
-                ["width"] = width,
-                ["height"] = height
-            },
-            ["sceneItemEnabled"] = true
+            ["inputKind"] = inputKind,
+            ["sceneItemEnabled"] = enabled
+        };
+        if (settings is not null)
+            request["inputSettings"] = settings;
+
+        var response = client.SendRequest("CreateInput", request);
+        return response.Value<int?>("sceneItemId")
+            ?? throw new InvalidOperationException("OBS の応答にシーンアイテム ID がありません。");
+    }
+
+    internal IReadOnlyList<(int ItemId, string SourceName, string? SourceType, string? InputKind)> GetSceneItems(
+        string sceneOrGroupName, bool isGroup)
+    {
+        EnsureConnected();
+        var response = client.SendRequest(isGroup ? "GetGroupSceneItemList" : "GetSceneItemList",
+            new JObject { ["sceneName"] = sceneOrGroupName });
+        return response["sceneItems"]!.Select(item =>
+            (item.Value<int>("sceneItemId"), item.Value<string>("sourceName")!,
+                item.Value<string>("sourceType"), item.Value<string>("inputKind"))).ToArray();
+    }
+
+    internal void SetSceneItemPosition(string sceneOrGroupName, int sceneItemId, double x, double y)
+    {
+        if (!double.IsFinite(x))
+            throw new ArgumentOutOfRangeException(nameof(x));
+        if (!double.IsFinite(y))
+            throw new ArgumentOutOfRangeException(nameof(y));
+
+        EnsureConnected();
+        client.SendRequest("SetSceneItemTransform", new JObject
+        {
+            ["sceneName"] = sceneOrGroupName,
+            ["sceneItemId"] = sceneItemId,
+            ["sceneItemTransform"] = new JObject { ["positionX"] = x, ["positionY"] = y }
         });
     }
 

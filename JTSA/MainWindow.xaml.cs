@@ -49,6 +49,7 @@ namespace JTSA
         private readonly SemaphoreSlim mainObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim subObsConnectionLock = new(1, 1);
         private readonly SemaphoreSlim twitchAccountTokenLock = new(1, 1);
+        private readonly TwitchAccessTokenCache twitchAccessTokens = new();
         private bool isSteamGameLaunching;
         private readonly StreamExpansionService streamExpansionService = new();
 		private bool isObsOperationRunning;
@@ -313,7 +314,7 @@ namespace JTSA
             #region ==========アクセストークンの自動リフレッシュタイマー設定==========
 
             accessTokenRefreshTimer = new DispatcherTimer();
-            accessTokenRefreshTimer.Interval = TimeSpan.FromHours(3);
+            accessTokenRefreshTimer.Interval = TimeSpan.FromMinutes(1);
             accessTokenRefreshTimer.Tick += AccessTokenRefreshTimer_TickAsync;
             accessTokenRefreshTimer.Start();
 
@@ -441,22 +442,34 @@ namespace JTSA
             accessTokenRefreshTimer.Stop();
             try
             {
-                var accessToken = await ResetAccessTokenAsync();
-                if (string.IsNullOrEmpty(accessToken))
-                {
-                    LoadSubPanel.Visibility = Visibility.Visible;
-                    return;
-                }
-
-                SettingPanel.SetAccessTokenStatus(true);
-
                 var primaryAccount = DAO_TwitchAccount.SelectPrimary();
-
-                // 追加アカウントを選択中の場合、そのアカウントのトークンも更新する。
-                if (SelectedTargetAccountId is long selectedAccountId &&
-                    selectedAccountId != primaryAccount?.Id)
+                var connected = ChatPanel.GetConnectedAccountContext();
+                var accountIds = DAO_TwitchAccount.SelectAll()
+                    .Where(account => account.Id == primaryAccount?.Id ||
+                        account.Id == SelectedTargetAccountId ||
+                        account.BroadcasterId == connected.BroadcasterId)
+                    .Select(account => account.Id)
+                    .ToList();
+                // メイン側の認証失敗でも、配信中のサブアカウント更新を続ける。
+                foreach (var accountId in accountIds)
                 {
-                    await GetSelectedTargetAccountAsync();
+                    try
+                    {
+                        if (accountId == primaryAccount?.Id)
+                        {
+                            var accessToken = await ResetAccessTokenAsync();
+                            SettingPanel.SetAccessTokenStatus(!string.IsNullOrEmpty(accessToken));
+                        }
+                        else
+                        {
+                            await GetAccountAccessTokenAsync(accountId, "定期更新");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLogPanel.Error(GetType().Name,
+                            $"アカウントID={accountId} の自動更新に失敗しました。{ex.GetBaseException().Message}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -1749,6 +1762,11 @@ namespace JTSA
                 if (account is null || string.IsNullOrWhiteSpace(account.RefreshToken))
                     return null;
 
+                if (twitchAccessTokens.TryGet(account.Id, account.RefreshToken,
+                    DateTimeOffset.UtcNow, out var cachedToken))
+                    return (account, cachedToken);
+
+                var issuedAt = DateTimeOffset.UtcNow;
                 var token = await TwitchHelper.RefreshAccessTokenAsync(account.RefreshToken);
                 if (token is null ||
                     string.IsNullOrWhiteSpace(token.accessToken) ||
@@ -1763,12 +1781,24 @@ namespace JTSA
                     return null;
                 }
 
+                var tokenOwner = await TwitchHelper.GetAuthenticatedUserAsync(token.accessToken);
+                if (tokenOwner?.UserId != account.BroadcasterId)
+                {
+                    AppLogPanel.Error(GetType().Name,
+                        $"{account.UserName} の認証情報とアカウントIDが一致しません。対象アカウントを再認証してください。");
+                    ShowOAuthReauthenticationNotification(account.Id.ToString(CultureInfo.InvariantCulture),
+                        $"{account.UserName} を設定画面から再認証してください。");
+                    return null;
+                }
+
                 DAO_TwitchAccount.UpdateRefreshToken(account.Id, token.refreshToken);
                 if (account.IsPrimary)
                 {
                     DAO_Setting.InsertUpdate(DAO_Setting.SettingName.RefreshToken, token.refreshToken);
                 }
 
+                twitchAccessTokens.Store(account.Id, token.refreshToken, token.accessToken,
+                    token.expiresIn, issuedAt);
                 account.RefreshToken = token.refreshToken;
                 await ApplyAccountAccessTokenAsync(account, token.accessToken, reason);
                 return (account, token.accessToken);
@@ -2988,8 +3018,8 @@ namespace JTSA
                     .SelectOneById(DAO_Setting.SettingName.RefreshToken)?.Value;
                 var refreshTokenCandidates = new[]
                     {
-                        settingRefreshToken,
-                        primaryAccount?.RefreshToken
+                        primaryAccount?.RefreshToken,
+                        primaryAccount is null ? settingRefreshToken : null
                     }
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .Distinct()
@@ -3001,6 +3031,11 @@ namespace JTSA
                     return string.Empty;
                 }
 
+                if (primaryAccount != null && twitchAccessTokens.TryGet(primaryAccount.Id,
+                    primaryAccount.RefreshToken, DateTimeOffset.UtcNow, out var cachedToken))
+                    return cachedToken;
+
+                var issuedAt = DateTimeOffset.UtcNow;
                 AccessTokenResponseIF? accessTokenResponse = null;
                 foreach (var refreshToken in refreshTokenCandidates)
                 {
@@ -3019,6 +3054,16 @@ namespace JTSA
                     return string.Empty;
                 }
 
+                if (primaryAccount != null)
+                {
+                    var tokenOwner = await TwitchHelper.GetAuthenticatedUserAsync(accessTokenResponse.accessToken);
+                    if (tokenOwner?.UserId != primaryAccount.BroadcasterId)
+                    {
+                        processLog.ErrorLogWrite("メインアカウントと認証情報の持ち主が一致しません。メインアカウントを再認証してください。");
+                        return string.Empty;
+                    }
+                }
+
                 DAO_Setting.InsertUpdate(
                     DAO_Setting.SettingName.RefreshToken,
                     accessTokenResponse.refreshToken);
@@ -3026,7 +3071,11 @@ namespace JTSA
                     DAO_Setting.SettingName.ExpiresIn,
                     accessTokenResponse.expiresIn.ToString());
                 if (primaryAccount is not null)
+                {
                     DAO_TwitchAccount.UpdateRefreshToken(primaryAccount.Id, accessTokenResponse.refreshToken);
+                    twitchAccessTokens.Store(primaryAccount.Id, accessTokenResponse.refreshToken,
+                        accessTokenResponse.accessToken, accessTokenResponse.expiresIn, issuedAt);
+                }
 
                 await ApplyAccountAccessTokenAsync(primaryAccount, accessTokenResponse.accessToken, "起動・定期更新");
                 processLog.SuccessLogWrite();

@@ -3,6 +3,8 @@ using JTSA.Utility;
 using JTSA.Dao;
 using System.Windows.Interop;
 using System.IO;
+using System.Text.Json;
+using Newtonsoft.Json.Linq;
 
 namespace JTSA.Plugins;
 
@@ -11,7 +13,8 @@ internal sealed class JtsaPluginContext :
     IJtsaCalendarPluginContext,
     IJtsaStreamMetadataPluginContext,
     IJtsaExternalChatPluginContext,
-    IJtsaRemotePanelPluginContext
+    IJtsaRemotePanelPluginContext,
+    IJtsaObsPluginContext
 {
     private readonly MainWindow mainWindow;
     private readonly string pluginId;
@@ -40,6 +43,47 @@ internal sealed class JtsaPluginContext :
 
     public void RemoveRemotePanel(string id) =>
         RemotePanelRegistry.Remove(pluginId, id);
+
+    public bool IsObsConnected(bool isSub = false) =>
+        mainWindow.GetConnectedObsController(isSub) is not null;
+
+    public Task<IReadOnlyList<string>> GetObsSceneNamesAsync(bool isSub = false) =>
+        Task.Run(() => GetObsController(isSub).GetSceneNames());
+
+    public Task SetObsTextAsync(string sourceName, string text, bool isSub = false) =>
+        Task.Run(() => GetObsController(isSub).SetTextSourceText(sourceName, text));
+
+    public Task<IReadOnlyList<ObsSceneItemInfo>> GetObsSceneItemsAsync(
+        string sceneOrGroupName, bool isGroup = false, bool isSub = false) =>
+        Task.Run<IReadOnlyList<ObsSceneItemInfo>>(() => GetObsController(isSub)
+            .GetSceneItems(sceneOrGroupName, isGroup)
+            .Select(item => new ObsSceneItemInfo(item.ItemId, item.SourceName)
+            {
+                SourceType = item.SourceType,
+                InputKind = item.InputKind
+            })
+            .ToArray());
+
+    public Task SetObsSceneItemPositionAsync(
+        string sceneOrGroupName, int sceneItemId, double x, double y, bool isSub = false) =>
+        Task.Run(() => GetObsController(isSub).SetSceneItemPosition(sceneOrGroupName, sceneItemId, x, y));
+
+    public async Task<int> CreateObsSourceAsync(
+        string sceneName, string sourceName, string inputKind, JsonElement? settings = null,
+        bool enabled = true, bool isSub = false)
+    {
+        if (settings is { } value && value.ValueKind != JsonValueKind.Object)
+            throw new ArgumentException("OBS のソース設定には JSON オブジェクトを指定してください。", nameof(settings));
+
+        var inputSettings = settings is { } json ? JObject.Parse(json.GetRawText()) : null;
+        return await Task.Run(() =>
+            GetObsController(isSub).CreateSource(sceneName, sourceName, inputKind, inputSettings, enabled))
+            .ConfigureAwait(false);
+    }
+
+    private ObsController GetObsController(bool isSub) =>
+        mainWindow.GetConnectedObsController(isSub)
+        ?? throw new InvalidOperationException(isSub ? "サブ OBS に接続されていません。" : "メイン OBS に接続されていません。");
 
     public void SetInteractiveRemotePanel(RemotePluginPanelContent panel, Func<string, string?, bool> onAction, Func<string> getState) =>
         RemotePanelRegistry.Set(pluginId, panel, onAction, getState);

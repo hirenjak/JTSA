@@ -1,4 +1,5 @@
 using Microsoft.Web.WebView2.Core;
+using System.Diagnostics;
 using System.Windows;
 
 namespace JTSA;
@@ -80,6 +81,7 @@ public partial class InAppBrowserWindow : Window
     private void UpdateNavigationState()
     {
         AddressTextBox.Text = Browser.Source?.AbsoluteUri ?? currentUri.AbsoluteUri;
+        OpenExternalButton.IsEnabled = GetExternalUri() is not null;
         BackButton.IsEnabled = Browser.CanGoBack;
         ForwardButton.IsEnabled = Browser.CanGoForward;
     }
@@ -95,6 +97,27 @@ public partial class InAppBrowserWindow : Window
     }
 
     private void ReloadButton_Click(object sender, RoutedEventArgs e) => Browser.Reload();
+
+    private Uri? GetExternalUri()
+    {
+        return Uri.TryCreate(AddressTextBox.Text, UriKind.Absolute, out var uri)
+            && uri.Scheme is "http" or "https" ? uri : null;
+    }
+
+    private void OpenExternalButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetExternalUri() is not { } uri) return;
+
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            MessageBox.Show(this, $"既定のブラウザを開けませんでした。{ex.Message}",
+                "ブラウザ", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
 
     public void NavigateTo(Uri uri)
     {

@@ -61,6 +61,24 @@ context.RemoveExpansionOverlay("status");
 
 描画IDはプラグインIDごとに分離されるため、別のExtensionと同じ名前を使っても衝突しません。
 
+## OBS の操作
+
+`Initialize` で受け取るコンテキストが `IJtsaObsPluginContext` を実装していれば、接続中の OBS を操作できます。既定はメイン OBS で、各 API に `isSub: true` を渡すとサブ OBS が対象になります。
+
+```csharp
+if (context is IJtsaObsPluginContext obs && obs.IsObsConnected())
+{
+    var settings = System.Text.Json.JsonSerializer.SerializeToElement(new { text = "準備中" });
+    var itemId = await obs.CreateObsSourceAsync("配信", "配信ステータス", "text_gdiplus", settings);
+    await obs.SetObsSceneItemPositionAsync("配信", itemId, 120, 80);
+    await obs.SetObsTextAsync("配信ステータス", "配信中");
+}
+```
+
+`await obs.GetObsSceneNamesAsync()` でシーン名を名前順に取得できます。取得した名前をソース一覧の取得や新規ソースの追加に渡せます。
+
+既存ソースの位置を変更するときは `GetObsSceneItemsAsync` で対象のアイテム ID を取得します。グループ内のソースでは、取得時にグループ名と `isGroup: true` を渡し、位置変更時にも同じグループ名を指定します。文言変更は同じソースを参照するすべてのシーンに反映されます。切断や OBS の操作拒否は例外として扱えます。
+
 ## Desktop Wall 連携
 
 JTSAの予定をDesktopWallManagerへ共有するExtensionを追加しました。

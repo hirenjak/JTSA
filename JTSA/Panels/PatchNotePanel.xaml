@@ -61,7 +61,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Border Background="LightSeaGreen" CornerRadius="3" Padding="8,3">
-                                    <TextBlock Text="{Binding Version, StringFormat=v{0}}"
+                                    <TextBlock Text="{Binding Version}"
                                                Foreground="White"
                                                FontWeight="Bold"/>
                                 </Border>

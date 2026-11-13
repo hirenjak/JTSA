@@ -12,6 +12,8 @@ public partial class ToolPanelWindow : Window
     public ToolPanelWindow(string title, FrameworkElement content)
     {
         InitializeComponent();
+        // メインに従属するパネルを独立したタスクバー項目として扱わない。
+        ShowInTaskbar = false;
         Title = title;
         PanelContent.Content = content;
         SourceInitialized += ToolPanelWindow_SourceInitialized;
